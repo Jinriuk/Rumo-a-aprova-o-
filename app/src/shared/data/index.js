@@ -165,6 +165,16 @@ export const lgpdTitular = (acao, alunoId) => invocar("lgpd-titular", { acao, al
 
 /* ---------- motor (meta + registro) ---------- */
 
+export async function listarMetas(alunoId) {
+  const { data, error } = await supabase
+    .from("metas")
+    .select("*, meta_atividades(id, estado, atividade_modelo_id)")
+    .eq("aluno_id", alunoId)
+    .order("semana_numero", { ascending: false });
+  if (error) throw falha("metas", error);
+  return data;
+}
+
 export async function metaAtual(alunoId) {
   const { data, error } = await supabase
     .from("metas")

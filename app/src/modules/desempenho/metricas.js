@@ -60,6 +60,8 @@ export function calcularMetricas({ registros, simulados, semanas, semanaAtiva, d
 
   const totalDias = new Set(logs.map((l) => l.data)).size;
   const mediaDia = totalDias ? Math.round(totDone / totalDias) : 0;
+  const minutosTotais = logs.reduce((a, l) => a + (+l.minutos || 0), 0);
+  const mediaMinutosDia = totalDias ? Math.round(minutosTotais / totalDias) : 0;
   const datas = logs.map((l) => l.data).sort();
   const primeiraData = datas[0] || null;
 
@@ -87,5 +89,6 @@ export function calcularMetricas({ registros, simulados, semanas, semanaAtiva, d
   return {
     qHoje, qSem, totDone, acerto, streak, wlogs, diasSemana, metaPct, weak, lastSim,
     weeksData, totalDias, mediaDia, primeiraData, consistencia, accTrend, matStats,
+    minutosTotais, mediaMinutosDia,
   };
 }

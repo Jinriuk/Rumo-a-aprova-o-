@@ -1,12 +1,12 @@
 /* Registro de estudo (questões, acertos, tempo) — portado da versão
    atual. Só o aluno escreve; o banco garante isso, não esta tela. */
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Card, Empty, Botao, Erro, useInputStyle } from "../../shared/ui/componentes.jsx";
 import { useTema } from "../../shared/branding/BrandingContext.jsx";
 import { todayISO, fmtBR } from "../../shared/regras/regras.js";
 import * as db from "../../shared/data/index.js";
 
-export function Registrar({ aluno, trilha, registros, aoMudar }) {
+export function Registrar({ aluno, trilha, registros, aoMudar, minutosSugeridos }) {
   const T = useTema();
   const { input: inputS, label: lbl } = useInputStyle();
   const branco = { data: todayISO(), disciplina_codigo: "mat", topico: "", questoes: "", acertos: "", minutos: "", obs: "" };
@@ -14,6 +14,11 @@ export function Registrar({ aluno, trilha, registros, aoMudar }) {
   const [erro, setErro] = useState(null);
   const [ocupado, setOcupado] = useState(false);
   const set = (k, v) => setF({ ...f, [k]: v });
+
+  // o cronômetro do topo manda os minutos direto pra cá
+  useEffect(() => {
+    if (minutosSugeridos > 0) setF((atual) => ({ ...atual, minutos: String(minutosSugeridos) }));
+  }, [minutosSugeridos]);
 
   async function adicionar() {
     if (!f.questoes || +f.questoes <= 0 || ocupado) return;

@@ -2,7 +2,7 @@
    estados do motor (pendente → concluída; ignorar fica disponível
    sem drama). Quem GERA a meta é o servidor; aqui o aluno só marca. */
 import React, { useState } from "react";
-import { Card, Tag, SubjDot, Empty, Erro } from "../../shared/ui/componentes.jsx";
+import { Card, Tag, SubjDot, Empty, Erro, Estrelas } from "../../shared/ui/componentes.jsx";
 import { useTema } from "../../shared/branding/BrandingContext.jsx";
 import { fmtBR } from "../../shared/regras/regras.js";
 import * as db from "../../shared/data/index.js";
@@ -72,6 +72,7 @@ export function MetaSemana({ meta, trilha, podeEditar, aoMudar }) {
                 <span style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
                   <SubjDot disciplina={trilha.porCodigo[at.disciplina_codigo]} />
                   <Tag p={at.prioridade} />
+                  <Estrelas p={at.prioridade} />
                   {ignorada && <span style={{ fontSize: 10, color: T.sub, border: `1px solid ${T.line}`, borderRadius: 5, padding: "1px 6px" }}>IGNORADA</span>}
                 </span>
                 <span style={{ display: "block", fontSize: 13.5, color: concluida || ignorada ? T.sub : T.ink, textDecoration: concluida ? "line-through" : "none", marginTop: 2 }}>

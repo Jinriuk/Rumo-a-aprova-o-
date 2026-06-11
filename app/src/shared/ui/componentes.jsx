@@ -45,6 +45,22 @@ export function Tag({ p }) {
   );
 }
 
+// Relevância em estrelas — leitura visual da prioridade da
+// metodologia (Fechar/Pincelar/Mínimo). Não muda o método: só o traduz.
+const ESTRELAS_POR_PRIORIDADE = { F: 5, P: 3, X: 2 };
+
+export function Estrelas({ p }) {
+  const T = useTema();
+  const n = ESTRELAS_POR_PRIORIDADE[p] ?? 2;
+  const titulo = { F: "Fechar", P: "Pincelar", X: "Mínimo" }[p] ?? "Mínimo";
+  return (
+    <span title={`${titulo} — relevância ${n}/5`} style={{ fontSize: 12, letterSpacing: 1, whiteSpace: "nowrap" }}>
+      <span style={{ color: T.gold }}>{"★".repeat(n)}</span>
+      <span style={{ color: T.line }}>{"★".repeat(5 - n)}</span>
+    </span>
+  );
+}
+
 export function SubjDot({ disciplina }) {
   const T = useTema();
   if (!disciplina) return null;
