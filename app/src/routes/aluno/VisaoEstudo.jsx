@@ -3,7 +3,8 @@
    Mesma composição para aluno (edita) e para coordenação (lê) — o
    banco decide o que cada um PODE; aqui só se esconde o que não cabe. */
 import React, { useEffect, useMemo, useState } from "react";
-import { SectionCard, Empty, Tag, SubjDot, Estrelas, Erro, Tabs } from "../../shared/ui/componentes.jsx";
+import { SectionCard, Empty, Tag, SubjDot, Estrelas, Erro } from "../../shared/ui/componentes.jsx";
+import { MenuPrincipal } from "../../shared/ui/MenuPrincipal.jsx";
 import { Cronometro } from "../../shared/ui/Cronometro.jsx";
 import { useTema } from "../../shared/branding/BrandingContext.jsx";
 import { useTrilha } from "../../modules/conteudo/useTrilha.js";
@@ -64,10 +65,11 @@ export function VisaoEstudo({ aluno, podeEditar, comResumo, contexto = "Plano de
   const xp = calcularXP({ metas: dados.metas, totalQuestoes: m?.totDone ?? 0, simulados: dados.simulados.length });
 
   const ABAS = [
-    ["hoje", "Hoje"], ["registrar", "Registrar"], ["desempenho", "Desempenho"],
-    ["simulados", "Simulados"], ["historico", "Histórico"], ["plano", "Plano"],
+    ["hoje", "Hoje", null, "⚓"], ["registrar", "Registrar", null, "✎"],
+    ["desempenho", "Desempenho", null, "📊"], ["simulados", "Simulados", null, "🎯"],
+    ["historico", "Histórico", null, "🗂"], ["plano", "Plano", null, "🗺"],
   ].filter(([k]) => podeEditar || k !== "registrar").map(
-    ([k, lb]) => (k === "hoje" && podeEditar && pendentes > 0 ? [k, lb, pendentes] : [k, lb]),
+    ([k, lb, badge, icone]) => (k === "hoje" && podeEditar && pendentes > 0 ? [k, lb, pendentes, icone] : [k, lb, badge, icone]),
   );
 
   return (
@@ -79,7 +81,7 @@ export function VisaoEstudo({ aluno, podeEditar, comResumo, contexto = "Plano de
         </div>
       )}
 
-      <Tabs abas={ABAS} ativo={tab} aoTrocar={setTab} />
+      <MenuPrincipal abas={ABAS} ativo={tab} aoTrocar={setTab} />
 
       <div className="fade" key={tab}>
         {tab === "hoje" && (

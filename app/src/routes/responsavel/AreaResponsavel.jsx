@@ -76,7 +76,7 @@ export default function AreaResponsavel({ perfil }) {
     <div>
       <Cabecalho subtitulo={subtitulo} diasProva={prova?.dias ?? null} diasProvaMedia={prova?.media}
         nomeUsuario={perfil.usuario.nome} rotuloPapel="Responsável" />
-      <main style={{ maxWidth: 760, margin: "0 auto", padding: "18px max(16px, env(safe-area-inset-right)) calc(64px + env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left))" }}>
+      <main style={{ maxWidth: 760, margin: "0 auto", padding: "18px max(16px, env(safe-area-inset-right)) calc(88px + env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left))" }}>
         {erro && <Erro>{erro}</Erro>}
         {aluno === undefined && !erro && <Empty txt="Carregando…" />}
         {aluno === null && <Empty txt="Nenhum aluno vinculado a este acesso. Fale com a escola." />}

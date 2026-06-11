@@ -54,7 +54,7 @@ export default function AreaAluno({ perfil }) {
   return (
     <div>
       <Cabecalho subtitulo={subtitulo} diasProva={prova?.dias ?? null} nomeUsuario={perfil.usuario.nome} />
-      <main style={{ maxWidth: 1080, margin: "0 auto", padding: "18px max(16px, env(safe-area-inset-right)) calc(64px + env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left))" }}>
+      <main style={{ maxWidth: 1080, margin: "0 auto", padding: "18px max(16px, env(safe-area-inset-right)) calc(88px + env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left))" }}>
         {erro && <Erro>{erro}</Erro>}
         {aluno === undefined && !erro && <Empty txt="Carregando…" />}
         {aluno === null && <Empty txt="Sua conta não está ligada a um aluno. Fale com a coordenação." />}

@@ -2,7 +2,8 @@
    Painel / Alunos / Ranking / Turmas / LGPD / Marca. */
 import React, { useEffect, useMemo, useState } from "react";
 import { Cabecalho } from "../../shared/ui/Cabecalho.jsx";
-import { SectionCard, Empty, Erro, Tabs, StatCard, EmptyState } from "../../shared/ui/componentes.jsx";
+import { SectionCard, Empty, Erro, StatCard, EmptyState } from "../../shared/ui/componentes.jsx";
+import { MenuPrincipal } from "../../shared/ui/MenuPrincipal.jsx";
 import { useTema } from "../../shared/branding/BrandingContext.jsx";
 import { NovaTurma, NovosAlunos, CredencialGerada } from "../../modules/pessoas/CadastroAlunos.jsx";
 import { ListaAlunos } from "../../modules/pessoas/ListaAlunos.jsx";
@@ -48,8 +49,9 @@ export default function AreaEscola({ perfil }) {
   const concursosPorId = Object.fromEntries(dados.concursos.map((c) => [c.id, c]));
 
   const ABAS = [
-    ["painel", "Painel"], ["alunos", "Alunos"], ["ranking", "Ranking"],
-    ["turmas", "Turmas"], ["conformidade", "LGPD"], ["marca", "Marca"],
+    ["painel", "Painel", null, "📊"], ["alunos", "Alunos", null, "👥"],
+    ["ranking", "Ranking", null, "🏆"], ["turmas", "Turmas", null, "🎓"],
+    ["conformidade", "LGPD", null, "🛡"], ["marca", "Marca", null, "🎨"],
   ];
 
   const concursoDoAluno = alunoAberto ? concursosPorId[alunoAberto.concurso_id] : null;
@@ -57,8 +59,8 @@ export default function AreaEscola({ perfil }) {
   return (
     <div>
       <Cabecalho subtitulo="Painel de gestão" nomeUsuario={perfil.usuario.nome} rotuloPapel="Coordenação" />
-      <main style={{ maxWidth: 1080, margin: "0 auto", padding: "16px max(16px, env(safe-area-inset-right)) calc(64px + env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left))" }}>
-        {!alunoAberto && <Tabs abas={ABAS} ativo={tab} aoTrocar={irPara} />}
+      <main style={{ maxWidth: 1080, margin: "0 auto", padding: "16px max(16px, env(safe-area-inset-right)) calc(88px + env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left))" }}>
+        {!alunoAberto && <MenuPrincipal abas={ABAS} ativo={tab} aoTrocar={irPara} />}
 
         <div className="fade" key={tab + (alunoAberto?.id ?? "")}>
           {dados.erro && <Erro>{dados.erro}</Erro>}
