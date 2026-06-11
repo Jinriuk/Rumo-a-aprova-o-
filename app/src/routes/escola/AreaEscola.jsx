@@ -11,7 +11,7 @@ import { Marca } from "../../modules/escola/Marca.jsx";
 import { PainelConformidade } from "../../modules/consentimento/PainelConformidade.jsx";
 import { ClassificacaoTurma } from "../../modules/desempenho/ClassificacaoTurma.jsx";
 import { PainelGestao, agregarEscola } from "../../modules/desempenho/PainelGestao.jsx";
-import { VisaoEstudo } from "../aluno/VisaoEstudo.jsx";
+import { FichaAluno } from "../../modules/desempenho/FichaAluno.jsx";
 import * as db from "../../shared/data/index.js";
 
 export default function AreaEscola({ perfil }) {
@@ -64,11 +64,8 @@ export default function AreaEscola({ perfil }) {
     <div>
       <Cabecalho subtitulo="Painel de gestão" nomeUsuario={perfil.usuario.nome} rotuloPapel="Coordenação" />
       <main className="com-sidebar" style={{ maxWidth: 1080, margin: "0 auto", padding: "16px max(16px, env(safe-area-inset-right)) calc(88px + env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left))" }}>
-        {/* com aluno aberto, o menu visível é o do aluno (vem do VisaoEstudo) */}
-        {!alunoAberto && (
-          <MenuPrincipal abas={ABAS} ativo={tab} aoTrocar={irPara}
-            usuario={{ nome: perfil.usuario.nome, sub: "Coordenação" }} />
-        )}
+        <MenuPrincipal abas={ABAS} ativo={tab} aoTrocar={irPara}
+          usuario={{ nome: perfil.usuario.nome, sub: "Coordenação" }} />
 
         <div className="fade" key={tab + (alunoAberto?.id ?? "")}>
           {dados.erro && <Erro>{dados.erro}</Erro>}
@@ -77,8 +74,7 @@ export default function AreaEscola({ perfil }) {
           {!dados.carregando && alunoAberto && (
             <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
               <button onClick={() => setAlunoAberto(null)} style={{ alignSelf: "flex-start", border: `1px solid ${T.line}`, background: T.card, color: T.sub, borderRadius: 8, padding: "8px 14px", fontSize: 13, fontWeight: 600 }}>← voltar ao painel</button>
-              <VisaoEstudo aluno={alunoAberto} podeEditar={false} comResumo concurso={concursoDoAluno}
-                contexto={concursoDoAluno ? concursoDoAluno.nome.split(" (")[0] : "Plano de estudos"} />
+              <FichaAluno aluno={alunoAberto} concurso={concursoDoAluno} />
             </div>
           )}
 

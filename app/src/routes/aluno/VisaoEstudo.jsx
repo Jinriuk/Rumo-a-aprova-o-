@@ -18,12 +18,11 @@ import { Progresso, Simulados } from "../../modules/desempenho/Progresso.jsx";
 import { InsightsDesempenho } from "../../modules/desempenho/Insights.jsx";
 import { Acumulado } from "../../modules/desempenho/Acumulado.jsx";
 import { RadarDesempenho } from "../../modules/desempenho/RadarDesempenho.jsx";
-import { Resumo } from "../../modules/desempenho/Resumo.jsx";
 import { calcularMetricas } from "../../modules/desempenho/metricas.js";
 import { semanaAtual, fmtBR } from "../../shared/regras/regras.js";
 import * as db from "../../shared/data/index.js";
 
-export function VisaoEstudo({ aluno, podeEditar, comResumo, concurso = null, contexto = "Plano de estudos" }) {
+export function VisaoEstudo({ aluno, podeEditar, concurso = null, contexto = "Plano de estudos" }) {
   const T = useTema();
   const [tab, setTab] = useState("hoje");
   const [dados, setDados] = useState({ carregando: true, metas: [], registros: [], simulados: [], erro: null });
@@ -91,11 +90,6 @@ export function VisaoEstudo({ aluno, podeEditar, comResumo, concurso = null, con
           <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
             <FaixaAspirante nome={aluno.nome.split(" ")[0]} contexto={contexto} xp={xp} streak={m?.streak ?? 0}
               aoAbrirConquistas={() => setTab("conquistas")} />
-            {comResumo && m && (
-              <Resumo m={m} semanaAtiva={semanaAtiva} totalSemanas={semanasRegras.length}
-                doneCount={itensMeta.filter((x) => x.estado === "concluida").length}
-                totalTasks={itensMeta.filter((x) => x.estado !== "ignorada").length} diasProva={null} />
-            )}
             <MissaoAtual meta={meta} trilha={trilha} m={m} />
             <MetaSemana meta={meta} trilha={trilha} podeEditar={podeEditar} aoMudar={recarregar} />
             {podeEditar && (

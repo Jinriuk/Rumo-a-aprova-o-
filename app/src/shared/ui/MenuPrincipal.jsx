@@ -63,16 +63,20 @@ export function MenuPrincipal({ abas, ativo, aoTrocar, usuario }) {
       {/* ============ DESKTOP: menu lateral fixo ============ */}
       <nav className="menu-lateral" style={{ position: "fixed", left: 0, top: 0, bottom: 0, width: LARGURA_SIDEBAR, zIndex: 10, flexDirection: "column", background: `linear-gradient(180deg, ${T.bg2} 0%, ${T.bg} 100%)`, borderRight: `1px solid ${T.line}`, padding: "86px 12px 14px", overflow: "hidden" }}>
 
-        {/* perfil: bolinha com avatar + nome (a foto/modelos vêm na Fase 15) */}
+        {/* perfil VERTICAL: avatar centralizado em cima, nome embaixo
+            (quebra em até 2 linhas — nada de "…" em nome grande).
+            Foto/modelos de avatar entram na Fase 15. */}
         {usuario && (
-          <div style={{ display: "flex", alignItems: "center", gap: 11, background: T.card, border: `1px solid ${T.line}`, borderRadius: 13, padding: "11px 12px", marginBottom: 16 }}>
-            <div className="disp" style={{ width: 42, height: 42, borderRadius: "50%", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center", background: `linear-gradient(135deg, ${T.gold}, #9c7d2e)`, color: "#0A1622", fontWeight: 800, fontSize: 15, boxShadow: `0 3px 10px ${T.gold}44`, border: `2px solid ${T.gold}` }}>
+          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", textAlign: "center", background: T.card, border: `1px solid ${T.line}`, borderRadius: 14, padding: "16px 12px 13px", marginBottom: 16 }}>
+            <div className="disp" style={{ width: 56, height: 56, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", background: `linear-gradient(135deg, ${T.gold}, #9c7d2e)`, color: "#0A1622", fontWeight: 800, fontSize: 19, boxShadow: `0 4px 14px ${T.gold}44`, border: `2.5px solid ${T.gold}` }}>
               {iniciais || "•"}
             </div>
-            <div style={{ minWidth: 0 }}>
-              <div className="disp" style={{ fontSize: 13.5, fontWeight: 700, color: T.ink, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{usuario.nome}</div>
-              {usuario.sub && <div style={{ fontSize: 10.5, color: T.gold, fontWeight: 700, marginTop: 1, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{usuario.sub}</div>}
+            <div className="disp" style={{ fontSize: 13.5, fontWeight: 700, color: T.ink, marginTop: 9, lineHeight: 1.25, display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden", wordBreak: "break-word" }}>
+              {usuario.nome}
             </div>
+            {usuario.sub && (
+              <div style={{ fontSize: 10.5, color: T.gold, fontWeight: 700, marginTop: 4, background: `${T.gold}12`, border: `1px solid ${T.gold}33`, borderRadius: 7, padding: "2px 9px", maxWidth: "100%", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{usuario.sub}</div>
+            )}
           </div>
         )}
 
