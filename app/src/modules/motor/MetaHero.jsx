@@ -6,7 +6,7 @@ import React from "react";
 import { StatCard, StatusBadge } from "../../shared/ui/componentes.jsx";
 import { useTema } from "../../shared/branding/BrandingContext.jsx";
 import { fmtBR, todayISO, daysBetween } from "../../shared/regras/regras.js";
-import { L, patente, fmtHoras, fmtHorasCurto } from "./jargao.js";
+import { L, patente, fmtHoras, fmtHorasCurto, xpPorPrioridade } from "./jargao.js";
 
 export function FaixaAspirante({ nome, contexto, xp, streak }) {
   const T = useTema();
@@ -68,6 +68,11 @@ export function MissaoAtual({ meta, trilha, m }) {
   const pct = Math.min(100, Math.round((feitas / consideradas) * 100));
   const disciplinas = new Set((trilha.atividadesPorSemana[meta.semana_numero] ?? []).map((a) => a.disciplina_codigo)).size;
 
+  // meta de XP da semana: quanto a missão vale e quanto já foi garantido
+  const xpDe = (it) => xpPorPrioridade[trilha.atividadesPorId[it.atividade_modelo_id]?.prioridade] ?? 40;
+  const xpMissao = itens.filter((x) => x.estado !== "ignorada").reduce((s, it) => s + xpDe(it), 0);
+  const xpGanho = itens.filter((x) => x.estado === "concluida").reduce((s, it) => s + xpDe(it), 0);
+
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
       {/* MISSÃO ATUAL */}
@@ -104,6 +109,18 @@ export function MissaoAtual({ meta, trilha, m }) {
           <span>{disciplinas} disciplinas · {itens.length} objetivos{ignoradas > 0 ? ` · ${ignoradas} adiados` : ""}</span>
           <span>{fmtBR(String(meta.inicio))} – {fmtBR(String(meta.fim))}</span>
         </div>
+
+        {/* meta de XP da semana — objetivo concreto e curto */}
+        {xpMissao > 0 && (
+          <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 10, background: T.bg, border: `1px solid ${T.line}`, borderRadius: 9, padding: "8px 11px" }}>
+            <span style={{ fontSize: 14 }}>⭐</span>
+            <span style={{ flex: 1, fontSize: 11.5, color: T.sub }}>XP da missão</span>
+            <span className="num" style={{ fontSize: 13, fontWeight: 800 }}>
+              <b style={{ color: xpGanho >= xpMissao ? T.green : T.gold }}>{xpGanho}</b>
+              <span style={{ color: T.sub, fontWeight: 600 }}> / {xpMissao} XP</span>
+            </span>
+          </div>
+        )}
       </div>
 
       {/* RADAR DE DESEMPENHO */}
