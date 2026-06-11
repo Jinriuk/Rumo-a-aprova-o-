@@ -11,10 +11,12 @@ import { Icone } from "./Icones.jsx";
 const MAX_NA_BARRA = 4;
 export const LARGURA_SIDEBAR = 236;
 
-export function MenuPrincipal({ abas, ativo, aoTrocar }) {
+export function MenuPrincipal({ abas, ativo, aoTrocar, usuario }) {
   const T = useTema();
   const { escola } = useBranding();
   const [maisAberto, setMaisAberto] = useState(false);
+  const iniciais = (usuario?.nome ?? "")
+    .split(" ").filter(Boolean).slice(0, 2).map((p) => p[0].toUpperCase()).join("");
 
   const precisaMais = abas.length > MAX_NA_BARRA + 1;
   const naBarra = precisaMais ? abas.slice(0, MAX_NA_BARRA) : abas;
@@ -53,15 +55,32 @@ export function MenuPrincipal({ abas, ativo, aoTrocar }) {
         .mi { transition: background .15s, color .15s, transform .15s; }
         .mi:hover { background: ${T.cardHi} !important; color: ${T.ink} !important; transform: translateX(2px); }
         .mi:hover .mi-ic { color: ${T.gold} !important; }
+        /* rolagem do menu: vertical fina e discreta, lateral nunca */
+        .menu-rolagem { scrollbar-width: none; }
+        .menu-rolagem::-webkit-scrollbar { display: none; }
       `}</style>
 
       {/* ============ DESKTOP: menu lateral fixo ============ */}
-      <nav className="menu-lateral" style={{ position: "fixed", left: 0, top: 0, bottom: 0, width: LARGURA_SIDEBAR, zIndex: 10, flexDirection: "column", background: `linear-gradient(180deg, ${T.bg2} 0%, ${T.bg} 100%)`, borderRight: `1px solid ${T.line}`, padding: "86px 12px 14px" }}>
+      <nav className="menu-lateral" style={{ position: "fixed", left: 0, top: 0, bottom: 0, width: LARGURA_SIDEBAR, zIndex: 10, flexDirection: "column", background: `linear-gradient(180deg, ${T.bg2} 0%, ${T.bg} 100%)`, borderRight: `1px solid ${T.line}`, padding: "86px 12px 14px", overflow: "hidden" }}>
+
+        {/* perfil: bolinha com avatar + nome (a foto/modelos vêm na Fase 15) */}
+        {usuario && (
+          <div style={{ display: "flex", alignItems: "center", gap: 11, background: T.card, border: `1px solid ${T.line}`, borderRadius: 13, padding: "11px 12px", marginBottom: 16 }}>
+            <div className="disp" style={{ width: 42, height: 42, borderRadius: "50%", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center", background: `linear-gradient(135deg, ${T.gold}, #9c7d2e)`, color: "#0A1622", fontWeight: 800, fontSize: 15, boxShadow: `0 3px 10px ${T.gold}44`, border: `2px solid ${T.gold}` }}>
+              {iniciais || "•"}
+            </div>
+            <div style={{ minWidth: 0 }}>
+              <div className="disp" style={{ fontSize: 13.5, fontWeight: 700, color: T.ink, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{usuario.nome}</div>
+              {usuario.sub && <div style={{ fontSize: 10.5, color: T.gold, fontWeight: 700, marginTop: 1, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{usuario.sub}</div>}
+            </div>
+          </div>
+        )}
+
         <div style={{ fontSize: 10.5, color: T.sub, fontWeight: 800, textTransform: "uppercase", letterSpacing: 1.4, padding: "0 12px 10px", opacity: 0.8 }}>
           Menu
         </div>
 
-        <div style={{ display: "flex", flexDirection: "column", gap: 3, flex: 1, overflowY: "auto" }}>
+        <div className="menu-rolagem" style={{ display: "flex", flexDirection: "column", gap: 3, flex: 1, overflowY: "auto", overflowX: "hidden" }}>
           {abas.map(([k, lb, badge, icone]) => {
             const on = ativo === k;
             return (
@@ -71,10 +90,10 @@ export function MenuPrincipal({ abas, ativo, aoTrocar }) {
                   border: "none", borderRadius: 11, padding: "9px 10px", minHeight: 48,
                   fontSize: 14.5, fontWeight: on ? 800 : 600, fontFamily: "inherit",
                   background: on ? `linear-gradient(90deg, ${T.gold}1f, ${T.gold}08)` : "transparent",
-                  color: on ? T.ink : T.sub, position: "relative",
+                  color: on ? T.ink : T.sub, position: "relative", flexShrink: 0,
                 }}>
-                {/* indicador lateral do ativo */}
-                <span style={{ position: "absolute", left: -12, top: 9, bottom: 9, width: 3.5, borderRadius: "0 4px 4px 0", background: on ? T.gold : "transparent", boxShadow: on ? `0 0 12px ${T.gold}` : "none" }} />
+                {/* indicador lateral do ativo (dentro do item — nada vaza) */}
+                <span style={{ position: "absolute", left: 0, top: 9, bottom: 9, width: 3.5, borderRadius: "0 4px 4px 0", background: on ? T.gold : "transparent", boxShadow: on ? `0 0 12px ${T.gold}` : "none" }} />
                 {/* pílula do ícone */}
                 <span className="mi-ic" style={{
                   width: 34, height: 34, borderRadius: 9, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,

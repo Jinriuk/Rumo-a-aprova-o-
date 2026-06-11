@@ -11,6 +11,7 @@ export function Marca({ escola, aoMudar }) {
   const T = useTema();
   const { aplicarMarca } = useBranding();
   const { input: inputS, label: lbl } = useInputStyle();
+  const [nome, setNome] = useState(escola.nome ?? "");
   const [logo, setLogo] = useState(escola.logo_url ?? "");
   const [cor, setCor] = useState(escola.cor_acento ?? "#CDA349");
   const [erro, setErro] = useState(null);
@@ -24,7 +25,7 @@ export function Marca({ escola, aoMudar }) {
   async function salvar() {
     setOcupado(true); setErro(null); setOk(false);
     try {
-      const marca = { logo_url: logo.trim() || null, cor_acento: corValida ? cor : null };
+      const marca = { nome: nome.trim() || escola.nome, logo_url: logo.trim() || null, cor_acento: corValida ? cor : null };
       await db.atualizarMarca(escola.id, marca);
       aplicarMarca(marca); // aplica em TODO o sistema na hora, sem recarregar
       setOk(true);
@@ -37,6 +38,10 @@ export function Marca({ escola, aoMudar }) {
     <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
       <SectionCard titulo="Marca da escola" sub="O sistema leva o nome e a cara da escola. Layout e tipografia são fixos.">
         <div style={{ display: "grid", gap: 14 }}>
+          <div>
+            <label style={lbl}>Nome de exibição</label>
+            <input value={nome} onChange={(e) => setNome(e.target.value)} placeholder="ex: Colégio Vitrine Naval" style={inputS} />
+          </div>
           <div>
             <label style={lbl}>URL do logo (quadrado, opcional)</label>
             <input value={logo} onChange={(e) => setLogo(e.target.value)} placeholder="https://…/logo.png" style={inputS} />
@@ -62,7 +67,7 @@ export function Marca({ escola, aoMudar }) {
       </SectionCard>
 
       <SectionCard titulo="Como a escola verá" sub="Pré-visualização ao vivo da personalização.">
-        <BrandPreview nome={escola.nome} logo={logo.trim()} acento={acento} />
+        <BrandPreview nome={nome.trim() || escola.nome} logo={logo.trim()} acento={acento} />
       </SectionCard>
     </div>
   );

@@ -47,7 +47,10 @@ export function tema(corAcento) {
 export const FONTES_CSS = `
   @import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&family=Archivo:wght@400;500;600;700&display=swap');
   * { box-sizing: border-box; }
-  html, body { margin:0; max-width:100%; overflow-x:hidden; }
+  html, body { margin:0; max-width:100%; overflow-x:hidden; background:#0A1622; }
+  /* sem efeito elástico no topo (mobile): o cabeçalho não "descola"
+     do resto da tela ao puxar pra baixo */
+  html, body { overscroll-behavior-y: none; }
   .fade { animation: fade .5s ease both; }
   @keyframes fade { from { opacity:0; transform: translateY(8px);} to {opacity:1; transform:none;} }
   /* font-size 16px nos inputs evita o zoom automático do iOS ao focar */
@@ -64,5 +67,7 @@ export const FONTES_CSS = `
   @media (min-width: 1600px) { body { zoom: 1.15; } }
   @media (max-width: 560px) {
     .hdr-title { font-size: 17px !important; }
+    /* mobile mais compacto: menos respiro vertical, mais conteúdo na dobra */
+    main { padding-top: 12px !important; }
   }
 `;

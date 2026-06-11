@@ -13,7 +13,7 @@ import { MetaSemana } from "../../modules/motor/MetaSemana.jsx";
 import { Registrar } from "../../modules/motor/Registrar.jsx";
 import { Arquivo } from "../../modules/motor/Arquivo.jsx";
 import { Conquistas } from "../../modules/motor/Conquistas.jsx";
-import { calcularXP } from "../../modules/motor/jargao.js";
+import { calcularXP, patente } from "../../modules/motor/jargao.js";
 import { Progresso, Simulados } from "../../modules/desempenho/Progresso.jsx";
 import { InsightsDesempenho } from "../../modules/desempenho/Insights.jsx";
 import { Acumulado } from "../../modules/desempenho/Acumulado.jsx";
@@ -83,7 +83,8 @@ export function VisaoEstudo({ aluno, podeEditar, comResumo, concurso = null, con
         </div>
       )}
 
-      <MenuPrincipal abas={ABAS} ativo={tab} aoTrocar={setTab} />
+      <MenuPrincipal abas={ABAS} ativo={tab} aoTrocar={setTab}
+        usuario={{ nome: aluno.nome, sub: `${patente(xp).nome} · ${xp.toLocaleString("pt-BR")} XP` }} />
 
       <div className="fade" key={tab}>
         {tab === "hoje" && (

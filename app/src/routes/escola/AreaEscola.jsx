@@ -64,7 +64,11 @@ export default function AreaEscola({ perfil }) {
     <div>
       <Cabecalho subtitulo="Painel de gestão" nomeUsuario={perfil.usuario.nome} rotuloPapel="Coordenação" />
       <main className="com-sidebar" style={{ maxWidth: 1080, margin: "0 auto", padding: "16px max(16px, env(safe-area-inset-right)) calc(88px + env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left))" }}>
-        <MenuPrincipal abas={ABAS} ativo={tab} aoTrocar={irPara} />
+        {/* com aluno aberto, o menu visível é o do aluno (vem do VisaoEstudo) */}
+        {!alunoAberto && (
+          <MenuPrincipal abas={ABAS} ativo={tab} aoTrocar={irPara}
+            usuario={{ nome: perfil.usuario.nome, sub: "Coordenação" }} />
+        )}
 
         <div className="fade" key={tab + (alunoAberto?.id ?? "")}>
           {dados.erro && <Erro>{dados.erro}</Erro>}
@@ -100,7 +104,8 @@ export default function AreaEscola({ perfil }) {
 
           {!dados.carregando && !alunoAberto && tab === "turmas" && (
             <Turmas turmas={dados.turmas} alunos={dados.alunos} registros={dados.registrosEscola}
-              metas={dados.metasEscola} aoMudar={recarregar} aoVerRanking={() => irPara("ranking")} />
+              metas={dados.metasEscola} aoMudar={recarregar} aoVerRanking={() => irPara("ranking")}
+              aoVerAluno={verAluno} />
           )}
 
           {!dados.carregando && !alunoAberto && tab === "conformidade" && (
@@ -118,11 +123,16 @@ export default function AreaEscola({ perfil }) {
   );
 }
 
-/* Turmas com indicadores: alunos, acerto, questões e alunos em risco. */
-function Turmas({ turmas, alunos, registros, metas, aoMudar, aoVerRanking }) {
+/* Turmas com indicadores: alunos, acerto, questões e alunos em risco.
+   Clicar na turma abre a lista de alunos dela; clicar no aluno abre o
+   desempenho individual (Fase 10 do doc). */
+function Turmas({ turmas, alunos, registros, metas, aoMudar, aoVerRanking, aoVerAluno }) {
   const T = useTema();
+  const [turmaAberta, setTurmaAberta] = useState(null);
   const ag = useMemo(() => agregarEscola({ alunos, registros, metas }), [alunos, registros, metas]);
   const porAluno = Object.fromEntries(ag.map((x) => [x.aluno.id, x]));
+  const alunosDaTurma = (turmaId) =>
+    alunos.filter((a) => (a.alunos_turmas ?? []).some((v) => v.turma_id === turmaId));
 
   function statsTurma(turmaId) {
     const da = alunos.filter((a) => (a.alunos_turmas ?? []).some((v) => v.turma_id === turmaId));
@@ -158,18 +168,51 @@ function Turmas({ turmas, alunos, registros, metas, aoMudar, aoVerRanking }) {
           <div style={{ display: "flex", flexDirection: "column" }}>
             {turmas.map((t, i) => {
               const s = statsTurma(t.id);
+              const aberta = turmaAberta === t.id;
               return (
-                <div key={t.id} style={{ padding: "13px 15px", borderBottom: i === turmas.length - 1 ? "none" : `1px solid ${T.line}` }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
-                    <div className="disp" style={{ fontSize: 15, fontWeight: 700 }}>{t.nome}</div>
+                <div key={t.id} style={{ padding: "13px 15px", borderBottom: i === turmas.length - 1 ? "none" : `1px solid ${T.line}`, background: aberta ? `${T.gold}06` : "transparent" }}>
+                  <button onClick={() => setTurmaAberta(aberta ? null : t.id)}
+                    style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, flexWrap: "wrap", width: "100%", border: "none", background: "transparent", textAlign: "left", padding: 0, color: T.ink }}>
+                    <div className="disp" style={{ fontSize: 15, fontWeight: 700 }}>
+                      {t.nome} <span style={{ fontSize: 11, color: T.gold, fontWeight: 700, marginLeft: 6 }}>{aberta ? "fechar alunos ▴" : "ver alunos ▾"}</span>
+                    </div>
                     {s.risco > 0 && <span style={{ fontSize: 11, fontWeight: 700, color: T.red, background: `${T.red}14`, border: `1px solid ${T.red}44`, borderRadius: 6, padding: "2px 8px" }}>{s.risco} em risco</span>}
-                  </div>
+                  </button>
                   <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(90px,1fr))", gap: 8, marginTop: 10 }}>
                     <Mini rotulo="Alunos" valor={s.n} />
                     <Mini rotulo="Acerto" valor={s.acerto == null ? "—" : `${s.acerto}%`} cor={s.acerto == null ? null : s.acerto >= 70 ? T.green : T.gold} />
                     <Mini rotulo="Questões" valor={s.questoes} />
                     <Mini rotulo="Sem atividade" valor={s.risco} cor={s.risco ? T.red : T.green} />
                   </div>
+                  {/* lista de alunos da turma (cards básicos → desempenho) */}
+                  {aberta && (
+                    <div style={{ marginTop: 12, border: `1px solid ${T.line}`, borderRadius: 11, overflow: "hidden" }}>
+                      {alunosDaTurma(t.id).length === 0 ? (
+                        <div style={{ padding: "14px", fontSize: 12.5, color: T.sub, textAlign: "center" }}>Nenhum aluno nesta turma ainda — vincule na aba Alunos.</div>
+                      ) : alunosDaTurma(t.id).map((a, j, arr) => {
+                        const r = porAluno[a.id];
+                        return (
+                          <button key={a.id} className="row" onClick={() => aoVerAluno(a)}
+                            style={{ display: "flex", alignItems: "center", gap: 11, width: "100%", textAlign: "left", border: "none", background: "transparent", padding: "11px 13px", borderBottom: j === arr.length - 1 ? "none" : `1px solid ${T.line}`, color: T.ink }}>
+                            <div className="disp" style={{ width: 32, height: 32, borderRadius: "50%", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center", background: T.cardHi, border: `1px solid ${T.line}`, color: T.gold, fontWeight: 800, fontSize: 12 }}>
+                              {a.nome.split(" ").filter(Boolean).slice(0, 2).map((p) => p[0].toUpperCase()).join("")}
+                            </div>
+                            <div style={{ flex: 1, minWidth: 0 }}>
+                              <div style={{ fontSize: 13.5, fontWeight: 700, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{a.nome}</div>
+                              {r && (
+                                <div className="num" style={{ fontSize: 11, color: T.sub, marginTop: 1 }}>
+                                  {r.qSem} questões (7d) · acerto <b style={{ color: r.acc == null ? T.sub : r.acc >= 70 ? T.green : T.gold }}>{r.acc == null ? "—" : `${r.acc}%`}</b> · {r.diasSem} dias
+                                  {r.semAtividade && <b style={{ color: T.red }}> · sem atividade</b>}
+                                </div>
+                              )}
+                            </div>
+                            <span style={{ color: T.gold, fontSize: 13, fontWeight: 700, flexShrink: 0 }}>›</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
+
                   <div style={{ display: "flex", gap: 8, marginTop: 10, flexWrap: "wrap" }}>
                     <button onClick={aoVerRanking} style={{ border: `1px solid ${T.line}`, background: "transparent", color: T.gold, borderRadius: 8, fontSize: 12.5, fontWeight: 700, padding: "7px 14px", minHeight: 36 }}>
                       Ver classificação ›
