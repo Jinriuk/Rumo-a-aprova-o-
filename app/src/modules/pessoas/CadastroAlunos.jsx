@@ -39,11 +39,12 @@ export function NovaTurma({ aoMudar }) {
   );
 }
 
-export function NovosAlunos({ turmas, trilhaPadrao, aoMudar }) {
+export function NovosAlunos({ turmas, trilhaPadrao, concursos = [], aoMudar }) {
   const T = useTema();
   const { input: inputS, label: lbl } = useInputStyle();
   const [nomes, setNomes] = useState("");
   const [turmaId, setTurmaId] = useState("");
+  const [concursoId, setConcursoId] = useState("");
   const [consentimentoNome, setConsentimentoNome] = useState("");
   const [consentiu, setConsentiu] = useState(false);
   const [erro, setErro] = useState(null);
@@ -60,7 +61,8 @@ export function NovosAlunos({ turmas, trilhaPadrao, aoMudar }) {
     if (!pronto || ocupado) return;
     setOcupado(true); setErro(null); setFeito(null);
     try {
-      const alunos = await db.cadastrarAlunos(lista, turmaId || null, trilhaPadrao?.id ?? null);
+      const concursoEscolhido = concursoId || concursos.find((c) => c.codigo === "cn")?.id || null;
+      const alunos = await db.cadastrarAlunos(lista, turmaId || null, trilhaPadrao?.id ?? null, concursoEscolhido);
       if (!emLote && consentiu && consentimentoNome.trim()) {
         await db.registrarConsentimento(alunos[0].id, consentimentoNome.trim());
       }
@@ -91,6 +93,15 @@ export function NovosAlunos({ turmas, trilhaPadrao, aoMudar }) {
           <select value={turmaId} onChange={(e) => setTurmaId(e.target.value)} style={inputS}>
             <option value="" style={{ background: T.bg2 }}>— sem turma —</option>
             {turmas.map((t) => <option key={t.id} value={t.id} style={{ background: T.bg2 }}>{t.nome}</option>)}
+          </select>
+        </div>
+        <div style={{ flex: 1, minWidth: 180 }}>
+          <label style={lbl}>Concurso</label>
+          <select value={concursoId || (concursos.find((c) => c.codigo === "cn")?.id ?? "")}
+            onChange={(e) => setConcursoId(e.target.value)} style={inputS}>
+            {concursos.map((c) => (
+              <option key={c.id} value={c.id} style={{ background: T.bg2 }}>{c.nome}</option>
+            ))}
           </select>
         </div>
         <div style={{ flex: 1, minWidth: 180 }}>

@@ -87,6 +87,12 @@ export async function trilhaPadrao() {
   return data[0] ?? null;
 }
 
+export async function listarConcursos() {
+  const { data, error } = await supabase.from("concursos").select("*").order("ordem");
+  if (error) throw falha("concursos", error);
+  return data;
+}
+
 /* ---------- pessoas ---------- */
 
 export async function meuAluno() {
@@ -128,9 +134,11 @@ export async function listarAlunos() {
 }
 
 // cadastro um a um ou em lote: `nomes` é um array (1..N)
-export async function cadastrarAlunos(nomes, turmaId, trilhaId) {
+export async function cadastrarAlunos(nomes, turmaId, trilhaId, concursoId) {
   const { escola } = await meuPerfil();
-  const linhas = nomes.map((nome) => ({ escola_id: escola.id, nome, trilha_id: trilhaId }));
+  const linhas = nomes.map((nome) => ({
+    escola_id: escola.id, nome, trilha_id: trilhaId, concurso_id: concursoId ?? null,
+  }));
   const { data, error } = await supabase.from("alunos").insert(linhas).select();
   if (error) throw falha("cadastrar alunos", error);
   if (turmaId) {
@@ -138,6 +146,28 @@ export async function cadastrarAlunos(nomes, turmaId, trilhaId) {
     const { error: e2 } = await supabase.from("alunos_turmas").insert(v);
     if (e2) throw falha("vincular turma", e2);
   }
+  return data;
+}
+
+export async function atualizarAluno(alunoId, campos) {
+  const { data, error } = await supabase.from("alunos").update(campos).eq("id", alunoId).select();
+  if (error) throw falha("atualizar aluno", error);
+  if (!data?.length) throw new Error("atualizar aluno: o banco recusou a alteração");
+  return data[0];
+}
+
+// leituras da ESCOLA inteira (coordenação) — a RLS limita ao tenant
+export async function listarRegistrosEscola() {
+  const { data, error } = await supabase
+    .from("registros_estudo").select("aluno_id, data, questoes, acertos, minutos");
+  if (error) throw falha("registros da escola", error);
+  return data;
+}
+
+export async function listarMetasEscola() {
+  const { data, error } = await supabase
+    .from("metas").select("aluno_id, status, semana_numero, meta_atividades(estado)");
+  if (error) throw falha("metas da escola", error);
   return data;
 }
 

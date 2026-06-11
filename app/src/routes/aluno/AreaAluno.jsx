@@ -1,38 +1,59 @@
 /* Área do aluno: a própria meta e o próprio progresso. O banco só
-   entrega o que é dele — esta tela nem precisa filtrar. */
+   entrega o que é dele — esta tela nem precisa filtrar.
+   A contagem para a prova usa a data REAL da trilha quando existe;
+   sem trilha, usa a data MÉDIA do concurso escolhido pela escola. */
 import React, { useEffect, useState } from "react";
 import { Cabecalho } from "../../shared/ui/Cabecalho.jsx";
 import { Empty, Erro } from "../../shared/ui/componentes.jsx";
-import { useTema } from "../../shared/branding/BrandingContext.jsx";
 import { VisaoEstudo } from "./VisaoEstudo.jsx";
-import { todayISO, daysBetween } from "../../shared/regras/regras.js";
+import { diasParaProva } from "../../modules/conteudo/concursos.js";
+import { fmtBR } from "../../shared/regras/regras.js";
 import * as db from "../../shared/data/index.js";
 
 export default function AreaAluno({ perfil }) {
-  const T = useTema();
   const [aluno, setAluno] = useState(undefined);
   const [erro, setErro] = useState(null);
-  const [diasProva, setDiasProva] = useState(null);
+  const [prova, setProva] = useState(null);
+  const [concurso, setConcurso] = useState(null);
 
   useEffect(() => {
     let vivo = true;
-    db.meuAluno()
-      .then(async (a) => {
+    (async () => {
+      try {
+        const a = await db.meuAluno();
         if (!vivo) return;
         setAluno(a);
-        if (a?.trilha_id) {
+        if (!a) return;
+
+        let semanasTrilha = null;
+        if (a.trilha_id) {
           const { semanas } = await db.carregarTrilha(a.trilha_id);
-          const fim = String(semanas[semanas.length - 1].fim);
-          if (vivo) setDiasProva(Math.max(0, daysBetween(new Date(todayISO()), new Date(fim))));
+          semanasTrilha = semanas;
         }
-      })
-      .catch((e) => vivo && setErro(e.message));
+        let c = null;
+        if (a.concurso_id) {
+          const concursos = await db.listarConcursos();
+          c = concursos.find((x) => x.id === a.concurso_id) ?? null;
+        }
+        if (!vivo) return;
+        setConcurso(c);
+        setProva(diasParaProva({ semanasTrilha, concurso: c }));
+      } catch (e) {
+        if (vivo) setErro(e.message);
+      }
+    })();
     return () => { vivo = false; };
   }, []);
 
+  const subtitulo = [
+    "Área do aluno",
+    concurso ? concurso.nome.split(" (")[0] : null,
+    prova ? `prova ${prova.media ? "≈" : "em"} ${fmtBR(prova.dataIso)}${prova.media ? " (data média)" : ""}` : null,
+  ].filter(Boolean).join(" · ");
+
   return (
     <div>
-      <Cabecalho subtitulo="Área do aluno" diasProva={diasProva} nomeUsuario={perfil.usuario.nome} />
+      <Cabecalho subtitulo={subtitulo} diasProva={prova?.dias ?? null} nomeUsuario={perfil.usuario.nome} />
       <main style={{ maxWidth: 1080, margin: "0 auto", padding: "18px max(16px, env(safe-area-inset-right)) calc(64px + env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left))" }}>
         {erro && <Erro>{erro}</Erro>}
         {aluno === undefined && !erro && <Empty txt="Carregando…" />}

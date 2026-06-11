@@ -63,6 +63,22 @@ com o porquê. Nenhuma reabre decisão travada dos Documentos 1–6.
     `cn:logs`/`cn:sims` do projeto antigo) é operação de produção com a chave antiga — fica
     documentada como passo do operador, fora deste repositório.
 
+## Concursos e classificação (pedidos do dono pós-build)
+
+15. **Cadastro global de concursos com data MÉDIA da prova** (migration 0007 + seed 05):
+    CN ~01/08, EPCAR ~28/06, EsPCEx ~28/09, EsSA ~01/10, EEAr ~16/11 (2ª edição; tem duas
+    por ano), CM ~25/10 — médias das edições 2023–2026, ajustáveis pelo operador quando o
+    edital sai. A escola seleciona o concurso de cada aluno (no cadastro e na lista). A
+    contagem regressiva usa a data REAL da trilha quando o aluno tem trilha (CN 2026);
+    sem trilha, a próxima ocorrência da data média, rotulada como "(data média)".
+16. **Trilhas específicas por concurso ficam para depois** (decisão do dono): os níveis
+    variam (fundamental/médio/questões de superior) e o plano precisa ser pensado prova a
+    prova. O aluno pode estar num concurso sem trilha pronta — o sistema não quebra.
+17. **Classificação da turma é da COORDENAÇÃO, não do aluno.** O dono pediu o ranking da
+    visão da escola (estilo guruja). O comparativo/ranking ENTRE alunos na tela do aluno
+    segue travado como Fase 3 (Doc 4 §6). A classificação ordena por questões resolvidas
+    (desempate: acerto, tempo), com janela de 7 dias ou geral e filtro por turma.
+
 ## O que ficou conscientemente de fora (além da Fase 2)
 
 - Deploy real (Supabase/Vercel): o repositório está pronto; o passo a passo está no README.

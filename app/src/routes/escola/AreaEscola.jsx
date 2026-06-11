@@ -8,13 +8,17 @@ import { NovaTurma, NovosAlunos, CredencialGerada } from "../../modules/pessoas/
 import { ListaAlunos } from "../../modules/pessoas/ListaAlunos.jsx";
 import { Marca } from "../../modules/escola/Marca.jsx";
 import { PainelConformidade } from "../../modules/consentimento/PainelConformidade.jsx";
+import { ClassificacaoTurma } from "../../modules/desempenho/ClassificacaoTurma.jsx";
 import { VisaoEstudo } from "../aluno/VisaoEstudo.jsx";
 import * as db from "../../shared/data/index.js";
 
 export default function AreaEscola({ perfil }) {
   const T = useTema();
   const [tab, setTab] = useState("alunos");
-  const [dados, setDados] = useState({ carregando: true, erro: null, turmas: [], alunos: [], consentimentos: [], logs: [], trilha: null });
+  const [dados, setDados] = useState({
+    carregando: true, erro: null, turmas: [], alunos: [], consentimentos: [],
+    logs: [], trilha: null, concursos: [], registrosEscola: [], metasEscola: [],
+  });
   const [credencial, setCredencial] = useState(null);
   const [alunoAberto, setAlunoAberto] = useState(null);
   const [versao, setVersao] = useState(0);
@@ -22,9 +26,12 @@ export default function AreaEscola({ perfil }) {
 
   useEffect(() => {
     let vivo = true;
-    Promise.all([db.listarTurmas(), db.listarAlunos(), db.listarConsentimentos(), db.listarLogsAcesso(), db.trilhaPadrao()])
-      .then(([turmas, alunos, consentimentos, logs, trilha]) =>
-        vivo && setDados({ carregando: false, erro: null, turmas, alunos, consentimentos, logs, trilha }))
+    Promise.all([
+      db.listarTurmas(), db.listarAlunos(), db.listarConsentimentos(), db.listarLogsAcesso(),
+      db.trilhaPadrao(), db.listarConcursos(), db.listarRegistrosEscola(), db.listarMetasEscola(),
+    ])
+      .then(([turmas, alunos, consentimentos, logs, trilha, concursos, registrosEscola, metasEscola]) =>
+        vivo && setDados({ carregando: false, erro: null, turmas, alunos, consentimentos, logs, trilha, concursos, registrosEscola, metasEscola }))
       .catch((e) => vivo && setDados((d) => ({ ...d, carregando: false, erro: e.message })));
     return () => { vivo = false; };
   }, [versao]);
@@ -36,7 +43,11 @@ export default function AreaEscola({ perfil }) {
   }
 
   const alunosPorId = Object.fromEntries(dados.alunos.map((a) => [a.id, a]));
-  const ABAS = [["alunos", "Alunos"], ["turmas", "Turmas"], ["conformidade", "LGPD"], ["marca", "Marca"]];
+  const concursosPorId = Object.fromEntries(dados.concursos.map((c) => [c.id, c]));
+  const ABAS = [
+    ["alunos", "Alunos"], ["classificacao", "Classificação"], ["turmas", "Turmas"],
+    ["conformidade", "LGPD"], ["marca", "Marca"],
+  ];
 
   return (
     <div>
@@ -66,10 +77,15 @@ export default function AreaEscola({ perfil }) {
 
         {!dados.carregando && !alunoAberto && tab === "alunos" && (
           <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-            <NovosAlunos turmas={dados.turmas} trilhaPadrao={dados.trilha} aoMudar={recarregar} />
-            <ListaAlunos alunos={dados.alunos} consentimentos={dados.consentimentos}
+            <NovosAlunos turmas={dados.turmas} trilhaPadrao={dados.trilha} concursos={dados.concursos} aoMudar={recarregar} />
+            <ListaAlunos alunos={dados.alunos} consentimentos={dados.consentimentos} concursos={dados.concursos}
               aoMudar={recarregar} aoGerarCredencial={setCredencial} aoVerAluno={verAluno} />
           </div>
+        )}
+
+        {!dados.carregando && !alunoAberto && tab === "classificacao" && (
+          <ClassificacaoTurma alunos={dados.alunos} turmas={dados.turmas}
+            registros={dados.registrosEscola} metas={dados.metasEscola} concursosPorId={concursosPorId} />
         )}
 
         {!dados.carregando && !alunoAberto && tab === "turmas" && (

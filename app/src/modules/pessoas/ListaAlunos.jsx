@@ -5,11 +5,20 @@ import { Card, Empty, Erro, Botao } from "../../shared/ui/componentes.jsx";
 import { useTema } from "../../shared/branding/BrandingContext.jsx";
 import * as db from "../../shared/data/index.js";
 
-export function ListaAlunos({ alunos, consentimentos, aoMudar, aoGerarCredencial, aoVerAluno }) {
+export function ListaAlunos({ alunos, consentimentos, concursos = [], aoMudar, aoGerarCredencial, aoVerAluno }) {
   const T = useTema();
   const [erro, setErro] = useState(null);
   const [ocupado, setOcupado] = useState(null);
   const comConsentimento = new Set(consentimentos.map((c) => c.aluno_id));
+
+  async function trocarConcurso(aluno, concursoId) {
+    setOcupado(aluno.id); setErro(null);
+    try {
+      await db.atualizarAluno(aluno.id, { concurso_id: concursoId || null });
+      aoMudar?.();
+    } catch (e) { setErro(e.message); }
+    setOcupado(null);
+  }
 
   async function credencialAluno(aluno) {
     setOcupado(aluno.id); setErro(null);
@@ -99,6 +108,17 @@ export function ListaAlunos({ alunos, consentimentos, aoMudar, aoGerarCredencial
                     {" · "}
                     <span style={{ color: temConsentimento ? T.green : T.red }}>{temConsentimento ? "consentimento ok" : "sem consentimento"}</span>
                   </div>
+                  {concursos.length > 0 && (
+                    <select value={a.concurso_id ?? ""} disabled={!!ocupado}
+                      onChange={(e) => trocarConcurso(a, e.target.value)}
+                      title="Concurso em que o aluno está inscrito"
+                      style={{ marginTop: 6, background: T.bg, border: `1px solid ${T.line}`, color: T.sub, borderRadius: 6, padding: "4px 8px", fontSize: 11.5, maxWidth: 280 }}>
+                      <option value="" style={{ background: T.bg2 }}>— sem concurso —</option>
+                      {concursos.map((c) => (
+                        <option key={c.id} value={c.id} style={{ background: T.bg2 }}>{c.nome}</option>
+                      ))}
+                    </select>
+                  )}
                 </div>
                 <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
                   {botaoMini("desempenho", () => aoVerAluno(a), true)}
