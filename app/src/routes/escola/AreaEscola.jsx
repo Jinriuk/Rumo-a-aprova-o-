@@ -47,6 +47,10 @@ export default function AreaEscola({ perfil }) {
 
   const alunosPorId = Object.fromEntries(dados.alunos.map((a) => [a.id, a]));
   const concursosPorId = Object.fromEntries(dados.concursos.map((c) => [c.id, c]));
+  const resumoPorAluno = useMemo(
+    () => Object.fromEntries(agregarEscola({ alunos: dados.alunos, registros: dados.registrosEscola, metas: dados.metasEscola }).map((x) => [x.aluno.id, x])),
+    [dados.alunos, dados.registrosEscola, dados.metasEscola],
+  );
 
   const ABAS = [
     ["painel", "Painel", null, "painel"], ["alunos", "Alunos", null, "alunos"],
@@ -83,6 +87,7 @@ export default function AreaEscola({ perfil }) {
             <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
               <NovosAlunos turmas={dados.turmas} trilhaPadrao={dados.trilha} concursos={dados.concursos} aoMudar={recarregar} />
               <ListaAlunos alunos={dados.alunos} consentimentos={dados.consentimentos} concursos={dados.concursos}
+                turmas={dados.turmas} resumoPorAluno={resumoPorAluno}
                 aoMudar={recarregar} aoGerarCredencial={setCredencial} aoVerAluno={verAluno} />
             </div>
           )}

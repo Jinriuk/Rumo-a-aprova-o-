@@ -15,6 +15,7 @@ import { Arquivo } from "../../modules/motor/Arquivo.jsx";
 import { Conquistas } from "../../modules/motor/Conquistas.jsx";
 import { calcularXP } from "../../modules/motor/jargao.js";
 import { Progresso, Simulados } from "../../modules/desempenho/Progresso.jsx";
+import { InsightsDesempenho } from "../../modules/desempenho/Insights.jsx";
 import { Acumulado } from "../../modules/desempenho/Acumulado.jsx";
 import { RadarDesempenho } from "../../modules/desempenho/RadarDesempenho.jsx";
 import { Resumo } from "../../modules/desempenho/Resumo.jsx";
@@ -110,6 +111,7 @@ export function VisaoEstudo({ aluno, podeEditar, comResumo, concurso = null, con
         )}
         {tab === "desempenho" && (
           <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+            {m && <InsightsDesempenho m={m} />}
             <RadarDesempenho m={m} trilha={trilha} aoRegistrar={podeEditar ? () => setTab("registrar") : null} />
             <Acumulado registros={dados.registros} trilha={trilha} />
             <Progresso registros={dados.registros} trilha={trilha} />

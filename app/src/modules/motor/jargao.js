@@ -59,6 +59,11 @@ export function patente(xp) {
 // XP que uma atividade vale, pela prioridade (Fechar vale mais).
 export const xpPorPrioridade = { F: 100, P: 60, X: 40 };
 
+// Nível 1 do banco de questões (doc, Fase 16): o sistema SUGERE a
+// quantidade por objetivo; o aluno resolve fora e registra aqui.
+// Quantidade por prioridade — vira configuração por edital na Fase 15.
+export const questoesSugeridas = { F: 30, P: 20, X: 10 };
+
 // Rótulo e tom da prioridade no "modo missão".
 export const PRIORIDADE = {
   F: { texto: "Prioridade máxima", tom: "risco" },

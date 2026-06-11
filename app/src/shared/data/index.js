@@ -160,6 +160,18 @@ export async function cadastrarAlunos(nomes, turmaId, trilhaId, concursoId) {
   return data;
 }
 
+// troca a turma do aluno (modelo atual: uma turma por aluno)
+export async function definirTurma(alunoId, turmaId) {
+  const { escola } = await meuPerfil();
+  const { error: e1 } = await supabase.from("alunos_turmas").delete().eq("aluno_id", alunoId);
+  if (e1) throw falha("trocar turma", e1);
+  if (turmaId) {
+    const { error: e2 } = await supabase.from("alunos_turmas")
+      .insert({ escola_id: escola.id, aluno_id: alunoId, turma_id: turmaId });
+    if (e2) throw falha("trocar turma", e2);
+  }
+}
+
 export async function atualizarAluno(alunoId, campos) {
   const { data, error } = await supabase.from("alunos").update(campos).eq("id", alunoId).select();
   if (error) throw falha("atualizar aluno", error);

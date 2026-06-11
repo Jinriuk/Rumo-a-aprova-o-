@@ -2,12 +2,11 @@
    (ref. spec). Linguagem clara para o pai/mãe, sem jargão de jogo e
    sem controles administrativos. Tudo leitura. */
 import React from "react";
-import { SectionCard, StatCard, EmptyState, StatusBadge } from "../../shared/ui/componentes.jsx";
+import { SectionCard, StatCard, EmptyState, StatusBadge, InsightCard } from "../../shared/ui/componentes.jsx";
 import { useTema } from "../../shared/branding/BrandingContext.jsx";
-import { fmtBR, notaProjetadaDia1 } from "../../shared/regras/regras.js";
+import { fmtBR } from "../../shared/regras/regras.js";
 import { fmtHoras } from "../motor/jargao.js";
-
-const notaSimulado = (s) => notaProjetadaDia1(s.acertos);
+import { provaDoConcurso, notaPct, totalAcertos, totalQuestoes } from "../conteudo/provas.js";
 
 export function ResumoResponsavel({ aluno, m, meta, trilha, simulados, semanaAtiva, concurso }) {
   const T = useTema();
@@ -41,8 +40,13 @@ export function ResumoResponsavel({ aluno, m, meta, trilha, simulados, semanaAti
 
   const ultimoSim = simulados.length
     ? [...simulados].sort((a, b) => String(a.data).localeCompare(String(b.data)))[simulados.length - 1] : null;
+  const prova = provaDoConcurso(concurso?.codigo);
+  const notaSimulado = (s) => notaPct(prova, s.acertos);
 
   const materias = m.matStats.filter((s) => s.q > 0).sort((a, b) => b.q - a.q);
+  const comAcc = m.matStats.filter((s) => s.comAcc);
+  const melhor = comAcc.length ? [...comAcc].sort((a, b) => b.acc - a.acc)[0] : null;
+  const pior = comAcc.length > 1 ? [...comAcc].sort((a, b) => a.acc - b.acc)[0] : null;
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
@@ -88,6 +92,16 @@ export function ResumoResponsavel({ aluno, m, meta, trilha, simulados, semanaAti
         )}
       </SectionCard>
 
+      {/* melhor e pior matéria — leitura direta para o responsável */}
+      {melhor && (
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(220px,1fr))", gap: 10 }}>
+          <InsightCard tom="ok" titulo="Melhor matéria" valor={melhor.name} sub={`${melhor.acc}% de acerto`} />
+          {pior && pior.id !== melhor.id && (
+            <InsightCard tom={pior.acc < 60 ? "risco" : "alerta"} titulo="Matéria para reforçar" valor={pior.name} sub={`${pior.acc}% de acerto`} />
+          )}
+        </div>
+      )}
+
       {/* desempenho por matéria */}
       <SectionCard titulo="Desempenho por matéria">
         {materias.length === 0 ? (
@@ -113,11 +127,11 @@ export function ResumoResponsavel({ aluno, m, meta, trilha, simulados, semanaAti
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 10 }}>
             <div>
               <div className="disp" style={{ fontSize: 15, fontWeight: 700 }}>{ultimoSim.nome}</div>
-              <div style={{ fontSize: 12, color: T.sub, marginTop: 2 }}>{fmtBR(String(ultimoSim.data))} · {Object.values(ultimoSim.acertos).reduce((a, b) => a + (+b || 0), 0)} acertos no total</div>
+              <div style={{ fontSize: 12, color: T.sub, marginTop: 2 }}>{fmtBR(String(ultimoSim.data))} · {totalAcertos(prova, ultimoSim.acertos)}/{totalQuestoes(prova)} acertos · {prova.rotulo}</div>
             </div>
             <div style={{ textAlign: "right" }}>
               <div className="num disp" style={{ fontSize: 26, fontWeight: 800, color: notaSimulado(ultimoSim) >= 70 ? T.green : notaSimulado(ultimoSim) >= 50 ? T.gold : T.red }}>{notaSimulado(ultimoSim)}</div>
-              <div style={{ fontSize: 10.5, color: T.sub }}>nota projetada (Dia 1)</div>
+              <div style={{ fontSize: 10.5, color: T.sub }}>{prova.notaRotulo ?? "nota projetada"} /100</div>
             </div>
           </div>
         </SectionCard>

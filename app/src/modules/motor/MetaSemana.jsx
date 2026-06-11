@@ -6,7 +6,7 @@
 import React, { useState } from "react";
 import { SectionCard, EmptyState, Erro, StatusBadge } from "../../shared/ui/componentes.jsx";
 import { useTema } from "../../shared/branding/BrandingContext.jsx";
-import { L, PRIORIDADE, xpPorPrioridade } from "./jargao.js";
+import { L, PRIORIDADE, xpPorPrioridade, questoesSugeridas } from "./jargao.js";
 import * as db from "../../shared/data/index.js";
 
 export function MetaSemana({ meta, trilha, podeEditar, aoMudar }) {
@@ -86,6 +86,12 @@ function ObjetivoItem({ item, trilha, podeEditar, ocupado, ultimo, aoConcluir, a
             )}
             {concluida ? <StatusBadge tom="ok">Cumprido</StatusBadge> : <StatusBadge tom={pri.tom}>{pri.texto}</StatusBadge>}
             <span style={{ fontSize: 11, fontWeight: 800, color: concluida ? T.green : T.gold }}>+{xp} XP</span>
+            {!concluida && !adiada && (
+              <span title="Sugestão de prática: resolva e registre na aba Registrar"
+                style={{ fontSize: 11, fontWeight: 700, color: T.sub, border: `1px solid ${T.line}`, borderRadius: 6, padding: "1px 7px" }}>
+                ✦ ≈{questoesSugeridas[at.prioridade] ?? 10} questões
+              </span>
+            )}
           </div>
 
           {podeEditar && (

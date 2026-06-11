@@ -7,11 +7,13 @@ import { SectionCard, EmptyState, Erro, StatusBadge, BotaoMini, MaisAcoes } from
 import { useTema } from "../../shared/branding/BrandingContext.jsx";
 import * as db from "../../shared/data/index.js";
 
-export function ListaAlunos({ alunos, consentimentos, concursos = [], aoMudar, aoGerarCredencial, aoVerAluno }) {
+export function ListaAlunos({ alunos, consentimentos, concursos = [], turmas = [], resumoPorAluno = {}, aoMudar, aoGerarCredencial, aoVerAluno }) {
   const T = useTema();
   const [erro, setErro] = useState(null);
   const [ocupado, setOcupado] = useState(null);
   const [busca, setBusca] = useState("");
+  const [fTurma, setFTurma] = useState("");
+  const [fStatus, setFStatus] = useState("");
   const comConsentimento = new Set(consentimentos.map((c) => c.aluno_id));
 
   async function comAcao(aluno, fn) {
@@ -32,6 +34,12 @@ export function ListaAlunos({ alunos, consentimentos, concursos = [], aoMudar, a
     return comAcao(a, () => db.registrarConsentimento(a.id, nome.trim()));
   };
   const trocarConcurso = (a, concursoId) => comAcao(a, () => db.atualizarAluno(a.id, { concurso_id: concursoId || null }));
+  const trocarTurma = (a, turmaId) => comAcao(a, () => db.definirTurma(a.id, turmaId || null));
+  const renomear = (a) => {
+    const nome = window.prompt("Novo nome do aluno:", a.nome);
+    if (!nome?.trim() || nome.trim() === a.nome) return;
+    return comAcao(a, () => db.atualizarAluno(a.id, { nome: nome.trim() }));
+  };
   async function exportar(a) {
     setOcupado(a.id); setErro(null);
     try {
@@ -49,49 +57,93 @@ export function ListaAlunos({ alunos, consentimentos, concursos = [], aoMudar, a
     if (ok) return comAcao(a, () => db.lgpdTitular("excluir", a.id));
   };
 
-  const filtrados = busca.trim()
-    ? alunos.filter((a) => a.nome.toLowerCase().includes(busca.trim().toLowerCase()))
-    : alunos;
+  const filtrados = alunos
+    .filter((a) => !busca.trim() || a.nome.toLowerCase().includes(busca.trim().toLowerCase()))
+    .filter((a) => !fTurma || (a.alunos_turmas ?? []).some((v) => v.turma_id === fTurma))
+    .filter((a) => {
+      if (!fStatus) return true;
+      const r = resumoPorAluno[a.id];
+      if (fStatus === "sem-credencial") return !a.usuario_id;
+      if (fStatus === "sem-consentimento") return !comConsentimento.has(a.id);
+      if (fStatus === "sem-atividade") return r ? r.semAtividade : true;
+      if (fStatus === "meta-atrasada") return r?.metaIncompleta;
+      return true;
+    });
+
+  const selS = { background: T.bg, border: `1px solid ${T.line}`, color: T.ink, borderRadius: 8, padding: "7px 9px", fontSize: 12.5 };
 
   return (
-    <SectionCard titulo="Alunos da escola" sub={`${alunos.length} cadastrado(s)`} semPadding
-      acao={alunos.length > 6 ? (
-        <input value={busca} onChange={(e) => setBusca(e.target.value)} placeholder="Buscar aluno…"
-          style={{ background: T.bg, border: `1px solid ${T.line}`, color: T.ink, borderRadius: 8, padding: "7px 11px", fontSize: 13, width: 150 }} />
-      ) : null}>
+    <SectionCard titulo="Alunos da escola" sub={`${filtrados.length} de ${alunos.length}`} semPadding
+      acao={
+        <div style={{ display: "flex", gap: 7, flexWrap: "wrap", justifyContent: "flex-end" }}>
+          <input value={busca} onChange={(e) => setBusca(e.target.value)} placeholder="Buscar…"
+            style={{ ...selS, width: 120 }} />
+          {turmas.length > 0 && (
+            <select value={fTurma} onChange={(e) => setFTurma(e.target.value)} style={selS}>
+              <option value="" style={{ background: T.bg2 }}>Todas as turmas</option>
+              {turmas.map((t) => <option key={t.id} value={t.id} style={{ background: T.bg2 }}>{t.nome}</option>)}
+            </select>
+          )}
+          <select value={fStatus} onChange={(e) => setFStatus(e.target.value)} style={selS}>
+            <option value="" style={{ background: T.bg2 }}>Todos os status</option>
+            <option value="sem-credencial" style={{ background: T.bg2 }}>Sem credencial</option>
+            <option value="sem-consentimento" style={{ background: T.bg2 }}>Sem consentimento</option>
+            <option value="sem-atividade" style={{ background: T.bg2 }}>Sem atividade (7d)</option>
+            <option value="meta-atrasada" style={{ background: T.bg2 }}>Meta atrasada</option>
+          </select>
+        </div>
+      }>
       {erro && <div style={{ padding: "10px 14px 0" }}><Erro>{erro}</Erro></div>}
       {filtrados.length === 0 ? (
         <div style={{ padding: 8 }}><EmptyState icone="👥" titulo={busca ? "Nenhum aluno encontrado" : "Nenhum aluno ainda"} dica={busca ? "Tente outro nome." : "Cadastre alunos no formulário acima — um a um ou em lote."} /></div>
       ) : (
         <div style={{ display: "flex", flexDirection: "column" }}>
           {filtrados.map((a, i) => {
-            const turmas = (a.alunos_turmas ?? []).map((v) => v.turmas?.nome).filter(Boolean).join(", ");
+            const turmaAtual = (a.alunos_turmas ?? [])[0]?.turma_id ?? "";
             const temCred = !!a.usuario_id;
             const temCons = comConsentimento.has(a.id);
             const trabalhando = ocupado === a.id;
+            const r = resumoPorAluno[a.id];
+            const selMini = { background: T.bg, border: `1px solid ${T.line}`, color: T.sub, borderRadius: 7, padding: "5px 9px", fontSize: 11.5, maxWidth: "100%" };
             return (
               <div key={a.id} style={{ padding: "13px 15px", borderBottom: i === filtrados.length - 1 ? "none" : `1px solid ${T.line}` }}>
                 <div style={{ display: "flex", gap: 10, alignItems: "flex-start", flexWrap: "wrap" }}>
-                  <div style={{ flex: 1, minWidth: 160 }}>
+                  <div style={{ flex: 1, minWidth: 180 }}>
                     <div style={{ fontSize: 14.5, fontWeight: 700 }}>{a.nome}</div>
-                    <div style={{ fontSize: 11.5, color: T.sub, marginTop: 2 }}>{turmas || "sem turma"}</div>
+                    {/* desempenho resumido direto na listagem (Fase 10) */}
+                    {r && (
+                      <div className="num" style={{ fontSize: 11.5, color: T.sub, marginTop: 3 }}>
+                        <b style={{ color: T.ink }}>{r.qSem}</b> questões (7d) · acerto{" "}
+                        <b style={{ color: r.acc == null ? T.sub : r.acc >= 70 ? T.green : r.acc >= 55 ? T.gold : T.red }}>{r.acc == null ? "—" : `${r.acc}%`}</b>
+                        {" · "}<b style={{ color: r.diasSem >= 3 ? T.ink : T.red }}>{r.diasSem}</b> dias
+                        {r.consideradas > 0 && <> · meta <b style={{ color: r.feitas >= r.consideradas ? T.green : T.gold }}>{r.feitas}/{r.consideradas}</b></>}
+                      </div>
+                    )}
                     <div style={{ display: "flex", gap: 6, marginTop: 7, flexWrap: "wrap" }}>
                       <StatusBadge tom={temCred ? "ok" : "alerta"}>{temCred ? "com credencial" : "sem credencial"}</StatusBadge>
                       <StatusBadge tom={temCons ? "ok" : "risco"}>{temCons ? "consentimento ok" : "sem consentimento"}</StatusBadge>
+                      {r?.semAtividade && <StatusBadge tom="risco">sem atividade 7d</StatusBadge>}
                     </div>
-                    {concursos.length > 0 && (
-                      <select value={a.concurso_id ?? ""} disabled={trabalhando}
-                        onChange={(e) => trocarConcurso(a, e.target.value)} title="Concurso do aluno"
-                        style={{ marginTop: 8, background: T.bg, border: `1px solid ${T.line}`, color: T.sub, borderRadius: 7, padding: "5px 9px", fontSize: 11.5, maxWidth: "100%" }}>
-                        <option value="" style={{ background: T.bg2 }}>— sem concurso —</option>
-                        {concursos.map((c) => <option key={c.id} value={c.id} style={{ background: T.bg2 }}>{c.nome}</option>)}
-                      </select>
-                    )}
+                    <div style={{ display: "flex", gap: 7, marginTop: 8, flexWrap: "wrap" }}>
+                      {turmas.length > 0 && (
+                        <select value={turmaAtual} disabled={trabalhando} onChange={(e) => trocarTurma(a, e.target.value)} title="Turma do aluno" style={selMini}>
+                          <option value="" style={{ background: T.bg2 }}>— sem turma —</option>
+                          {turmas.map((t) => <option key={t.id} value={t.id} style={{ background: T.bg2 }}>{t.nome}</option>)}
+                        </select>
+                      )}
+                      {concursos.length > 0 && (
+                        <select value={a.concurso_id ?? ""} disabled={trabalhando} onChange={(e) => trocarConcurso(a, e.target.value)} title="Concurso do aluno" style={selMini}>
+                          <option value="" style={{ background: T.bg2 }}>— sem concurso —</option>
+                          {concursos.map((c) => <option key={c.id} value={c.id} style={{ background: T.bg2 }}>{c.nome}</option>)}
+                        </select>
+                      )}
+                    </div>
                   </div>
                   <div style={{ display: "flex", gap: 7, alignItems: "center", flexWrap: "wrap", justifyContent: "flex-end" }}>
                     <BotaoMini destaque onClick={() => aoVerAluno(a)}>Ver desempenho</BotaoMini>
                     {!temCred && <BotaoMini destaque disabled={trabalhando} onClick={() => credencialAluno(a)}>{trabalhando ? "…" : "Gerar credencial"}</BotaoMini>}
                     <MaisAcoes acoes={[
+                      { rotulo: "✎ Renomear aluno", aoClicar: () => renomear(a) },
                       { rotulo: "+ Adicionar responsável", aoClicar: () => credencialResp(a) },
                       ...(!temCons ? [{ rotulo: "Registrar consentimento", aoClicar: () => consentir(a) }] : []),
                       ...(temCred ? [{ rotulo: "Regerar credencial do aluno", aoClicar: () => credencialAluno(a) }] : []),
