@@ -5,7 +5,7 @@
 import React from "react";
 import { StatCard, StatusBadge } from "../../shared/ui/componentes.jsx";
 import { useTema } from "../../shared/branding/BrandingContext.jsx";
-import { fmtBR } from "../../shared/regras/regras.js";
+import { fmtBR, todayISO, daysBetween } from "../../shared/regras/regras.js";
 import { L, patente, fmtHoras, fmtHorasCurto } from "./jargao.js";
 
 export function FaixaAspirante({ nome, contexto, xp, streak }) {
@@ -118,19 +118,24 @@ export function MissaoAtual({ meta, trilha, m }) {
       )}
 
       {/* PRÓXIMA MISSÃO — compacta */}
-      {proxima ? (
-        <div style={{ display: "flex", alignItems: "center", gap: 12, background: T.card, border: `1px solid ${T.line}`, borderRadius: 12, padding: "11px 14px" }}>
-          <div style={{ width: 38, height: 38, borderRadius: 10, border: `1.5px solid ${T.line}`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 17, flexShrink: 0 }}>🔒</div>
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ fontSize: 10.5, color: T.sub, textTransform: "uppercase", letterSpacing: 0.5 }}>{L.proximaMissao}</div>
-            <div className="disp" style={{ fontSize: 14.5, fontWeight: 700 }}>{L.missao} {proxima.numero}</div>
+      {proxima ? (() => {
+        const diasDesbloqueio = Math.max(0, daysBetween(new Date(todayISO()), new Date(String(proxima.inicio))));
+        return (
+          <div style={{ display: "flex", alignItems: "center", gap: 12, background: T.card, border: `1px solid ${T.line}`, borderRadius: 12, padding: "11px 14px" }}>
+            <div style={{ width: 38, height: 38, borderRadius: 10, border: `1.5px solid ${T.line}`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 17, flexShrink: 0 }}>🔒</div>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontSize: 10.5, color: T.sub, textTransform: "uppercase", letterSpacing: 0.5 }}>{L.proximaMissao}</div>
+              <div className="disp" style={{ fontSize: 14.5, fontWeight: 700 }}>{L.missao} {proxima.numero}</div>
+            </div>
+            <div style={{ textAlign: "right", flexShrink: 0 }}>
+              <div style={{ fontSize: 10, color: T.sub }}>desbloqueia em</div>
+              <StatusBadge tom="alerta">
+                {diasDesbloqueio === 0 ? "hoje à meia-noite" : diasDesbloqueio === 1 ? "1 dia" : `${diasDesbloqueio} dias`}
+              </StatusBadge>
+            </div>
           </div>
-          <div style={{ textAlign: "right", flexShrink: 0 }}>
-            <div style={{ fontSize: 10, color: T.sub }}>desbloqueia em</div>
-            <StatusBadge tom="alerta">{fmtBR(String(proxima.inicio))}</StatusBadge>
-          </div>
-        </div>
-      ) : (
+        );
+      })() : (
         <div style={{ background: T.card, border: `1px solid ${T.line}`, borderRadius: 12, padding: "12px 14px", textAlign: "center", fontSize: 12.5, color: T.sub }}>
           🏁 Última missão do plano — reta final. Boa prova!
         </div>

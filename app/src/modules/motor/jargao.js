@@ -15,7 +15,7 @@ export const L = {
   adiar: "Adiar",
   cumprido: "Cumprido",
   precisao: "Precisão",
-  horas: "Horas de estudo",
+  horas: "Horas de voo",
   alvos: "Alvos atingidos",
   ritmo: "Ritmo diário",
   radar: "Radar de desempenho",
