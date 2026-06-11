@@ -58,7 +58,7 @@ export default function AreaAluno({ perfil }) {
         {erro && <Erro>{erro}</Erro>}
         {aluno === undefined && !erro && <Empty txt="Carregando…" />}
         {aluno === null && <Empty txt="Sua conta não está ligada a um aluno. Fale com a coordenação." />}
-        {aluno && <VisaoEstudo aluno={aluno} podeEditar />}
+        {aluno && <VisaoEstudo aluno={aluno} podeEditar contexto={concurso ? concurso.nome.split(" (")[0] : "Plano de estudos"} />}
       </main>
     </div>
   );

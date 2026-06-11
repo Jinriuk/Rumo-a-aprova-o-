@@ -1,26 +1,28 @@
-/* A visão de estudo de UM aluno: Meta / Registrar / Desempenho /
-   Simulados / Arquivo / Plano. É a mesma composição para o aluno
-   (edita), o responsável e a coordenação (leem) — quem decide o que
-   cada um PODE é o banco; aqui só se esconde o que não cabe ao papel. */
+/* A visão de estudo de UM aluno, com cara de missão (ref. designs):
+   Hoje / Registrar / Desempenho / Simulados / Histórico / Plano.
+   Mesma composição para aluno (edita) e para coordenação (lê) — o
+   banco decide o que cada um PODE; aqui só se esconde o que não cabe. */
 import React, { useEffect, useMemo, useState } from "react";
-import { Card, Empty, Tag, SubjDot, Estrelas, Erro } from "../../shared/ui/componentes.jsx";
+import { SectionCard, Empty, Tag, SubjDot, Estrelas, Erro, Tabs } from "../../shared/ui/componentes.jsx";
 import { Cronometro } from "../../shared/ui/Cronometro.jsx";
 import { useTema } from "../../shared/branding/BrandingContext.jsx";
 import { useTrilha } from "../../modules/conteudo/useTrilha.js";
-import { MetaHero } from "../../modules/motor/MetaHero.jsx";
+import { FaixaAspirante, MissaoAtual } from "../../modules/motor/MetaHero.jsx";
 import { MetaSemana } from "../../modules/motor/MetaSemana.jsx";
 import { Registrar } from "../../modules/motor/Registrar.jsx";
 import { Arquivo } from "../../modules/motor/Arquivo.jsx";
+import { calcularXP } from "../../modules/motor/jargao.js";
 import { Progresso, Simulados } from "../../modules/desempenho/Progresso.jsx";
 import { Acumulado } from "../../modules/desempenho/Acumulado.jsx";
+import { RadarDesempenho } from "../../modules/desempenho/RadarDesempenho.jsx";
 import { Resumo } from "../../modules/desempenho/Resumo.jsx";
 import { calcularMetricas } from "../../modules/desempenho/metricas.js";
-import { todayISO, fmtBR, daysBetween, semanaAtual } from "../../shared/regras/regras.js";
+import { semanaAtual, fmtBR } from "../../shared/regras/regras.js";
 import * as db from "../../shared/data/index.js";
 
-export function VisaoEstudo({ aluno, podeEditar, comResumo, abaInicial = "painel" }) {
+export function VisaoEstudo({ aluno, podeEditar, comResumo, contexto = "Plano de estudos" }) {
   const T = useTema();
-  const [tab, setTab] = useState(abaInicial);
+  const [tab, setTab] = useState("hoje");
   const [dados, setDados] = useState({ carregando: true, metas: [], registros: [], simulados: [], erro: null });
   const { trilha, carregando: carregandoTrilha, erro: erroTrilha } = useTrilha(aluno?.trilha_id);
   const [versao, setVersao] = useState(0);
@@ -53,54 +55,49 @@ export function VisaoEstudo({ aluno, podeEditar, comResumo, abaInicial = "painel
     });
   }, [dados, trilha, semanaAtiva]);
 
-  if (carregandoTrilha || dados.carregando) return <Empty txt="Carregando painel…" />;
+  if (carregandoTrilha || dados.carregando) return <Empty txt="Carregando…" />;
   if (erroTrilha || dados.erro) return <Erro>{erroTrilha || dados.erro}</Erro>;
   if (!trilha) return <Empty txt="Aluno sem trilha de estudo." />;
 
-  const ultimaSemana = semanasRegras[semanasRegras.length - 1];
-  const diasProva = Math.max(0, daysBetween(new Date(todayISO()), new Date(String(ultimaSemana.fim))));
-
   const itensMeta = (meta?.meta_atividades ?? []);
-  const doneCount = itensMeta.filter((x) => x.estado === "concluida").length;
-  const totalTasks = itensMeta.filter((x) => x.estado !== "ignorada").length;
+  const pendentes = itensMeta.filter((x) => x.estado === "pendente").length;
+  const xp = calcularXP({ metas: dados.metas, totalQuestoes: m?.totDone ?? 0, simulados: dados.simulados.length });
 
   const ABAS = [
-    ["painel", "Meta"], ["registrar", "Registrar"], ["desempenho", "Desempenho"],
-    ["simulados", "Simulados"], ["arquivo", "Arquivo"], ["plano", "Plano"],
-  ].filter(([k]) => podeEditar || k !== "registrar");
+    ["hoje", "Hoje"], ["registrar", "Registrar"], ["desempenho", "Desempenho"],
+    ["simulados", "Simulados"], ["historico", "Histórico"], ["plano", "Plano"],
+  ].filter(([k]) => podeEditar || k !== "registrar").map(
+    ([k, lb]) => (k === "hoje" && podeEditar && pendentes > 0 ? [k, lb, pendentes] : [k, lb]),
+  );
 
   return (
     <div>
-      {/* saudação + cronômetro: a cara de "começa agora" do jogo */}
+      {/* cronômetro: começa agora, e o tempo vai direto pro registro */}
       {podeEditar && (
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, flexWrap: "wrap", marginBottom: 12 }}>
-          <div>
-            <div className="disp" style={{ fontSize: 21, fontWeight: 800 }}>Oi, {aluno.nome.split(" ")[0]} <span style={{ fontSize: 16 }}>⚓</span></div>
-            <div style={{ fontSize: 12.5, color: T.sub, marginTop: 2 }}>Acompanhe seu progresso e veja o que falta para atingir sua meta.</div>
-          </div>
+        <div style={{ marginBottom: 12, display: "flex", justifyContent: "flex-end" }}>
           <Cronometro aoUsarMinutos={(min) => { setMinutosSugeridos(min); setTab("registrar"); }} />
         </div>
       )}
 
-      <div className="navwrap" style={{ display: "flex", gap: 2, overflowX: "auto", borderBottom: `1px solid ${T.line}`, marginBottom: 16 }}>
-        {ABAS.map(([k, lb]) => (
-          <button key={k} className="tab" onClick={() => setTab(k)}
-            style={{ border: "none", background: "transparent", color: tab === k ? T.gold : T.sub, fontWeight: 600, fontSize: 14, padding: "13px 14px", minHeight: 46, whiteSpace: "nowrap", borderBottom: tab === k ? `2px solid ${T.gold}` : "2px solid transparent" }}>
-            {lb}
-          </button>
-        ))}
-      </div>
+      <Tabs abas={ABAS} ativo={tab} aoTrocar={setTab} />
 
       <div className="fade" key={tab}>
-        {tab === "painel" && (
-          <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+        {tab === "hoje" && (
+          <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+            <FaixaAspirante nome={aluno.nome.split(" ")[0]} contexto={contexto} xp={xp} streak={m?.streak ?? 0} />
             {comResumo && m && (
               <Resumo m={m} semanaAtiva={semanaAtiva} totalSemanas={semanasRegras.length}
-                doneCount={doneCount} totalTasks={totalTasks} diasProva={diasProva} />
+                doneCount={itensMeta.filter((x) => x.estado === "concluida").length}
+                totalTasks={itensMeta.filter((x) => x.estado !== "ignorada").length} diasProva={null} />
             )}
-            <MetaHero meta={meta} trilha={trilha} m={m} />
+            <MissaoAtual meta={meta} trilha={trilha} m={m} />
             <MetaSemana meta={meta} trilha={trilha} podeEditar={podeEditar} aoMudar={recarregar} />
-            {m && <QuestoesPorMateria m={m} trilha={trilha} />}
+            {podeEditar && (
+              <button onClick={() => setTab("registrar")}
+                style={{ border: `1px dashed ${T.gold}66`, background: `${T.gold}0c`, color: T.gold, borderRadius: 12, fontWeight: 700, fontSize: 14, padding: "14px", minHeight: 50 }}>
+                ✎ Registrar estudo de hoje
+              </button>
+            )}
           </div>
         )}
         {tab === "registrar" && podeEditar && (
@@ -109,6 +106,7 @@ export function VisaoEstudo({ aluno, podeEditar, comResumo, abaInicial = "painel
         )}
         {tab === "desempenho" && (
           <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+            <RadarDesempenho m={m} trilha={trilha} aoRegistrar={podeEditar ? () => setTab("registrar") : null} />
             <Acumulado registros={dados.registros} trilha={trilha} />
             <Progresso registros={dados.registros} trilha={trilha} />
           </div>
@@ -116,7 +114,7 @@ export function VisaoEstudo({ aluno, podeEditar, comResumo, abaInicial = "painel
         {tab === "simulados" && (
           <Simulados aluno={aluno} simulados={dados.simulados} podeEditar={podeEditar} semanaAtiva={semanaAtiva} aoMudar={recarregar} />
         )}
-        {tab === "arquivo" && (
+        {tab === "historico" && (
           <Arquivo metas={dados.metas} trilha={trilha} registros={dados.registros} />
         )}
         {tab === "plano" && <Plano trilha={trilha} semanaAtiva={semanaAtiva} meta={meta} />}
@@ -125,39 +123,8 @@ export function VisaoEstudo({ aluno, podeEditar, comResumo, abaInicial = "painel
   );
 }
 
-function QuestoesPorMateria({ m, trilha }) {
-  const T = useTema();
-  const porMat = trilha.disciplinas.map((s) => ({
-    ...s, q: m.wlogs.filter((l) => l.disciplina_codigo === s.codigo).reduce((a, l) => a + (+l.questoes || 0), 0),
-  })).filter((x) => x.q > 0);
-
-  return (
-    <Card>
-      <div className="disp" style={{ fontSize: 15, fontWeight: 700, marginBottom: 12 }}>Questões por matéria — esta semana</div>
-      {porMat.length === 0 ? <Empty txt="Sem registros nesta semana ainda." /> : (
-        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-          {porMat.sort((a, b) => b.q - a.q).map((s) => {
-            const max = Math.max(...porMat.map((x) => x.q));
-            return (
-              <div key={s.codigo} style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                <div style={{ width: 92, fontSize: 12.5, color: T.sub, flexShrink: 0 }}>{s.nome}</div>
-                <div style={{ flex: 1, background: T.bg, borderRadius: 5, height: 22, overflow: "hidden" }}>
-                  <div style={{ width: `${(s.q / max) * 100}%`, height: "100%", background: s.cor, display: "flex", alignItems: "center", justifyContent: "flex-end", paddingRight: 8, borderRadius: 5 }}>
-                    <span className="num" style={{ fontSize: 12, fontWeight: 700, color: "#0A1622" }}>{s.q}</span>
-                  </div>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      )}
-    </Card>
-  );
-}
-
-/* O Plano: as semanas inteiras da trilha. Os textos vêm do conteúdo
-   global (a metodologia importada); o estado vem da meta do aluno
-   quando há (semana corrente). */
+/* O Plano: as semanas inteiras da trilha. Textos da metodologia
+   importada; estado vem da meta da semana corrente quando há. */
 function Plano({ trilha, semanaAtiva, meta }) {
   const T = useTema();
   const estadosPorAtividade = Object.fromEntries(
@@ -171,33 +138,28 @@ function Plano({ trilha, semanaAtiva, meta }) {
         const tarefas = trilha.atividadesPorSemana[w.numero] ?? [];
         const dc = tarefas.filter((tk) => estadosPorAtividade[tk.id] === "concluida").length;
         return (
-          <Card key={w.numero} style={{ borderColor: isNow ? T.gold : T.line, borderWidth: isNow ? 2 : 1 }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 8, flexWrap: "wrap" }}>
-              <div className="disp" style={{ fontSize: 16, fontWeight: 700, color: isNow ? T.gold : T.ink }}>
-                Semana {w.numero} {isNow && <span style={{ fontSize: 11, color: T.gold }}>· agora</span>}
-              </div>
-              <div style={{ fontSize: 12, color: T.sub }}>
-                {fmtBR(String(w.inicio))}–{fmtBR(String(w.fim))}{isNow ? ` · ${dc}/${tarefas.length}` : ""}
-              </div>
-            </div>
-            <div style={{ fontStyle: "italic", color: T.sub, fontSize: 13, margin: "3px 0 6px" }}>{w.foco}</div>
+          <SectionCard key={w.numero}
+            titulo={`Missão ${w.numero}${isNow ? " · agora" : ""}`}
+            sub={`${fmtBR(String(w.inicio))}–${fmtBR(String(w.fim))}${isNow ? ` · ${dc}/${tarefas.length}` : ""}`}
+            style={isNow ? { borderColor: T.gold, borderWidth: 1.5 } : undefined}>
+            <div style={{ fontStyle: "italic", color: T.sub, fontSize: 13, marginBottom: 8 }}>{w.foco}</div>
             {w.simulado && <div style={{ fontSize: 12, color: T.red, fontWeight: 600, marginBottom: 8 }}>⚑ {w.simulado}</div>}
             <div style={{ display: "flex", flexDirection: "column", gap: 1 }}>
               {tarefas.map((tk) => {
                 const estado = estadosPorAtividade[tk.id];
                 const ch = estado === "concluida";
                 return (
-                  <div key={tk.id} className="chk" style={{ display: "flex", alignItems: "flex-start", gap: 9, padding: "9px 4px", minHeight: 44, opacity: estado === "ignorada" ? 0.45 : 1 }}>
-                    <input type="checkbox" checked={ch} disabled style={{ marginTop: 2, accentColor: T.gold, width: 20, height: 20, flexShrink: 0 }} />
+                  <div key={tk.id} className="chk" style={{ display: "flex", alignItems: "flex-start", gap: 9, padding: "9px 4px", minHeight: 40, opacity: estado === "ignorada" ? 0.45 : 1 }}>
+                    <span style={{ marginTop: 3, width: 16, height: 16, borderRadius: "50%", border: `2px solid ${ch ? T.green : T.line}`, background: ch ? T.green : "transparent", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 9, color: "#0A1622", fontWeight: 800 }}>{ch ? "✓" : ""}</span>
                     <span style={{ flex: 1, display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
-                      <SubjDot disciplina={trilha.porCodigo[tk.disciplina_codigo]} /><Tag p={tk.prioridade} /><Estrelas p={tk.prioridade} />
+                      <SubjDot disciplina={trilha.porCodigo[tk.disciplina_codigo]} /><Tag p={tk.prioridade} />
                       <span style={{ fontSize: 13, color: ch ? T.sub : T.ink, textDecoration: ch ? "line-through" : "none", flexBasis: "100%" }}>{tk.texto}</span>
                     </span>
                   </div>
                 );
               })}
             </div>
-          </Card>
+          </SectionCard>
         );
       })}
     </div>

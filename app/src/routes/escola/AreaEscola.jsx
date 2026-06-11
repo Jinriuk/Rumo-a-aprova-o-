@@ -1,20 +1,21 @@
-/* Área da coordenação: alunos e turmas, credenciais, consentimento,
-   desempenho por aluno, conformidade e marca. */
-import React, { useEffect, useState } from "react";
+/* Área da coordenação — painel de gestão, não só cadastro (ref. spec):
+   Painel / Alunos / Ranking / Turmas / LGPD / Marca. */
+import React, { useEffect, useMemo, useState } from "react";
 import { Cabecalho } from "../../shared/ui/Cabecalho.jsx";
-import { Card, Empty, Erro } from "../../shared/ui/componentes.jsx";
+import { SectionCard, Empty, Erro, Tabs, StatCard, EmptyState } from "../../shared/ui/componentes.jsx";
 import { useTema } from "../../shared/branding/BrandingContext.jsx";
 import { NovaTurma, NovosAlunos, CredencialGerada } from "../../modules/pessoas/CadastroAlunos.jsx";
 import { ListaAlunos } from "../../modules/pessoas/ListaAlunos.jsx";
 import { Marca } from "../../modules/escola/Marca.jsx";
 import { PainelConformidade } from "../../modules/consentimento/PainelConformidade.jsx";
 import { ClassificacaoTurma } from "../../modules/desempenho/ClassificacaoTurma.jsx";
+import { PainelGestao, agregarEscola } from "../../modules/desempenho/PainelGestao.jsx";
 import { VisaoEstudo } from "../aluno/VisaoEstudo.jsx";
 import * as db from "../../shared/data/index.js";
 
 export default function AreaEscola({ perfil }) {
   const T = useTema();
-  const [tab, setTab] = useState("alunos");
+  const [tab, setTab] = useState("painel");
   const [dados, setDados] = useState({
     carregando: true, erro: null, turmas: [], alunos: [], consentimentos: [],
     logs: [], trilha: null, concursos: [], registrosEscola: [], metasEscola: [],
@@ -36,87 +37,138 @@ export default function AreaEscola({ perfil }) {
     return () => { vivo = false; };
   }, [versao]);
 
+  function irPara(t) { setTab(t); setAlunoAberto(null); }
+
   function verAluno(aluno) {
     setAlunoAberto(aluno);
-    // trilha de acesso: a coordenação abriu o desempenho do aluno
     db.registrarAcesso(perfil.escola.id, aluno.id, perfil.usuario.id, "coordenacao", "leitura-desempenho");
   }
 
   const alunosPorId = Object.fromEntries(dados.alunos.map((a) => [a.id, a]));
   const concursosPorId = Object.fromEntries(dados.concursos.map((c) => [c.id, c]));
+
   const ABAS = [
-    ["alunos", "Alunos"], ["classificacao", "Classificação"], ["turmas", "Turmas"],
-    ["conformidade", "LGPD"], ["marca", "Marca"],
+    ["painel", "Painel"], ["alunos", "Alunos"], ["ranking", "Ranking"],
+    ["turmas", "Turmas"], ["conformidade", "LGPD"], ["marca", "Marca"],
   ];
+
+  const concursoDoAluno = alunoAberto ? concursosPorId[alunoAberto.concurso_id] : null;
 
   return (
     <div>
-      <Cabecalho subtitulo="Área da coordenação" nomeUsuario={perfil.usuario.nome} />
-      <div className="navwrap" style={{ maxWidth: 1080, margin: "0 auto", padding: "0 8px", display: "flex", gap: 2, overflowX: "auto", borderBottom: `1px solid ${T.line}` }}>
-        {ABAS.map(([k, lb]) => (
-          <button key={k} className="tab" onClick={() => { setTab(k); setAlunoAberto(null); }}
-            style={{ border: "none", background: "transparent", color: tab === k && !alunoAberto ? T.gold : T.sub, fontWeight: 600, fontSize: 14, padding: "13px 14px", minHeight: 46, whiteSpace: "nowrap", borderBottom: tab === k && !alunoAberto ? `2px solid ${T.gold}` : "2px solid transparent" }}>
-            {lb}
-          </button>
-        ))}
-      </div>
+      <Cabecalho subtitulo="Painel de gestão" nomeUsuario={perfil.usuario.nome} rotuloPapel="Coordenação" />
+      <main style={{ maxWidth: 1080, margin: "0 auto", padding: "16px max(16px, env(safe-area-inset-right)) calc(64px + env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left))" }}>
+        {!alunoAberto && <Tabs abas={ABAS} ativo={tab} aoTrocar={irPara} />}
 
-      <main style={{ maxWidth: 1080, margin: "0 auto", padding: "18px max(16px, env(safe-area-inset-right)) calc(64px + env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left))" }} className="fade" key={tab + (alunoAberto?.id ?? "")}>
-        {dados.erro && <Erro>{dados.erro}</Erro>}
-        {dados.carregando && <Empty txt="Carregando…" />}
+        <div className="fade" key={tab + (alunoAberto?.id ?? "")}>
+          {dados.erro && <Erro>{dados.erro}</Erro>}
+          {dados.carregando && <Empty txt="Carregando…" />}
 
-        {!dados.carregando && alunoAberto && (
-          <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-              <button onClick={() => setAlunoAberto(null)} style={{ border: `1px solid ${T.line}`, background: T.card, color: T.sub, borderRadius: 8, padding: "8px 14px", fontSize: 13, fontWeight: 600 }}>← voltar</button>
-              <div className="disp" style={{ fontSize: 18, fontWeight: 700 }}>{alunoAberto.nome}</div>
+          {!dados.carregando && alunoAberto && (
+            <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+              <button onClick={() => setAlunoAberto(null)} style={{ alignSelf: "flex-start", border: `1px solid ${T.line}`, background: T.card, color: T.sub, borderRadius: 8, padding: "8px 14px", fontSize: 13, fontWeight: 600 }}>← voltar ao painel</button>
+              <VisaoEstudo aluno={alunoAberto} podeEditar={false} comResumo
+                contexto={concursoDoAluno ? concursoDoAluno.nome.split(" (")[0] : "Plano de estudos"} />
             </div>
-            <VisaoEstudo aluno={alunoAberto} podeEditar={false} comResumo />
-          </div>
-        )}
+          )}
 
-        {!dados.carregando && !alunoAberto && tab === "alunos" && (
-          <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-            <NovosAlunos turmas={dados.turmas} trilhaPadrao={dados.trilha} concursos={dados.concursos} aoMudar={recarregar} />
-            <ListaAlunos alunos={dados.alunos} consentimentos={dados.consentimentos} concursos={dados.concursos}
-              aoMudar={recarregar} aoGerarCredencial={setCredencial} aoVerAluno={verAluno} />
-          </div>
-        )}
+          {!dados.carregando && !alunoAberto && tab === "painel" && (
+            <PainelGestao alunos={dados.alunos} registros={dados.registrosEscola} metas={dados.metasEscola}
+              turmas={dados.turmas} concursosPorId={concursosPorId} aoIr={irPara} />
+          )}
 
-        {!dados.carregando && !alunoAberto && tab === "classificacao" && (
-          <ClassificacaoTurma alunos={dados.alunos} turmas={dados.turmas}
-            registros={dados.registrosEscola} metas={dados.metasEscola} concursosPorId={concursosPorId} />
-        )}
+          {!dados.carregando && !alunoAberto && tab === "alunos" && (
+            <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+              <NovosAlunos turmas={dados.turmas} trilhaPadrao={dados.trilha} concursos={dados.concursos} aoMudar={recarregar} />
+              <ListaAlunos alunos={dados.alunos} consentimentos={dados.consentimentos} concursos={dados.concursos}
+                aoMudar={recarregar} aoGerarCredencial={setCredencial} aoVerAluno={verAluno} />
+            </div>
+          )}
 
-        {!dados.carregando && !alunoAberto && tab === "turmas" && (
-          <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-            <NovaTurma aoMudar={recarregar} />
-            <Card>
-              <div className="disp" style={{ fontSize: 15, fontWeight: 700, marginBottom: 10 }}>Turmas</div>
-              {dados.turmas.length === 0 ? <Empty txt="Nenhuma turma ainda." /> : (
-                dados.turmas.map((t) => {
-                  const n = dados.alunos.filter((a) => (a.alunos_turmas ?? []).some((v) => v.turma_id === t.id)).length;
-                  return (
-                    <div key={t.id} style={{ padding: "10px 8px", borderBottom: `1px solid ${T.line}`, fontSize: 14 }}>
-                      <b>{t.nome}</b> <span style={{ color: T.sub, fontSize: 12.5 }}>· {n} aluno(s)</span>
-                    </div>
-                  );
-                })
-              )}
-            </Card>
-          </div>
-        )}
+          {!dados.carregando && !alunoAberto && tab === "ranking" && (
+            <ClassificacaoTurma alunos={dados.alunos} turmas={dados.turmas}
+              registros={dados.registrosEscola} metas={dados.metasEscola} concursosPorId={concursosPorId} />
+          )}
 
-        {!dados.carregando && !alunoAberto && tab === "conformidade" && (
-          <PainelConformidade consentimentos={dados.consentimentos} logs={dados.logs} alunosPorId={alunosPorId} />
-        )}
+          {!dados.carregando && !alunoAberto && tab === "turmas" && (
+            <Turmas turmas={dados.turmas} alunos={dados.alunos} registros={dados.registrosEscola}
+              metas={dados.metasEscola} aoMudar={recarregar} aoVerRanking={() => irPara("ranking")} />
+          )}
 
-        {!dados.carregando && !alunoAberto && tab === "marca" && (
-          <Marca escola={perfil.escola} aoMudar={recarregar} />
-        )}
+          {!dados.carregando && !alunoAberto && tab === "conformidade" && (
+            <PainelConformidade consentimentos={dados.consentimentos} logs={dados.logs} alunosPorId={alunosPorId} />
+          )}
+
+          {!dados.carregando && !alunoAberto && tab === "marca" && (
+            <Marca escola={perfil.escola} aoMudar={recarregar} />
+          )}
+        </div>
       </main>
 
       <CredencialGerada credencial={credencial} aoFechar={() => setCredencial(null)} />
+    </div>
+  );
+}
+
+/* Turmas com indicadores: alunos, acerto, questões e alunos em risco. */
+function Turmas({ turmas, alunos, registros, metas, aoMudar, aoVerRanking }) {
+  const T = useTema();
+  const ag = useMemo(() => agregarEscola({ alunos, registros, metas }), [alunos, registros, metas]);
+  const porAluno = Object.fromEntries(ag.map((x) => [x.aluno.id, x]));
+
+  function statsTurma(turmaId) {
+    const da = alunos.filter((a) => (a.alunos_turmas ?? []).some((v) => v.turma_id === turmaId));
+    const linhas = da.map((a) => porAluno[a.id]).filter(Boolean);
+    const comAcc = linhas.filter((x) => x.acc != null);
+    return {
+      n: da.length,
+      questoes: linhas.reduce((s, x) => s + x.q, 0),
+      acerto: comAcc.length ? Math.round(comAcc.reduce((s, x) => s + x.acc, 0) / comAcc.length) : null,
+      risco: linhas.filter((x) => x.semAtividade).length,
+    };
+  }
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+      <NovaTurma aoMudar={aoMudar} />
+      <SectionCard titulo="Turmas" sub="Visão rápida do desempenho de cada turma" semPadding>
+        {turmas.length === 0 ? (
+          <div style={{ padding: 8 }}><EmptyState icone="🎓" titulo="Nenhuma turma ainda" dica="Crie a primeira turma acima e cadastre alunos na aba Alunos." /></div>
+        ) : (
+          <div style={{ display: "flex", flexDirection: "column" }}>
+            {turmas.map((t, i) => {
+              const s = statsTurma(t.id);
+              return (
+                <div key={t.id} style={{ padding: "13px 15px", borderBottom: i === turmas.length - 1 ? "none" : `1px solid ${T.line}` }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+                    <div className="disp" style={{ fontSize: 15, fontWeight: 700 }}>{t.nome}</div>
+                    {s.risco > 0 && <span style={{ fontSize: 11, fontWeight: 700, color: T.red, background: `${T.red}14`, border: `1px solid ${T.red}44`, borderRadius: 6, padding: "2px 8px" }}>{s.risco} em risco</span>}
+                  </div>
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(90px,1fr))", gap: 8, marginTop: 10 }}>
+                    <Mini rotulo="Alunos" valor={s.n} />
+                    <Mini rotulo="Acerto" valor={s.acerto == null ? "—" : `${s.acerto}%`} cor={s.acerto == null ? null : s.acerto >= 70 ? T.green : T.gold} />
+                    <Mini rotulo="Questões" valor={s.questoes} />
+                    <Mini rotulo="Sem atividade" valor={s.risco} cor={s.risco ? T.red : T.green} />
+                  </div>
+                  <button onClick={aoVerRanking} style={{ marginTop: 10, border: `1px solid ${T.line}`, background: "transparent", color: T.gold, borderRadius: 8, fontSize: 12.5, fontWeight: 700, padding: "7px 14px", minHeight: 36 }}>
+                    Ver classificação ›
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </SectionCard>
+    </div>
+  );
+}
+
+function Mini({ rotulo, valor, cor }) {
+  const T = useTema();
+  return (
+    <div style={{ background: T.bg, border: `1px solid ${T.line}`, borderRadius: 9, padding: "8px 10px" }}>
+      <div style={{ fontSize: 10, color: T.sub, textTransform: "uppercase", letterSpacing: 0.4 }}>{rotulo}</div>
+      <div className="num disp" style={{ fontSize: 18, fontWeight: 800, color: cor || T.ink, marginTop: 2 }}>{valor}</div>
     </div>
   );
 }

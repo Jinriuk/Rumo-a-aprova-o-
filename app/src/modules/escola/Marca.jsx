@@ -1,9 +1,10 @@
-/* Configuração da marca (white-label leve): logo, e a cor de acento
-   dentro do limite. O design segue fixo — é isso que mantém a
-   manutenção possível com 5–6 escolas. */
+/* Configuração da marca (white-label leve) + PREVIEW ao vivo (ref.
+   spec): a escola vê, na hora, como ficam cabeçalho, botão e card
+   com a cor e o logo dela. O design segue fixo — só a marca muda. */
 import React, { useState } from "react";
-import { Card, Botao, Erro, useInputStyle } from "../../shared/ui/componentes.jsx";
+import { SectionCard, Botao, Erro, useInputStyle } from "../../shared/ui/componentes.jsx";
 import { useTema } from "../../shared/branding/BrandingContext.jsx";
+import { BASE } from "../../shared/ui/tema.js";
 import * as db from "../../shared/data/index.js";
 
 export function Marca({ escola, aoMudar }) {
@@ -15,10 +16,13 @@ export function Marca({ escola, aoMudar }) {
   const [ok, setOk] = useState(false);
   const [ocupado, setOcupado] = useState(false);
 
+  const corValida = /^#[0-9a-fA-F]{6}$/.test(cor);
+  const acento = corValida ? cor : BASE.gold;
+
   async function salvar() {
     setOcupado(true); setErro(null); setOk(false);
     try {
-      await db.atualizarMarca(escola.id, { logo_url: logo.trim() || null, cor_acento: cor });
+      await db.atualizarMarca(escola.id, { logo_url: logo.trim() || null, cor_acento: corValida ? cor : null });
       setOk(true);
       aoMudar?.();
     } catch (e) { setErro(e.message); }
@@ -26,27 +30,64 @@ export function Marca({ escola, aoMudar }) {
   }
 
   return (
-    <Card>
-      <div className="disp" style={{ fontSize: 15, fontWeight: 700, marginBottom: 4 }}>Marca da escola</div>
-      <div style={{ fontSize: 12, color: T.sub, marginBottom: 14, lineHeight: 1.5 }}>
-        O sistema leva o nome e a cara da escola: logo e cor de destaque. O layout e a tipografia são fixos.
-      </div>
-      <div style={{ display: "grid", gap: 12 }}>
-        <div>
-          <label style={lbl}>URL do logo (quadrado, opcional)</label>
-          <input value={logo} onChange={(e) => setLogo(e.target.value)} placeholder="https://…/logo.png" style={inputS} />
-        </div>
-        <div>
-          <label style={lbl}>Cor de destaque</label>
-          <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
-            <input type="color" value={cor} onChange={(e) => setCor(e.target.value)} style={{ width: 56, height: 46, border: `1px solid ${T.line}`, borderRadius: 8, background: T.bg, padding: 4 }} />
-            <code style={{ color: T.sub, fontSize: 13 }}>{cor}</code>
+    <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+      <SectionCard titulo="Marca da escola" sub="O sistema leva o nome e a cara da escola. Layout e tipografia são fixos.">
+        <div style={{ display: "grid", gap: 14 }}>
+          <div>
+            <label style={lbl}>URL do logo (quadrado, opcional)</label>
+            <input value={logo} onChange={(e) => setLogo(e.target.value)} placeholder="https://…/logo.png" style={inputS} />
+          </div>
+          <div>
+            <label style={lbl}>Cor de destaque</label>
+            <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+              <input type="color" value={corValida ? cor : "#CDA349"} onChange={(e) => setCor(e.target.value)} style={{ width: 54, height: 44, border: `1px solid ${T.line}`, borderRadius: 8, background: T.bg, padding: 4 }} />
+              <input value={cor} onChange={(e) => setCor(e.target.value)} placeholder="#CDA349"
+                style={{ ...inputS, width: 130, fontFamily: "monospace" }} />
+            </div>
           </div>
         </div>
+        <Botao onClick={salvar} disabled={ocupado} style={{ marginTop: 16, width: "100%" }}>{ocupado ? "Salvando…" : "Salvar marca"}</Botao>
+        {ok && <div style={{ color: BASE.green, fontSize: 13, marginTop: 10 }}>Marca atualizada. Recarregue a página para aplicar em todo o sistema.</div>}
+        <Erro>{erro}</Erro>
+      </SectionCard>
+
+      <SectionCard titulo="Como a escola verá" sub="Pré-visualização ao vivo da personalização.">
+        <BrandPreview nome={escola.nome} logo={logo.trim()} acento={acento} />
+      </SectionCard>
+    </div>
+  );
+}
+
+// Preview ESTÁTICO (não usa o tema da sessão — mostra a cor escolhida AGORA).
+function BrandPreview({ nome, logo, acento }) {
+  const C = BASE;
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+      {/* cabeçalho */}
+      <div style={{ background: C.bg2, border: `1px solid ${C.line}`, borderRadius: 10, padding: "10px 12px", display: "flex", alignItems: "center", gap: 10 }}>
+        {logo
+          ? <img src={logo} alt="" style={{ width: 32, height: 32, borderRadius: 8, objectFit: "cover" }} onError={(e) => { e.currentTarget.style.display = "none"; }} />
+          : <div className="disp" style={{ width: 32, height: 32, borderRadius: 8, background: `linear-gradient(135deg, ${acento}, #9c7d2e)`, display: "flex", alignItems: "center", justifyContent: "center", color: "#0A1622", fontWeight: 800 }}>⚓</div>}
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div className="disp" style={{ fontSize: 14, fontWeight: 700, color: C.ink, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{nome}</div>
+          <div style={{ fontSize: 10.5, color: C.sub }}>Painel de estudos</div>
+        </div>
+        <div style={{ textAlign: "center" }}>
+          <div className="num disp" style={{ fontSize: 16, fontWeight: 800, color: acento }}>124</div>
+          <div style={{ fontSize: 8.5, color: C.sub }}>dias p/ prova</div>
+        </div>
       </div>
-      <Botao onClick={salvar} disabled={ocupado} style={{ marginTop: 14 }}>{ocupado ? "Salvando…" : "Salvar marca"}</Botao>
-      {ok && <div style={{ color: T.green, fontSize: 13, marginTop: 10 }}>Marca atualizada. Recarregue a página para ver em tudo.</div>}
-      <Erro>{erro}</Erro>
-    </Card>
+      {/* card + botão */}
+      <div style={{ background: C.card, border: `1px solid ${C.line}`, borderRadius: 10, padding: 13 }}>
+        <div className="disp" style={{ fontSize: 13.5, fontWeight: 700, color: C.ink }}>Missão da semana</div>
+        <div style={{ height: 7, background: C.bg, borderRadius: 4, overflow: "hidden", margin: "9px 0" }}>
+          <div style={{ width: "62%", height: "100%", background: `linear-gradient(90deg, ${acento}, ${C.green})` }} />
+        </div>
+        <div style={{ display: "flex", gap: 8 }}>
+          <span style={{ background: acento, color: "#0A1622", borderRadius: 8, padding: "8px 16px", fontWeight: 800, fontSize: 12.5 }}>Concluir</span>
+          <span style={{ border: `1px solid ${C.line}`, color: C.sub, borderRadius: 8, padding: "8px 14px", fontWeight: 600, fontSize: 12.5 }}>Adiar</span>
+        </div>
+      </div>
+    </div>
   );
 }

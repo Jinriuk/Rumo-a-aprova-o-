@@ -1,10 +1,12 @@
-/* A meta da semana: o checklist de atividades da trilha com os três
-   estados do motor (pendente → concluída; ignorar fica disponível
-   sem drama). Quem GERA a meta é o servidor; aqui o aluno só marca. */
+/* "Objetivos da semana" — a lista de atividades da missão, redesenhada
+   (ref. designs): título em destaque; disciplina, prioridade e XP como
+   info secundária; ação principal CONCLUIR e secundária ADIAR. Menos
+   poluição: um único selo de prioridade, sem estrelas concorrendo.
+   Quem GERA a meta é o servidor; aqui o aluno só marca. */
 import React, { useState } from "react";
-import { Card, Tag, SubjDot, Empty, Erro, Estrelas } from "../../shared/ui/componentes.jsx";
+import { SectionCard, EmptyState, Erro, StatusBadge } from "../../shared/ui/componentes.jsx";
 import { useTema } from "../../shared/branding/BrandingContext.jsx";
-import { fmtBR } from "../../shared/regras/regras.js";
+import { L, PRIORIDADE, xpPorPrioridade } from "./jargao.js";
 import * as db from "../../shared/data/index.js";
 
 export function MetaSemana({ meta, trilha, podeEditar, aoMudar }) {
@@ -12,31 +14,28 @@ export function MetaSemana({ meta, trilha, podeEditar, aoMudar }) {
   const [erro, setErro] = useState(null);
   const [ocupado, setOcupado] = useState(null);
 
-  if (!meta) return <Card><Empty txt="A meta da semana ainda não foi gerada. Ela nasce no servidor — fale com a coordenação." /></Card>;
+  if (!meta) {
+    return (
+      <SectionCard titulo={L.objetivos}>
+        <EmptyState icone="⚓" titulo="Nenhum objetivo ainda" dica="A missão da semana é gerada no servidor. Ela aparece aqui automaticamente." />
+      </SectionCard>
+    );
+  }
 
-  const semana = trilha.semanas.find((s) => s.numero === meta.semana_numero);
   const itens = (meta.meta_atividades ?? [])
     .map((ma) => ({ ...ma, atividade: trilha.atividadesPorId[ma.atividade_modelo_id] }))
     .filter((x) => x.atividade)
-    .sort((a, b) => a.atividade.ordem - b.atividade.ordem);
+    .sort((a, b) => {
+      // pendentes primeiro, cumpridos no fim, adiados antes dos cumpridos
+      const ordem = { pendente: 0, ignorada: 1, concluida: 2 };
+      return (ordem[a.estado] - ordem[b.estado]) || (a.atividade.ordem - b.atividade.ordem);
+    });
 
   const feitas = itens.filter((x) => x.estado === "concluida").length;
   const consideradas = itens.filter((x) => x.estado !== "ignorada").length;
 
-  async function alternar(item) {
+  async function mudar(item, novo) {
     if (!podeEditar || ocupado) return;
-    const novo = item.estado === "concluida" ? "pendente" : "concluida";
-    setOcupado(item.id); setErro(null);
-    try {
-      await db.definirEstadoAtividade(item.id, novo);
-      aoMudar?.();
-    } catch (e) { setErro(e.message); }
-    setOcupado(null);
-  }
-
-  async function ignorar(item) {
-    if (!podeEditar || ocupado) return;
-    const novo = item.estado === "ignorada" ? "pendente" : "ignorada";
     setOcupado(item.id); setErro(null);
     try {
       await db.definirEstadoAtividade(item.id, novo);
@@ -46,50 +45,65 @@ export function MetaSemana({ meta, trilha, podeEditar, aoMudar }) {
   }
 
   return (
-    <Card>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 4, flexWrap: "wrap", gap: 6 }}>
-        <div className="disp" style={{ fontSize: 17, fontWeight: 700 }}>
-          Semana {meta.semana_numero} · {fmtBR(String(meta.inicio))}–{fmtBR(String(meta.fim))}
+    <SectionCard titulo={L.objetivos} sub={`${feitas} de ${consideradas} concluídos`} semPadding>
+      <div style={{ display: "flex", flexDirection: "column" }}>
+        {itens.map((item, i) => (
+          <ObjetivoItem key={item.id} item={item} trilha={trilha} podeEditar={podeEditar}
+            ocupado={ocupado === item.id} ultimo={i === itens.length - 1}
+            aoConcluir={() => mudar(item, item.estado === "concluida" ? "pendente" : "concluida")}
+            aoAdiar={() => mudar(item, item.estado === "ignorada" ? "pendente" : "ignorada")} />
+        ))}
+      </div>
+      {erro && <div style={{ padding: "0 14px 12px" }}><Erro>{erro}</Erro></div>}
+    </SectionCard>
+  );
+}
+
+function ObjetivoItem({ item, trilha, podeEditar, ocupado, ultimo, aoConcluir, aoAdiar }) {
+  const T = useTema();
+  const at = item.atividade;
+  const disc = trilha.porCodigo[at.disciplina_codigo];
+  const concluida = item.estado === "concluida";
+  const adiada = item.estado === "ignorada";
+  const pri = PRIORIDADE[at.prioridade] ?? PRIORIDADE.X;
+  const xp = xpPorPrioridade[at.prioridade] ?? 40;
+
+  return (
+    <div style={{ padding: "13px 14px", borderBottom: ultimo ? "none" : `1px solid ${T.line}`, opacity: adiada ? 0.5 : 1, background: concluida ? `${T.green}0c` : "transparent" }}>
+      <div style={{ display: "flex", gap: 11, alignItems: "flex-start" }}>
+        <div style={{ flexShrink: 0, marginTop: 1, width: 22, height: 22, borderRadius: "50%", border: `2px solid ${concluida ? T.green : adiada ? T.line : T.gold}`, background: concluida ? T.green : "transparent", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, color: "#0A1622", fontWeight: 800 }}>
+          {concluida ? "✓" : ""}
         </div>
-        <div style={{ fontSize: 12, color: T.sub }}>{feitas}/{consideradas} atividades</div>
-      </div>
-      {semana && <div style={{ fontStyle: "italic", color: T.gold, fontSize: 13.5, marginBottom: 4 }}>{semana.foco}</div>}
-      {semana?.simulado && <div style={{ fontSize: 12.5, color: T.red, fontWeight: 600, marginBottom: 8 }}>⚑ {semana.simulado} esta semana</div>}
-      <div style={{ height: 6, background: T.bg, borderRadius: 4, overflow: "hidden", margin: "8px 0 14px" }}>
-        <div style={{ width: `${consideradas ? (feitas / consideradas) * 100 : 0}%`, height: "100%", background: `linear-gradient(90deg,${T.gold},${T.green})`, transition: "width .3s" }} />
-      </div>
-      <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
-        {itens.map((item) => {
-          const at = item.atividade;
-          const concluida = item.estado === "concluida";
-          const ignorada = item.estado === "ignorada";
-          return (
-            <div key={item.id} className="row chk" style={{ display: "flex", alignItems: "flex-start", gap: 10, padding: "10px 8px", borderRadius: 8, minHeight: 44, opacity: ignorada ? 0.45 : 1 }}>
-              <input type="checkbox" checked={concluida} disabled={!podeEditar || ignorada || ocupado === item.id}
-                onChange={() => alternar(item)}
-                style={{ marginTop: 2, accentColor: T.gold, width: 20, height: 20, flexShrink: 0, cursor: podeEditar ? "pointer" : "default" }} />
-              <span style={{ flex: 1 }}>
-                <span style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
-                  <SubjDot disciplina={trilha.porCodigo[at.disciplina_codigo]} />
-                  <Tag p={at.prioridade} />
-                  <Estrelas p={at.prioridade} />
-                  {ignorada && <span style={{ fontSize: 10, color: T.sub, border: `1px solid ${T.line}`, borderRadius: 5, padding: "1px 6px" }}>IGNORADA</span>}
-                </span>
-                <span style={{ display: "block", fontSize: 13.5, color: concluida || ignorada ? T.sub : T.ink, textDecoration: concluida ? "line-through" : "none", marginTop: 2 }}>
-                  {at.texto}
-                </span>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ fontSize: 14, fontWeight: 700, color: concluida ? T.sub : T.ink, textDecoration: concluida ? "line-through" : "none", lineHeight: 1.3 }}>
+            {at.texto}
+          </div>
+          <div style={{ display: "flex", gap: 7, alignItems: "center", flexWrap: "wrap", marginTop: 6 }}>
+            {disc && (
+              <span style={{ display: "inline-flex", alignItems: "center", gap: 5, fontSize: 11.5, color: T.sub }}>
+                <span style={{ width: 8, height: 8, borderRadius: 3, background: disc.cor }} />{disc.nome}
               </span>
-              {podeEditar && (
-                <button onClick={() => ignorar(item)} title={ignorada ? "Voltar para pendente" : "Ignorar esta atividade"}
-                  style={{ background: "transparent", border: `1px solid ${T.line}`, color: T.sub, borderRadius: 6, fontSize: 11, padding: "4px 8px", flexShrink: 0 }}>
-                  {ignorada ? "retomar" : "ignorar"}
+            )}
+            {concluida ? <StatusBadge tom="ok">Cumprido</StatusBadge> : <StatusBadge tom={pri.tom}>{pri.texto}</StatusBadge>}
+            <span style={{ fontSize: 11, fontWeight: 800, color: concluida ? T.green : T.gold }}>+{xp} XP</span>
+          </div>
+
+          {podeEditar && (
+            <div style={{ display: "flex", gap: 8, marginTop: 10, flexWrap: "wrap" }}>
+              <button onClick={aoConcluir} disabled={ocupado}
+                style={{ border: "none", background: concluida ? "transparent" : T.gold, color: concluida ? T.sub : "#0A1622", borderRadius: 8, fontWeight: 800, fontSize: 13, padding: concluida ? "8px 0" : "9px 18px", minHeight: 38 }}>
+                {concluida ? "↺ Reabrir" : `✓ ${L.concluir}`}
+              </button>
+              {!concluida && (
+                <button onClick={aoAdiar} disabled={ocupado}
+                  style={{ border: `1px solid ${T.line}`, background: "transparent", color: T.sub, borderRadius: 8, fontWeight: 600, fontSize: 13, padding: "9px 16px", minHeight: 38 }}>
+                  {adiada ? "Retomar" : L.adiar}
                 </button>
               )}
             </div>
-          );
-        })}
+          )}
+        </div>
       </div>
-      <Erro>{erro}</Erro>
-    </Card>
+    </div>
   );
 }

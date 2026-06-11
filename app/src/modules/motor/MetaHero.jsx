@@ -1,134 +1,140 @@
-/* O "hero" da meta — a cara de jogo (inspiração: guruja/Rumo ao
-   fisco, adaptada à identidade navy/dourado). Barra de progresso
-   com o marcador navegando, contadores feitas/pendentes/ignoradas
-   e o cartão da PRÓXIMA meta, bloqueada até a virada (que roda no
-   servidor — aqui ela só fica visível e desejável). */
+/* "Hoje" — o coração gamificado da área do aluno (ref. designs):
+   faixa do aspirante (patente + XP + ofensiva), Missão atual grande,
+   Radar de desempenho e Próxima Missão compacta/bloqueada.
+   Tudo derivado de dado REAL; o jargão é só apresentação. */
 import React from "react";
-import { Card, MiniStat } from "../../shared/ui/componentes.jsx";
+import { StatCard, StatusBadge } from "../../shared/ui/componentes.jsx";
 import { useTema } from "../../shared/branding/BrandingContext.jsx";
 import { fmtBR } from "../../shared/regras/regras.js";
+import { L, patente, fmtHoras, fmtHorasCurto } from "./jargao.js";
 
-function fmtHoras(min) {
-  const h = Math.floor(min / 60);
-  const m = Math.round(min % 60);
-  return `${String(h).padStart(2, "0")}h${String(m).padStart(2, "0")}m`;
-}
-
-export function MetaHero({ meta, trilha, m }) {
+export function FaixaAspirante({ nome, contexto, xp, streak }) {
   const T = useTema();
-  if (!meta) return null;
-
-  const semana = trilha.semanas.find((s) => s.numero === meta.semana_numero);
-  const proxima = trilha.semanas.find((s) => s.numero === meta.semana_numero + 1);
-
-  const itens = meta.meta_atividades ?? [];
-  const feitas = itens.filter((x) => x.estado === "concluida").length;
-  const ignoradas = itens.filter((x) => x.estado === "ignorada").length;
-  const pendentes = itens.length - feitas - ignoradas;
-  const consideradas = Math.max(1, itens.length - ignoradas);
-  const pct = Math.min(100, Math.round((feitas / consideradas) * 100));
-
-  const disciplinasDaSemana = new Set(
-    (trilha.atividadesPorSemana[meta.semana_numero] ?? []).map((a) => a.disciplina_codigo),
-  ).size;
-
+  const p = patente(xp);
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-      <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: 12 }}>
-        <style>{`@media (min-width: 760px) { .meta-hero-grid { display:grid; grid-template-columns: 1fr 230px; gap:12px; } }`}</style>
-        <div className="meta-hero-grid" style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-          {/* META ATUAL */}
-          <Card style={{ padding: 0, overflow: "hidden" }}>
-            <div style={{ padding: "10px 16px", borderBottom: `1px solid ${T.line}`, display: "flex", alignItems: "center", gap: 8 }}>
-              <span style={{ color: T.gold }}>⚑</span>
-              <span className="disp" style={{ fontSize: 14, fontWeight: 700 }}>Meta atual</span>
-              {semana?.simulado && (
-                <span style={{ marginLeft: "auto", fontSize: 11.5, color: T.red, fontWeight: 700 }}>⚑ {semana.simulado}</span>
-              )}
-            </div>
-            <div style={{ padding: 16 }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", marginBottom: 6 }}>
-                <span className="disp" style={{ border: `1px solid ${T.gold}`, color: T.gold, borderRadius: 7, padding: "2px 10px", fontWeight: 700, fontSize: 14 }}>
-                  Semana {meta.semana_numero}
-                </span>
-                <span style={{ fontSize: 12.5, color: T.sub, fontStyle: "italic" }}>{semana?.foco}</span>
-              </div>
-
-              {/* contadores e barra com o marcador navegando */}
-              <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13, margin: "10px 0 6px" }}>
-                <span style={{ color: T.green, fontWeight: 700 }}>✓ {feitas}</span>
-                <span style={{ color: T.sub, fontWeight: 700 }}>
-                  {pendentes} <span style={{ fontWeight: 400 }}>pendentes</span>
-                  {ignoradas > 0 && <span style={{ fontWeight: 400 }}> · {ignoradas} ignoradas</span>}
-                </span>
-              </div>
-              <div style={{ position: "relative", height: 26, marginBottom: 8 }}>
-                <div style={{ position: "absolute", top: 8, left: 0, right: 0, height: 10, background: T.bg, borderRadius: 6, overflow: "hidden" }}>
-                  <div style={{ width: `${pct}%`, height: "100%", background: `linear-gradient(90deg, ${T.gold}, ${T.green})`, transition: "width .4s" }} />
-                </div>
-                <div title={`${pct}% da meta`} style={{
-                  position: "absolute", top: 0, left: `calc(${pct}% - 13px)`, width: 26, height: 26,
-                  borderRadius: "50%", background: T.bg2, border: `2px solid ${T.gold}`,
-                  display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13,
-                  transition: "left .4s", boxShadow: "0 0 8px #0008",
-                }}>⚓</div>
-              </div>
-
-              <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, color: T.sub, flexWrap: "wrap", gap: 6 }}>
-                <span><b style={{ color: T.ink }}>{disciplinasDaSemana}</b> disciplinas · <b style={{ color: T.ink }}>{itens.length}</b> atividades</span>
-                <span>Iniciada: <b style={{ color: T.ink }}>{fmtBR(String(meta.inicio))}</b> · termina {fmtBR(String(meta.fim))}</span>
-              </div>
-            </div>
-          </Card>
-
-          {/* PRÓXIMA META, bloqueada até a virada no servidor */}
-          <Card style={{ border: `1.5px solid ${T.gold}`, textAlign: "center", display: "flex", flexDirection: "column", justifyContent: "center", gap: 8 }}>
-            <div className="disp" style={{ fontSize: 13.5, fontWeight: 700 }}>Próxima Meta</div>
-            {proxima ? (
-              <>
-                <span className="disp" style={{ alignSelf: "center", border: `1px solid ${T.line}`, color: T.sub, borderRadius: 7, padding: "2px 10px", fontWeight: 700, fontSize: 13 }}>
-                  Semana {proxima.numero}
-                </span>
-                <div style={{ width: 46, height: 46, borderRadius: "50%", border: `2px solid ${T.gold}`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20, alignSelf: "center" }}>🔒</div>
-                <div style={{ fontSize: 12, color: T.sub }}>
-                  Liberada em: <b style={{ color: T.gold }}>{fmtBR(String(proxima.inicio))}</b>
-                </div>
-                <div style={{ fontSize: 11, color: T.sub, lineHeight: 1.4 }}>
-                  A virada acontece sozinha à meia-noite. Finalize ou ignore as atividades da meta atual.
-                </div>
-              </>
-            ) : (
-              <>
-                <div style={{ fontSize: 22 }}>🏁</div>
-                <div style={{ fontSize: 12, color: T.sub, lineHeight: 1.4 }}>
-                  Última semana do plano — reta final. Boa prova!
-                </div>
-              </>
-            )}
-          </Card>
+    <div style={{ background: `linear-gradient(135deg, ${T.cardHi}, ${T.card})`, border: `1px solid ${T.line}`, borderRadius: 14, padding: "12px 14px" }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 11 }}>
+        <div style={{ position: "relative", flexShrink: 0 }}>
+          <div className="disp" style={{ width: 40, height: 40, borderRadius: 10, background: `linear-gradient(135deg, ${T.gold}, #9c7d2e)`, display: "flex", alignItems: "center", justifyContent: "center", color: "#0A1622", fontWeight: 800, fontSize: 18 }}>⚓</div>
+          <span className="num" style={{ position: "absolute", right: -5, bottom: -5, background: T.bg2, border: `1.5px solid ${T.gold}`, color: T.gold, borderRadius: "50%", width: 18, height: 18, fontSize: 10, fontWeight: 800, display: "flex", alignItems: "center", justifyContent: "center" }}>{p.nivel}</span>
+        </div>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div className="disp" style={{ fontSize: 16, fontWeight: 800, lineHeight: 1.1, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+            {p.nome} {nome}
+          </div>
+          <div style={{ fontSize: 11, color: T.sub, marginTop: 1, textTransform: "uppercase", letterSpacing: 0.4 }}>{contexto}</div>
+        </div>
+        <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 4, flexShrink: 0 }}>
+          {streak > 0 && (
+            <span style={{ fontSize: 11, fontWeight: 700, color: T.gold, background: `${T.gold}14`, border: `1px solid ${T.gold}44`, borderRadius: 7, padding: "2px 7px", whiteSpace: "nowrap" }}>🔥 {streak} {streak === 1 ? "dia" : "dias"}</span>
+          )}
+          <span className="num" style={{ fontSize: 11.5, fontWeight: 800, color: T.gold }}>{xp.toLocaleString("pt-BR")} XP</span>
         </div>
       </div>
-
-      {/* cartões de stats da semana, no estilo do guruja, na nossa paleta */}
-      {m && (
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(150px,1fr))", gap: 10 }}>
-          <CartaoStat cor="#3D6FA8" rotulo="Seu desempenho" valor={`${m.acerto}%`} icone="✪" sub="acerto geral" />
-          <CartaoStat cor={T.green} rotulo="Horas estudadas" valor={fmtHoras(m.minutosTotais ?? 0)} icone="◷" sub="no período todo" />
-          <CartaoStat cor="#C56B3F" rotulo="Questões resolvidas" valor={m.totDone} icone="✔" sub={`${m.qSem} nesta semana`} />
-          <CartaoStat cor={T.gold} rotulo="Média diária" valor={fmtHoras(m.mediaMinutosDia ?? 0)} icone="⧗" sub={`sequência: ${m.streak} 🔥`} />
+      {p.proxXp != null && (
+        <div style={{ marginTop: 9 }}>
+          <div style={{ height: 5, background: T.bg, borderRadius: 3, overflow: "hidden" }}>
+            <div style={{ width: `${p.pctProx}%`, height: "100%", background: `linear-gradient(90deg, ${T.gold}, ${T.green})` }} />
+          </div>
+          <div style={{ fontSize: 10, color: T.sub, marginTop: 3 }}>faltam {(p.proxXp - xp).toLocaleString("pt-BR")} XP para a próxima patente</div>
         </div>
       )}
     </div>
   );
 }
 
-function CartaoStat({ cor, rotulo, valor, sub, icone }) {
+export function MissaoAtual({ meta, trilha, m }) {
+  const T = useTema();
+  if (!meta) {
+    return (
+      <div style={{ background: T.card, border: `1px solid ${T.line}`, borderRadius: 14, padding: 18, textAlign: "center" }}>
+        <div className="disp" style={{ fontSize: 15, fontWeight: 700 }}>Missão sendo preparada</div>
+        <div style={{ fontSize: 12.5, color: T.sub, marginTop: 6, lineHeight: 1.5 }}>
+          A missão da semana nasce no servidor, na virada. Se demorar, fale com a coordenação.
+        </div>
+      </div>
+    );
+  }
+
+  const semana = trilha.semanas.find((s) => s.numero === meta.semana_numero);
+  const proxima = trilha.semanas.find((s) => s.numero === meta.semana_numero + 1);
+  const itens = meta.meta_atividades ?? [];
+  const feitas = itens.filter((x) => x.estado === "concluida").length;
+  const ignoradas = itens.filter((x) => x.estado === "ignorada").length;
+  const consideradas = Math.max(1, itens.length - ignoradas);
+  const pendentes = consideradas - feitas;
+  const pct = Math.min(100, Math.round((feitas / consideradas) * 100));
+  const disciplinas = new Set((trilha.atividadesPorSemana[meta.semana_numero] ?? []).map((a) => a.disciplina_codigo)).size;
+
   return (
-    <div style={{ background: `linear-gradient(135deg, ${cor}, ${cor}99)`, borderRadius: 12, padding: "12px 14px", position: "relative", overflow: "hidden", minHeight: 86 }}>
-      <div style={{ fontSize: 11.5, color: "#0A1622", fontWeight: 800, textTransform: "uppercase", letterSpacing: 0.3, opacity: 0.85 }}>{rotulo}</div>
-      <div className="num disp" style={{ fontSize: 26, fontWeight: 800, color: "#fff", lineHeight: 1.15, marginTop: 4, textShadow: "0 1px 2px #0004" }}>{valor}</div>
-      {sub && <div style={{ fontSize: 10.5, color: "#0A1622", fontWeight: 600, marginTop: 2, opacity: 0.8 }}>{sub}</div>}
-      <div style={{ position: "absolute", right: 10, bottom: 8, fontSize: 22, color: "#ffffff55" }}>{icone}</div>
+    <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+      {/* MISSÃO ATUAL */}
+      <div style={{ background: `linear-gradient(160deg, ${T.cardHi}, ${T.card})`, border: `1.5px solid ${T.gold}66`, borderRadius: 14, padding: 16 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 9, flexWrap: "wrap", marginBottom: 8 }}>
+          <span className="disp" style={{ background: T.gold, color: "#0A1622", borderRadius: 8, padding: "3px 11px", fontWeight: 800, fontSize: 14 }}>
+            {L.missao.toUpperCase()} {meta.semana_numero}
+          </span>
+          <span style={{ fontSize: 11, color: T.gold, fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.4 }}>⊚ alvo atual</span>
+          <span style={{ marginLeft: "auto", textAlign: "right" }}>
+            <b className="num disp" style={{ fontSize: 18, color: T.ink }}>{feitas}/{consideradas}</b>
+            <div style={{ fontSize: 9.5, color: T.sub, textTransform: "uppercase", letterSpacing: 0.4 }}>alvos abatidos</div>
+          </span>
+        </div>
+
+        {semana && <div className="disp" style={{ fontSize: 17, fontWeight: 700, lineHeight: 1.25 }}>{semana.foco}</div>}
+        {semana?.simulado && <div style={{ fontSize: 12, color: T.red, fontWeight: 700, marginTop: 4 }}>⚑ {semana.simulado} nesta missão</div>}
+
+        {/* barra com o marcador navegando */}
+        <div style={{ position: "relative", height: 24, margin: "14px 0 8px" }}>
+          <div style={{ position: "absolute", top: 7, left: 0, right: 0, height: 10, background: T.bg, borderRadius: 6, overflow: "hidden" }}>
+            <div style={{ width: `${pct}%`, height: "100%", background: `linear-gradient(90deg, ${T.gold}, ${T.green})`, transition: "width .4s" }} />
+          </div>
+          <div style={{ position: "absolute", top: 0, left: `calc(${pct}% - 12px)`, width: 24, height: 24, borderRadius: "50%", background: T.bg2, border: `2px solid ${T.gold}`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, transition: "left .4s", boxShadow: "0 0 8px #0008" }}>⚓</div>
+        </div>
+
+        {/* frase de missão objetiva */}
+        <div style={{ fontSize: 13, color: T.ink, fontWeight: 600, marginTop: 6, lineHeight: 1.4 }}>
+          {pendentes > 0
+            ? <>🎯 Sua missão: concluir <b style={{ color: T.gold }}>{pendentes} {pendentes === 1 ? "objetivo" : "objetivos"}</b> até {fmtBR(String(meta.fim))}.</>
+            : <span style={{ color: T.green }}>✓ Missão cumprida! Todos os objetivos desta semana foram concluídos.</span>}
+        </div>
+        <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, color: T.sub, marginTop: 8, flexWrap: "wrap", gap: 6 }}>
+          <span>{disciplinas} disciplinas · {itens.length} objetivos{ignoradas > 0 ? ` · ${ignoradas} adiados` : ""}</span>
+          <span>{fmtBR(String(meta.inicio))} – {fmtBR(String(meta.fim))}</span>
+        </div>
+      </div>
+
+      {/* RADAR DE DESEMPENHO */}
+      {m && (
+        <div>
+          <div style={{ fontSize: 11, color: T.sub, fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.6, margin: "2px 2px 8px" }}>◎ {L.radar}</div>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(150px,1fr))", gap: 10 }}>
+            <StatCard rotulo={L.precisao} valor={`${m.acerto}%`} sub="acerto geral" icone="◎" tom={m.acerto >= 70 ? "ok" : m.acerto > 0 ? "alerta" : "neutro"} />
+            <StatCard rotulo={L.horas} valor={fmtHoras(m.minutosTotais ?? 0)} sub="tempo registrado" icone="◷" />
+            <StatCard rotulo={L.alvos} valor={m.totDone} sub={`${m.qSem} nesta semana`} icone="✦" />
+            <StatCard rotulo={L.ritmo} valor={fmtHorasCurto(m.mediaMinutosDia ?? 0)} sub={`ofensiva: ${m.streak} 🔥`} icone="⧗" />
+          </div>
+        </div>
+      )}
+
+      {/* PRÓXIMA MISSÃO — compacta */}
+      {proxima ? (
+        <div style={{ display: "flex", alignItems: "center", gap: 12, background: T.card, border: `1px solid ${T.line}`, borderRadius: 12, padding: "11px 14px" }}>
+          <div style={{ width: 38, height: 38, borderRadius: 10, border: `1.5px solid ${T.line}`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 17, flexShrink: 0 }}>🔒</div>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ fontSize: 10.5, color: T.sub, textTransform: "uppercase", letterSpacing: 0.5 }}>{L.proximaMissao}</div>
+            <div className="disp" style={{ fontSize: 14.5, fontWeight: 700 }}>{L.missao} {proxima.numero}</div>
+          </div>
+          <div style={{ textAlign: "right", flexShrink: 0 }}>
+            <div style={{ fontSize: 10, color: T.sub }}>desbloqueia em</div>
+            <StatusBadge tom="alerta">{fmtBR(String(proxima.inicio))}</StatusBadge>
+          </div>
+        </div>
+      ) : (
+        <div style={{ background: T.card, border: `1px solid ${T.line}`, borderRadius: 12, padding: "12px 14px", textAlign: "center", fontSize: 12.5, color: T.sub }}>
+          🏁 Última missão do plano — reta final. Boa prova!
+        </div>
+      )}
     </div>
   );
 }

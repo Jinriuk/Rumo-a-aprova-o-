@@ -27,6 +27,7 @@ export function calcularMetricas({ registros, simulados, semanas, semanaAtiva, d
   }
 
   const diasSemana = new Set(wlogs.map((l) => l.data)).size;
+  const minutosSemana = wlogs.reduce((a, l) => a + (+l.minutos || 0), 0);
   const metaPct = Math.round((qSem / metaQuestoes) * 100);
 
   const weak = disciplinas.map((x) => {
@@ -89,6 +90,25 @@ export function calcularMetricas({ registros, simulados, semanas, semanaAtiva, d
   return {
     qHoje, qSem, totDone, acerto, streak, wlogs, diasSemana, metaPct, weak, lastSim,
     weeksData, totalDias, mediaDia, primeiraData, consistencia, accTrend, matStats,
-    minutosTotais, mediaMinutosDia,
+    minutosTotais, mediaMinutosDia, minutosSemana,
   };
+}
+
+/* Insights interpretados (cards de leitura antes dos gráficos):
+   melhor matéria, maior volume e ponto de atenção. Voltam null
+   quando não há dado suficiente — a tela mostra estado vazio. */
+export function calcularInsights(m) {
+  const comAcc = m.matStats.filter((s) => s.comAcc);
+  const comVol = m.matStats.filter((s) => s.q > 0);
+
+  const melhor = comAcc.length ? [...comAcc].sort((a, b) => b.acc - a.acc)[0] : null;
+  const volume = comVol.length ? [...comVol].sort((a, b) => b.q - a.q)[0] : null;
+  const pior = comAcc.length ? [...comAcc].sort((a, b) => a.acc - b.acc)[0] : null;
+
+  let atencao = null;
+  if (pior && pior.acc < 60) atencao = { tipo: "materia", materia: pior.name, acc: pior.acc };
+  else if (m.accTrend && m.accTrend.delta <= -5) atencao = { tipo: "queda", de: m.accTrend.de, para: m.accTrend.para };
+  else if (m.diasSemana < 3 && m.totalDias > 0) atencao = { tipo: "frequencia", dias: m.diasSemana };
+
+  return { melhor, volume, atencao, temDados: m.totDone > 0 };
 }

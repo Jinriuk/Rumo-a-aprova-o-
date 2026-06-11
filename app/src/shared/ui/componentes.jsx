@@ -106,3 +106,150 @@ export function Erro({ children }) {
     </div>
   );
 }
+
+/* ============================================================
+   KIT REFINADO (UX premium) — componentes reutilizáveis novos.
+   Tudo mobile-first, sem estouro horizontal, navy/dourado.
+   ============================================================ */
+
+// Card com cabeçalho editorial: título forte + subtítulo + ação à direita.
+export function SectionCard({ titulo, sub, acao, children, style, semPadding }) {
+  const T = useTema();
+  return (
+    <div style={{ background: T.card, border: `1px solid ${T.line}`, borderRadius: 14, overflow: "hidden", ...style }}>
+      {(titulo || acao) && (
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, padding: "13px 16px", borderBottom: `1px solid ${T.line}`, flexWrap: "wrap" }}>
+          <div style={{ minWidth: 0 }}>
+            {titulo && <div className="disp" style={{ fontSize: 15.5, fontWeight: 700, lineHeight: 1.2 }}>{titulo}</div>}
+            {sub && <div style={{ fontSize: 12, color: T.sub, marginTop: 2 }}>{sub}</div>}
+          </div>
+          {acao && <div style={{ flexShrink: 0 }}>{acao}</div>}
+        </div>
+      )}
+      <div style={{ padding: semPadding ? 0 : 16 }}>{children}</div>
+    </div>
+  );
+}
+
+// Barra de abas rolável (mobile-first). `abas`: [[chave, rótulo], ...].
+export function Tabs({ abas, ativo, aoTrocar }) {
+  const T = useTema();
+  return (
+    <div className="navwrap" style={{ display: "flex", gap: 2, overflowX: "auto", borderBottom: `1px solid ${T.line}`, marginBottom: 16 }}>
+      {abas.map(([k, lb, badge]) => {
+        const on = ativo === k;
+        return (
+          <button key={k} className="tab" onClick={() => aoTrocar(k)}
+            style={{ border: "none", background: "transparent", color: on ? T.gold : T.sub, fontWeight: 600, fontSize: 13.5, padding: "12px 13px", minHeight: 46, whiteSpace: "nowrap", borderBottom: on ? `2px solid ${T.gold}` : "2px solid transparent", display: "inline-flex", alignItems: "center", gap: 6 }}>
+            {lb}
+            {badge != null && badge !== 0 && (
+              <span style={{ fontSize: 10.5, fontWeight: 800, background: on ? T.gold : T.line, color: on ? "#0A1622" : T.sub, borderRadius: 9, padding: "1px 6px", minWidth: 17, textAlign: "center" }}>{badge}</span>
+            )}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+// Card de indicador. Use `gradiente` para os destaques "vivos"; senão,
+// fica sóbrio com borda. `tom`: ok | alerta | risco | neutro (cor do valor).
+export function StatCard({ rotulo, valor, sub, icone, gradiente, tom, onClick }) {
+  const T = useTema();
+  const corTom = tom === "ok" ? T.green : tom === "alerta" ? T.gold : tom === "risco" ? T.red : T.ink;
+  if (gradiente) {
+    return (
+      <div onClick={onClick} style={{ background: `linear-gradient(135deg, ${gradiente}, ${gradiente}99)`, borderRadius: 13, padding: "12px 14px", position: "relative", overflow: "hidden", minHeight: 84, cursor: onClick ? "pointer" : "default" }}>
+        <div style={{ fontSize: 11, color: "#0A1622", fontWeight: 800, textTransform: "uppercase", letterSpacing: 0.3, opacity: 0.85 }}>{rotulo}</div>
+        <div className="num disp" style={{ fontSize: 25, fontWeight: 800, color: "#fff", lineHeight: 1.15, marginTop: 4, textShadow: "0 1px 2px #0004" }}>{valor}</div>
+        {sub && <div style={{ fontSize: 10.5, color: "#0A1622", fontWeight: 600, marginTop: 2, opacity: 0.8 }}>{sub}</div>}
+        {icone && <div style={{ position: "absolute", right: 10, bottom: 8, fontSize: 22, color: "#ffffff55" }}>{icone}</div>}
+      </div>
+    );
+  }
+  return (
+    <div onClick={onClick} style={{ background: T.bg, border: `1px solid ${T.line}`, borderRadius: 12, padding: "12px 14px", minHeight: 78, cursor: onClick ? "pointer" : "default" }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 11, color: T.sub, textTransform: "uppercase", letterSpacing: 0.4 }}>
+        {icone && <span style={{ opacity: 0.8 }}>{icone}</span>}{rotulo}
+      </div>
+      <div className="num disp" style={{ fontSize: 24, fontWeight: 800, color: corTom, lineHeight: 1.15, marginTop: 5 }}>{valor}</div>
+      {sub && <div style={{ fontSize: 11, color: T.sub, marginTop: 2 }}>{sub}</div>}
+    </div>
+  );
+}
+
+// Card de insight (leitura interpretada): borda colorida + frase curta.
+export function InsightCard({ titulo, valor, sub, tom }) {
+  const T = useTema();
+  const cor = tom === "ok" ? T.green : tom === "alerta" ? T.gold : tom === "risco" ? T.red : T.gold;
+  return (
+    <div style={{ background: T.bg, border: `1px solid ${T.line}`, borderLeft: `4px solid ${cor}`, borderRadius: 10, padding: "11px 13px" }}>
+      <div style={{ fontSize: 10.5, color: T.sub, textTransform: "uppercase", letterSpacing: 0.4, fontWeight: 700 }}>{titulo}</div>
+      <div className="disp" style={{ fontSize: 16, fontWeight: 700, color: T.ink, marginTop: 3, lineHeight: 1.2 }}>{valor}</div>
+      {sub && <div style={{ fontSize: 11.5, color: T.sub, marginTop: 3, lineHeight: 1.4 }}>{sub}</div>}
+    </div>
+  );
+}
+
+// Estado vazio inteligente: ícone + título + dica de próximo passo.
+export function EmptyState({ icone = "✦", titulo, dica }) {
+  const T = useTema();
+  return (
+    <div style={{ padding: "26px 16px", textAlign: "center" }}>
+      <div style={{ fontSize: 26, opacity: 0.5 }}>{icone}</div>
+      <div className="disp" style={{ fontSize: 14.5, fontWeight: 700, color: T.ink, marginTop: 8 }}>{titulo}</div>
+      {dica && <div style={{ fontSize: 12.5, color: T.sub, marginTop: 5, maxWidth: 320, marginInline: "auto", lineHeight: 1.5 }}>{dica}</div>}
+    </div>
+  );
+}
+
+// Selo de status: ok (verde), alerta (dourado), risco (vermelho), neutro.
+export function StatusBadge({ tom = "neutro", children }) {
+  const T = useTema();
+  const cor = tom === "ok" ? T.green : tom === "alerta" ? T.gold : tom === "risco" ? T.red : T.sub;
+  return (
+    <span style={{ display: "inline-flex", alignItems: "center", gap: 4, fontSize: 10.5, fontWeight: 700, color: cor, border: `1px solid ${cor}55`, background: `${cor}14`, borderRadius: 6, padding: "2px 7px", whiteSpace: "nowrap" }}>
+      <span style={{ width: 6, height: 6, borderRadius: "50%", background: cor }} />{children}
+    </span>
+  );
+}
+
+// Menu "Mais ações" (ações secundárias colapsadas — bom no mobile).
+export function MaisAcoes({ acoes }) {
+  const T = useTema();
+  const [aberto, setAberto] = React.useState(false);
+  if (!acoes?.length) return null;
+  return (
+    <div style={{ position: "relative" }}>
+      <button onClick={() => setAberto((v) => !v)}
+        style={{ border: `1px solid ${T.line}`, background: "transparent", color: T.sub, borderRadius: 7, fontSize: 12, fontWeight: 600, padding: "6px 10px", minHeight: 32 }}>
+        ⋯ Mais
+      </button>
+      {aberto && (
+        <>
+          <div onClick={() => setAberto(false)} style={{ position: "fixed", inset: 0, zIndex: 30 }} />
+          <div style={{ position: "absolute", right: 0, top: "calc(100% + 4px)", zIndex: 31, background: T.bg2, border: `1px solid ${T.line}`, borderRadius: 10, padding: 4, minWidth: 180, boxShadow: "0 8px 24px #0007" }}>
+            {acoes.map((a, i) => (
+              <button key={i} onClick={() => { setAberto(false); a.aoClicar(); }} disabled={a.desabilitado}
+                style={{ display: "block", width: "100%", textAlign: "left", border: "none", background: "transparent", color: a.perigo ? T.red : T.ink, borderRadius: 7, fontSize: 13, padding: "9px 11px", minHeight: 38, opacity: a.desabilitado ? 0.4 : 1 }}>
+                {a.rotulo}
+              </button>
+            ))}
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
+// Botão pequeno (ação secundária inline).
+export function BotaoMini({ children, onClick, destaque, perigo, disabled }) {
+  const T = useTema();
+  const cor = perigo ? T.red : destaque ? T.gold : T.sub;
+  return (
+    <button onClick={onClick} disabled={disabled}
+      style={{ border: `1px solid ${destaque ? T.gold : T.line}`, background: destaque ? `${T.gold}14` : "transparent", color: cor, borderRadius: 7, fontSize: 12, fontWeight: 600, padding: "6px 10px", minHeight: 32, opacity: disabled ? 0.5 : 1, whiteSpace: "nowrap" }}>
+      {children}
+    </button>
+  );
+}
