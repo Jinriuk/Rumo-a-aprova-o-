@@ -1,17 +1,19 @@
 /* Menu principal responsivo (Fase 1 do doc central):
-   - CELULAR (≤700px): barra inferior fixa (zona do polegar), ícones +
-     rótulo, 4 itens principais + "Mais". Safe-area do iOS.
+   - CELULAR (≤700px): barra inferior fixa (zona do polegar), ícones
+     SVG + rótulo, 4 itens principais + "Mais". Safe-area do iOS.
    - DESKTOP (>700px): MENU LATERAL fixo (sidebar, ref. Guruja) — o
      conteúdo ocupa praticamente a tela toda (classe .com-sidebar).
-   Mesmo contrato do Tabs: abas = [[chave, rótulo, badge?, ícone?]]. */
+   Contrato: abas = [[chave, rótulo, badge?, nomeDoÍcone]]. */
 import React, { useState } from "react";
-import { useTema } from "../branding/BrandingContext.jsx";
+import { useTema, useBranding } from "../branding/BrandingContext.jsx";
+import { Icone } from "./Icones.jsx";
 
 const MAX_NA_BARRA = 4;
-export const LARGURA_SIDEBAR = 204;
+export const LARGURA_SIDEBAR = 236;
 
 export function MenuPrincipal({ abas, ativo, aoTrocar }) {
   const T = useTema();
+  const { escola } = useBranding();
   const [maisAberto, setMaisAberto] = useState(false);
 
   const precisaMais = abas.length > MAX_NA_BARRA + 1;
@@ -26,12 +28,12 @@ export function MenuPrincipal({ abas, ativo, aoTrocar }) {
 
   const ItemBarra = ({ rotulo, badge, icone, on, aoClicar }) => (
     <button onClick={aoClicar}
-      style={{ flex: 1, minWidth: 0, border: "none", background: "transparent", display: "flex", flexDirection: "column", alignItems: "center", gap: 3, padding: "7px 2px 6px", position: "relative", color: on ? T.gold : T.sub }}>
-      <span style={{ position: "absolute", top: 0, left: "20%", right: "20%", height: 2.5, borderRadius: 2, background: on ? T.gold : "transparent" }} />
-      <span style={{ fontSize: 19, lineHeight: 1, filter: on ? "none" : "grayscale(1) opacity(.75)" }}>{icone}</span>
-      <span style={{ fontSize: 9.5, fontWeight: on ? 800 : 600, letterSpacing: 0.2, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", maxWidth: "100%" }}>{rotulo}</span>
+      style={{ flex: 1, minWidth: 0, border: "none", background: "transparent", display: "flex", flexDirection: "column", alignItems: "center", gap: 4, padding: "8px 2px 7px", position: "relative", color: on ? T.gold : T.sub }}>
+      <span style={{ position: "absolute", top: 0, left: "22%", right: "22%", height: 3, borderRadius: "0 0 3px 3px", background: on ? T.gold : "transparent", boxShadow: on ? `0 0 10px ${T.gold}88` : "none" }} />
+      <Icone nome={icone} tam={21} grosso={on ? 2.4 : 2} />
+      <span style={{ fontSize: 10, fontWeight: on ? 800 : 600, letterSpacing: 0.2, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", maxWidth: "100%" }}>{rotulo}</span>
       {badge != null && badge !== 0 && (
-        <span className="num" style={{ position: "absolute", top: 3, right: "calc(50% - 19px)", background: T.gold, color: "#0A1622", fontSize: 9, fontWeight: 800, borderRadius: 8, minWidth: 15, height: 15, display: "flex", alignItems: "center", justifyContent: "center", padding: "0 4px" }}>{badge}</span>
+        <span className="num" style={{ position: "absolute", top: 4, right: "calc(50% - 21px)", background: T.gold, color: "#0A1622", fontSize: 9.5, fontWeight: 800, borderRadius: 8, minWidth: 16, height: 16, display: "flex", alignItems: "center", justifyContent: "center", padding: "0 4px", boxShadow: "0 1px 4px #0007" }}>{badge}</span>
       )}
     </button>
   );
@@ -48,33 +50,70 @@ export function MenuPrincipal({ abas, ativo, aoTrocar }) {
           .menu-lateral { display:flex; }
           .com-sidebar { margin-left: ${LARGURA_SIDEBAR}px !important; max-width: none !important; }
         }
-        .menu-item-lat:hover { background: ${T.cardHi} !important; color: ${T.ink} !important; }
+        .mi { transition: background .15s, color .15s, transform .15s; }
+        .mi:hover { background: ${T.cardHi} !important; color: ${T.ink} !important; transform: translateX(2px); }
+        .mi:hover .mi-ic { color: ${T.gold} !important; }
       `}</style>
 
-      {/* DESKTOP: menu lateral fixo */}
-      <nav className="menu-lateral" style={{ position: "fixed", left: 0, top: 0, bottom: 0, width: LARGURA_SIDEBAR, zIndex: 10, flexDirection: "column", gap: 2, background: T.bg2, borderRight: `1px solid ${T.line}`, padding: "84px 10px 16px" }}>
-        {abas.map(([k, lb, badge, icone]) => {
-          const on = ativo === k;
-          return (
-            <button key={k} className={on ? "" : "menu-item-lat"} onClick={() => trocar(k)}
-              style={{ display: "flex", alignItems: "center", gap: 11, width: "100%", textAlign: "left", border: "none", borderRadius: 10, padding: "11px 13px", minHeight: 44, fontSize: 13.5, fontWeight: on ? 800 : 600, background: on ? `${T.gold}16` : "transparent", color: on ? T.gold : T.sub, borderLeft: `3px solid ${on ? T.gold : "transparent"}` }}>
-              <span style={{ fontSize: 17, lineHeight: 1, filter: on ? "none" : "grayscale(1) opacity(.8)" }}>{icone ?? "•"}</span>
-              <span style={{ flex: 1, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{lb}</span>
-              {badge != null && badge !== 0 && (
-                <span className="num" style={{ background: T.gold, color: "#0A1622", fontSize: 10.5, fontWeight: 800, borderRadius: 9, padding: "1px 7px" }}>{badge}</span>
-              )}
-            </button>
-          );
-        })}
+      {/* ============ DESKTOP: menu lateral fixo ============ */}
+      <nav className="menu-lateral" style={{ position: "fixed", left: 0, top: 0, bottom: 0, width: LARGURA_SIDEBAR, zIndex: 10, flexDirection: "column", background: `linear-gradient(180deg, ${T.bg2} 0%, ${T.bg} 100%)`, borderRight: `1px solid ${T.line}`, padding: "86px 12px 14px" }}>
+        <div style={{ fontSize: 10.5, color: T.sub, fontWeight: 800, textTransform: "uppercase", letterSpacing: 1.4, padding: "0 12px 10px", opacity: 0.8 }}>
+          Menu
+        </div>
+
+        <div style={{ display: "flex", flexDirection: "column", gap: 3, flex: 1, overflowY: "auto" }}>
+          {abas.map(([k, lb, badge, icone]) => {
+            const on = ativo === k;
+            return (
+              <button key={k} className={on ? "" : "mi"} onClick={() => trocar(k)}
+                style={{
+                  display: "flex", alignItems: "center", gap: 12, width: "100%", textAlign: "left",
+                  border: "none", borderRadius: 11, padding: "9px 10px", minHeight: 48,
+                  fontSize: 14.5, fontWeight: on ? 800 : 600, fontFamily: "inherit",
+                  background: on ? `linear-gradient(90deg, ${T.gold}1f, ${T.gold}08)` : "transparent",
+                  color: on ? T.ink : T.sub, position: "relative",
+                }}>
+                {/* indicador lateral do ativo */}
+                <span style={{ position: "absolute", left: -12, top: 9, bottom: 9, width: 3.5, borderRadius: "0 4px 4px 0", background: on ? T.gold : "transparent", boxShadow: on ? `0 0 12px ${T.gold}` : "none" }} />
+                {/* pílula do ícone */}
+                <span className="mi-ic" style={{
+                  width: 34, height: 34, borderRadius: 9, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
+                  background: on ? `linear-gradient(135deg, ${T.gold}, #9c7d2e)` : T.card,
+                  border: on ? "none" : `1px solid ${T.line}`,
+                  color: on ? "#0A1622" : T.sub,
+                  boxShadow: on ? `0 3px 12px ${T.gold}44` : "none",
+                  transition: "color .15s",
+                }}>
+                  <Icone nome={icone} tam={18} grosso={on ? 2.4 : 2} />
+                </span>
+                <span style={{ flex: 1, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{lb}</span>
+                {badge != null && badge !== 0 && (
+                  <span className="num" style={{ background: T.gold, color: "#0A1622", fontSize: 11, fontWeight: 800, borderRadius: 9, padding: "2px 8px", boxShadow: `0 2px 8px ${T.gold}55` }}>{badge}</span>
+                )}
+              </button>
+            );
+          })}
+        </div>
+
+        {/* rodapé da sidebar: assinatura discreta da plataforma */}
+        <div style={{ borderTop: `1px solid ${T.line}`, paddingTop: 12, marginTop: 10, display: "flex", alignItems: "center", gap: 9, padding: "12px 10px 0" }}>
+          <span style={{ width: 28, height: 28, borderRadius: 8, background: `linear-gradient(135deg, ${T.gold}, #9c7d2e)`, display: "flex", alignItems: "center", justifyContent: "center", color: "#0A1622", flexShrink: 0 }}>
+            <Icone nome="ancora" tam={15} grosso={2.4} />
+          </span>
+          <div style={{ minWidth: 0 }}>
+            <div className="disp" style={{ fontSize: 12, fontWeight: 700, color: T.ink, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{escola?.nome ?? "Rumo à Aprovação"}</div>
+            <div style={{ fontSize: 9.5, color: T.sub, letterSpacing: 0.4, textTransform: "uppercase" }}>Rumo à Aprovação</div>
+          </div>
+        </div>
       </nav>
 
-      {/* CELULAR: barra inferior fixa */}
+      {/* ============ CELULAR: barra inferior fixa ============ */}
       <nav className="menu-barra" style={{ position: "fixed", left: 0, right: 0, bottom: 0, zIndex: 40, background: `${T.bg2}f2`, backdropFilter: "blur(10px)", WebkitBackdropFilter: "blur(10px)", borderTop: `1px solid ${T.line}`, paddingBottom: "env(safe-area-inset-bottom)" }}>
         {naBarra.map(([k, lb, badge, icone]) => (
-          <ItemBarra key={k} rotulo={lb} badge={badge} icone={icone ?? "•"} on={ativo === k} aoClicar={() => trocar(k)} />
+          <ItemBarra key={k} rotulo={lb} badge={badge} icone={icone} on={ativo === k} aoClicar={() => trocar(k)} />
         ))}
         {precisaMais && (
-          <ItemBarra rotulo="Mais" icone="⋯" on={ativoNoMais || maisAberto} aoClicar={() => setMaisAberto((v) => !v)} />
+          <ItemBarra rotulo="Mais" icone="mais" on={ativoNoMais || maisAberto} aoClicar={() => setMaisAberto((v) => !v)} />
         )}
       </nav>
 
@@ -82,18 +121,18 @@ export function MenuPrincipal({ abas, ativo, aoTrocar }) {
       {maisAberto && (
         <>
           <div onClick={() => setMaisAberto(false)} style={{ position: "fixed", inset: 0, zIndex: 41, background: "#0008" }} />
-          <div style={{ position: "fixed", left: 10, right: 10, bottom: `calc(64px + env(safe-area-inset-bottom))`, zIndex: 42, background: T.bg2, border: `1px solid ${T.line}`, borderRadius: 14, overflow: "hidden", boxShadow: "0 12px 40px #000a" }}>
+          <div style={{ position: "fixed", left: 10, right: 10, bottom: `calc(66px + env(safe-area-inset-bottom))`, zIndex: 42, background: T.bg2, border: `1px solid ${T.line}`, borderRadius: 14, overflow: "hidden", boxShadow: "0 12px 40px #000a" }}>
             {noMais.map(([k, lb, badge, icone], i) => {
               const on = ativo === k;
               return (
                 <button key={k} onClick={() => trocar(k)}
-                  style={{ display: "flex", alignItems: "center", gap: 12, width: "100%", textAlign: "left", border: "none", background: on ? `${T.gold}14` : "transparent", color: on ? T.gold : T.ink, padding: "14px 16px", minHeight: 50, fontSize: 14.5, fontWeight: on ? 800 : 600, borderBottom: i === noMais.length - 1 ? "none" : `1px solid ${T.line}` }}>
-                  <span style={{ fontSize: 18 }}>{icone ?? "•"}</span>
+                  style={{ display: "flex", alignItems: "center", gap: 12, width: "100%", textAlign: "left", border: "none", background: on ? `${T.gold}14` : "transparent", color: on ? T.gold : T.ink, padding: "14px 16px", minHeight: 52, fontSize: 15, fontWeight: on ? 800 : 600, borderBottom: i === noMais.length - 1 ? "none" : `1px solid ${T.line}` }}>
+                  <Icone nome={icone} tam={19} />
                   <span style={{ flex: 1 }}>{lb}</span>
                   {badge != null && badge !== 0 && (
                     <span className="num" style={{ background: T.gold, color: "#0A1622", fontSize: 10.5, fontWeight: 800, borderRadius: 9, padding: "1px 7px" }}>{badge}</span>
                   )}
-                  {on && <span>✓</span>}
+                  {on && <Icone nome="check" tam={16} />}
                 </button>
               );
             })}

@@ -58,6 +58,10 @@ export const FONTES_CSS = `
   .chk { transition: all .15s; }
   .navwrap { -webkit-overflow-scrolling: touch; scrollbar-width: none; }
   .navwrap::-webkit-scrollbar { display: none; }
+  /* em telas grandes o sistema inteiro sobe um degrau de tamanho —
+     leitura confortável sem mexer componente a componente */
+  @media (min-width: 1200px) { body { zoom: 1.08; } }
+  @media (min-width: 1600px) { body { zoom: 1.15; } }
   @media (max-width: 560px) {
     .hdr-title { font-size: 17px !important; }
   }

@@ -66,9 +66,9 @@ export function VisaoEstudo({ aluno, podeEditar, comResumo, concurso = null, con
   const xp = calcularXP({ metas: dados.metas, totalQuestoes: m?.totDone ?? 0, simulados: dados.simulados.length });
 
   const ABAS = [
-    ["hoje", "Hoje", null, "⚓"], ["registrar", "Registrar", null, "✎"],
-    ["desempenho", "Desempenho", null, "📊"], ["simulados", "Simulados", null, "🎯"],
-    ["conquistas", "Conquistas", null, "🎖"], ["historico", "Histórico", null, "🗂"], ["plano", "Plano", null, "🗺"],
+    ["hoje", "Hoje", null, "ancora"], ["registrar", "Registrar", null, "lapis"],
+    ["desempenho", "Desempenho", null, "grafico"], ["simulados", "Simulados", null, "alvo"],
+    ["conquistas", "Conquistas", null, "medalha"], ["historico", "Histórico", null, "arquivo"], ["plano", "Plano", null, "mapa"],
   ].filter(([k]) => podeEditar || k !== "registrar").map(
     ([k, lb, badge, icone]) => (k === "hoje" && podeEditar && pendentes > 0 ? [k, lb, pendentes, icone] : [k, lb, badge, icone]),
   );

@@ -49,9 +49,9 @@ export default function AreaEscola({ perfil }) {
   const concursosPorId = Object.fromEntries(dados.concursos.map((c) => [c.id, c]));
 
   const ABAS = [
-    ["painel", "Painel", null, "📊"], ["alunos", "Alunos", null, "👥"],
-    ["ranking", "Ranking", null, "🏆"], ["turmas", "Turmas", null, "🎓"],
-    ["conformidade", "LGPD", null, "🛡"], ["marca", "Marca", null, "🎨"],
+    ["painel", "Painel", null, "painel"], ["alunos", "Alunos", null, "alunos"],
+    ["ranking", "Ranking", null, "trofeu"], ["turmas", "Turmas", null, "turmas"],
+    ["conformidade", "LGPD", null, "escudo"], ["marca", "Marca", null, "pincel"],
   ];
 
   const concursoDoAluno = alunoAberto ? concursosPorId[alunoAberto.concurso_id] : null;
