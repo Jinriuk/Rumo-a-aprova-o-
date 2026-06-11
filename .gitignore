@@ -3,5 +3,7 @@ dist/
 .env
 .env.*
 !.env.example
+# chaves PÚBLICAS do demo (anon key é publicável; a RLS é a segurança)
+!app/.env.production
 *.log
 .DS_Store
