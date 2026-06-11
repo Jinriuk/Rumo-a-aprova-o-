@@ -16,11 +16,32 @@ export const BASE = {
   red: "#D9695E",
 };
 
+// Contraste mínimo no tema escuro: acento escuro demais some (botão
+// preto em fundo navy). Clareia até a luminância mínima — a cor da
+// escola é respeitada, mas nunca pode quebrar a leitura.
+const LUM_MINIMA = 0.32;
+
+export function luminancia(hex) {
+  const n = parseInt(hex.slice(1), 16);
+  const r = (n >> 16) & 255, g = (n >> 8) & 255, b = n & 255;
+  return (0.2126 * r + 0.7152 * g + 0.0722 * b) / 255;
+}
+
+export function garantirLegivel(hex) {
+  const lum = luminancia(hex);
+  if (lum >= LUM_MINIMA) return hex;
+  const n = parseInt(hex.slice(1), 16);
+  let r = (n >> 16) & 255, g = (n >> 8) & 255, b = n & 255;
+  const t = (LUM_MINIMA - lum) / (1 - lum); // mistura com branco
+  r = Math.round(r + (255 - r) * t); g = Math.round(g + (255 - g) * t); b = Math.round(b + (255 - b) * t);
+  return `#${((r << 16) | (g << 8) | b).toString(16).padStart(6, "0")}`;
+}
+
 // A cor de acento da escola entra DENTRO de limites: substitui só o
-// dourado de destaque. O resto do tema não se toca.
+// dourado de destaque (já clareada se preciso). O resto não se toca.
 export function tema(corAcento) {
   if (!corAcento || !/^#[0-9a-fA-F]{6}$/.test(corAcento)) return BASE;
-  return { ...BASE, gold: corAcento };
+  return { ...BASE, gold: garantirLegivel(corAcento) };
 }
 
 export const FONTES_CSS = `

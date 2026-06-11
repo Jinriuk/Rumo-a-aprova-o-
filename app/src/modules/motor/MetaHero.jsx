@@ -8,11 +8,13 @@ import { useTema } from "../../shared/branding/BrandingContext.jsx";
 import { fmtBR, todayISO, daysBetween } from "../../shared/regras/regras.js";
 import { L, patente, fmtHoras, fmtHorasCurto, xpPorPrioridade } from "./jargao.js";
 
-export function FaixaAspirante({ nome, contexto, xp, streak }) {
+export function FaixaAspirante({ nome, contexto, xp, streak, aoAbrirConquistas }) {
   const T = useTema();
   const p = patente(xp);
   return (
-    <div style={{ background: `linear-gradient(135deg, ${T.cardHi}, ${T.card})`, border: `1px solid ${T.line}`, borderRadius: 14, padding: "12px 14px" }}>
+    <div onClick={aoAbrirConquistas} role={aoAbrirConquistas ? "button" : undefined}
+      title={aoAbrirConquistas ? "Ver patentes e conquistas" : undefined}
+      style={{ background: `linear-gradient(135deg, ${T.cardHi}, ${T.card})`, border: `1px solid ${T.line}`, borderRadius: 14, padding: "12px 14px", cursor: aoAbrirConquistas ? "pointer" : "default" }}>
       <div style={{ display: "flex", alignItems: "center", gap: 11 }}>
         <div style={{ position: "relative", flexShrink: 0 }}>
           <div className="disp" style={{ width: 40, height: 40, borderRadius: 10, background: `linear-gradient(135deg, ${T.gold}, #9c7d2e)`, display: "flex", alignItems: "center", justifyContent: "center", color: "#0A1622", fontWeight: 800, fontSize: 18 }}>⚓</div>

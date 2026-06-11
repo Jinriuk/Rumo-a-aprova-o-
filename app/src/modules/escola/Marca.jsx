@@ -3,12 +3,13 @@
    com a cor e o logo dela. O design segue fixo — só a marca muda. */
 import React, { useState } from "react";
 import { SectionCard, Botao, Erro, useInputStyle } from "../../shared/ui/componentes.jsx";
-import { useTema } from "../../shared/branding/BrandingContext.jsx";
-import { BASE } from "../../shared/ui/tema.js";
+import { useTema, useBranding } from "../../shared/branding/BrandingContext.jsx";
+import { BASE, luminancia, garantirLegivel } from "../../shared/ui/tema.js";
 import * as db from "../../shared/data/index.js";
 
 export function Marca({ escola, aoMudar }) {
   const T = useTema();
+  const { aplicarMarca } = useBranding();
   const { input: inputS, label: lbl } = useInputStyle();
   const [logo, setLogo] = useState(escola.logo_url ?? "");
   const [cor, setCor] = useState(escola.cor_acento ?? "#CDA349");
@@ -17,12 +18,15 @@ export function Marca({ escola, aoMudar }) {
   const [ocupado, setOcupado] = useState(false);
 
   const corValida = /^#[0-9a-fA-F]{6}$/.test(cor);
-  const acento = corValida ? cor : BASE.gold;
+  const corEscura = corValida && luminancia(cor) < 0.32;
+  const acento = corValida ? garantirLegivel(cor) : BASE.gold;
 
   async function salvar() {
     setOcupado(true); setErro(null); setOk(false);
     try {
-      await db.atualizarMarca(escola.id, { logo_url: logo.trim() || null, cor_acento: corValida ? cor : null });
+      const marca = { logo_url: logo.trim() || null, cor_acento: corValida ? cor : null };
+      await db.atualizarMarca(escola.id, marca);
+      aplicarMarca(marca); // aplica em TODO o sistema na hora, sem recarregar
       setOk(true);
       aoMudar?.();
     } catch (e) { setErro(e.message); }
@@ -46,8 +50,14 @@ export function Marca({ escola, aoMudar }) {
             </div>
           </div>
         </div>
+        {corEscura && (
+          <div style={{ marginTop: 12, fontSize: 12.5, color: T.gold, border: `1px solid ${T.gold}44`, background: `${T.gold}10`, borderRadius: 8, padding: "9px 12px", lineHeight: 1.5 }}>
+            ⚠ Esta cor é escura demais para o tema escuro — o sistema vai clareá-la automaticamente
+            (<span style={{ fontFamily: "monospace" }}>{acento}</span>) para manter botões e destaques legíveis.
+          </div>
+        )}
         <Botao onClick={salvar} disabled={ocupado} style={{ marginTop: 16, width: "100%" }}>{ocupado ? "Salvando…" : "Salvar marca"}</Botao>
-        {ok && <div style={{ color: BASE.green, fontSize: 13, marginTop: 10 }}>Marca atualizada. Recarregue a página para aplicar em todo o sistema.</div>}
+        {ok && <div style={{ color: BASE.green, fontSize: 13, marginTop: 10 }}>✓ Marca salva no banco e aplicada em todo o sistema.</div>}
         <Erro>{erro}</Erro>
       </SectionCard>
 

@@ -19,7 +19,7 @@ export default function AreaEscola({ perfil }) {
   const [tab, setTab] = useState("painel");
   const [dados, setDados] = useState({
     carregando: true, erro: null, turmas: [], alunos: [], consentimentos: [],
-    logs: [], trilha: null, concursos: [], registrosEscola: [], metasEscola: [],
+    logs: [], trilha: null, concursos: [], registrosEscola: [], metasEscola: [], simuladosEscola: [],
   });
   const [credencial, setCredencial] = useState(null);
   const [alunoAberto, setAlunoAberto] = useState(null);
@@ -30,10 +30,10 @@ export default function AreaEscola({ perfil }) {
     let vivo = true;
     Promise.all([
       db.listarTurmas(), db.listarAlunos(), db.listarConsentimentos(), db.listarLogsAcesso(),
-      db.trilhaPadrao(), db.listarConcursos(), db.listarRegistrosEscola(), db.listarMetasEscola(),
+      db.trilhaPadrao(), db.listarConcursos(), db.listarRegistrosEscola(), db.listarMetasEscola(), db.listarSimuladosEscola(),
     ])
-      .then(([turmas, alunos, consentimentos, logs, trilha, concursos, registrosEscola, metasEscola]) =>
-        vivo && setDados({ carregando: false, erro: null, turmas, alunos, consentimentos, logs, trilha, concursos, registrosEscola, metasEscola }))
+      .then(([turmas, alunos, consentimentos, logs, trilha, concursos, registrosEscola, metasEscola, simuladosEscola]) =>
+        vivo && setDados({ carregando: false, erro: null, turmas, alunos, consentimentos, logs, trilha, concursos, registrosEscola, metasEscola, simuladosEscola }))
       .catch((e) => vivo && setDados((d) => ({ ...d, carregando: false, erro: e.message })));
     return () => { vivo = false; };
   }, [versao]);
@@ -59,8 +59,8 @@ export default function AreaEscola({ perfil }) {
   return (
     <div>
       <Cabecalho subtitulo="Painel de gestão" nomeUsuario={perfil.usuario.nome} rotuloPapel="Coordenação" />
-      <main style={{ maxWidth: 1080, margin: "0 auto", padding: "16px max(16px, env(safe-area-inset-right)) calc(88px + env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left))" }}>
-        {!alunoAberto && <MenuPrincipal abas={ABAS} ativo={tab} aoTrocar={irPara} />}
+      <main className="com-sidebar" style={{ maxWidth: 1080, margin: "0 auto", padding: "16px max(16px, env(safe-area-inset-right)) calc(88px + env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left))" }}>
+        <MenuPrincipal abas={ABAS} ativo={tab} aoTrocar={irPara} />
 
         <div className="fade" key={tab + (alunoAberto?.id ?? "")}>
           {dados.erro && <Erro>{dados.erro}</Erro>}
@@ -69,7 +69,7 @@ export default function AreaEscola({ perfil }) {
           {!dados.carregando && alunoAberto && (
             <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
               <button onClick={() => setAlunoAberto(null)} style={{ alignSelf: "flex-start", border: `1px solid ${T.line}`, background: T.card, color: T.sub, borderRadius: 8, padding: "8px 14px", fontSize: 13, fontWeight: 600 }}>← voltar ao painel</button>
-              <VisaoEstudo aluno={alunoAberto} podeEditar={false} comResumo
+              <VisaoEstudo aluno={alunoAberto} podeEditar={false} comResumo concurso={concursoDoAluno}
                 contexto={concursoDoAluno ? concursoDoAluno.nome.split(" (")[0] : "Plano de estudos"} />
             </div>
           )}
@@ -89,7 +89,8 @@ export default function AreaEscola({ perfil }) {
 
           {!dados.carregando && !alunoAberto && tab === "ranking" && (
             <ClassificacaoTurma alunos={dados.alunos} turmas={dados.turmas}
-              registros={dados.registrosEscola} metas={dados.metasEscola} concursosPorId={concursosPorId} />
+              registros={dados.registrosEscola} metas={dados.metasEscola}
+              simulados={dados.simuladosEscola} concursosPorId={concursosPorId} />
           )}
 
           {!dados.carregando && !alunoAberto && tab === "turmas" && (
@@ -130,6 +131,18 @@ function Turmas({ turmas, alunos, registros, metas, aoMudar, aoVerRanking }) {
     };
   }
 
+  // a escola gerencia as próprias turmas: renomear e excluir (Fase 10)
+  async function renomear(t) {
+    const nome = window.prompt("Novo nome da turma:", t.nome);
+    if (!nome || nome.trim() === t.nome) return;
+    try { await db.renomearTurma(t.id, nome.trim()); aoMudar?.(); } catch (e) { window.alert(e.message); }
+  }
+  async function excluir(t, n) {
+    if (n > 0) { window.alert(`A turma "${t.nome}" tem ${n} aluno(s). Mova os alunos antes de excluir.`); return; }
+    if (!window.confirm(`Excluir a turma "${t.nome}"? Esta ação não tem volta.`)) return;
+    try { await db.removerTurma(t.id); aoMudar?.(); } catch (e) { window.alert(e.message); }
+  }
+
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
       <NovaTurma aoMudar={aoMudar} />
@@ -152,9 +165,17 @@ function Turmas({ turmas, alunos, registros, metas, aoMudar, aoVerRanking }) {
                     <Mini rotulo="Questões" valor={s.questoes} />
                     <Mini rotulo="Sem atividade" valor={s.risco} cor={s.risco ? T.red : T.green} />
                   </div>
-                  <button onClick={aoVerRanking} style={{ marginTop: 10, border: `1px solid ${T.line}`, background: "transparent", color: T.gold, borderRadius: 8, fontSize: 12.5, fontWeight: 700, padding: "7px 14px", minHeight: 36 }}>
-                    Ver classificação ›
-                  </button>
+                  <div style={{ display: "flex", gap: 8, marginTop: 10, flexWrap: "wrap" }}>
+                    <button onClick={aoVerRanking} style={{ border: `1px solid ${T.line}`, background: "transparent", color: T.gold, borderRadius: 8, fontSize: 12.5, fontWeight: 700, padding: "7px 14px", minHeight: 36 }}>
+                      Ver classificação ›
+                    </button>
+                    <button onClick={() => renomear(t)} style={{ border: `1px solid ${T.line}`, background: "transparent", color: T.sub, borderRadius: 8, fontSize: 12.5, fontWeight: 600, padding: "7px 14px", minHeight: 36 }}>
+                      ✎ Renomear
+                    </button>
+                    <button onClick={() => excluir(t, s.n)} style={{ border: `1px solid ${s.n ? T.line : T.red + "66"}`, background: "transparent", color: s.n ? T.sub : T.red, borderRadius: 8, fontSize: 12.5, fontWeight: 600, padding: "7px 14px", minHeight: 36, opacity: s.n ? 0.6 : 1 }}>
+                      × Excluir
+                    </button>
+                  </div>
                 </div>
               );
             })}

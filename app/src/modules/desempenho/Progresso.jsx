@@ -150,10 +150,16 @@ export function Progresso({ registros, trilha }) {
   );
 }
 
-/* ---------- Simulados (registro + evolução + nota projetada) ---------- */
-export function Simulados({ aluno, simulados, podeEditar, semanaAtiva, aoMudar }) {
+/* ---------- Simulados (estrutura POR CONCURSO + validação + objetivo) ---------- */
+import { provaDoConcurso, materiasDaProva, totalQuestoes, totalAcertos, notaPct, objetivoSugerido } from "../conteudo/provas.js";
+
+export function Simulados({ aluno, simulados, podeEditar, semanaAtiva, concurso, aoMudar }) {
   const T = useTema();
-  const blank = { nome: semanaAtiva?.simulado || "Simulado", data: todayISO(), mat: "", ing: "", por: "", fis: "", qui: "", soc: "" };
+  const prova = provaDoConcurso(concurso?.codigo);
+  const materias = materiasDaProva(prova);
+  const totalMax = totalQuestoes(prova);
+
+  const blank = { nome: semanaAtiva?.simulado || `Simulado ${prova.rotulo}`, data: todayISO(), ...Object.fromEntries(materias.map((m) => [m.k, ""])) };
   const [f, setF] = useState(blank);
   const [erro, setErro] = useState(null);
   const set = (k, v) => setF({ ...f, [k]: v });
@@ -161,12 +167,16 @@ export function Simulados({ aluno, simulados, podeEditar, semanaAtiva, aoMudar }
   const inputS = { background: T.bg, border: `1px solid ${T.line}`, color: T.ink, borderRadius: 8, padding: "12px 12px", fontSize: 16, width: "100%", minHeight: 46 };
   const lbl = { fontSize: 11, color: T.sub, marginBottom: 4, display: "block" };
 
+  // VALIDAÇÃO CRÍTICA (doc): acertos não podem passar do máximo da prova
+  const estouros = materias.filter((m) => f[m.k] !== "" && +f[m.k] > m.max);
+
   async function adicionar() {
+    if (estouros.length) return;
     setErro(null);
     try {
       await db.adicionarSimulado({
         escola_id: aluno.escola_id, aluno_id: aluno.id, nome: f.nome, data: f.data,
-        acertos: { mat: +f.mat || 0, ing: +f.ing || 0, por: +f.por || 0, fis: +f.fis || 0, qui: +f.qui || 0, soc: +f.soc || 0 },
+        acertos: Object.fromEntries(materias.map((m) => [m.k, Math.min(+f[m.k] || 0, m.max)])),
       });
       setF(blank);
       aoMudar?.();
@@ -181,26 +191,49 @@ export function Simulados({ aluno, simulados, podeEditar, semanaAtiva, aoMudar }
     } catch (e) { setErro(e.message); }
   }
 
-  const chart = simulados.map((s) => {
-    const dia1 = (s.acertos.mat || 0) + (s.acertos.ing || 0); // /40
-    const tot = Object.values(s.acertos).reduce((a, b) => a + (+b || 0), 0);
-    return { label: fmtBR(String(s.data)), dia1, tot };
-  });
+  const chart = simulados.map((s) => ({
+    label: fmtBR(String(s.data)),
+    nota: notaPct(prova, s.acertos),
+    tot: totalAcertos(prova, s.acertos),
+  }));
+
+  const ultimo = simulados.length ? [...simulados].sort((a, b) => String(a.data).localeCompare(String(b.data)))[simulados.length - 1] : null;
+  const evolucao = chart.length >= 2 ? chart[chart.length - 1].nota - chart[chart.length - 2].nota : null;
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+      {/* DESEMPENHO + OBJETIVO do último simulado */}
+      {ultimo && (
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(220px,1fr))", gap: 10 }}>
+          <div style={{ background: T.card, border: `1px solid ${T.line}`, borderLeft: `4px solid ${T.gold}`, borderRadius: 10, padding: "11px 13px" }}>
+            <div style={{ fontSize: 10.5, color: T.sub, textTransform: "uppercase", letterSpacing: 0.4, fontWeight: 700 }}>Último simulado</div>
+            <div className="disp num" style={{ fontSize: 20, fontWeight: 800, marginTop: 3 }}>
+              {notaPct(prova, ultimo.acertos)}<span style={{ fontSize: 13, color: T.sub }}>/100</span>
+              {evolucao != null && (
+                <span style={{ fontSize: 12.5, marginLeft: 8, color: evolucao >= 0 ? T.green : T.red }}>{evolucao >= 0 ? "▲" : "▼"} {Math.abs(evolucao)}</span>
+              )}
+            </div>
+            <div style={{ fontSize: 11.5, color: T.sub, marginTop: 2 }}>{ultimo.nome} · {fmtBR(String(ultimo.data))} · {totalAcertos(prova, ultimo.acertos)}/{totalMax} acertos</div>
+          </div>
+          <div style={{ background: T.card, border: `1px solid ${T.line}`, borderLeft: `4px solid ${T.green}`, borderRadius: 10, padding: "11px 13px" }}>
+            <div style={{ fontSize: 10.5, color: T.sub, textTransform: "uppercase", letterSpacing: 0.4, fontWeight: 700 }}>🎯 Objetivo sugerido</div>
+            <div style={{ fontSize: 13.5, fontWeight: 600, marginTop: 4, lineHeight: 1.45 }}>{objetivoSugerido(prova, ultimo.acertos)}</div>
+          </div>
+        </div>
+      )}
+
       <Card>
-        <div className="disp" style={{ fontSize: 15, fontWeight: 700, marginBottom: 10 }}>Evolução nos simulados</div>
-        {chart.length === 0 ? <Empty txt="Nenhum simulado registrado. A partir da Semana 5 começam." /> : (
+        <div className="disp" style={{ fontSize: 15, fontWeight: 700, marginBottom: 10 }}>Evolução nos simulados — {prova.rotulo}</div>
+        {chart.length === 0 ? <Empty txt="Nenhum simulado registrado ainda. Registre o primeiro abaixo." /> : (
           <ResponsiveContainer width="100%" height={230}>
             <LineChart data={chart} margin={{ top: 6, right: 10, left: -16, bottom: 0 }}>
               <CartesianGrid strokeDasharray="3 3" stroke={T.line} />
               <XAxis dataKey="label" tick={{ fill: T.sub, fontSize: 10 }} axisLine={{ stroke: T.line }} tickLine={false} minTickGap={6} />
-              <YAxis tick={{ fill: T.sub, fontSize: 10 }} axisLine={false} tickLine={false} width={28} allowDecimals={false} />
+              <YAxis domain={[0, 100]} tick={{ fill: T.sub, fontSize: 10 }} axisLine={false} tickLine={false} width={28} allowDecimals={false} />
               <Tooltip contentStyle={{ background: T.bg2, border: `1px solid ${T.line}`, borderRadius: 8 }} />
               <Legend wrapperStyle={{ fontSize: 11 }} />
-              <Line type="monotone" dataKey="dia1" name="Dia 1 (Mat+Ing /40)" stroke={T.gold} strokeWidth={2.5} dot={{ r: 3 }} />
-              <Line type="monotone" dataKey="tot" name="Total de acertos" stroke={T.green} strokeWidth={2.5} dot={{ r: 3 }} />
+              <Line type="monotone" dataKey="nota" name={prova.notaRotulo ?? "nota geral %"} stroke={T.gold} strokeWidth={2.5} dot={{ r: 3 }} />
+              <Line type="monotone" dataKey="tot" name={`acertos /${totalMax}`} stroke={T.green} strokeWidth={2.5} dot={{ r: 3 }} />
             </LineChart>
           </ResponsiveContainer>
         )}
@@ -208,18 +241,40 @@ export function Simulados({ aluno, simulados, podeEditar, semanaAtiva, aoMudar }
 
       {podeEditar && (
         <Card>
-          <div className="disp" style={{ fontSize: 15, fontWeight: 700, marginBottom: 4 }}>Registrar simulado</div>
-          <div style={{ fontSize: 11.5, color: T.sub, marginBottom: 12 }}>Acertos por matéria. Dia 1: Mat (20) + Inglês (20). Dia 2: Português, Est. Sociais e Ciências (Fís/Quí).</div>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(120px,1fr))", gap: 10 }}>
-            <div style={{ gridColumn: "1 / -1", display: "flex", gap: 10, flexWrap: "wrap" }}>
-              <div style={{ flex: 2, minWidth: 160 }}><label style={lbl}>Nome</label><input value={f.nome} onChange={(e) => set("nome", e.target.value)} style={inputS} /></div>
-              <div style={{ flex: 1, minWidth: 130 }}><label style={lbl}>Data</label><input type="date" value={f.data} onChange={(e) => set("data", e.target.value)} style={inputS} /></div>
-            </div>
-            {[["mat", "Matemática /20"], ["ing", "Inglês /20"], ["por", "Português"], ["fis", "Física"], ["qui", "Química"], ["soc", "Est. Sociais"]].map(([k, lb]) => (
-              <div key={k}><label style={lbl}>{lb}</label><input type="number" inputMode="numeric" min="0" value={f[k]} onChange={(e) => set(k, e.target.value)} placeholder="0" style={inputS} /></div>
-            ))}
+          <div className="disp" style={{ fontSize: 15, fontWeight: 700, marginBottom: 4 }}>Registrar simulado — {prova.rotulo}</div>
+          <div style={{ fontSize: 11.5, color: T.sub, marginBottom: 12 }}>
+            Acertos por matéria, com o máximo de cada prova. {totalMax} questões no total.
           </div>
-          <button onClick={adicionar} style={{ marginTop: 14, background: T.gold, color: "#0A1622", border: "none", borderRadius: 8, padding: "13px 20px", minHeight: 48, fontWeight: 700, fontSize: 15 }}>+ Salvar simulado</button>
+          <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginBottom: 12 }}>
+            <div style={{ flex: 2, minWidth: 160 }}><label style={lbl}>Nome</label><input value={f.nome} onChange={(e) => set("nome", e.target.value)} style={inputS} /></div>
+            <div style={{ flex: 1, minWidth: 130 }}><label style={lbl}>Data</label><input type="date" value={f.data} onChange={(e) => set("data", e.target.value)} style={inputS} /></div>
+          </div>
+          {prova.dias.map((dia) => (
+            <div key={dia.nome} style={{ marginBottom: 12 }}>
+              <div style={{ fontSize: 11, color: T.gold, fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 8 }}>{dia.nome}</div>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(120px,1fr))", gap: 10 }}>
+                {dia.materias.map((m) => {
+                  const estourou = f[m.k] !== "" && +f[m.k] > m.max;
+                  return (
+                    <div key={m.k}>
+                      <label style={lbl}>{m.nome} <b style={{ color: T.sub }}>/{m.max}</b></label>
+                      <input type="number" inputMode="numeric" min="0" max={m.max} value={f[m.k]} onChange={(e) => set(m.k, e.target.value)} placeholder="0"
+                        style={{ ...inputS, borderColor: estourou ? T.red : T.line }} />
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          ))}
+          {estouros.length > 0 && (
+            <div style={{ color: T.red, fontSize: 12.5, marginBottom: 10 }}>
+              ⚠ {estouros.map((m) => `${m.nome} tem no máximo ${m.max} questões`).join(" · ")}
+            </div>
+          )}
+          <button onClick={adicionar} disabled={estouros.length > 0}
+            style={{ background: estouros.length ? T.line : T.gold, color: estouros.length ? T.sub : "#0A1622", border: "none", borderRadius: 8, padding: "13px 20px", minHeight: 48, fontWeight: 700, fontSize: 15, width: "100%" }}>
+            + Salvar simulado
+          </button>
           {erro && <div style={{ color: T.red, fontSize: 13, marginTop: 10 }}>{erro}</div>}
         </Card>
       )}
@@ -229,15 +284,15 @@ export function Simulados({ aluno, simulados, podeEditar, semanaAtiva, aoMudar }
           <div className="disp" style={{ fontSize: 15, fontWeight: 700, marginBottom: 10 }}>Histórico</div>
           <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
             {[...simulados].reverse().map((s) => {
-              const tot = Object.values(s.acertos).reduce((a, b) => a + (+b || 0), 0);
-              const nota = Math.round(((s.acertos.mat || 0) + (s.acertos.ing || 0)) * 2.5);
+              const tot = totalAcertos(prova, s.acertos);
+              const nota = notaPct(prova, s.acertos);
               return (
                 <div key={s.id} className="row" style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 8px", borderRadius: 8, borderBottom: `1px solid ${T.line}` }}>
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ fontSize: 13.5, fontWeight: 600 }}>{s.nome} <span style={{ color: T.sub, fontWeight: 400 }}>· {fmtBR(String(s.data))}</span></div>
                     <div style={{ fontSize: 11.5, color: T.sub, marginTop: 2 }}>
-                      Mat {s.acertos.mat ?? 0} · Ing {s.acertos.ing ?? 0} · Por {s.acertos.por ?? 0} · Fís {s.acertos.fis ?? 0} · Quí {s.acertos.qui ?? 0} · Soc {s.acertos.soc ?? 0}
-                      {" · "}nota projetada Dia 1: <b style={{ color: nota >= 70 ? T.green : nota >= 50 ? T.gold : T.red }}>{nota}/100</b>
+                      {materias.map((m) => `${m.nome.slice(0, 3)} ${Math.min(+s.acertos[m.k] || 0, m.max)}/${m.max}`).join(" · ")}
+                      {" · "}{prova.notaRotulo ?? "nota"}: <b style={{ color: nota >= 70 ? T.green : nota >= 50 ? T.gold : T.red }}>{nota}/100</b>
                     </div>
                   </div>
                   <div className="num disp" style={{ fontSize: 20, fontWeight: 700, color: T.gold }}>{tot}</div>

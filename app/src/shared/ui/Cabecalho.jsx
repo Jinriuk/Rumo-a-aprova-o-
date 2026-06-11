@@ -10,7 +10,7 @@ export function Cabecalho({ titulo, subtitulo, diasProva, diasProvaMedia, nomeUs
   return (
     <header style={{ borderBottom: `1px solid ${T.line}`, background: `linear-gradient(180deg, ${T.bg2}, ${T.bg})`, position: "sticky", top: 0, zIndex: 20, paddingTop: "env(safe-area-inset-top)" }}>
       <style>{`@media (max-width:560px){ .hdr-user{display:none !important;} .hdr-prova-num{font-size:18px !important;} }`}</style>
-      <div style={{ maxWidth: 1080, margin: "0 auto", padding: "10px max(14px, env(safe-area-inset-right)) 10px max(14px, env(safe-area-inset-left))", display: "flex", alignItems: "center", gap: 11 }}>
+      <div style={{ padding: "10px max(18px, env(safe-area-inset-right)) 10px max(18px, env(safe-area-inset-left))", display: "flex", alignItems: "center", gap: 11 }}>
         <MarcaEscola tamanho={34} />
         <div style={{ flex: 1, minWidth: 0 }}>
           <div className="disp hdr-title" style={{ fontSize: 17, fontWeight: 700, lineHeight: 1.1, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>

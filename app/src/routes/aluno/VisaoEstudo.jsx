@@ -12,6 +12,7 @@ import { FaixaAspirante, MissaoAtual } from "../../modules/motor/MetaHero.jsx";
 import { MetaSemana } from "../../modules/motor/MetaSemana.jsx";
 import { Registrar } from "../../modules/motor/Registrar.jsx";
 import { Arquivo } from "../../modules/motor/Arquivo.jsx";
+import { Conquistas } from "../../modules/motor/Conquistas.jsx";
 import { calcularXP } from "../../modules/motor/jargao.js";
 import { Progresso, Simulados } from "../../modules/desempenho/Progresso.jsx";
 import { Acumulado } from "../../modules/desempenho/Acumulado.jsx";
@@ -21,7 +22,7 @@ import { calcularMetricas } from "../../modules/desempenho/metricas.js";
 import { semanaAtual, fmtBR } from "../../shared/regras/regras.js";
 import * as db from "../../shared/data/index.js";
 
-export function VisaoEstudo({ aluno, podeEditar, comResumo, contexto = "Plano de estudos" }) {
+export function VisaoEstudo({ aluno, podeEditar, comResumo, concurso = null, contexto = "Plano de estudos" }) {
   const T = useTema();
   const [tab, setTab] = useState("hoje");
   const [dados, setDados] = useState({ carregando: true, metas: [], registros: [], simulados: [], erro: null });
@@ -67,7 +68,7 @@ export function VisaoEstudo({ aluno, podeEditar, comResumo, contexto = "Plano de
   const ABAS = [
     ["hoje", "Hoje", null, "⚓"], ["registrar", "Registrar", null, "✎"],
     ["desempenho", "Desempenho", null, "📊"], ["simulados", "Simulados", null, "🎯"],
-    ["historico", "Histórico", null, "🗂"], ["plano", "Plano", null, "🗺"],
+    ["conquistas", "Conquistas", null, "🎖"], ["historico", "Histórico", null, "🗂"], ["plano", "Plano", null, "🗺"],
   ].filter(([k]) => podeEditar || k !== "registrar").map(
     ([k, lb, badge, icone]) => (k === "hoje" && podeEditar && pendentes > 0 ? [k, lb, pendentes, icone] : [k, lb, badge, icone]),
   );
@@ -77,7 +78,7 @@ export function VisaoEstudo({ aluno, podeEditar, comResumo, contexto = "Plano de
       {/* cronômetro: começa agora, e o tempo vai direto pro registro */}
       {podeEditar && (
         <div style={{ marginBottom: 12, display: "flex", justifyContent: "flex-end" }}>
-          <Cronometro aoUsarMinutos={(min) => { setMinutosSugeridos(min); setTab("registrar"); }} />
+          <Cronometro aoFinalizar={(min) => { setMinutosSugeridos(min); setTab("registrar"); }} />
         </div>
       )}
 
@@ -86,7 +87,8 @@ export function VisaoEstudo({ aluno, podeEditar, comResumo, contexto = "Plano de
       <div className="fade" key={tab}>
         {tab === "hoje" && (
           <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-            <FaixaAspirante nome={aluno.nome.split(" ")[0]} contexto={contexto} xp={xp} streak={m?.streak ?? 0} />
+            <FaixaAspirante nome={aluno.nome.split(" ")[0]} contexto={contexto} xp={xp} streak={m?.streak ?? 0}
+              aoAbrirConquistas={() => setTab("conquistas")} />
             {comResumo && m && (
               <Resumo m={m} semanaAtiva={semanaAtiva} totalSemanas={semanasRegras.length}
                 doneCount={itensMeta.filter((x) => x.estado === "concluida").length}
@@ -114,7 +116,10 @@ export function VisaoEstudo({ aluno, podeEditar, comResumo, contexto = "Plano de
           </div>
         )}
         {tab === "simulados" && (
-          <Simulados aluno={aluno} simulados={dados.simulados} podeEditar={podeEditar} semanaAtiva={semanaAtiva} aoMudar={recarregar} />
+          <Simulados aluno={aluno} simulados={dados.simulados} podeEditar={podeEditar} semanaAtiva={semanaAtiva} concurso={concurso} aoMudar={recarregar} />
+        )}
+        {tab === "conquistas" && m && (
+          <Conquistas nome={aluno.nome.split(" ")[0]} xp={xp} m={m} metas={dados.metas} simulados={dados.simulados} />
         )}
         {tab === "historico" && (
           <Arquivo metas={dados.metas} trilha={trilha} registros={dados.registros} />

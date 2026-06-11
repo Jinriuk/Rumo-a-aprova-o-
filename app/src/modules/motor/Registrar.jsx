@@ -9,20 +9,41 @@ import { todayISO, fmtBR } from "../../shared/regras/regras.js";
 import { fmtHoras } from "./jargao.js";
 import * as db from "../../shared/data/index.js";
 
+// Tempo AMIGÁVEL (Fase 4 do doc): aceita "45min", "1h", "1h30", "90".
+// Devolve minutos (int) ou null se vazio/não entendido.
+export function parseTempo(txt) {
+  const s = String(txt ?? "").trim().toLowerCase().replace(",", ".").replace(/\s+/g, "");
+  if (!s) return null;
+  let m = s.match(/^(\d+)h(\d{1,2})m?$/); // 1h30
+  if (m) return +m[1] * 60 + +m[2];
+  m = s.match(/^(\d+(?:\.\d+)?)h$/); // 1h, 1.5h
+  if (m) return Math.round(+m[1] * 60);
+  m = s.match(/^(\d+)(m|min|mins|minutos)?$/); // 45, 45min
+  if (m) return +m[1];
+  return NaN; // formato não entendido
+}
+
+const fmtTempoCurto = (min) => (min >= 60 ? `${Math.floor(min / 60)}h${String(min % 60).padStart(2, "0")}` : `${min}min`);
+
 export function Registrar({ aluno, trilha, registros, aoMudar, minutosSugeridos }) {
   const T = useTema();
   const { input: inputS, label: lbl } = useInputStyle();
-  const branco = { data: todayISO(), disciplina_codigo: "mat", topico: "", questoes: "", acertos: "", minutos: "", obs: "" };
+  const branco = { data: todayISO(), disciplina_codigo: "mat", topico: "", questoes: "", acertos: "", tempo: "", obs: "" };
   const [f, setF] = useState(branco);
   const [erro, setErro] = useState(null);
   const [ocupado, setOcupado] = useState(false);
   const [maisCampos, setMaisCampos] = useState(false);
   const set = (k, v) => setF({ ...f, [k]: v });
 
-  // o cronômetro do topo manda os minutos direto pra cá
+  // o cronômetro do topo manda o tempo direto pra cá, já formatado
   useEffect(() => {
-    if (minutosSugeridos > 0) setF((atual) => ({ ...atual, minutos: String(minutosSugeridos) }));
+    if (minutosSugeridos > 0) setF((atual) => ({ ...atual, tempo: fmtTempoCurto(minutosSugeridos) }));
   }, [minutosSugeridos]);
+
+  const minutosParse = parseTempo(f.tempo);
+  const tempoInvalido = Number.isNaN(minutosParse);
+  const acertosDemais = f.acertos !== "" && f.questoes !== "" && +f.acertos > +f.questoes;
+  const podeSalvar = f.questoes !== "" && +f.questoes > 0 && f.topico.trim() !== "" && !tempoInvalido && !acertosDemais && !ocupado;
 
   // resumo do dia
   const hoje = todayISO();
@@ -38,15 +59,15 @@ export function Registrar({ aluno, trilha, registros, aoMudar, minutosSugeridos 
   }, [registros, hoje, trilha]);
 
   async function adicionar() {
-    if (!f.questoes || +f.questoes <= 0 || ocupado) return;
+    if (!podeSalvar) return;
     setOcupado(true); setErro(null);
     try {
       const acertos = f.acertos === "" ? null : Math.min(+f.acertos, +f.questoes);
       await db.adicionarRegistro({
         escola_id: aluno.escola_id, aluno_id: aluno.id,
         data: f.data, disciplina_codigo: f.disciplina_codigo,
-        topico: f.topico || null, questoes: +f.questoes,
-        acertos, minutos: f.minutos === "" ? null : +f.minutos, obs: f.obs || null,
+        topico: f.topico.trim(), questoes: +f.questoes,
+        acertos, minutos: minutosParse, obs: f.obs || null,
       });
       setF({ ...branco, data: f.data, disciplina_codigo: f.disciplina_codigo });
       aoMudar?.();
@@ -82,26 +103,43 @@ export function Registrar({ aluno, trilha, registros, aoMudar, minutosSugeridos 
               {trilha.disciplinas.map((s) => <option key={s.codigo} value={s.codigo} style={{ background: T.bg2 }}>{s.nome}</option>)}
             </select>
           </div>
+          <div style={{ gridColumn: "1 / -1" }}>
+            <label style={lbl}>Tópico <span style={{ color: T.gold }}>*</span></label>
+            <input value={f.topico} onChange={(e) => set("topico", e.target.value)} placeholder="ex: divisibilidade — MDC e MMC" style={inputS} />
+          </div>
           <div><label style={lbl}>Questões</label><input type="number" inputMode="numeric" min="0" value={f.questoes} onChange={(e) => set("questoes", e.target.value)} placeholder="0" style={inputS} /></div>
-          <div><label style={lbl}>Acertos</label><input type="number" inputMode="numeric" min="0" value={f.acertos} onChange={(e) => set("acertos", e.target.value)} placeholder="0" style={inputS} /></div>
-          <div><label style={lbl}>Minutos</label><input type="number" inputMode="numeric" min="0" value={f.minutos} onChange={(e) => set("minutos", e.target.value)} placeholder="0" style={inputS} /></div>
+          <div>
+            <label style={lbl}>Acertos</label>
+            <input type="number" inputMode="numeric" min="0" value={f.acertos} onChange={(e) => set("acertos", e.target.value)} placeholder="0"
+              style={{ ...inputS, borderColor: acertosDemais ? T.red : T.line }} />
+          </div>
+          <div>
+            <label style={lbl}>Tempo</label>
+            <input value={f.tempo} onChange={(e) => set("tempo", e.target.value)} placeholder="1h30, 45min…"
+              style={{ ...inputS, borderColor: tempoInvalido ? T.red : minutosSugeridos > 0 && f.tempo ? T.gold : T.line }} />
+          </div>
         </div>
+        {acertosDemais && <div style={{ fontSize: 12, color: T.red, marginTop: 8 }}>Acertos não podem passar do número de questões.</div>}
+        {tempoInvalido && <div style={{ fontSize: 12, color: T.red, marginTop: 8 }}>Tempo não entendido — use formatos como “45min”, “1h” ou “1h30”.</div>}
+        {!tempoInvalido && minutosParse > 0 && <div style={{ fontSize: 11.5, color: T.sub, marginTop: 8 }}>◷ {minutosParse} minutos {minutosSugeridos > 0 ? "— puxado do cronômetro, pode ajustar" : ""}</div>}
 
         <button onClick={() => setMaisCampos((v) => !v)}
           style={{ marginTop: 12, border: "none", background: "transparent", color: T.gold, fontSize: 12.5, fontWeight: 600, padding: "4px 0" }}>
-          {maisCampos ? "− Menos campos" : "+ Tópico, observação e data"}
+          {maisCampos ? "− Menos campos" : "+ Observação e data"}
         </button>
         {maisCampos && (
           <div style={{ display: "grid", gap: 12, marginTop: 4 }}>
-            <div><label style={lbl}>Tópico</label><input value={f.topico} onChange={(e) => set("topico", e.target.value)} placeholder="ex: geometria — ângulo inscrito" style={inputS} /></div>
             <div><label style={lbl}>Observações</label><input value={f.obs} onChange={(e) => set("obs", e.target.value)} placeholder="onde travou, o que revisar…" style={inputS} /></div>
             <div style={{ maxWidth: 200 }}><label style={lbl}>Data</label><input type="date" value={f.data} onChange={(e) => set("data", e.target.value)} style={inputS} /></div>
           </div>
         )}
 
-        <Botao onClick={adicionar} disabled={!f.questoes || +f.questoes <= 0 || ocupado} style={{ marginTop: 14, width: "100%" }}>
+        <Botao onClick={adicionar} disabled={!podeSalvar} style={{ marginTop: 14, width: "100%" }}>
           {ocupado ? "Salvando…" : "✓ Adicionar registro"}
         </Botao>
+        {f.questoes !== "" && +f.questoes > 0 && f.topico.trim() === "" && (
+          <div style={{ fontSize: 12, color: T.sub, marginTop: 8 }}>Falta o <b style={{ color: T.gold }}>tópico</b> — ele alimenta seu histórico e o radar de desempenho.</div>
+        )}
         <Erro>{erro}</Erro>
       </SectionCard>
 

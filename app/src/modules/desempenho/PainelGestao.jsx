@@ -2,7 +2,7 @@
    gestão, cards de ALERTA de risco (sem atividade, sem credencial,
    meta atrasada) e ranking resumido. Tudo leitura, dentro do tenant
    (a RLS já limita à escola). Clicar num alerta leva à aba útil. */
-import React, { useMemo } from "react";
+import React, { useMemo, useState } from "react";
 import { SectionCard, StatCard, EmptyState } from "../../shared/ui/componentes.jsx";
 import { useTema } from "../../shared/branding/BrandingContext.jsx";
 import { todayISO } from "../../shared/regras/regras.js";
@@ -65,9 +65,18 @@ export function PainelGestao({ alunos, registros, metas, turmas, concursosPorId,
   const mediaAcerto = comAcc.length ? Math.round(comAcc.reduce((s, x) => s + x.acc, 0) / comAcc.length) : null;
   const questoesSemana = ag.reduce((s, x) => s + x.qSem, 0);
 
+  // Destaques: a escola escolhe o critério (Fase 9 do doc central)
+  const [criterio, setCriterio] = useState("acerto");
+  const CRITERIOS = {
+    acerto: { rotulo: "Melhor acerto", v: (x) => x.acc ?? -1, fmt: (x) => (x.acc == null ? "—" : `${x.acc}%`), sub: "acerto" },
+    questoes: { rotulo: "Mais questões (7d)", v: (x) => x.qSem, fmt: (x) => x.qSem, sub: "questões 7d" },
+    tempo: { rotulo: "Mais tempo (7d)", v: (x) => x.minSem, fmt: (x) => fmtHorasCurto(x.minSem), sub: "tempo 7d" },
+    dias: { rotulo: "Mais dias (7d)", v: (x) => x.diasSem, fmt: (x) => `${x.diasSem}d`, sub: "dias 7d" },
+  };
+  const crit = CRITERIOS[criterio];
   const ranking = [...ag]
     .filter((x) => x.q > 0)
-    .sort((a, b) => (b.acc ?? -1) - (a.acc ?? -1) || b.q - a.q)
+    .sort((a, b) => crit.v(b) - crit.v(a) || b.q - a.q)
     .slice(0, 3);
 
   const nomeTurma = (a) => (a.alunos_turmas ?? []).map((v) => v.turmas?.nome).filter(Boolean)[0];
@@ -108,9 +117,15 @@ export function PainelGestao({ alunos, registros, metas, turmas, concursosPorId,
         <Alerta tom="neutro" icone="🏁" titulo="Meta atrasada" sub="Missão da semana incompleta" n={metaAtrasada} ir={metaAtrasada ? "ranking" : null} />
       </div>
 
-      {/* RANKING RESUMIDO */}
+      {/* RANKING RESUMIDO — critério escolhido pela escola */}
       <SectionCard titulo="Destaques da semana" acao={
-        <button onClick={() => aoIr("ranking")} style={{ border: "none", background: "transparent", color: T.gold, fontSize: 12.5, fontWeight: 700 }}>Ver completo ›</button>
+        <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+          <select value={criterio} onChange={(e) => setCriterio(e.target.value)}
+            style={{ background: T.bg, border: `1px solid ${T.line}`, color: T.ink, borderRadius: 8, padding: "7px 9px", fontSize: 12 }}>
+            {Object.entries(CRITERIOS).map(([k, c]) => <option key={k} value={k} style={{ background: T.bg2 }}>{c.rotulo}</option>)}
+          </select>
+          <button onClick={() => aoIr("ranking")} style={{ border: "none", background: "transparent", color: T.gold, fontSize: 12.5, fontWeight: 700 }}>Ver completo ›</button>
+        </div>
       } semPadding>
         {ranking.length === 0 ? (
           <div style={{ padding: 8 }}><EmptyState icone="🏆" titulo="Sem dados para ranking" dica="Os destaques aparecem quando os alunos começam a registrar questões." /></div>
@@ -124,8 +139,8 @@ export function PainelGestao({ alunos, registros, metas, turmas, concursosPorId,
                   <div style={{ fontSize: 11, color: T.sub }}>{nomeTurma(r.aluno) || "sem turma"} · {r.q} questões</div>
                 </div>
                 <div style={{ textAlign: "right" }}>
-                  <div className="num disp" style={{ fontSize: 16, fontWeight: 800, color: r.acc >= 70 ? T.green : T.gold }}>{r.acc == null ? "—" : `${r.acc}%`}</div>
-                  <div style={{ fontSize: 9.5, color: T.sub, textTransform: "uppercase" }}>acerto</div>
+                  <div className="num disp" style={{ fontSize: 16, fontWeight: 800, color: T.gold }}>{crit.fmt(r)}</div>
+                  <div style={{ fontSize: 9.5, color: T.sub, textTransform: "uppercase" }}>{crit.sub}</div>
                 </div>
               </div>
             ))}

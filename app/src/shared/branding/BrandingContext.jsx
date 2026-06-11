@@ -1,13 +1,20 @@
 /* A camada de marca (white-label leve, Doc 6 §1.2): aplica logo,
    nome e cor de acento da escola POR CIMA do design fixo. */
-import React, { createContext, useContext } from "react";
+import React, { createContext, useContext, useState } from "react";
 import { BASE, tema as temaDaEscola } from "../ui/tema.js";
 
-const BrandingContext = createContext({ escola: null, tema: BASE });
+const BrandingContext = createContext({ escola: null, tema: BASE, aplicarMarca: () => {} });
 
 export function BrandingProvider({ escola, children }) {
-  const tema = temaDaEscola(escola?.cor_acento);
-  return <BrandingContext.Provider value={{ escola, tema }}>{children}</BrandingContext.Provider>;
+  // override local: a tela Marca aplica a mudança NA HORA, sem F5
+  const [marcaLocal, setMarcaLocal] = useState(null);
+  const efetiva = escola && marcaLocal ? { ...escola, ...marcaLocal } : escola;
+  const tema = temaDaEscola(efetiva?.cor_acento);
+  return (
+    <BrandingContext.Provider value={{ escola: efetiva, tema, aplicarMarca: setMarcaLocal }}>
+      {children}
+    </BrandingContext.Provider>
+  );
 }
 
 export const useBranding = () => useContext(BrandingContext);

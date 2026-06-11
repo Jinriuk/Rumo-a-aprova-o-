@@ -124,6 +124,17 @@ export async function criarTurma(nome) {
   return data;
 }
 
+export async function renomearTurma(turmaId, nome) {
+  const { data, error } = await supabase.from("turmas").update({ nome }).eq("id", turmaId).select("id");
+  if (error) throw falha("renomear turma", error);
+  if (!data?.length) throw new Error("renomear turma: o banco recusou a alteração");
+}
+
+export async function removerTurma(turmaId) {
+  const { error } = await supabase.from("turmas").delete().eq("id", turmaId);
+  if (error) throw falha("excluir turma", error);
+}
+
 export async function listarAlunos() {
   const { data, error } = await supabase
     .from("alunos")
@@ -161,6 +172,13 @@ export async function listarRegistrosEscola() {
   const { data, error } = await supabase
     .from("registros_estudo").select("aluno_id, data, questoes, acertos, minutos");
   if (error) throw falha("registros da escola", error);
+  return data;
+}
+
+export async function listarSimuladosEscola() {
+  const { data, error } = await supabase
+    .from("simulados").select("aluno_id, nome, data, acertos").order("data");
+  if (error) throw falha("simulados da escola", error);
   return data;
 }
 
@@ -267,8 +285,9 @@ export async function removerSimulado(id) {
 /* ---------- escola / marca ---------- */
 
 export async function atualizarMarca(escolaId, marca) {
-  const { error } = await supabase.from("escolas").update(marca).eq("id", escolaId);
+  const { data, error } = await supabase.from("escolas").update(marca).eq("id", escolaId).select("id");
   if (error) throw falha("marca", error);
+  if (!data?.length) throw new Error("marca: o banco recusou a alteração (verifique seu papel)");
 }
 
 /* ---------- conformidade ---------- */

@@ -35,7 +35,7 @@ export function calcularXP({ metas = [], totalQuestoes = 0, simulados = 0 }) {
 // Patentes por faixa de XP — escala do EXÉRCITO (padrão e neutra
 // entre forças: as turmas misturam CN+EPCAR, EsSA+EEAr etc.).
 // O "nível" é o índice + 1.
-const PATENTES = [
+export const PATENTES = [
   { xp: 0, nome: "Recruta" },
   { xp: 300, nome: "Soldado" },
   { xp: 800, nome: "Cabo" },
