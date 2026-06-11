@@ -36,7 +36,9 @@ export function FaixaAspirante({ nome, contexto, xp, streak }) {
           <div style={{ height: 5, background: T.bg, borderRadius: 3, overflow: "hidden" }}>
             <div style={{ width: `${p.pctProx}%`, height: "100%", background: `linear-gradient(90deg, ${T.gold}, ${T.green})` }} />
           </div>
-          <div style={{ fontSize: 10, color: T.sub, marginTop: 3 }}>faltam {(p.proxXp - xp).toLocaleString("pt-BR")} XP para a próxima patente</div>
+          <div style={{ fontSize: 10, color: T.sub, marginTop: 3 }}>
+            faltam {(p.proxXp - xp).toLocaleString("pt-BR")} XP para <b style={{ color: T.gold }}>{p.proxNome}</b>
+          </div>
         </div>
       )}
     </div>

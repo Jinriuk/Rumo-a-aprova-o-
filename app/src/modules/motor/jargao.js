@@ -15,7 +15,7 @@ export const L = {
   adiar: "Adiar",
   cumprido: "Cumprido",
   precisao: "Precisão",
-  horas: "Horas de voo",
+  horas: "Horas de instrução",
   alvos: "Alvos atingidos",
   ritmo: "Ritmo diário",
   radar: "Radar de desempenho",
@@ -32,14 +32,19 @@ export function calcularXP({ metas = [], totalQuestoes = 0, simulados = 0 }) {
   return cumpridas * 100 + totalQuestoes + simulados * 50;
 }
 
-// Patentes por faixa de XP. O "nível" é o índice + 1.
+// Patentes por faixa de XP — escala do EXÉRCITO (padrão e neutra
+// entre forças: as turmas misturam CN+EPCAR, EsSA+EEAr etc.).
+// O "nível" é o índice + 1.
 const PATENTES = [
   { xp: 0, nome: "Recruta" },
-  { xp: 300, nome: "Grumete" },
-  { xp: 800, nome: "Marinheiro" },
-  { xp: 1800, nome: "Aspirante" },
-  { xp: 3500, nome: "Guarda-Marinha" },
-  { xp: 6000, nome: "Segundo-Tenente" },
+  { xp: 300, nome: "Soldado" },
+  { xp: 800, nome: "Cabo" },
+  { xp: 1600, nome: "2º Tenente" },
+  { xp: 2800, nome: "1º Tenente" },
+  { xp: 4400, nome: "Capitão" },
+  { xp: 6500, nome: "Major" },
+  { xp: 9200, nome: "Coronel" },
+  { xp: 12500, nome: "General" },
 ];
 
 export function patente(xp) {
@@ -48,7 +53,7 @@ export function patente(xp) {
   const atual = PATENTES[i];
   const prox = PATENTES[i + 1] ?? null;
   const pct = prox ? Math.round(((xp - atual.xp) / (prox.xp - atual.xp)) * 100) : 100;
-  return { nome: atual.nome, nivel: i + 1, xp, proxXp: prox?.xp ?? null, pctProx: pct };
+  return { nome: atual.nome, nivel: i + 1, xp, proxXp: prox?.xp ?? null, proxNome: prox?.nome ?? null, pctProx: pct };
 }
 
 // XP que uma atividade vale, pela prioridade (Fechar vale mais).
