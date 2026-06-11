@@ -1,0 +1,96 @@
+{
+  "comentario": "Trilha do Colégio Naval (CPACN/2026) — IMPORTADA da versão atual (src/App.jsx do Rumo ao Naval). Os textos do plano são a metodologia autorada pelo dono: NÃO reescrever, não 'melhorar'. Versionada (Doc 4, seção 5).",
+  "nicho": "colegio-naval",
+  "nome": "Colégio Naval — CPACN/2026 (9 semanas)",
+  "versao": 1,
+  "metaQuestoesSemana": 250,
+  "disciplinas": [
+    { "codigo": "mat",  "nome": "Matemática",    "abrev": "Mat",  "cor": "#CDA349" },
+    { "codigo": "ing",  "nome": "Inglês",        "abrev": "Ing",  "cor": "#49B6CF" },
+    { "codigo": "por",  "nome": "Português",     "abrev": "Por",  "cor": "#E0788E" },
+    { "codigo": "fis",  "nome": "Física",        "abrev": "Fís",  "cor": "#9A8CF0" },
+    { "codigo": "qui",  "nome": "Química",       "abrev": "Quí",  "cor": "#5FC089" },
+    { "codigo": "soc",  "nome": "Est. Sociais",  "abrev": "Soc",  "cor": "#E0954A" },
+    { "codigo": "red",  "nome": "Redação",       "abrev": "Red",  "cor": "#46C6B0" },
+    { "codigo": "prov", "nome": "Provas antigas","abrev": "Prov", "cor": "#C77DFF" }
+  ],
+  "semanas": [
+    { "n": 1, "inicio": "2026-05-30", "fim": "2026-06-07", "foco": "Diagnóstico + base crítica (fração e potenciação)", "simulado": null,
+      "tarefas": [
+        { "s": "mat", "p": "F", "t": "Aplicar 1 prova antiga COMPLETA cronometrada (diagnóstico)" },
+        { "s": "mat", "p": "F", "t": "Frações: operações, simplificação, equações" },
+        { "s": "mat", "p": "P", "t": "Potenciação e radiciação (só base)" },
+        { "s": "ing", "p": "F", "t": "Murphy Units 1–14 (Simple / Continuous)" },
+        { "s": "por", "p": "F", "t": "Faça e Passe: acentuação (Cap 1.3) + iniciar morfologia (Cap 2)" }
+      ] },
+    { "n": 2, "inicio": "2026-06-08", "fim": "2026-06-14", "foco": "Divisibilidade + fim da base", "simulado": null,
+      "tarefas": [
+        { "s": "mat", "p": "F", "t": "Divisibilidade, MDC, MMC, congruência, módulo" },
+        { "s": "mat", "p": "F", "t": "Números racionais e frações: fechar de vez" },
+        { "s": "ing", "p": "F", "t": "Murphy Units 15–25 (Present Perfect, Future)" },
+        { "s": "por", "p": "F", "t": "Morfologia: substantivo, adjetivo, pronome, verbo (Cap 2.2)" }
+      ] },
+    { "n": 3, "inicio": "2026-06-15", "fim": "2026-06-21", "foco": "Início da geometria + funções", "simulado": "Simulado 1",
+      "tarefas": [
+        { "s": "mat", "p": "F", "t": "Geometria: triângulos, semelhança, ângulos" },
+        { "s": "mat", "p": "F", "t": "Funções 1º/2º grau, domínio, inequações" },
+        { "s": "ing", "p": "F", "t": "Morfologia: countable/uncountable, pronomes (61–76)" },
+        { "s": "por", "p": "F", "t": "Morfologia: verbo + advérbio/preposição/conjunção (2.2.6–2.2.7)" },
+        { "s": "fis", "p": "F", "t": "Cinemática (Vol.1)" },
+        { "s": "prov", "p": "F", "t": "Dissecar 1 prova antiga do CN: anotar cada pegadinha no caderno da banca" }
+      ] },
+    { "n": 4, "inicio": "2026-06-22", "fim": "2026-06-28", "foco": "Geometria pesada + sistemas", "simulado": "Simulado 2",
+      "tarefas": [
+        { "s": "mat", "p": "F", "t": "Geometria: círculo, ângulo inscrito, áreas" },
+        { "s": "mat", "p": "F", "t": "Equações e sistemas lineares" },
+        { "s": "ing", "p": "F", "t": "Comparativos/superlativos; question formation" },
+        { "s": "por", "p": "F", "t": "Sintaxe: termos da oração — sujeito, predicado, complementos (Cap 3.1)" },
+        { "s": "por", "p": "P", "t": "Interpretação: manter volume pelas provas antigas" },
+        { "s": "fis", "p": "F", "t": "Dinâmica: Newton, atrito, plano inclinado (Vol.1)" },
+        { "s": "prov", "p": "F", "t": "Dissecar mais 1 prova; cruzar pegadinhas que se repetem" }
+      ] },
+    { "n": 5, "inicio": "2026-06-29", "fim": "2026-07-05", "foco": "Geometria avançada + simulado semanal", "simulado": "Simulado 3",
+      "tarefas": [
+        { "s": "mat", "p": "F", "t": "Geometria: polígonos regulares, áreas compostas" },
+        { "s": "mat", "p": "P", "t": "Proporção, porcentagem, juros simples" },
+        { "s": "ing", "p": "P", "t": "Modais; voz passiva" },
+        { "s": "por", "p": "F", "t": "Sintaxe: orações coordenadas e subordinadas (3.2); crase (4.1)" },
+        { "s": "por", "p": "P", "t": "Interpretação: manter volume pelas provas" },
+        { "s": "fis", "p": "F", "t": "Termologia (Vol.2)" },
+        { "s": "qui", "p": "P", "t": "Atomística e funções inorgânicas" }
+      ] },
+    { "n": 6, "inicio": "2026-07-06", "fim": "2026-07-12", "foco": "Consolidação + redação entra", "simulado": "Simulado 4",
+      "tarefas": [
+        { "s": "mat", "p": "P", "t": "Progressões (fórmulas), estatística básica" },
+        { "s": "mat", "p": "F", "t": "Revisão geral de geometria" },
+        { "s": "ing", "p": "P", "t": "Relativos, preposições + revisão" },
+        { "s": "por", "p": "F", "t": "Concordância e regência verbal/nominal (Cap 3.3–3.4)" },
+        { "s": "red", "p": "F", "t": "1 redação dissertativa" },
+        { "s": "fis", "p": "P", "t": "Circuitos e eletrostática (Vol.3)" },
+        { "s": "soc", "p": "P", "t": "História colonial/império; geografia econômica" }
+      ] },
+    { "n": 7, "inicio": "2026-07-13", "fim": "2026-07-19", "foco": "Simulados + redação semanal", "simulado": "Simulado 5",
+      "tarefas": [
+        { "s": "mat", "p": "F", "t": "Bateria por tópico FECHAR (focar erros do Simulado 2)" },
+        { "s": "ing", "p": "F", "t": "Revisão ativa: tempos verbais e morfologia" },
+        { "s": "por", "p": "F", "t": "Revisar crase/pontuação + 1 redação; interpretação pelas provas" },
+        { "s": "red", "p": "F", "t": "1 redação" },
+        { "s": "fis", "p": "P", "t": "Ondas; Química: estequiometria/equilíbrio" },
+        { "s": "soc", "p": "P", "t": "1ª República, Vargas; agropecuária, urbanização" }
+      ] },
+    { "n": 8, "inicio": "2026-07-20", "fim": "2026-07-26", "foco": "Reta final — refazer as 10 provas até dominar", "simulado": "Simulados 6 e 7",
+      "tarefas": [
+        { "s": "prov", "p": "F", "t": "Refazer as 10 provas do CN até dominar; fechar o caderno de pegadinhas da banca" },
+        { "s": "mat", "p": "F", "t": "Refazer toda geometria errada das provas até sair no automático" },
+        { "s": "por", "p": "F", "t": "2 redações na semana + revisão de morfologia/sintaxe nos erros" },
+        { "s": "ing", "p": "F", "t": "Fechar pontos fáceis: gramática recorrente e química perto de 100%" }
+      ] },
+    { "n": 9, "inicio": "2026-07-27", "fim": "2026-08-01", "foco": "Ajuste fino e descanso estratégico", "simulado": "Simulado 8 (leve)",
+      "tarefas": [
+        { "s": "mat", "p": "P", "t": "1 simulado leve no início; depois só revisão" },
+        { "s": "por", "p": "P", "t": "Revisar morfologia, sintaxe, crase e acentuação (resumos)" },
+        { "s": "ing", "p": "P", "t": "Revisão leve" },
+        { "s": "prov", "p": "P", "t": "Reler o caderno de pegadinhas — não cair de novo no que já mapeou" }
+      ] }
+  ]
+}

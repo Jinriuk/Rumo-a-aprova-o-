@@ -1,0 +1,31 @@
+# Projeto Supabase — região São Paulo (sa-east-1) por causa da LGPD
+# (dado de menor fica no Brasil). Doc 6, seção 7.
+project_id = "rumo-aprovacao"
+
+[api]
+enabled = true
+port = 54321
+schemas = ["public"]
+
+[db]
+port = 54322
+major_version = 15
+
+[auth]
+enabled = true
+# login provisionado: ninguém se cadastra sozinho (aluno é menor;
+# coordenação é provisionada pelo operador)
+enable_signup = false
+
+[functions.gerar-meta]
+verify_jwt = true
+
+[functions.virar-semana]
+# valida a chave de serviço no código (operador), não JWT de usuário
+verify_jwt = false
+
+[functions.provisionar-aluno]
+verify_jwt = true
+
+[functions.lgpd-titular]
+verify_jwt = true
