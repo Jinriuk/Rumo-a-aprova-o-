@@ -25,7 +25,9 @@ test("navega por Alunos, Ranking, Turmas, LGPD e Marca", async ({ page }) => {
   await expect(page.getByText("Alunos da escola")).toBeVisible();
 
   await irParaAba(page, "Ranking");
-  await expect(page.getByText(/Classificação|Ranking/).first()).toBeVisible();
+  // "Ranking — Estudos" é o título do CONTEÚDO; "Ranking" sozinho
+  // casaria com o item do menu (oculto no mobile → falso negativo)
+  await expect(page.getByText(/Ranking —/).first()).toBeVisible();
 
   await irParaAba(page, "Turmas");
   await expect(page.getByText("Turmas").first()).toBeVisible();
@@ -60,6 +62,7 @@ test("destaques da semana respeitam o critério escolhido", async ({ page }) => 
 });
 
 test("MARCA: altera o nome de exibição, persiste após reload e restaura", async ({ page }) => {
+  test.setTimeout(60_000); // login + 2 salvamentos + reload não cabem nos 30s padrão
   await irParaAba(page, "Marca");
   const campoNome = campo(page, "Nome de exibição");
   await expect(campoNome).toBeVisible();

@@ -101,13 +101,18 @@ export async function sair(page) {
  *  desktop quanto na barra inferior do celular (onde abas excedentes
  *  ficam atrás do botão "Mais"). */
 export async function irParaAba(page, rotulo) {
-  const direto = botaoVisivel(page, rotulo);
-  if (await direto.count()) {
-    await direto.click();
+  const alvo = botaoVisivel(page, rotulo);
+  const mais = botaoVisivel(page, "Mais");
+  // pós-reload o menu demora a renderizar: espera a aba OU o "Mais"
+  // aparecer antes de decidir o caminho (sem isso, count()=0 cedo
+  // demais manda pro "Mais", que não existe no desktop → trava)
+  await expect(alvo.or(mais).first()).toBeVisible({ timeout: 15_000 });
+  if (await alvo.count()) {
+    await alvo.click();
     return;
   }
   // está escondida atrás de "Mais" (barra inferior do celular)
-  await botaoVisivel(page, "Mais").click();
+  await mais.click();
   await botaoVisivel(page, rotulo).click();
 }
 

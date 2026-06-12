@@ -6,8 +6,10 @@ import {
   CONTAS, coletarErros, loginAluno, loginResponsavel, loginCoordenacao, semEstouroHorizontal, botaoVisivel,
 } from "./_apoio.js";
 
-// só faz sentido no viewport de celular
-test.skip(({ }, testInfo) => testInfo.project.name !== "mobile", "apenas no projeto mobile");
+// só faz sentido no viewport de celular (o callback do test.skip
+// recebe apenas fixtures — testInfo não existe aqui; decide pela
+// largura: Pixel 7 ≈ 412px, desktop = 1366px)
+test.skip(({ viewport }) => !viewport || viewport.width > 600, "apenas no viewport de celular");
 
 test("aluno em 390px: sem estouro e com barra inferior", async ({ page }) => {
   const erros = coletarErros(page);
