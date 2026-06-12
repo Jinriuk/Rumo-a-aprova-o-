@@ -1,7 +1,9 @@
 /* Menu principal responsivo (Fase 1 do doc central):
-   - CELULAR (≤700px): barra inferior fixa (zona do polegar), ícones
-     SVG + rótulo, 4 itens principais + "Mais". Safe-area do iOS.
-   - DESKTOP (>700px): MENU LATERAL fixo (sidebar, ref. Guruja) — o
+   - CELULAR e TABLET (≤1023px): barra inferior fixa (zona do polegar),
+     ícones SVG + rótulo, 4 itens principais + "Mais". Safe-area iOS.
+     Tablet usa a MESMA navegação do celular — a sidebar só entra
+     quando a tela tem largura de sobra.
+   - DESKTOP (≥1024px): MENU LATERAL fixo (sidebar, ref. Guruja) — o
      conteúdo ocupa praticamente a tela toda (classe .com-sidebar).
    Contrato: abas = [[chave, rótulo, badge?, nomeDoÍcone]]. */
 import React, { useState } from "react";
@@ -45,10 +47,10 @@ export function MenuPrincipal({ abas, ativo, aoTrocar, usuario }) {
       <style>{`
         .menu-lateral { display:none; }
         .menu-barra { display:none; }
-        @media (max-width: 700px) {
+        @media (max-width: 1023px) {
           .menu-barra { display:flex; }
         }
-        @media (min-width: 701px) {
+        @media (min-width: 1024px) {
           .menu-lateral { display:flex; }
           .com-sidebar { margin-left: ${LARGURA_SIDEBAR}px !important; max-width: none !important; }
         }
@@ -144,7 +146,7 @@ export function MenuPrincipal({ abas, ativo, aoTrocar, usuario }) {
       {maisAberto && (
         <>
           <div onClick={() => setMaisAberto(false)} style={{ position: "fixed", inset: 0, zIndex: 41, background: "#0008" }} />
-          <div style={{ position: "fixed", left: 10, right: 10, bottom: `calc(66px + env(safe-area-inset-bottom))`, zIndex: 42, background: T.bg2, border: `1px solid ${T.line}`, borderRadius: 14, overflow: "hidden", boxShadow: "0 12px 40px #000a" }}>
+          <div style={{ position: "fixed", left: "50%", transform: "translateX(-50%)", width: "min(440px, calc(100% - 20px))", bottom: `calc(66px + env(safe-area-inset-bottom))`, zIndex: 42, background: T.bg2, border: `1px solid ${T.line}`, borderRadius: 14, overflow: "hidden", boxShadow: "0 12px 40px #000a" }}>
             {noMais.map(([k, lb, badge, icone], i) => {
               const on = ativo === k;
               return (
