@@ -21,6 +21,23 @@ jobs:
   build-e-unitarios:
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    # Postgres VANILLA de propósito: a migration 0001 cria as roles
+    # (authenticated/anon/service_role) quando faltam, e a 0004 pula o
+    # pg_cron quando indisponível — é o desenho do reset-db.sh. O
+    # Postgres do Supabase NÃO serve aqui: nele o pg_cron só pode ser
+    # criado no database `postgres`, e o teste usa `rumo_teste`.
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 54322:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
     env:
       PGHOST: 127.0.0.1
       PGPORT: "54322"
@@ -45,12 +62,6 @@ jobs:
       - name: Build de produção
         working-directory: app
         run: npm run build
-
-      - name: Subir Postgres do Supabase (porta 54322)
-        uses: supabase/setup-cli@v1
-        with:
-          version: latest
-      - run: supabase db start
 
       - name: Instalar dependências (tests)
         working-directory: tests
