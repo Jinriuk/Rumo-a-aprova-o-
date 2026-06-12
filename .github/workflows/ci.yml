@@ -1,0 +1,111 @@
+# CI — Fase 14.5: build, testes unitários (incl. motor+RLS em Postgres
+# real via Supabase CLI) e suíte E2E Playwright.
+#
+# SEGURANÇA: nenhum secret é necessário. O front usa só chaves
+# PÚBLICAS (app/.env.production: URL + anon key, publicáveis por
+# design — a segurança é a RLS). A service_role NUNCA entra aqui.
+name: CI
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  # ------------------------------------------------------------
+  # 1) Build de produção + testes unitários
+  #    - regras.test.mjs: lógica pura (sem banco)
+  #    - motor/isolamento.test.mjs: motor e RLS contra o Postgres
+  #      do Supabase local (mesmas migrations de produção)
+  # ------------------------------------------------------------
+  build-e-unitarios:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      PGHOST: 127.0.0.1
+      PGPORT: "54322"
+      PGUSER: postgres
+      PGPASSWORD: postgres
+      PGDATABASE: rumo_teste
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: |
+            app/package-lock.json
+            tests/package-lock.json
+
+      - name: Instalar dependências (app)
+        working-directory: app
+        run: npm ci
+
+      - name: Build de produção
+        working-directory: app
+        run: npm run build
+
+      - name: Subir Postgres do Supabase (porta 54322)
+        uses: supabase/setup-cli@v1
+        with:
+          version: latest
+      - run: supabase db start
+
+      - name: Instalar dependências (tests)
+        working-directory: tests
+        run: npm ci
+
+      - name: Migrations + seed (2x — idempotência exercitada)
+        working-directory: tests
+        run: bash reset-db.sh
+
+      - name: Testes unitários (regras + motor + isolamento RLS)
+        working-directory: tests
+        run: npm test
+
+  # ------------------------------------------------------------
+  # 2) E2E Playwright: o build REAL contra o Supabase de demo.
+  #    Os próprios testes validam erros de console (coletarErros).
+  # ------------------------------------------------------------
+  e2e:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    # o banco de demo é COMPARTILHADO e o teste de marca escreve e
+    # restaura — nunca duas suítes ao mesmo tempo
+    concurrency:
+      group: e2e-demo-db
+      cancel-in-progress: false
+    defaults:
+      run:
+        working-directory: app
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: app/package-lock.json
+
+      - name: Instalar dependências
+        run: npm ci
+
+      - name: Build de produção
+        run: npm run build
+
+      - name: Instalar Chromium do Playwright
+        run: npx playwright install --with-deps chromium
+
+      - name: Suíte E2E (42 testes, desktop + mobile)
+        run: npm run test:e2e
+        env:
+          CI: "true"
+
+      - name: Publicar relatório (em falha)
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: app/playwright-report/
+          retention-days: 14
