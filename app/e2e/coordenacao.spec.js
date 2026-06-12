@@ -29,11 +29,14 @@ test("navega por Alunos, Ranking, Turmas, LGPD e Marca", async ({ page }) => {
   // casaria com o item do menu (oculto no mobile → falso negativo)
   await expect(page.getByText(/Ranking —/).first()).toBeVisible();
 
+  // os matchers abaixo usam textos do CONTEÚDO de cada página —
+  // rótulos como "Turmas"/"LGPD" também existem no menu lateral
+  // (oculto no mobile) e o .first() resolveria no span escondido
   await irParaAba(page, "Turmas");
-  await expect(page.getByText("Turmas").first()).toBeVisible();
+  await expect(page.getByText("Visão rápida do desempenho de cada turma")).toBeVisible();
 
   await irParaAba(page, "LGPD");
-  await expect(page.getByText(/LGPD|consentiment|trilha de acesso/i).first()).toBeVisible();
+  await expect(page.getByText("Para que serve esta área")).toBeVisible();
 
   await irParaAba(page, "Marca");
   await expect(page.getByText("Marca da escola")).toBeVisible();
