@@ -1,7 +1,7 @@
 // @ts-check
 /* Autenticação: login dos três papéis, logout e rejeição de credencial. */
 import { test, expect } from "@playwright/test";
-import { CONTAS, coletarErros, loginAluno, loginResponsavel, loginCoordenacao, sair } from "./_apoio.js";
+import { CONTAS, coletarErros, loginAluno, loginResponsavel, loginCoordenacao, sair, botaoVisivel } from "./_apoio.js";
 
 test("tela de login aparece com as duas formas de entrar", async ({ page }) => {
   const erros = coletarErros(page);
@@ -23,7 +23,7 @@ test("código inválido é rejeitado com mensagem clara", async ({ page }) => {
 test("login do aluno (código) e logout", async ({ page }) => {
   const erros = coletarErros(page);
   await loginAluno(page, CONTAS.alunoLucas);
-  await expect(page.getByRole("button", { name: "Hoje", exact: true }).first()).toBeVisible();
+  await expect(botaoVisivel(page, "Hoje")).toBeVisible();
   await sair(page);
   expect(erros).toEqual([]);
 });

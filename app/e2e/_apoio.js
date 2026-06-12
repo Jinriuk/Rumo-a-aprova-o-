@@ -43,6 +43,21 @@ export async function semEstouroHorizontal(page) {
   expect(estoura, "não deve haver rolagem horizontal (estouro lateral)").toBe(false);
 }
 
+/** Campo de formulário pelo rótulo. Os <label> do app NÃO são
+ *  associados ao input (sem htmlFor) — são irmãos no DOM, então o
+ *  getByLabel não acha. Selecionamos o input vizinho do label.
+ *  (Associar labels de verdade fica anotado como melhoria de a11y.) */
+export function campo(page, rotulo) {
+  return page.locator(`label:has-text("${rotulo}") + input`).first();
+}
+
+/** Botão VISÍVEL pelo nome. O menu existe duplicado no DOM (sidebar
+ *  do desktop + barra inferior do celular; um deles sempre escondido
+ *  por CSS) — sem o filtro de visibilidade o strict mode estoura. */
+export function botaoVisivel(page, nome) {
+  return page.getByRole("button", { name: nome, exact: true }).filter({ visible: true }).first();
+}
+
 async function abrirLogin(page) {
   await page.goto("/");
   await expect(page.getByRole("button", { name: "Entrar" })).toBeVisible();
@@ -51,8 +66,8 @@ async function abrirLogin(page) {
 export async function loginCoordenacao(page, conta = CONTAS.coordenacaoVitrine) {
   await abrirLogin(page);
   await page.getByRole("button", { name: /Coordenação/ }).click();
-  await page.getByLabel("E-mail").fill(conta.email);
-  await page.getByLabel("Senha").fill(conta.senha);
+  await page.locator('input[type="email"]').fill(conta.email);
+  await page.locator('input[type="password"]').fill(conta.senha);
   await page.getByRole("button", { name: "Entrar" }).click();
   // entrou: o cabeçalho da coordenação aparece
   await expect(page.getByText("Painel de gestão")).toBeVisible({ timeout: 15_000 });
@@ -67,8 +82,9 @@ async function loginPorCodigo(page, codigo) {
 
 export async function loginAluno(page, conta = CONTAS.alunoLucas) {
   await loginPorCodigo(page, conta.codigo);
-  // a tela do aluno traz o botão Sair e as abas do estudo
-  await expect(page.getByRole("button", { name: "Sair" })).toBeVisible({ timeout: 15_000 });
+  // espera o MENU do aluno (não só o cabeçalho): ele só aparece
+  // depois que os dados carregam — navegação antes disso falharia
+  await expect(botaoVisivel(page, "Hoje")).toBeVisible({ timeout: 15_000 });
 }
 
 export async function loginResponsavel(page, conta = CONTAS.responsavelLucas) {
@@ -85,13 +101,13 @@ export async function sair(page) {
  *  desktop quanto na barra inferior do celular (onde abas excedentes
  *  ficam atrás do botão "Mais"). */
 export async function irParaAba(page, rotulo) {
-  const direto = page.getByRole("button", { name: rotulo, exact: true });
-  if (await direto.isVisible().catch(() => false)) {
-    await direto.first().click();
+  const direto = botaoVisivel(page, rotulo);
+  if (await direto.count()) {
+    await direto.click();
     return;
   }
   // está escondida atrás de "Mais" (barra inferior do celular)
-  await page.getByRole("button", { name: "Mais", exact: true }).click();
-  await page.getByRole("button", { name: rotulo, exact: true }).first().click();
+  await botaoVisivel(page, "Mais").click();
+  await botaoVisivel(page, rotulo).click();
 }
 

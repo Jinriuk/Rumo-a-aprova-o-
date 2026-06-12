@@ -13,7 +13,7 @@ test("vê o resumo do aluno vinculado (meta, desempenho, matérias)", async ({ p
   // frase interpretativa + blocos de leitura
   await expect(page.getByText("Atividades da semana")).toBeVisible({ timeout: 15_000 });
   await expect(page.getByText("Desempenho por matéria")).toBeVisible();
-  await expect(page.getByText("Meta da semana")).toBeVisible();
+  await expect(page.getByText("Meta da semana").first()).toBeVisible();
   await semEstouroHorizontal(page);
   expect(erros).toEqual([]);
 });

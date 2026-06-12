@@ -2,7 +2,7 @@
 /* Coordenação: painel, navegação pelas abas, abrir aluno, ranking,
    LGPD e persistência da MARCA (altera e restaura o nome de exibição). */
 import { test, expect } from "@playwright/test";
-import { CONTAS, coletarErros, loginCoordenacao, irParaAba, semEstouroHorizontal } from "./_apoio.js";
+import { CONTAS, coletarErros, loginCoordenacao, irParaAba, semEstouroHorizontal, campo } from "./_apoio.js";
 
 test.beforeEach(async ({ page }) => {
   await loginCoordenacao(page, CONTAS.coordenacaoVitrine);
@@ -61,7 +61,7 @@ test("destaques da semana respeitam o critério escolhido", async ({ page }) => 
 
 test("MARCA: altera o nome de exibição, persiste após reload e restaura", async ({ page }) => {
   await irParaAba(page, "Marca");
-  const campoNome = page.getByLabel("Nome de exibição");
+  const campoNome = campo(page, "Nome de exibição");
   await expect(campoNome).toBeVisible();
   const original = await campoNome.inputValue();
   const tempo = `${original} ⟦e2e⟧`;
@@ -74,11 +74,11 @@ test("MARCA: altera o nome de exibição, persiste após reload e restaura", asy
     // recarrega: o valor tem de vir do banco (persistência real)
     await page.reload();
     await irParaAba(page, "Marca");
-    await expect(page.getByLabel("Nome de exibição")).toHaveValue(tempo, { timeout: 15_000 });
+    await expect(campo(page, "Nome de exibição")).toHaveValue(tempo, { timeout: 15_000 });
   } finally {
     // restaura o nome original — não deixa o seed sujo
-    const campo = page.getByLabel("Nome de exibição");
-    await campo.fill(original);
+    const campoRestauro = campo(page, "Nome de exibição");
+    await campoRestauro.fill(original);
     await page.getByRole("button", { name: "Salvar marca" }).click();
     await expect(page.getByText(/Marca salva no banco/)).toBeVisible({ timeout: 15_000 });
   }
