@@ -28,6 +28,8 @@ export function MenuPrincipal({ abas, ativo, aoTrocar, usuario }) {
   function trocar(k) {
     setMaisAberto(false);
     aoTrocar(k);
+    // trocar de aba = página nova: sempre nasce no TOPO
+    window.scrollTo({ top: 0, left: 0, behavior: "instant" });
   }
 
   const ItemBarra = ({ rotulo, badge, icone, on, aoClicar }) => (

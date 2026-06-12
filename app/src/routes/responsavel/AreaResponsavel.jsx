@@ -19,6 +19,8 @@ export default function AreaResponsavel({ perfil }) {
   const [prova, setProva] = useState(null);
   const { trilha } = useTrilha(aluno?.trilha_id);
 
+  useEffect(() => window.scrollTo({ top: 0, left: 0, behavior: "instant" }), []); // login nasce no topo
+
   useEffect(() => {
     let vivo = true;
     (async () => {

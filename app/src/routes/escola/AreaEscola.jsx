@@ -38,10 +38,14 @@ export default function AreaEscola({ perfil }) {
     return () => { vivo = false; };
   }, [versao]);
 
-  function irPara(t) { setTab(t); setAlunoAberto(null); }
+  const aoTopo = () => window.scrollTo({ top: 0, left: 0, behavior: "instant" });
+  useEffect(aoTopo, []); // entrar no sistema = nascer no topo
+
+  function irPara(t) { setTab(t); setAlunoAberto(null); aoTopo(); }
 
   function verAluno(aluno) {
     setAlunoAberto(aluno);
+    aoTopo();
     db.registrarAcesso(perfil.escola.id, aluno.id, perfil.usuario.id, "coordenacao", "leitura-desempenho");
   }
 
@@ -73,7 +77,7 @@ export default function AreaEscola({ perfil }) {
 
           {!dados.carregando && alunoAberto && (
             <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-              <button onClick={() => setAlunoAberto(null)} style={{ alignSelf: "flex-start", border: `1px solid ${T.line}`, background: T.card, color: T.sub, borderRadius: 8, padding: "8px 14px", fontSize: 13, fontWeight: 600 }}>← voltar ao painel</button>
+              <button onClick={() => { setAlunoAberto(null); aoTopo(); }} style={{ alignSelf: "flex-start", border: `1px solid ${T.line}`, background: T.card, color: T.sub, borderRadius: 8, padding: "8px 14px", fontSize: 13, fontWeight: 600 }}>← voltar ao painel</button>
               <FichaAluno aluno={alunoAberto} concurso={concursoDoAluno} />
             </div>
           )}

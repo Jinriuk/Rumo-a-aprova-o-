@@ -16,6 +16,8 @@ export default function AreaAluno({ perfil }) {
   const [prova, setProva] = useState(null);
   const [concurso, setConcurso] = useState(null);
 
+  useEffect(() => window.scrollTo({ top: 0, left: 0, behavior: "instant" }), []); // login nasce no topo
+
   useEffect(() => {
     let vivo = true;
     (async () => {

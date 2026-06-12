@@ -30,6 +30,8 @@ export function VisaoEstudo({ aluno, podeEditar, concurso = null, contexto = "Pl
   const [versao, setVersao] = useState(0);
   const [minutosSugeridos, setMinutosSugeridos] = useState(0);
   const recarregar = () => setVersao((v) => v + 1);
+  // toda troca de aba (menu OU botões internos) nasce no topo da página
+  const irAba = (k) => { setTab(k); window.scrollTo({ top: 0, left: 0, behavior: "instant" }); };
 
   useEffect(() => {
     if (!aluno) return;
@@ -78,7 +80,7 @@ export function VisaoEstudo({ aluno, podeEditar, concurso = null, contexto = "Pl
       {/* cronômetro: começa agora, e o tempo vai direto pro registro */}
       {podeEditar && (
         <div style={{ marginBottom: 12, display: "flex", justifyContent: "flex-end" }}>
-          <Cronometro aoFinalizar={(min) => { setMinutosSugeridos(min); setTab("registrar"); }} />
+          <Cronometro aoFinalizar={(min) => { setMinutosSugeridos(min); irAba("registrar"); }} />
         </div>
       )}
 
@@ -89,11 +91,11 @@ export function VisaoEstudo({ aluno, podeEditar, concurso = null, contexto = "Pl
         {tab === "hoje" && (
           <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
             <FaixaAspirante nome={aluno.nome.split(" ")[0]} contexto={contexto} xp={xp} streak={m?.streak ?? 0}
-              aoAbrirConquistas={() => setTab("conquistas")} />
+              aoAbrirConquistas={() => irAba("conquistas")} />
             <MissaoAtual meta={meta} trilha={trilha} m={m} />
             <MetaSemana meta={meta} trilha={trilha} podeEditar={podeEditar} aoMudar={recarregar} />
             {podeEditar && (
-              <button onClick={() => setTab("registrar")}
+              <button onClick={() => irAba("registrar")}
                 style={{ border: `1px dashed ${T.gold}66`, background: `${T.gold}0c`, color: T.gold, borderRadius: 12, fontWeight: 700, fontSize: 14, padding: "14px", minHeight: 50 }}>
                 ✎ Registrar estudo de hoje
               </button>
@@ -107,7 +109,7 @@ export function VisaoEstudo({ aluno, podeEditar, concurso = null, contexto = "Pl
         {tab === "desempenho" && (
           <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
             {m && <InsightsDesempenho m={m} />}
-            <RadarDesempenho m={m} trilha={trilha} aoRegistrar={podeEditar ? () => setTab("registrar") : null} />
+            <RadarDesempenho m={m} trilha={trilha} aoRegistrar={podeEditar ? () => irAba("registrar") : null} />
             <Acumulado registros={dados.registros} trilha={trilha} />
             <Progresso registros={dados.registros} trilha={trilha} />
           </div>
