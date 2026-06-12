@@ -47,7 +47,10 @@ export function tema(corAcento) {
 export const FONTES_CSS = `
   @import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&family=Archivo:wght@400;500;600;700&display=swap');
   * { box-sizing: border-box; }
-  html, body { margin:0; max-width:100%; overflow-x:hidden; background:#0A1622; }
+  /* overflow-x: CLIP (não "hidden"): corta estouro lateral SEM criar
+     contêiner de rolagem — "hidden" no html quebra a inércia do
+     scroll por toque no Safari/iPad. */
+  html, body { margin:0; max-width:100%; overflow-x:clip; background:#0A1622; }
   /* sem efeito elástico no topo (mobile): o cabeçalho não "descola"
      do resto da tela ao puxar pra baixo */
   html, body { overscroll-behavior-y: none; }
@@ -61,10 +64,11 @@ export const FONTES_CSS = `
   .chk { transition: all .15s; }
   .navwrap { -webkit-overflow-scrolling: touch; scrollbar-width: none; }
   .navwrap::-webkit-scrollbar { display: none; }
-  /* em telas grandes o sistema inteiro sobe um degrau de tamanho —
-     leitura confortável sem mexer componente a componente */
-  @media (min-width: 1200px) { body { zoom: 1.08; } }
-  @media (min-width: 1600px) { body { zoom: 1.15; } }
+  /* em telas grandes DE COMPUTADOR (mouse/trackpad: pointer fine) o
+     sistema sobe um degrau de tamanho. Tablets ficam de fora: zoom
+     re-escala a página durante a rolagem e trava o scroll no WebKit. */
+  @media (min-width: 1200px) and (pointer: fine) { body { zoom: 1.08; } }
+  @media (min-width: 1600px) and (pointer: fine) { body { zoom: 1.15; } }
   @media (max-width: 560px) {
     .hdr-title { font-size: 17px !important; }
     /* mobile mais compacto: menos respiro vertical, mais conteúdo na dobra */

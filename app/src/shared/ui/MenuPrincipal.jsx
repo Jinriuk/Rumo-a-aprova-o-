@@ -134,8 +134,10 @@ export function MenuPrincipal({ abas, ativo, aoTrocar, usuario }) {
         </div>
       </nav>
 
-      {/* ============ CELULAR: barra inferior fixa ============ */}
-      <nav className="menu-barra" style={{ position: "fixed", left: 0, right: 0, bottom: 0, zIndex: 40, background: `${T.bg2}f2`, backdropFilter: "blur(10px)", WebkitBackdropFilter: "blur(10px)", borderTop: `1px solid ${T.line}`, paddingBottom: "env(safe-area-inset-bottom)" }}>
+      {/* ============ CELULAR/TABLET: barra inferior fixa ============
+          fundo SÓLIDO de propósito: backdrop-filter (blur) em elemento
+          fixo repinta a cada pixel rolado e trava o scroll em tablet */}
+      <nav className="menu-barra" style={{ position: "fixed", left: 0, right: 0, bottom: 0, zIndex: 40, background: T.bg2, borderTop: `1px solid ${T.line}`, paddingBottom: "env(safe-area-inset-bottom)", boxShadow: "0 -4px 16px #0006" }}>
         {naBarra.map(([k, lb, badge, icone]) => (
           <ItemBarra key={k} rotulo={lb} badge={badge} icone={icone} on={ativo === k} aoClicar={() => trocar(k)} />
         ))}
