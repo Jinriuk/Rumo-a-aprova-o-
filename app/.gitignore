@@ -1,0 +1,4 @@
+# artefatos do Playwright (E2E — Fase 14.5)
+playwright-report/
+test-results/
+playwright/.cache/
