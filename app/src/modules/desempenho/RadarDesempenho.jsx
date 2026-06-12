@@ -9,11 +9,11 @@ import {
 import { SectionCard, EmptyState, InsightCard } from "../../shared/ui/componentes.jsx";
 import { useTema } from "../../shared/branding/BrandingContext.jsx";
 import { calcularInsights } from "./metricas.js";
-import { fmtHorasCurto } from "../motor/jargao.js";
 
 export function RadarDesempenho({ m, trilha, aoRegistrar }) {
   const T = useTema();
-  const insights = calcularInsights(m);
+  // fora do período da trilha (ou trilha sem semanas) não há métricas
+  const insights = m ? calcularInsights(m) : { temDados: false };
 
   if (!insights.temDados) {
     return (

@@ -40,7 +40,8 @@ export function calcularMetricas({ registros, simulados, semanas, semanaAtiva, d
   let lastSim = null;
   if (simulados.length) {
     const sm = [...simulados].sort((a, b) => String(a.data).localeCompare(String(b.data)))[simulados.length - 1];
-    lastSim = { label: sm.nome, nota: notaProjetadaDia1(sm.acertos) };
+    // chaves podem faltar no jsonb de outros concursos — nunca NaN
+    lastSim = { label: sm.nome, nota: notaProjetadaDia1({ mat: +sm.acertos.mat || 0, ing: +sm.acertos.ing || 0 }) };
   }
 
   // visão do período todo: agregados por semana da trilha

@@ -2,7 +2,7 @@
    Painel / Alunos / Ranking / Turmas / LGPD / Marca. */
 import React, { useEffect, useMemo, useState } from "react";
 import { Cabecalho } from "../../shared/ui/Cabecalho.jsx";
-import { SectionCard, Empty, Erro, StatCard, EmptyState } from "../../shared/ui/componentes.jsx";
+import { SectionCard, Empty, Erro, EmptyState } from "../../shared/ui/componentes.jsx";
 import { MenuPrincipal } from "../../shared/ui/MenuPrincipal.jsx";
 import { useTema } from "../../shared/branding/BrandingContext.jsx";
 import { NovaTurma, NovosAlunos, CredencialGerada } from "../../modules/pessoas/CadastroAlunos.jsx";
