@@ -15,7 +15,7 @@ Mudança puramente **aditiva**: só novas tabelas, colunas e políticas.
   `status_dado`. Valores fiéis ao doc (ver tabela abaixo).
 - **Turmas comerciais** (`turmas_comerciais` + `turmas_comerciais_concursos`):
   catálogo global que agrupa concursos para venda/UI. **Não comanda o
-  motor.** Iniciais: CN/EPCAR → {cn, epcar}; ESA/EEAR → {essa, eear};
+  motor.** Iniciais: CN/EPCAR → {cn, epcar}; ESA/EEAR → {esa, eear};
   EsPCEx → {espcex}.
 - **Alvo pedagógico ativo do aluno.** `alunos.concurso_id` (já existia
   na 0007) é o alvo único (decisão D2). Acrescentados a `alunos`:
@@ -41,10 +41,10 @@ Mudança puramente **aditiva**: só novas tabelas, colunas e políticas.
 | Colégio Naval | `cn` | `absoluto_50` | `eliminatoria` | — |
 | EPCAR | `epcar` | `absoluto_5` | `eliminatoria_classificatoria` | — |
 | EsPCEx | `espcex` | `mediana` | `eliminatoria_classificatoria` | — |
-| ESA (EsSA) | `essa` | `mediana` | `eliminatoria` | — |
+| ESA (EsSA) | `esa` | `mediana` | `eliminatoria` | — |
 | EEAR | `eear` | `absoluto_5` | `ausente` | ✅ ambos |
 
-> O doc chama a EsSA de "ESA"; no sistema o código é `essa`. Colégio
+> O doc chama a EsSA de "ESA"; no sistema o código é `esa`. Colégio
 > Militar (`cm`) fica fora do escopo pedagógico desta fase.
 
 ## Como cada exigência foi atendida

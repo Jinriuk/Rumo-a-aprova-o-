@@ -39,9 +39,9 @@ test("alvo só é permitido entre os concursos da turma comercial (não mistura 
   const cnEpcar = { codigo: "cn-epcar", concursos: [{ codigo: "cn", ordem: 0 }, { codigo: "epcar", ordem: 1 }] };
   assert.equal(alvoPermitido("cn", cnEpcar), true);
   assert.equal(alvoPermitido("epcar", cnEpcar), true);
-  assert.equal(alvoPermitido("essa", cnEpcar), false, "ESA não pode ser alvo de quem está na turma CN/EPCAR");
+  assert.equal(alvoPermitido("esa", cnEpcar), false, "ESA não pode ser alvo de quem está na turma CN/EPCAR");
   // sem turma comercial: qualquer concurso vale
-  assert.equal(alvoPermitido("essa", null), true);
+  assert.equal(alvoPermitido("esa", null), true);
 });
 
 test("concursosDaTurma respeita a ordem do catálogo", () => {

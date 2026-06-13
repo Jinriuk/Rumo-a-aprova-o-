@@ -32,8 +32,8 @@ export const PROVAS = {
     ],
     nota: null, notaRotulo: null,
   },
-  essa: {
-    rotulo: "EsSA",
+  esa: {
+    rotulo: "ESA",
     dias: [
       { nome: "Prova única", materias: [{ k: "mat", nome: "Matemática", max: 12 }, { k: "por", nome: "Português", max: 12 }, { k: "ing", nome: "Inglês", max: 8 }, { k: "soc", nome: "Hist./Geo.", max: 8 }] }, // aprox.
     ],

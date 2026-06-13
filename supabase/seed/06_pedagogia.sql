@@ -10,8 +10,8 @@
 -- Roda DEPOIS de 05_concursos.sql (os concursos já existem) e é
 -- idempotente (on conflict / where). Mapeamento de códigos:
 --   cn=Colégio Naval · epcar=EPCAR · espcex=EsPCEx ·
---   essa=ESA (EsSA/ESA) · eear=EEAR · cm=Colégio Militar.
--- O doc chama a EsSA de "ESA"; no sistema o código é `essa`.
+--   esa=ESA (EsSA/ESA) · eear=EEAR · cm=Colégio Militar.
+-- O doc chama a EsSA de "ESA"; no sistema o código é `esa`.
 -- ============================================================
 
 -- ------------------------------------------------------------
@@ -21,7 +21,7 @@
 update concursos set elimination_model = 'absoluto_50', redacao_role = 'eliminatoria',                  status_dado = 'oficial' where codigo = 'cn';
 update concursos set elimination_model = 'absoluto_5',  redacao_role = 'eliminatoria_classificatoria',  status_dado = 'oficial' where codigo = 'epcar';
 update concursos set elimination_model = 'mediana',     redacao_role = 'eliminatoria_classificatoria',  status_dado = 'oficial' where codigo = 'espcex';
-update concursos set elimination_model = 'mediana',     redacao_role = 'eliminatoria',                  status_dado = 'oficial' where codigo = 'essa';
+update concursos set elimination_model = 'mediana',     redacao_role = 'eliminatoria',                  status_dado = 'oficial' where codigo = 'esa';
 update concursos set elimination_model = 'absoluto_5',  redacao_role = 'ausente', usa_especialidade = true, usa_ciclo = true, status_dado = 'oficial' where codigo = 'eear';
 -- Colégio Militar fica fora do escopo pedagógico desta fase: config
 -- de eliminação/redação permanece nula (a tratar quando entrar).
@@ -40,7 +40,7 @@ insert into turmas_comerciais (id, codigo, nome, ordem) values
 insert into turmas_comerciais_concursos (turma_comercial_codigo, exam_tag, ordem) values
   ('cn-epcar', 'cn',     0),
   ('cn-epcar', 'epcar',  1),
-  ('esa-eear', 'essa',   0),
+  ('esa-eear', 'esa',   0),
   ('esa-eear', 'eear',   1),
   ('espcex',   'espcex', 0)
   on conflict (turma_comercial_codigo, exam_tag) do nothing;
@@ -56,23 +56,23 @@ insert into config_oficial (exam_tag, chave, valor, status_dado, fonte, observac
   ('cn',     'piso_disciplina', '{"tipo": "absoluto", "pct": 50}'::jsonb,        'oficial',    'Edital CPACN, subitem 6.5',          'Eliminação individual: <50% em qualquer disciplina elimina.'),
   ('epcar',  'piso_disciplina', '{"tipo": "absoluto", "nota_min": 5.0}'::jsonb,  'oficial',    'Edital EA CPCAR',                    '≥5,0/10 em cada matéria e na Média Final.'),
   ('eear',   'piso_disciplina', '{"tipo": "absoluto", "nota_min": 5.0}'::jsonb,  'oficial',    'Edital EA CFS (EEAR)',               '≥5,0/10 por matéria e média ≥5,0.'),
-  ('essa',   'piso_disciplina', '{"tipo": "mediana"}'::jsonb,                    'oficial',    'Edital ESA, Art. 68, inc. I',        'Piso RELATIVO: ≥ mediana da turma em cada parte. Sem alvo absoluto oficial.'),
+  ('esa',   'piso_disciplina', '{"tipo": "mediana"}'::jsonb,                    'oficial',    'Edital ESA, Art. 68, inc. I',        'Piso RELATIVO: ≥ mediana da turma em cada parte. Sem alvo absoluto oficial.'),
   ('espcex', 'piso_disciplina', '{"tipo": "mediana"}'::jsonb,                    'oficial',    'Edital EsPCEx (DECEx/VUNESP)',       'Piso RELATIVO: ≥ mediana em cada prova objetiva + redação APTA.'),
   -- Papel da redação (detalhe do edital)
   ('cn',     'redacao', '{"papel": "eliminatoria", "linhas_min": 15, "linhas_max": 30, "minimo": 50}'::jsonb,                'oficial', 'Edital CPACN',  'Só eliminatória (≥50/100).'),
   ('epcar',  'redacao', '{"papel": "eliminatoria_classificatoria", "linhas_min": 20, "linhas_max": 30, "nota_min": 5.0}'::jsonb, 'oficial', 'Edital EA CPCAR', 'Vale 1/4 da Média Final: maior alavancagem isolada.'),
-  ('essa',   'redacao', '{"papel": "eliminatoria", "linhas_min": 20, "linhas_max": 30, "nota_min": 5.0}'::jsonb,             'oficial', 'Edital ESA',    'Barreira (≥5,0); não soma na classificação.'),
+  ('esa',   'redacao', '{"papel": "eliminatoria", "linhas_min": 20, "linhas_max": 30, "nota_min": 5.0}'::jsonb,             'oficial', 'Edital ESA',    'Barreira (≥5,0); não soma na classificação.'),
   ('espcex', 'redacao', '{"papel": "eliminatoria_classificatoria", "peso": 1, "linhas_min": 25, "linhas_max": 30, "minimo": 50}'::jsonb, 'oficial', 'Edital EsPCEx', 'Dissertativo-argumentativo 3ª pessoa; zero se <17 ou >38 linhas.'),
   ('eear',   'redacao', '{"papel": "ausente"}'::jsonb,                                                                       'oficial', 'Edital EA CFS', 'EEAR não tem redação.'),
   -- Leitura estratégica (juízo pedagógico do doc) → INFERÊNCIA, não regra fixa.
-  ('essa',   'foco_estrategico', '{"texto": "Inglês é a maior alavancagem (2,5%/questão, só 10 questões) e o mais negligenciado."}'::jsonb, 'inferencia', 'Consolidação Fase 15.0, §1.2', 'Default editável; não é regra de edital.'),
+  ('esa',   'foco_estrategico', '{"texto": "Inglês é a maior alavancagem (2,5%/questão, só 10 questões) e o mais negligenciado."}'::jsonb, 'inferencia', 'Consolidação Fase 15.0, §1.2', 'Default editável; não é regra de edital.'),
   ('espcex', 'foco_estrategico', '{"texto": "Inglês (peso 1,5) vale mais por questão que História, Geografia e Química (peso 1,0)."}'::jsonb, 'inferencia', 'Consolidação Fase 15.0, §5', 'Default editável; não é regra de edital.'),
   ('eear',   'foco_estrategico', '{"texto": "Corrida contra o tempo (2,5 min/questão); blindar a matéria mais fraca (em geral Física) antes de buscar nota alta."}'::jsonb, 'inferencia', 'Consolidação Fase 15.0, §4', 'Default editável; não é regra de edital.'),
   -- Recorrência por assunto: o ativo proprietário ainda não medido → VALIDAR.
   ('cn',     'recorrencia_status',     '{"medida": false}'::jsonb, 'validar', 'Pendente de tagueamento de provas reais', 'Recorrência por assunto ainda não medida questão a questão.'),
   ('epcar',  'recorrencia_status',     '{"medida": false}'::jsonb, 'validar', 'Pendente de tagueamento de provas reais', 'Recorrência por assunto ainda não medida questão a questão.'),
   ('espcex', 'recorrencia_status',     '{"medida": false}'::jsonb, 'validar', 'Pendente de tagueamento de provas reais', 'Recorrência por assunto ainda não medida questão a questão.'),
-  ('essa',   'recorrencia_status',     '{"medida": false}'::jsonb, 'validar', 'Pendente de tagueamento de provas reais', 'Recorrência por assunto ainda não medida questão a questão.'),
+  ('esa',   'recorrencia_status',     '{"medida": false}'::jsonb, 'validar', 'Pendente de tagueamento de provas reais', 'Recorrência por assunto ainda não medida questão a questão.'),
   ('eear',   'recorrencia_status',     '{"medida": false}'::jsonb, 'validar', 'Pendente de tagueamento de provas reais', 'Recorrência por assunto ainda não medida questão a questão.')
   on conflict (exam_tag, chave) do nothing;
 

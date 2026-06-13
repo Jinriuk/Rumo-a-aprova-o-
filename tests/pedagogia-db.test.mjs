@@ -21,7 +21,7 @@ test("modelo de eliminação e papel da redação batem com o doc, por concurso"
   await como(IDS.coordA, async (c) => {
     const r = await c.query(
       "select codigo, elimination_model, redacao_role, usa_especialidade, usa_ciclo from concursos where codigo = any($1) order by codigo",
-      [["cn", "epcar", "espcex", "essa", "eear"]]
+      [["cn", "epcar", "espcex", "esa", "eear"]]
     );
     const m = Object.fromEntries(r.rows.map((x) => [x.codigo, x]));
     assert.equal(m.cn.elimination_model, "absoluto_50");
@@ -30,8 +30,8 @@ test("modelo de eliminação e papel da redação batem com o doc, por concurso"
     assert.equal(m.epcar.redacao_role, "eliminatoria_classificatoria");
     assert.equal(m.espcex.elimination_model, "mediana");
     assert.equal(m.espcex.redacao_role, "eliminatoria_classificatoria");
-    assert.equal(m.essa.elimination_model, "mediana");
-    assert.equal(m.essa.redacao_role, "eliminatoria");
+    assert.equal(m.esa.elimination_model, "mediana");
+    assert.equal(m.esa.redacao_role, "eliminatoria");
     assert.equal(m.eear.elimination_model, "absoluto_5");
     assert.equal(m.eear.redacao_role, "ausente");
     assert.equal(m.eear.usa_especialidade, true, "EEAR usa especialidade");
@@ -54,7 +54,7 @@ test("turmas comerciais agrupam os concursos certos (turma não vira regra pedag
     );
     const m = Object.fromEntries(r.rows.map((x) => [x.turma_comercial_codigo, x.tags]));
     assert.deepEqual(m["cn-epcar"], ["cn", "epcar"]);
-    assert.deepEqual(m["esa-eear"], ["essa", "eear"]);
+    assert.deepEqual(m["esa-eear"], ["esa", "eear"]);
     assert.deepEqual(m["espcex"], ["espcex"]);
   });
 });

@@ -12,7 +12,7 @@
 --   • PRIORIDADE de assunto: preliminar (deriva de peso × recorrência;
 --     a recorrência só será medida na 15.7).
 --   • dúvida de edital (ex.: OCR "eletroforese"): ⚠️ validar.
--- Roda depois de 05/06; idempotente. Códigos: cn/epcar/espcex/essa/eear.
+-- Roda depois de 05/06; idempotente. Códigos: cn/epcar/espcex/esa/eear.
 -- ============================================================
 
 -- ------------------------------------------------------------
@@ -37,7 +37,7 @@ insert into provas (exam_tag, nome, num_dias, formula, status_dado, observacao) 
   ('cn',     'Colégio Naval (CPACN)',        2, 'ME = (2·MI + 2·ECP + RE)/5',      'oficial', 'Dia 1: Mat+Inglês (2,5/q). Dia 2: Port+Ciências+Estudos Sociais (2,0/q). Redação eliminatória.'),
   ('epcar',  'EPCAR (EA CPCAR)',             1, 'MF = (GP + GM + GI + GR)/4',      'oficial', 'Bloco único ~5h20. Redação eliminatória + classificatória (1/4 da Média Final).'),
   ('espcex', 'EsPCEx',                       2, 'soma ponderada (pesos por matéria) + redação peso 1', 'oficial', 'Dia 1: Port+Redação+Física+Química. Dia 2: Mat+Inglês+História+Geografia.'),
-  ('essa',   'ESA (Área Geral)',             1, '(NM + NQOP + NHGB + NI)/4',       'oficial', '4 partes iguais. Redação só eliminatória. Piso por mediana (Art. 68).'),
+  ('esa',   'ESA (Área Geral)',             1, '(NM + NQOP + NHGB + NI)/4',       'oficial', '4 partes iguais. Redação só eliminatória. Piso por mediana (Art. 68).'),
   ('eear',   'EEAR (CFS)',                   1, 'média das 4 matérias + piso por matéria', 'oficial', '96 questões / 4h20. Sem redação. Piso absoluto de 5,0 por matéria.')
   on conflict (exam_tag) do nothing;
 
@@ -50,7 +50,7 @@ insert into prova_dias (exam_tag, numero, nome, duracao_min, ordem) values
   ('espcex', 1, 'Dia 1', 270, 0),
   ('espcex', 2, 'Dia 2', 270, 1),
   ('epcar',  1, 'Prova única', 320, 0),
-  ('essa',   1, 'Prova única', 240, 0),
+  ('esa',   1, 'Prova única', 240, 0),
   ('eear',   1, 'Prova única', 260, 0)
   on conflict (exam_tag, numero) do nothing;
 
@@ -85,12 +85,12 @@ insert into prova_materias (exam_tag, materia_codigo, dia_numero, num_questoes, 
   ('espcex', 'his', 2, 12, 1.0, null, false, null, 'oficial', 6),
   ('espcex', 'geo', 2, 12, 1.0, null, false, null, 'oficial', 7),
   -- ESA (4 partes iguais)
-  ('essa', 'mat', 1, 14, null, null, false, null, 'oficial', 0),
-  ('essa', 'por', 1, 14, null, null, false, null, 'oficial', 1),
-  ('essa', 'his', 1, 6,  null, null, false, 'História/Geografia', 'oficial', 2),
-  ('essa', 'geo', 1, 6,  null, null, false, 'História/Geografia', 'oficial', 3),
-  ('essa', 'ing', 1, 10, null, null, false, null, 'oficial', 4),
-  ('essa', 'red', 1, null, null, null, true, null, 'oficial', 5),
+  ('esa', 'mat', 1, 14, null, null, false, null, 'oficial', 0),
+  ('esa', 'por', 1, 14, null, null, false, null, 'oficial', 1),
+  ('esa', 'his', 1, 6,  null, null, false, 'História/Geografia', 'oficial', 2),
+  ('esa', 'geo', 1, 6,  null, null, false, 'História/Geografia', 'oficial', 3),
+  ('esa', 'ing', 1, 10, null, null, false, null, 'oficial', 4),
+  ('esa', 'red', 1, null, null, null, true, null, 'oficial', 5),
   -- EEAR (sem redação; 50% exatas)
   ('eear', 'mat', 1, 24, null, null, false, null, 'oficial', 0),
   ('eear', 'fis', 1, 24, null, null, false, null, 'oficial', 1),

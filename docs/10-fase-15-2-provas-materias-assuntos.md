@@ -31,7 +31,7 @@ da 14.5 nem nas telas (E2E intocada).
 | Colégio Naval | `cn` | 9 (inclui **Biologia**) | 90 | eliminatória | 2 |
 | EPCAR | `epcar` | 4 | 48 | elim. + classif. | 1 |
 | EsPCEx | `espcex` | 8 (inclui **Lit. Brasileira**) | 100 | elim. + classif. (p1) | 2 |
-| ESA | `essa` | 6 | 50 | eliminatória | 1 |
+| ESA | `esa` | 6 | 50 | eliminatória | 1 |
 | EEAR | `eear` | 4 | 96 | **ausente** | 1 |
 
 - **CN ≠ EPCAR** e **ESA ≠ EEAR**: estruturas distintas mesmo dentro da

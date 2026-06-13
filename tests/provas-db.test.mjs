@@ -22,11 +22,11 @@ test("nº de questões objetivas por concurso bate com o doc", async () => {
     assert.equal(m.cn.q, 90, "CN tem 90 questões objetivas");
     assert.equal(m.epcar.q, 48, "EPCAR tem 48");
     assert.equal(m.espcex.q, 100, "EsPCEx tem 100");
-    assert.equal(m.essa.q, 50, "ESA tem 50");
+    assert.equal(m.esa.q, 50, "ESA tem 50");
     assert.equal(m.eear.q, 96, "EEAR tem 96");
     // redação existe em todos menos EEAR
     assert.equal(Number(m.eear.redacoes), 0, "EEAR não tem redação");
-    for (const t of ["cn", "epcar", "espcex", "essa"]) assert.equal(Number(m[t].redacoes), 1, `${t} tem redação`);
+    for (const t of ["cn", "epcar", "espcex", "esa"]) assert.equal(Number(m[t].redacoes), 1, `${t} tem redação`);
   });
 });
 
@@ -42,7 +42,7 @@ test("Biologia é matéria do CN — e NÃO do EPCAR (concursos separados na mes
 
 test("ESA e EEAR têm estruturas distintas (não se misturam na turma ESA/EEAR)", async () => {
   await como(IDS.alunoA, async (c) => {
-    const esa = await c.query("select array_agg(materia_codigo order by materia_codigo) as m from prova_materias where exam_tag='essa'");
+    const esa = await c.query("select array_agg(materia_codigo order by materia_codigo) as m from prova_materias where exam_tag='esa'");
     const eear = await c.query("select array_agg(materia_codigo order by materia_codigo) as m from prova_materias where exam_tag='eear'");
     assert.deepEqual(esa.rows[0].m, ["geo", "his", "ing", "mat", "por", "red"]);
     assert.deepEqual(eear.rows[0].m, ["fis", "ing", "mat", "por"]);
