@@ -149,6 +149,29 @@ export async function carregarEstruturaProva(examTag) {
   return { prova: prova.data ?? null, dias: dias.data, materias: materias.data, assuntos: assuntos.data, subassuntos };
 }
 
+/* ---------- recorrência e tagueamento (Fase 15.7 — global, leitura) ---------- */
+
+// Provas anteriores tagueadas de um concurso.
+export async function carregarProvasAnteriores(examTag) {
+  const { data, error } = await supabase.from("provas_anteriores").select("*").eq("exam_tag", examTag).order("ano", { ascending: false });
+  if (error) throw falha("provas anteriores", error);
+  return data;
+}
+
+// Recorrência por assunto (todos os graus: estimada/validada/medida).
+export async function carregarRecorrencia(examTag) {
+  const { data, error } = await supabase.from("recorrencia_assunto").select("*").eq("exam_tag", examTag);
+  if (error) throw falha("recorrência", error);
+  return data;
+}
+
+// Recorrência MEDIDA ao vivo (view) — contagem do tagueamento real.
+export async function carregarRecorrenciaMedida(examTag) {
+  const { data, error } = await supabase.from("vw_recorrencia_medida").select("*").eq("exam_tag", examTag);
+  if (error) throw falha("recorrência medida", error);
+  return data;
+}
+
 /* ---------- níveis e onboarding (Fase 15.3) ---------- */
 
 // Níveis do aluno (geral + por matéria). A RLS decide o que sai:
