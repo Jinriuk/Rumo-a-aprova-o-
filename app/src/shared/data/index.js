@@ -87,6 +87,13 @@ export async function trilhaPadrao() {
   return data[0] ?? null;
 }
 
+// Config de um concurso (elimination_model, redacao_role, etc.).
+export async function carregarConcursoPorTag(examTag) {
+  const { data, error } = await supabase.from("concursos").select("*").eq("codigo", examTag).maybeSingle();
+  if (error) throw falha("concurso", error);
+  return data ?? null;
+}
+
 export async function listarConcursos() {
   const { data, error } = await supabase.from("concursos").select("*").order("ordem");
   if (error) throw falha("concursos", error);
