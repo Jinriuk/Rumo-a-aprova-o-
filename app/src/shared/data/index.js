@@ -142,6 +142,67 @@ export async function carregarEstruturaProva(examTag) {
   return { prova: prova.data ?? null, dias: dias.data, materias: materias.data, assuntos: assuntos.data, subassuntos };
 }
 
+/* ---------- níveis e onboarding (Fase 15.3) ---------- */
+
+// Níveis do aluno (geral + por matéria). A RLS decide o que sai:
+// coordenação vê os da escola; aluno vê o próprio; responsável o do vinculado.
+export async function carregarNivelAluno(alunoId) {
+  const { data, error } = await supabase.from("aluno_niveis").select("*").eq("aluno_id", alunoId).order("escopo");
+  if (error) throw falha("níveis do aluno", error);
+  return data;
+}
+
+// Define/ajusta o nível de um escopo ('geral' ou matéria). Só a
+// coordenação escreve (RLS); o gatilho registra o histórico.
+export async function salvarNivelAluno({ alunoId, escopo, nivel, origem, motivo }) {
+  const { escola } = await meuPerfil();
+  const { usuario } = { usuario: (await supabase.from("usuarios").select("id").limit(1)).data?.[0] };
+  const { data, error } = await supabase
+    .from("aluno_niveis")
+    .upsert(
+      { escola_id: escola.id, aluno_id: alunoId, escopo, nivel, origem, motivo, definido_por: usuario?.id ?? null, atualizado_em: new Date().toISOString() },
+      { onConflict: "aluno_id,escopo" }
+    )
+    .select().single();
+  if (error) throw falha("salvar nível", error);
+  return data;
+}
+
+// Histórico de alterações de nível (só coordenação lê).
+export async function historicoNivelAluno(alunoId) {
+  const { data, error } = await supabase
+    .from("aluno_nivel_historico").select("*").eq("aluno_id", alunoId).order("em", { ascending: false });
+  if (error) throw falha("histórico de nível", error);
+  return data;
+}
+
+// Alvo pedagógico do aluno (principal/secundário, data da prova,
+// especialidade/ciclo). Escrita só da coordenação (RLS de alunos).
+export async function atualizarAlvoPedagogico(alunoId, campos) {
+  const permitidos = ["concurso_id", "concurso_secundario_id", "data_prova_alvo", "especialidade", "ciclo", "turma_comercial_codigo"];
+  const patch = Object.fromEntries(Object.entries(campos).filter(([k]) => permitidos.includes(k)));
+  const { data, error } = await supabase.from("alunos").update(patch).eq("id", alunoId).select("id");
+  if (error) throw falha("atualizar alvo pedagógico", error);
+  if (!data?.length) throw new Error("atualizar alvo pedagógico: o banco recusou a alteração");
+}
+
+// Onboarding pedagógico (1:1 com o aluno).
+export async function carregarOnboarding(alunoId) {
+  const { data, error } = await supabase.from("aluno_onboarding").select("*").eq("aluno_id", alunoId).maybeSingle();
+  if (error) throw falha("onboarding", error);
+  return data ?? null;
+}
+
+export async function salvarOnboarding(alunoId, campos) {
+  const { escola } = await meuPerfil();
+  const { data, error } = await supabase
+    .from("aluno_onboarding")
+    .upsert({ aluno_id: alunoId, escola_id: escola.id, ...campos, atualizado_em: new Date().toISOString() }, { onConflict: "aluno_id" })
+    .select().single();
+  if (error) throw falha("salvar onboarding", error);
+  return data;
+}
+
 /* ---------- pessoas ---------- */
 
 export async function meuAluno() {
