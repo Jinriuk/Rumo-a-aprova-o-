@@ -21,14 +21,14 @@ for f in "$DIR"/supabase/migrations/*.sql; do
   psql -v ON_ERROR_STOP=1 -q -f "$f"
 done
 # o seed 04 (contas no Auth) só roda no Supabase real: aqui não há GoTrue
-for f in "$DIR"/supabase/seed/0[1235678]_*.sql; do
+for f in "$DIR"/supabase/seed/0[12356789]_*.sql; do
   echo "seed: $(basename "$f")"
   psql -v ON_ERROR_STOP=1 -q -f "$f" > /dev/null
 done
 
 # o seed precisa ser idempotente: roda DUAS vezes de propósito e
 # o teste de motor confere que nada duplicou
-for f in "$DIR"/supabase/seed/0[1235678]_*.sql; do
+for f in "$DIR"/supabase/seed/0[12356789]_*.sql; do
   psql -v ON_ERROR_STOP=1 -q -f "$f" > /dev/null
 done
 

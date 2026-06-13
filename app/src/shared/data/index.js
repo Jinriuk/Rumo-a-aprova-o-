@@ -203,6 +203,51 @@ export async function salvarOnboarding(alunoId, campos) {
   return data;
 }
 
+/* ---------- trilhas e missões (Fase 15.4) ---------- */
+
+// Planos de trilha de um concurso (global, só leitura).
+export async function carregarTrilhaPlanos(examTag) {
+  const { data, error } = await supabase.from("trilha_planos").select("*").eq("exam_tag", examTag).order("ordem");
+  if (error) throw falha("planos de trilha", error);
+  return data;
+}
+
+// Missões de um concurso (global). Filtro opcional por nível.
+export async function carregarMissoes(examTag, { nivel } = {}) {
+  let q = supabase.from("missoes").select("*").eq("exam_tag", examTag).order("ordem");
+  if (nivel) q = q.eq("nivel", nivel);
+  const { data, error } = await q;
+  if (error) throw falha("missões", error);
+  return data;
+}
+
+// Ajustes de missão da escola do usuário (isolado por RLS).
+export async function carregarMissoesEscola(examTag) {
+  // junta o exam_tag via missões (a tabela de ajuste não tem exam_tag)
+  const { data, error } = await supabase
+    .from("missoes_escola").select("*, missoes!inner(exam_tag)").eq("missoes.exam_tag", examTag);
+  if (error) throw falha("ajustes de missão da escola", error);
+  return data;
+}
+
+// Cria/ajusta o override de uma missão (só coordenação, via RLS).
+export async function salvarAjusteMissaoEscola({ missaoId, ativa, qtdQuestoes, xp, criterioConclusao, objetivo, desvioDoEdital }) {
+  const { escola, usuario } = await meuPerfil();
+  const { data, error } = await supabase
+    .from("missoes_escola")
+    .upsert(
+      {
+        escola_id: escola.id, missao_id: missaoId, ativa, qtd_questoes: qtdQuestoes, xp,
+        criterio_conclusao: criterioConclusao, objetivo, desvio_do_edital: !!desvioDoEdital,
+        ajustado_por: usuario?.id ?? null, atualizado_em: new Date().toISOString(),
+      },
+      { onConflict: "escola_id,missao_id" }
+    )
+    .select().single();
+  if (error) throw falha("salvar ajuste de missão", error);
+  return data;
+}
+
 /* ---------- pessoas ---------- */
 
 export async function meuAluno() {
