@@ -248,6 +248,53 @@ export async function salvarAjusteMissaoEscola({ missaoId, ativa, qtdQuestoes, x
   return data;
 }
 
+/* ---------- gamificação: XP, patentes, conquistas (Fase 15.5) ---------- */
+
+// Catálogos globais (só leitura).
+export async function listarPatentes() {
+  const { data, error } = await supabase.from("patentes").select("*").order("ordem");
+  if (error) throw falha("patentes", error);
+  return data;
+}
+
+export async function listarConquistas() {
+  const { data, error } = await supabase.from("conquistas").select("*").order("ordem");
+  if (error) throw falha("conquistas", error);
+  return data;
+}
+
+// Progresso do aluno (XP e conquistas), isolado por RLS no exam_tag.
+export async function carregarGamificacaoAluno(alunoId, examTag) {
+  const [xp, conq] = await Promise.all([
+    supabase.from("aluno_xp_eventos").select("*").eq("aluno_id", alunoId).eq("exam_tag", examTag).order("em"),
+    supabase.from("aluno_conquistas").select("*").eq("aluno_id", alunoId).eq("exam_tag", examTag),
+  ]);
+  for (const r of [xp, conq]) if (r.error) throw falha("gamificação do aluno", r.error);
+  return { eventos: xp.data, conquistas: conq.data };
+}
+
+// Concede um evento de XP (só coordenação/servidor; aluno não se autopontua).
+export async function concederXp({ alunoId, examTag, origem, pontos, descricao, referenciaId }) {
+  const { escola, usuario } = await meuPerfil();
+  const { data, error } = await supabase
+    .from("aluno_xp_eventos")
+    .insert({ escola_id: escola.id, aluno_id: alunoId, exam_tag: examTag, origem, pontos, descricao, referencia_id: referenciaId ?? null, concedido_por: usuario?.id ?? null })
+    .select().single();
+  if (error) throw falha("conceder XP", error);
+  return data;
+}
+
+// Desbloqueia uma conquista para o aluno (idempotente por unique).
+export async function desbloquearConquista({ alunoId, examTag, conquistaId }) {
+  const { escola } = await meuPerfil();
+  const { data, error } = await supabase
+    .from("aluno_conquistas")
+    .upsert({ escola_id: escola.id, aluno_id: alunoId, exam_tag: examTag, conquista_id: conquistaId }, { onConflict: "aluno_id,conquista_id,exam_tag" })
+    .select().single();
+  if (error) throw falha("desbloquear conquista", error);
+  return data;
+}
+
 /* ---------- pessoas ---------- */
 
 export async function meuAluno() {
