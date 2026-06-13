@@ -122,6 +122,26 @@ export async function configEscola(examTag) {
   return data;
 }
 
+// Estrutura cadastrada de um concurso (Fase 15.2): prova, dias,
+// matérias, assuntos e subassuntos. Conteúdo global, só leitura.
+export async function carregarEstruturaProva(examTag) {
+  const [prova, dias, materias, assuntos] = await Promise.all([
+    supabase.from("provas").select("*").eq("exam_tag", examTag).maybeSingle(),
+    supabase.from("prova_dias").select("*").eq("exam_tag", examTag).order("ordem"),
+    supabase.from("prova_materias").select("*").eq("exam_tag", examTag).order("ordem"),
+    supabase.from("assuntos").select("*").eq("exam_tag", examTag).order("ordem"),
+  ]);
+  for (const r of [prova, dias, materias, assuntos]) if (r.error) throw falha("estrutura da prova", r.error);
+  const ids = (assuntos.data ?? []).map((a) => a.id);
+  let subassuntos = [];
+  if (ids.length) {
+    const s = await supabase.from("subassuntos").select("*").in("assunto_id", ids).order("ordem");
+    if (s.error) throw falha("subassuntos", s.error);
+    subassuntos = s.data;
+  }
+  return { prova: prova.data ?? null, dias: dias.data, materias: materias.data, assuntos: assuntos.data, subassuntos };
+}
+
 /* ---------- pessoas ---------- */
 
 export async function meuAluno() {
