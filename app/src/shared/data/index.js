@@ -93,6 +93,35 @@ export async function listarConcursos() {
   return data;
 }
 
+/* ---------- fundação pedagógica (Fase 15.1 — global, só leitura) ---------- */
+
+// Catálogo de turmas comerciais com os concursos que cada uma cobre.
+export async function listarTurmasComerciais() {
+  const [tc, tcc] = await Promise.all([
+    supabase.from("turmas_comerciais").select("*").order("ordem"),
+    supabase.from("turmas_comerciais_concursos").select("*").order("ordem"),
+  ]);
+  for (const r of [tc, tcc]) if (r.error) throw falha("turmas comerciais", r.error);
+  const concursosPorTurma = {};
+  for (const lig of tcc.data) (concursosPorTurma[lig.turma_comercial_codigo] ??= []).push(lig);
+  return tc.data.map((t) => ({ ...t, concursos: concursosPorTurma[t.codigo] ?? [] }));
+}
+
+// Config OFICIAL de um concurso (referência do edital). Global.
+export async function configOficial(examTag) {
+  const { data, error } = await supabase.from("config_oficial").select("*").eq("exam_tag", examTag);
+  if (error) throw falha("config oficial", error);
+  return data;
+}
+
+// Config da ESCOLA para um concurso (override, isolado por RLS na
+// escola do usuário logado). Não passa escola_id: a RLS já restringe.
+export async function configEscola(examTag) {
+  const { data, error } = await supabase.from("config_escola").select("*").eq("exam_tag", examTag);
+  if (error) throw falha("config escola", error);
+  return data;
+}
+
 /* ---------- pessoas ---------- */
 
 export async function meuAluno() {
