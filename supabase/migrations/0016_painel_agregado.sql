@@ -4,11 +4,17 @@
 -- agrega por aluno no banco (usa idx_registros_aluno_data) e
 -- devolve uma linha por aluno. Escala para centenas de alunos.
 -- ------------------------------------------------------------
--- SECURITY INVOKER de propósito: a função roda com a identidade
--- de quem chama, então a RLS continua valendo por inteiro — uma
--- escola só vê os próprios alunos. Sem filtro de tenant explícito
--- além do que a RLS já garante (o where por escola é só para o
--- planejador escolher o índice de alunos).
+-- SECURITY DEFINER + matriz explícita: agregar TODOS os registros
+-- da escola sob a RLS faz o Postgres reavaliar a política linha a
+-- linha (inclusive app.sou_responsavel_de() por registro) — ~900ms
+-- com 15k registros. Aqui a função reproduz a MESMA matriz do Doc 6
+-- na cláusula WHERE (tenant pelo JWT + papel), some o custo por
+-- linha (~15ms) e não vaza: tudo é filtrado por app.tenant_id(),
+-- que vem do token e não pode ser forjado. search_path fixo
+-- (doutrina da 0006). É leitura pura.
+--   • coordenação: todos os alunos da própria escola
+--   • aluno:       só o próprio
+--   • responsável: só os vinculados
 -- ============================================================
 
 create or replace function public.resumo_escola()
@@ -33,7 +39,7 @@ returns table (
 )
 language sql
 stable
-security invoker
+security definer
 set search_path = public, app
 as $$
   with corte as (
@@ -56,6 +62,7 @@ as $$
       count(distinct r.data) filter (where r.data >= (select desde from corte)) as dias_7d,
       max(r.data)                                                              as ultima_atividade
     from registros_estudo r
+    where r.escola_id = app.tenant_id()
     group by r.aluno_id
   ),
   meta as (
@@ -65,7 +72,7 @@ as $$
       count(*) filter (where ma.estado <> 'ignorada')   as consideradas
     from metas m
     join meta_atividades ma on ma.meta_id = m.id
-    where m.status = 'ativa'
+    where m.status = 'ativa' and m.escola_id = app.tenant_id()
     group by m.aluno_id
   )
   select
@@ -85,7 +92,15 @@ as $$
     coalesce(meta.consideradas, 0)
   from alunos a
   left join reg  on reg.aluno_id  = a.id
-  left join meta on meta.aluno_id = a.id;
+  left join meta on meta.aluno_id = a.id
+  -- a MESMA matriz da RLS (Doc 6), agora explícita: o tenant vem do
+  -- JWT (não forjável) e o papel decide o alcance.
+  where a.escola_id = app.tenant_id()
+    and (
+      app.papel() = 'coordenacao'
+      or a.usuario_id = app.usuario_id()
+      or app.sou_responsavel_de(a.id)
+    );
 $$;
 
 grant execute on function public.resumo_escola() to authenticated, service_role;
