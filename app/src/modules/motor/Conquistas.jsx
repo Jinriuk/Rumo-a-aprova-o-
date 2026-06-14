@@ -14,7 +14,7 @@ import { PATENTES, patente } from "./jargao.js";
 // catálogo de conquistas: cada uma mede o próprio progresso a partir
 // de dado real e carrega categoria + raridade (Fase 16). Os nomes têm
 // identidade de campanha; o requisito explica o que medimos.
-function catalogo({ m, metas, simulados }) {
+export function catalogoConquistas({ m, metas, simulados }) {
   const cumpridas = metas.reduce((a, mt) => a + (mt.meta_atividades ?? []).filter((x) => x.estado === "concluida").length, 0);
   const semanas100 = metas.filter((mt) => {
     const its = (mt.meta_atividades ?? []).filter((x) => x.estado !== "ignorada");
@@ -59,7 +59,7 @@ function Medalhao({ icone, ok, T, tam = 58 }) {
 export function Conquistas({ nome, xp, m, metas, simulados }) {
   const T = useTema();
   const p = patente(xp);
-  const conquistas = catalogo({ m, metas, simulados });
+  const conquistas = catalogoConquistas({ m, metas, simulados });
   const desbloqueadas = conquistas.filter((c) => c.atual >= c.alvo).length;
   const grupos = [...new Set(conquistas.map((c) => c.grupo))];
   const gIconeDe = (g) => conquistas.find((c) => c.grupo === g)?.gIcone ?? "estrela";
@@ -173,6 +173,52 @@ export function Conquistas({ nome, xp, m, metas, simulados }) {
           </div>
         );
       })}
+    </div>
+  );
+}
+
+/* Faixa compacta de conquistas para o "Hoje" (Fase 16.2): mostra as
+   últimas desbloqueadas como motivação; se ainda não há nenhuma,
+   destaca a que está mais perto de sair. Toca → abre a tela completa. */
+export function ConquistasRecentes({ m, metas, simulados, aoAbrir }) {
+  const T = useTema();
+  const todas = catalogoConquistas({ m, metas, simulados });
+  const desbloqueadas = todas.filter((c) => c.atual >= c.alvo);
+  const proxima = todas
+    .filter((c) => c.atual < c.alvo)
+    .sort((a, b) => b.atual / b.alvo - a.atual / a.alvo)[0];
+  const mostrar = desbloqueadas.slice(-3).reverse();
+
+  return (
+    <div onClick={aoAbrir} role={aoAbrir ? "button" : undefined}
+      title={aoAbrir ? "Ver todas as conquistas" : undefined}
+      style={{ background: T.card, border: `1px solid ${T.line}`, borderRadius: 12, padding: "12px 14px", cursor: aoAbrir ? "pointer" : "default" }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
+        <span style={{ color: T.gold }}><Icone nome="medalha" tam={16} /></span>
+        <div className="disp" style={{ fontSize: 13.5, fontWeight: 700, flex: 1 }}>Conquistas</div>
+        <span className="num" style={{ fontSize: 11, fontWeight: 700, color: T.sub }}>{desbloqueadas.length}/{todas.length}</span>
+      </div>
+      {mostrar.length > 0 ? (
+        <div style={{ display: "flex", gap: 14, overflowX: "auto" }} className="navwrap">
+          {mostrar.map((c) => (
+            <div key={c.nome} style={{ textAlign: "center", width: 64, flexShrink: 0 }}>
+              <Medalhao icone={c.icone} ok T={T} tam={44} />
+              <div style={{ fontSize: 10, color: T.ink, marginTop: 4, lineHeight: 1.2 }}>{c.nome}</div>
+            </div>
+          ))}
+        </div>
+      ) : proxima ? (
+        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+          <Medalhao icone={proxima.icone} ok={false} T={T} tam={44} />
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ fontSize: 12.5, color: T.sub }}>Mais perto de desbloquear</div>
+            <div className="disp" style={{ fontSize: 14, fontWeight: 700 }}>{proxima.nome}</div>
+            <div style={{ marginTop: 5 }}>
+              <BarraXP pct={Math.min(100, Math.round((proxima.atual / proxima.alvo) * 100))} alt={5} brilho={false} />
+            </div>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }
