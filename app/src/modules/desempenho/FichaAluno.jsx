@@ -2,29 +2,29 @@
    página condensada, sem os menus do aluno. A escola vê o que
    importa: a semana na trilha, o desempenho e o histórico recente —
    no mesmo formato enxuto do responsável. Tudo leitura. */
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useMemo } from "react";
 import { SectionCard, Empty, Erro, EmptyState } from "../../shared/ui/componentes.jsx";
 import { useTema } from "../../shared/branding/BrandingContext.jsx";
 import { useTrilha } from "../conteudo/useTrilha.js";
+import { useRecurso } from "../../shared/hooks/useRecurso.js";
 import { calcularMetricas } from "./metricas.js";
 import { ResumoResponsavel } from "./ResumoResponsavel.jsx";
+import { ListaRegistros } from "../../shared/ui/ListaRegistros.jsx";
 import { calcularXP, patente, fmtHoras } from "../motor/jargao.js";
-import { semanaAtual, fmtBR } from "../../shared/regras/regras.js";
+import { semanaAtual } from "../../shared/regras/regras.js";
 import * as db from "../../shared/data/index.js";
 
 export function FichaAluno({ aluno, concurso }) {
   const T = useTema();
-  const [dados, setDados] = useState({ carregando: true, metas: [], registros: [], simulados: [], erro: null });
+  const { dados: carregado, carregando: carregandoDados, erro: erroDados } = useRecurso(
+    () => (aluno
+      ? Promise.all([db.listarMetas(aluno.id), db.listarRegistros(aluno.id), db.listarSimulados(aluno.id)])
+          .then(([metas, registros, simulados]) => ({ metas, registros, simulados }))
+      : Promise.resolve({ metas: [], registros: [], simulados: [] })),
+    [aluno?.id],
+  );
+  const dados = carregado ?? { metas: [], registros: [], simulados: [] };
   const { trilha, carregando: carregandoTrilha, erro: erroTrilha } = useTrilha(aluno?.trilha_id);
-
-  useEffect(() => {
-    if (!aluno) return;
-    let vivo = true;
-    Promise.all([db.listarMetas(aluno.id), db.listarRegistros(aluno.id), db.listarSimulados(aluno.id)])
-      .then(([metas, registros, simulados]) => vivo && setDados({ carregando: false, metas, registros, simulados, erro: null }))
-      .catch((e) => vivo && setDados((d) => ({ ...d, carregando: false, erro: e.message })));
-    return () => { vivo = false; };
-  }, [aluno?.id]);
 
   const semanasRegras = useMemo(
     () => (trilha ? trilha.semanas.map((s) => ({ ...s, inicio: String(s.inicio), fim: String(s.fim) })) : []),
@@ -41,8 +41,8 @@ export function FichaAluno({ aluno, concurso }) {
     });
   }, [dados, trilha, semanaAtiva]);
 
-  if (carregandoTrilha || dados.carregando) return <Empty txt="Carregando ficha do aluno…" />;
-  if (erroTrilha || dados.erro) return <Erro>{erroTrilha || dados.erro}</Erro>;
+  if (carregandoTrilha || carregandoDados) return <Empty txt="Carregando ficha do aluno…" />;
+  if (erroTrilha || erroDados) return <Erro>{erroTrilha || erroDados}</Erro>;
   if (!trilha) return <Empty txt="Aluno sem trilha de estudo." />;
   if (!m || !semanaAtiva) return <Empty txt="Fora do período da trilha deste aluno." />;
 
@@ -86,25 +86,7 @@ export function FichaAluno({ aluno, concurso }) {
         {recentes.length === 0 ? (
           <div style={{ padding: 8 }}><EmptyState icone="✎" titulo="Nenhum registro ainda" dica="Os lançamentos do aluno aparecem aqui." /></div>
         ) : (
-          <div style={{ display: "flex", flexDirection: "column" }}>
-            {recentes.map((l, i) => {
-              const s = trilha.porCodigo[l.disciplina_codigo];
-              const acc = l.acertos !== null && l.questoes ? Math.round((l.acertos / l.questoes) * 100) : null;
-              return (
-                <div key={l.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 15px", borderBottom: i === recentes.length - 1 ? "none" : `1px solid ${T.line}` }}>
-                  <span style={{ width: 9, height: 9, borderRadius: 3, background: s?.cor, flexShrink: 0 }} />
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontSize: 13, color: T.ink, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                      {s?.nome}{l.topico ? <span style={{ color: T.sub }}> · {l.topico}</span> : null}
-                    </div>
-                    <div className="num" style={{ fontSize: 11, color: T.sub, marginTop: 1 }}>
-                      {fmtBR(String(l.data))} · {l.questoes} questões{acc !== null ? ` · ${acc}%` : ""}{l.minutos ? ` · ${l.minutos}min` : ""}
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
+          <ListaRegistros registros={recentes} porCodigo={trilha.porCodigo} />
         )}
       </SectionCard>
     </div>

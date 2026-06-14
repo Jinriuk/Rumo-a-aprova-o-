@@ -58,13 +58,20 @@ export async function sessaoAtual() {
 }
 
 export async function meuPerfil() {
-  const { data: u, error } = await supabase.from("usuarios").select("id, escola_id, papel, nome").limit(1);
+  // O usuário logado é o `sub` do JWT (= usuarios.id). Filtrar por ele:
+  // a coordenação enxerga TODOS os usuários da escola pela RLS, então um
+  // `limit(1)` sem filtro devolveria um colega qualquer — não ela mesma.
+  const { data: s } = await supabase.auth.getSession();
+  const uid = s?.session?.user?.id;
+  if (!uid) throw new Error("perfil: sessão sem usuário autenticado");
+  const { data: u, error } = await supabase
+    .from("usuarios").select("id, escola_id, papel, nome").eq("id", uid).maybeSingle();
   if (error) throw falha("perfil", error);
-  if (!u?.length) throw new Error("perfil: usuário sem cadastro nesta escola");
+  if (!u) throw new Error("perfil: usuário sem cadastro nesta escola");
   const { data: e, error: e2 } = await supabase
-    .from("escolas").select("id, nome, slug, logo_url, cor_acento").eq("id", u[0].escola_id).single();
+    .from("escolas").select("id, nome, slug, logo_url, cor_acento").eq("id", u.escola_id).single();
   if (e2) throw falha("escola", e2);
-  return { usuario: u[0], escola: e };
+  return { usuario: u, escola: e };
 }
 
 /* ---------- conteúdo (trilha — global, só leitura) ---------- */
@@ -185,12 +192,13 @@ export async function carregarNivelAluno(alunoId) {
 // Define/ajusta o nível de um escopo ('geral' ou matéria). Só a
 // coordenação escreve (RLS); o gatilho registra o histórico.
 export async function salvarNivelAluno({ alunoId, escopo, nivel, origem, motivo }) {
-  const { escola } = await meuPerfil();
-  const { usuario } = { usuario: (await supabase.from("usuarios").select("id").limit(1)).data?.[0] };
+  // `definido_por` é o coordenador logado — não um usuário qualquer da
+  // escola. meuPerfil() já resolve a identidade correta pelo JWT.
+  const { escola, usuario } = await meuPerfil();
   const { data, error } = await supabase
     .from("aluno_niveis")
     .upsert(
-      { escola_id: escola.id, aluno_id: alunoId, escopo, nivel, origem, motivo, definido_por: usuario?.id ?? null, atualizado_em: new Date().toISOString() },
+      { escola_id: escola.id, aluno_id: alunoId, escopo, nivel, origem, motivo, definido_por: usuario.id, atualizado_em: new Date().toISOString() },
       { onConflict: "aluno_id,escopo" }
     )
     .select().single();
@@ -411,25 +419,22 @@ export async function atualizarAluno(alunoId, campos) {
   return data[0];
 }
 
-// leituras da ESCOLA inteira (coordenação) — a RLS limita ao tenant
-export async function listarRegistrosEscola() {
-  const { data, error } = await supabase
-    .from("registros_estudo").select("aluno_id, data, questoes, acertos, minutos");
-  if (error) throw falha("registros da escola", error);
+// leituras da ESCOLA inteira (coordenação) — a RLS limita ao tenant.
+// O painel NÃO baixa mais todos os registros/metas: a agregação por
+// aluno acontece no banco (função resumo_escola, migration 0016) e
+// volta uma linha por aluno. Escala para centenas de alunos.
+export async function resumoEscola() {
+  const { data, error } = await supabase.rpc("resumo_escola");
+  if (error) throw falha("resumo da escola", error);
   return data;
 }
 
+// Simulados continuam crus (volume bem menor e o ranking precisa do
+// detalhe por simulado); indexados no cliente por aluno.
 export async function listarSimuladosEscola() {
   const { data, error } = await supabase
     .from("simulados").select("aluno_id, nome, data, acertos").order("data");
   if (error) throw falha("simulados da escola", error);
-  return data;
-}
-
-export async function listarMetasEscola() {
-  const { data, error } = await supabase
-    .from("metas").select("aluno_id, status, semana_numero, meta_atividades(estado)");
-  if (error) throw falha("metas da escola", error);
   return data;
 }
 
@@ -560,10 +565,16 @@ export async function listarLogsAcesso(limite = 100) {
 }
 
 // Trilha de acesso (LGPD): quem lê dado de aluno registra o acesso.
-// Falhar em logar não pode derrubar a tela, mas aparece no console.
+// Falhar em logar não pode DERRUBAR a tela (é efeito colateral de uma
+// leitura), mas não pode sumir em silêncio — a trilha LGPD é exigência
+// legal. Devolve {ok} para o chamador decidir avisar, e mantém o log.
 export async function registrarAcesso(escolaId, alunoId, usuarioId, papel, acao) {
   const { error } = await supabase.from("logs_acesso").insert({
     escola_id: escolaId, aluno_id: alunoId, usuario_id: usuarioId, papel, acao,
   });
-  if (error) console.error("log de acesso não registrado:", error.message);
+  if (error) {
+    console.error("log de acesso LGPD não registrado:", error.message);
+    return { ok: false, erro: error.message };
+  }
+  return { ok: true };
 }

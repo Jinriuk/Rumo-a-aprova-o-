@@ -10,33 +10,28 @@ import { ListaAlunos } from "../../modules/pessoas/ListaAlunos.jsx";
 import { Marca } from "../../modules/escola/Marca.jsx";
 import { PainelConformidade } from "../../modules/consentimento/PainelConformidade.jsx";
 import { ClassificacaoTurma } from "../../modules/desempenho/ClassificacaoTurma.jsx";
-import { PainelGestao, agregarEscola } from "../../modules/desempenho/PainelGestao.jsx";
+import { PainelGestao } from "../../modules/desempenho/PainelGestao.jsx";
 import { FichaAluno } from "../../modules/desempenho/FichaAluno.jsx";
+import { useRecurso } from "../../shared/hooks/useRecurso.js";
+import { adaptarResumoEscola } from "../../shared/metricas/agregados.js";
 import * as db from "../../shared/data/index.js";
+
+const VAZIO = { turmas: [], alunos: [], consentimentos: [], logs: [], trilha: null, concursos: [], resumo: [], simuladosEscola: [] };
 
 export default function AreaEscola({ perfil }) {
   const T = useTema();
   const [tab, setTab] = useState("painel");
-  const [dados, setDados] = useState({
-    carregando: true, erro: null, turmas: [], alunos: [], consentimentos: [],
-    logs: [], trilha: null, concursos: [], registrosEscola: [], metasEscola: [], simuladosEscola: [],
-  });
+  const { dados: carregado, carregando, erro, recarregar } = useRecurso(
+    () => Promise.all([
+      db.listarTurmas(), db.listarAlunos(), db.listarConsentimentos(), db.listarLogsAcesso(),
+      db.trilhaPadrao(), db.listarConcursos(), db.resumoEscola(), db.listarSimuladosEscola(),
+    ]).then(([turmas, alunos, consentimentos, logs, trilha, concursos, resumo, simuladosEscola]) =>
+      ({ turmas, alunos, consentimentos, logs, trilha, concursos, resumo, simuladosEscola })),
+    [],
+  );
+  const dados = carregado ?? VAZIO;
   const [credencial, setCredencial] = useState(null);
   const [alunoAberto, setAlunoAberto] = useState(null);
-  const [versao, setVersao] = useState(0);
-  const recarregar = () => setVersao((v) => v + 1);
-
-  useEffect(() => {
-    let vivo = true;
-    Promise.all([
-      db.listarTurmas(), db.listarAlunos(), db.listarConsentimentos(), db.listarLogsAcesso(),
-      db.trilhaPadrao(), db.listarConcursos(), db.listarRegistrosEscola(), db.listarMetasEscola(), db.listarSimuladosEscola(),
-    ])
-      .then(([turmas, alunos, consentimentos, logs, trilha, concursos, registrosEscola, metasEscola, simuladosEscola]) =>
-        vivo && setDados({ carregando: false, erro: null, turmas, alunos, consentimentos, logs, trilha, concursos, registrosEscola, metasEscola, simuladosEscola }))
-      .catch((e) => vivo && setDados((d) => ({ ...d, carregando: false, erro: e.message })));
-    return () => { vivo = false; };
-  }, [versao]);
 
   const aoTopo = () => window.scrollTo({ top: 0, left: 0, behavior: "instant" });
   useEffect(aoTopo, []); // entrar no sistema = nascer no topo
@@ -49,12 +44,12 @@ export default function AreaEscola({ perfil }) {
     db.registrarAcesso(perfil.escola.id, aluno.id, perfil.usuario.id, "coordenacao", "leitura-desempenho");
   }
 
-  const alunosPorId = Object.fromEntries(dados.alunos.map((a) => [a.id, a]));
-  const concursosPorId = Object.fromEntries(dados.concursos.map((c) => [c.id, c]));
-  const resumoPorAluno = useMemo(
-    () => Object.fromEntries(agregarEscola({ alunos: dados.alunos, registros: dados.registrosEscola, metas: dados.metasEscola }).map((x) => [x.aluno.id, x])),
-    [dados.alunos, dados.registrosEscola, dados.metasEscola],
-  );
+  const alunosPorId = useMemo(() => Object.fromEntries(dados.alunos.map((a) => [a.id, a])), [dados.alunos]);
+  const concursosPorId = useMemo(() => Object.fromEntries(dados.concursos.map((c) => [c.id, c])), [dados.concursos]);
+  // Agregado por aluno: vem PRONTO do banco (RPC resumo_escola) e é
+  // calculado uma única vez aqui — Painel, Ranking e Turmas reusam.
+  const resumoLista = useMemo(() => adaptarResumoEscola(dados.resumo, alunosPorId), [dados.resumo, alunosPorId]);
+  const resumoPorAluno = useMemo(() => Object.fromEntries(resumoLista.map((x) => [x.aluno.id, x])), [resumoLista]);
 
   const ABAS = [
     ["painel", "Painel", null, "painel"], ["alunos", "Alunos", null, "alunos"],
@@ -72,22 +67,21 @@ export default function AreaEscola({ perfil }) {
           usuario={{ nome: perfil.usuario.nome, sub: "Coordenação" }} />
 
         <div className="fade" key={tab + (alunoAberto?.id ?? "")}>
-          {dados.erro && <Erro>{dados.erro}</Erro>}
-          {dados.carregando && <Empty txt="Carregando…" />}
+          {erro && <Erro>{erro}</Erro>}
+          {carregando && <Empty txt="Carregando…" />}
 
-          {!dados.carregando && alunoAberto && (
+          {!carregando && alunoAberto && (
             <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
               <button onClick={() => { setAlunoAberto(null); aoTopo(); }} style={{ alignSelf: "flex-start", border: `1px solid ${T.line}`, background: T.card, color: T.sub, borderRadius: 8, padding: "8px 14px", fontSize: 13, fontWeight: 600 }}>← voltar ao painel</button>
               <FichaAluno aluno={alunoAberto} concurso={concursoDoAluno} />
             </div>
           )}
 
-          {!dados.carregando && !alunoAberto && tab === "painel" && (
-            <PainelGestao alunos={dados.alunos} registros={dados.registrosEscola} metas={dados.metasEscola}
-              turmas={dados.turmas} concursosPorId={concursosPorId} aoIr={irPara} />
+          {!carregando && !alunoAberto && tab === "painel" && (
+            <PainelGestao resumo={resumoLista} aoIr={irPara} />
           )}
 
-          {!dados.carregando && !alunoAberto && tab === "alunos" && (
+          {!carregando && !alunoAberto && tab === "alunos" && (
             <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
               <NovosAlunos turmas={dados.turmas} trilhaPadrao={dados.trilha} concursos={dados.concursos} aoMudar={recarregar} />
               <ListaAlunos alunos={dados.alunos} consentimentos={dados.consentimentos} concursos={dados.concursos}
@@ -96,23 +90,23 @@ export default function AreaEscola({ perfil }) {
             </div>
           )}
 
-          {!dados.carregando && !alunoAberto && tab === "ranking" && (
+          {!carregando && !alunoAberto && tab === "ranking" && (
             <ClassificacaoTurma alunos={dados.alunos} turmas={dados.turmas}
-              registros={dados.registrosEscola} metas={dados.metasEscola}
+              resumoPorAluno={resumoPorAluno}
               simulados={dados.simuladosEscola} concursosPorId={concursosPorId} />
           )}
 
-          {!dados.carregando && !alunoAberto && tab === "turmas" && (
-            <Turmas turmas={dados.turmas} alunos={dados.alunos} registros={dados.registrosEscola}
-              metas={dados.metasEscola} aoMudar={recarregar} aoVerRanking={() => irPara("ranking")}
+          {!carregando && !alunoAberto && tab === "turmas" && (
+            <Turmas turmas={dados.turmas} alunos={dados.alunos} porAluno={resumoPorAluno}
+              aoMudar={recarregar} aoVerRanking={() => irPara("ranking")}
               aoVerAluno={verAluno} />
           )}
 
-          {!dados.carregando && !alunoAberto && tab === "conformidade" && (
+          {!carregando && !alunoAberto && tab === "conformidade" && (
             <PainelConformidade consentimentos={dados.consentimentos} logs={dados.logs} alunosPorId={alunosPorId} />
           )}
 
-          {!dados.carregando && !alunoAberto && tab === "marca" && (
+          {!carregando && !alunoAberto && tab === "marca" && (
             <Marca escola={perfil.escola} aoMudar={recarregar} />
           )}
         </div>
@@ -126,11 +120,9 @@ export default function AreaEscola({ perfil }) {
 /* Turmas com indicadores: alunos, acerto, questões e alunos em risco.
    Clicar na turma abre a lista de alunos dela; clicar no aluno abre o
    desempenho individual (Fase 10 do doc). */
-function Turmas({ turmas, alunos, registros, metas, aoMudar, aoVerRanking, aoVerAluno }) {
+function Turmas({ turmas, alunos, porAluno, aoMudar, aoVerRanking, aoVerAluno }) {
   const T = useTema();
   const [turmaAberta, setTurmaAberta] = useState(null);
-  const ag = useMemo(() => agregarEscola({ alunos, registros, metas }), [alunos, registros, metas]);
-  const porAluno = Object.fromEntries(ag.map((x) => [x.aluno.id, x]));
   const alunosDaTurma = (turmaId) =>
     alunos.filter((a) => (a.alunos_turmas ?? []).some((v) => v.turma_id === turmaId));
 

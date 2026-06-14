@@ -2,9 +2,10 @@
    desempenho"; ação importante "Gerar credencial"; secundárias
    (responsável, exportar/excluir LGPD) recolhidas em "Mais ações".
    Status visual claro com selos. */
-import React, { useState } from "react";
+import React, { useMemo, useState } from "react";
 import { SectionCard, EmptyState, Erro, StatusBadge, BotaoMini, MaisAcoes } from "../../shared/ui/componentes.jsx";
 import { useTema } from "../../shared/branding/BrandingContext.jsx";
+import { limparNome, nomeValido } from "../../shared/validacao.js";
 import * as db from "../../shared/data/index.js";
 
 export function ListaAlunos({ alunos, consentimentos, concursos = [], turmas = [], resumoPorAluno = {}, aoMudar, aoGerarCredencial, aoVerAluno }) {
@@ -14,7 +15,7 @@ export function ListaAlunos({ alunos, consentimentos, concursos = [], turmas = [
   const [busca, setBusca] = useState("");
   const [fTurma, setFTurma] = useState("");
   const [fStatus, setFStatus] = useState("");
-  const comConsentimento = new Set(consentimentos.map((c) => c.aluno_id));
+  const comConsentimento = useMemo(() => new Set(consentimentos.map((c) => c.aluno_id)), [consentimentos]);
 
   async function comAcao(aluno, fn) {
     setOcupado(aluno.id); setErro(null);
@@ -23,22 +24,28 @@ export function ListaAlunos({ alunos, consentimentos, concursos = [], turmas = [
   }
 
   const credencialAluno = (a) => comAcao(a, async () => aoGerarCredencial(await db.provisionarAluno(a.id)));
+  const pedirNome = (mensagem, atual) => {
+    const nome = window.prompt(mensagem, atual);
+    if (nome === null) return null; // cancelou
+    if (!nomeValido(nome)) { setErro("Nome inválido: use de 2 a 80 caracteres."); return null; }
+    return limparNome(nome);
+  };
   const credencialResp = (a) => {
-    const nome = window.prompt(`Nome do responsável de ${a.nome}:`);
-    if (!nome?.trim()) return;
-    return comAcao(a, async () => aoGerarCredencial(await db.provisionarResponsavel(a.id, nome.trim())));
+    const nome = pedirNome(`Nome do responsável de ${a.nome}:`);
+    if (!nome) return;
+    return comAcao(a, async () => aoGerarCredencial(await db.provisionarResponsavel(a.id, nome)));
   };
   const consentir = (a) => {
-    const nome = window.prompt(`Nome do responsável que consente pelo aluno ${a.nome} (termo v1):`);
-    if (!nome?.trim()) return;
-    return comAcao(a, () => db.registrarConsentimento(a.id, nome.trim()));
+    const nome = pedirNome(`Nome do responsável que consente pelo aluno ${a.nome} (termo v1):`);
+    if (!nome) return;
+    return comAcao(a, () => db.registrarConsentimento(a.id, nome));
   };
   const trocarConcurso = (a, concursoId) => comAcao(a, () => db.atualizarAluno(a.id, { concurso_id: concursoId || null }));
   const trocarTurma = (a, turmaId) => comAcao(a, () => db.definirTurma(a.id, turmaId || null));
   const renomear = (a) => {
-    const nome = window.prompt("Novo nome do aluno:", a.nome);
-    if (!nome?.trim() || nome.trim() === a.nome) return;
-    return comAcao(a, () => db.atualizarAluno(a.id, { nome: nome.trim() }));
+    const nome = pedirNome("Novo nome do aluno:", a.nome);
+    if (!nome || nome === a.nome) return;
+    return comAcao(a, () => db.atualizarAluno(a.id, { nome }));
   };
   async function exportar(a) {
     setOcupado(a.id); setErro(null);
@@ -57,18 +64,21 @@ export function ListaAlunos({ alunos, consentimentos, concursos = [], turmas = [
     if (ok) return comAcao(a, () => db.lgpdTitular("excluir", a.id));
   };
 
-  const filtrados = alunos
-    .filter((a) => !busca.trim() || a.nome.toLowerCase().includes(busca.trim().toLowerCase()))
-    .filter((a) => !fTurma || (a.alunos_turmas ?? []).some((v) => v.turma_id === fTurma))
-    .filter((a) => {
-      if (!fStatus) return true;
-      const r = resumoPorAluno[a.id];
-      if (fStatus === "sem-credencial") return !a.usuario_id;
-      if (fStatus === "sem-consentimento") return !comConsentimento.has(a.id);
-      if (fStatus === "sem-atividade") return r ? r.semAtividade : true;
-      if (fStatus === "meta-atrasada") return r?.metaIncompleta;
-      return true;
-    });
+  const filtrados = useMemo(() => {
+    const termo = busca.trim().toLowerCase();
+    return alunos
+      .filter((a) => !termo || a.nome.toLowerCase().includes(termo))
+      .filter((a) => !fTurma || (a.alunos_turmas ?? []).some((v) => v.turma_id === fTurma))
+      .filter((a) => {
+        if (!fStatus) return true;
+        const r = resumoPorAluno[a.id];
+        if (fStatus === "sem-credencial") return !a.usuario_id;
+        if (fStatus === "sem-consentimento") return !comConsentimento.has(a.id);
+        if (fStatus === "sem-atividade") return r ? r.semAtividade : true;
+        if (fStatus === "meta-atrasada") return r?.metaIncompleta;
+        return true;
+      });
+  }, [alunos, busca, fTurma, fStatus, resumoPorAluno, comConsentimento]);
 
   const selS = { background: T.bg, border: `1px solid ${T.line}`, color: T.ink, borderRadius: 8, padding: "7px 9px", fontSize: 12.5 };
 
