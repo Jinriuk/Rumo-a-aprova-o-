@@ -12,7 +12,7 @@ import { FaixaAspirante, MissaoAtual } from "../../modules/motor/MetaHero.jsx";
 import { MetaSemana } from "../../modules/motor/MetaSemana.jsx";
 import { Registrar } from "../../modules/motor/Registrar.jsx";
 import { Arquivo } from "../../modules/motor/Arquivo.jsx";
-import { Conquistas } from "../../modules/motor/Conquistas.jsx";
+import { Conquistas, ConquistasRecentes } from "../../modules/motor/Conquistas.jsx";
 import { calcularXP, patente } from "../../modules/motor/jargao.js";
 import { Progresso, Simulados } from "../../modules/desempenho/Progresso.jsx";
 import { InsightsDesempenho } from "../../modules/desempenho/Insights.jsx";
@@ -94,6 +94,7 @@ export function VisaoEstudo({ aluno, podeEditar, concurso = null, contexto = "Pl
               aoAbrirConquistas={() => irAba("conquistas")} />
             <MissaoAtual meta={meta} trilha={trilha} m={m} />
             <MetaSemana meta={meta} trilha={trilha} podeEditar={podeEditar} aoMudar={recarregar} />
+            {m && <ConquistasRecentes m={m} metas={dados.metas} simulados={dados.simulados} aoAbrir={() => irAba("conquistas")} />}
             {podeEditar && (
               <button onClick={() => irAba("registrar")}
                 style={{ border: `1px dashed ${T.gold}66`, background: `${T.gold}0c`, color: T.gold, borderRadius: 12, fontWeight: 700, fontSize: 14, padding: "14px", minHeight: 50 }}>

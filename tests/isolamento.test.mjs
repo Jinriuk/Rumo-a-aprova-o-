@@ -17,6 +17,7 @@ const TABELAS_ISOLADAS = [
   "escolas", "usuarios", "turmas", "alunos", "alunos_turmas",
   "vinculos_responsaveis", "metas", "meta_atividades",
   "registros_estudo", "simulados", "consentimentos", "logs_acesso",
+  "config_escola", // Fase 15.1: override pedagógico por escola, isolado
 ];
 
 // ---------- LEITURA: nada da outra escola, em NENHUMA tabela ----------

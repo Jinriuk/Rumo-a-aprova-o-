@@ -3,7 +3,8 @@
    Radar de desempenho e Próxima Missão compacta/bloqueada.
    Tudo derivado de dado REAL; o jargão é só apresentação. */
 import React from "react";
-import { StatCard, StatusBadge } from "../../shared/ui/componentes.jsx";
+import { StatCard, StatusBadge, BarraXP } from "../../shared/ui/componentes.jsx";
+import { Insignia } from "../../shared/ui/Insignia.jsx";
 import { useTema } from "../../shared/branding/BrandingContext.jsx";
 import { fmtBR, todayISO, daysBetween } from "../../shared/regras/regras.js";
 import { L, patente, fmtHoras, fmtHorasCurto, xpPorPrioridade } from "./jargao.js";
@@ -17,8 +18,8 @@ export function FaixaAspirante({ nome, contexto, xp, streak, aoAbrirConquistas }
       style={{ background: `linear-gradient(135deg, ${T.cardHi}, ${T.card})`, border: `1px solid ${T.line}`, borderRadius: 14, padding: "12px 14px", cursor: aoAbrirConquistas ? "pointer" : "default" }}>
       <div style={{ display: "flex", alignItems: "center", gap: 11 }}>
         <div style={{ position: "relative", flexShrink: 0 }}>
-          <div className="disp" style={{ width: 40, height: 40, borderRadius: 10, background: `linear-gradient(135deg, ${T.gold}, #9c7d2e)`, display: "flex", alignItems: "center", justifyContent: "center", color: "#0A1622", fontWeight: 800, fontSize: 18 }}>⚓</div>
-          <span className="num" style={{ position: "absolute", right: -5, bottom: -5, background: T.bg2, border: `1.5px solid ${T.gold}`, color: T.gold, borderRadius: "50%", width: 18, height: 18, fontSize: 10, fontWeight: 800, display: "flex", alignItems: "center", justifyContent: "center" }}>{p.nivel}</span>
+          <Insignia patente={p} tam={42} />
+          <span className="num" style={{ position: "absolute", right: -5, bottom: -3, background: T.bg2, border: `1.5px solid ${T.gold}`, color: T.gold, borderRadius: "50%", width: 18, height: 18, fontSize: 10, fontWeight: 800, display: "flex", alignItems: "center", justifyContent: "center" }}>{p.nivel}</span>
         </div>
         <div style={{ flex: 1, minWidth: 0 }}>
           <div className="disp" style={{ fontSize: 16, fontWeight: 800, lineHeight: 1.1, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
@@ -35,9 +36,7 @@ export function FaixaAspirante({ nome, contexto, xp, streak, aoAbrirConquistas }
       </div>
       {p.proxXp != null && (
         <div style={{ marginTop: 9 }}>
-          <div style={{ height: 5, background: T.bg, borderRadius: 3, overflow: "hidden" }}>
-            <div style={{ width: `${p.pctProx}%`, height: "100%", background: `linear-gradient(90deg, ${T.gold}, ${T.green})` }} />
-          </div>
+          <BarraXP pct={p.pctProx} alt={5} brilho={false} />
           <div style={{ fontSize: 10, color: T.sub, marginTop: 3 }}>
             faltam {(p.proxXp - xp).toLocaleString("pt-BR")} XP para <b style={{ color: T.gold }}>{p.proxNome}</b>
           </div>

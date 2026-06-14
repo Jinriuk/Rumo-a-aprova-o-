@@ -242,6 +242,37 @@ export function MaisAcoes({ acoes }) {
   );
 }
 
+// Barra de XP/progresso reutilizável (Fase 16.1). `pct` 0..100.
+// `alt` controla a espessura; `brilho` acende o gradiente dourado→verde.
+export function BarraXP({ pct = 0, alt = 8, brilho = true, trilho }) {
+  const T = useTema();
+  const v = Math.max(0, Math.min(100, pct));
+  return (
+    <div style={{ height: alt, background: trilho ?? T.bg, borderRadius: alt, overflow: "hidden", border: `1px solid ${T.line}` }}>
+      <div style={{ width: `${v}%`, height: "100%", background: `linear-gradient(90deg, ${T.gold}, ${T.green})`, boxShadow: brilho ? `0 0 8px ${T.gold}66` : "none", transition: "width .4s ease" }} />
+    </div>
+  );
+}
+
+// Selo de raridade de conquista (Fase 16.1) — discreto, sem exagero gamer.
+// comum · destacada · rara · elite · lendária.
+export const RARIDADES = {
+  comum:     { rotulo: "Comum",     cor: "#8AA4BC" },
+  destacada: { rotulo: "Destacada", cor: "#4FB477" },
+  rara:      { rotulo: "Rara",      cor: "#5AA9E6" },
+  elite:     { rotulo: "Elite",     cor: "#B98CE0" },
+  lendaria:  { rotulo: "Lendária",  cor: "#CDA349" },
+};
+
+export function SeloRaridade({ raridade = "comum" }) {
+  const r = RARIDADES[raridade] ?? RARIDADES.comum;
+  return (
+    <span style={{ fontSize: 9.5, fontWeight: 800, color: r.cor, border: `1px solid ${r.cor}66`, background: `${r.cor}14`, borderRadius: 5, padding: "1px 6px", textTransform: "uppercase", letterSpacing: 0.5, whiteSpace: "nowrap" }}>
+      {r.rotulo}
+    </span>
+  );
+}
+
 // Botão pequeno (ação secundária inline).
 export function BotaoMini({ children, onClick, destaque, perigo, disabled }) {
   const T = useTema();
