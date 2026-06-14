@@ -65,7 +65,7 @@ test("destaques da semana respeitam o critério escolhido", async ({ page }) => 
 });
 
 test("MARCA: altera o nome de exibição, persiste após reload e restaura", async ({ page }) => {
-  test.setTimeout(60_000); // login + 2 salvamentos + reload não cabem nos 30s padrão
+  test.setTimeout(90_000); // login + 2 salvamentos + reload contra o banco de demo REMOTO; folga p/ latência de rede
   await irParaAba(page, "Marca");
   const campoNome = campo(page, "Nome de exibição");
   await expect(campoNome).toBeVisible();
@@ -75,17 +75,17 @@ test("MARCA: altera o nome de exibição, persiste após reload e restaura", asy
   try {
     await campoNome.fill(tempo);
     await page.getByRole("button", { name: "Salvar marca" }).click();
-    await expect(page.getByText(/Marca salva no banco/)).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByText(/Marca salva no banco/)).toBeVisible({ timeout: 30_000 });
 
     // recarrega: o valor tem de vir do banco (persistência real)
     await page.reload();
     await irParaAba(page, "Marca");
-    await expect(campo(page, "Nome de exibição")).toHaveValue(tempo, { timeout: 15_000 });
+    await expect(campo(page, "Nome de exibição")).toHaveValue(tempo, { timeout: 30_000 });
   } finally {
     // restaura o nome original — não deixa o seed sujo
     const campoRestauro = campo(page, "Nome de exibição");
     await campoRestauro.fill(original);
     await page.getByRole("button", { name: "Salvar marca" }).click();
-    await expect(page.getByText(/Marca salva no banco/)).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByText(/Marca salva no banco/)).toBeVisible({ timeout: 30_000 });
   }
 });
