@@ -18,6 +18,7 @@ import { Progresso, Simulados } from "../../modules/desempenho/Progresso.jsx";
 import { InsightsDesempenho } from "../../modules/desempenho/Insights.jsx";
 import { Acumulado } from "../../modules/desempenho/Acumulado.jsx";
 import { RadarDesempenho } from "../../modules/desempenho/RadarDesempenho.jsx";
+import { NiveisPorMateria } from "../../modules/desempenho/Niveis.jsx";
 import { calcularMetricas } from "../../modules/desempenho/metricas.js";
 import { semanaAtual, fmtBR } from "../../shared/regras/regras.js";
 import * as db from "../../shared/data/index.js";
@@ -110,6 +111,7 @@ export function VisaoEstudo({ aluno, podeEditar, concurso = null, contexto = "Pl
         {tab === "desempenho" && (
           <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
             {m && <InsightsDesempenho m={m} />}
+            <NiveisPorMateria m={m} trilha={trilha} />
             <RadarDesempenho m={m} trilha={trilha} aoRegistrar={podeEditar ? () => irAba("registrar") : null} />
             <Acumulado registros={dados.registros} trilha={trilha} />
             <Progresso registros={dados.registros} trilha={trilha} />
