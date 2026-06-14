@@ -3,7 +3,8 @@
    Mesma composição para aluno (edita) e para coordenação (lê) — o
    banco decide o que cada um PODE; aqui só se esconde o que não cabe. */
 import React, { useEffect, useMemo, useState } from "react";
-import { SectionCard, Empty, Tag, SubjDot, Erro } from "../../shared/ui/componentes.jsx";
+import { SectionCard, Empty, Tag, SubjDot, Erro, BarraXP, StatusBadge } from "../../shared/ui/componentes.jsx";
+import { Icone } from "../../shared/ui/Icones.jsx";
 import { MenuPrincipal } from "../../shared/ui/MenuPrincipal.jsx";
 import { Cronometro } from "../../shared/ui/Cronometro.jsx";
 import { useTema } from "../../shared/branding/BrandingContext.jsx";
@@ -18,6 +19,7 @@ import { Progresso, Simulados } from "../../modules/desempenho/Progresso.jsx";
 import { InsightsDesempenho } from "../../modules/desempenho/Insights.jsx";
 import { Acumulado } from "../../modules/desempenho/Acumulado.jsx";
 import { RadarDesempenho } from "../../modules/desempenho/RadarDesempenho.jsx";
+import { NiveisPorMateria } from "../../modules/desempenho/Niveis.jsx";
 import { calcularMetricas } from "../../modules/desempenho/metricas.js";
 import { semanaAtual, fmtBR } from "../../shared/regras/regras.js";
 import * as db from "../../shared/data/index.js";
@@ -110,6 +112,7 @@ export function VisaoEstudo({ aluno, podeEditar, concurso = null, contexto = "Pl
         {tab === "desempenho" && (
           <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
             {m && <InsightsDesempenho m={m} />}
+            <NiveisPorMateria m={m} trilha={trilha} />
             <RadarDesempenho m={m} trilha={trilha} aoRegistrar={podeEditar ? () => irAba("registrar") : null} />
             <Acumulado registros={dados.registros} trilha={trilha} />
             <Progresso registros={dados.registros} trilha={trilha} />
@@ -130,45 +133,113 @@ export function VisaoEstudo({ aluno, podeEditar, concurso = null, contexto = "Pl
   );
 }
 
-/* O Plano: as semanas inteiras da trilha. Textos da metodologia
-   importada; estado vem da meta da semana corrente quando há. */
+/* O Plano (Fase 16.4): a trilha vira JORNADA — uma linha do tempo de
+   missões com estado claro (encerrada / em andamento / a desbloquear),
+   "onde estou" e o próximo passo. Textos da metodologia importada;
+   estado da semana corrente vem da meta. */
 function Plano({ trilha, semanaAtiva, meta }) {
   const T = useTema();
   const estadosPorAtividade = Object.fromEntries(
     (meta?.meta_atividades ?? []).map((ma) => [ma.atividade_modelo_id, ma.estado]),
   );
+  const ativaNum = semanaAtiva?.numero ?? trilha.semanas[0]?.numero;
+  const total = trilha.semanas.length;
+  const posicao = Math.max(1, trilha.semanas.findIndex((w) => w.numero === ativaNum) + 1);
+  const pctJornada = total > 1 ? Math.round(((posicao - 1) / (total - 1)) * 100) : 0;
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-      {trilha.semanas.map((w) => {
-        const isNow = w.numero === semanaAtiva?.numero;
-        const tarefas = trilha.atividadesPorSemana[w.numero] ?? [];
-        const dc = tarefas.filter((tk) => estadosPorAtividade[tk.id] === "concluida").length;
-        return (
-          <SectionCard key={w.numero}
-            titulo={`Missão ${w.numero}${isNow ? " · agora" : ""}`}
-            sub={`${fmtBR(String(w.inicio))}–${fmtBR(String(w.fim))}${isNow ? ` · ${dc}/${tarefas.length}` : ""}`}
-            style={isNow ? { borderColor: T.gold, borderWidth: 1.5 } : undefined}>
-            <div style={{ fontStyle: "italic", color: T.sub, fontSize: 13, marginBottom: 8 }}>{w.foco}</div>
-            {w.simulado && <div style={{ fontSize: 12, color: T.red, fontWeight: 600, marginBottom: 8 }}>⚑ {w.simulado}</div>}
-            <div style={{ display: "flex", flexDirection: "column", gap: 1 }}>
-              {tarefas.map((tk) => {
-                const estado = estadosPorAtividade[tk.id];
-                const ch = estado === "concluida";
-                return (
-                  <div key={tk.id} className="chk" style={{ display: "flex", alignItems: "flex-start", gap: 9, padding: "9px 4px", minHeight: 40, opacity: estado === "ignorada" ? 0.45 : 1 }}>
-                    <span style={{ marginTop: 3, width: 16, height: 16, borderRadius: "50%", border: `2px solid ${ch ? T.green : T.line}`, background: ch ? T.green : "transparent", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 9, color: "#0A1622", fontWeight: 800 }}>{ch ? "✓" : ""}</span>
-                    <span style={{ flex: 1, display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
-                      <SubjDot disciplina={trilha.porCodigo[tk.disciplina_codigo]} /><Tag p={tk.prioridade} />
-                      <span style={{ fontSize: 13, color: ch ? T.sub : T.ink, textDecoration: ch ? "line-through" : "none", flexBasis: "100%" }}>{tk.texto}</span>
-                    </span>
-                  </div>
-                );
-              })}
+    <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+      {/* onde estou — cabeçalho da jornada */}
+      <div style={{ background: `linear-gradient(135deg, ${T.cardHi}, ${T.card})`, border: `1px solid ${T.line}`, borderRadius: 14, padding: "14px 16px" }}>
+        <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 10, flexWrap: "wrap" }}>
+          <div style={{ fontSize: 11, color: T.sub, textTransform: "uppercase", letterSpacing: 0.6, fontWeight: 700 }}>Sua jornada</div>
+          <div className="num" style={{ fontSize: 11.5, color: T.sub }}>missão <b className="disp" style={{ color: T.gold, fontSize: 15 }}>{posicao}</b> de {total}</div>
+        </div>
+        <div style={{ marginTop: 9 }}><BarraXP pct={pctJornada} alt={7} /></div>
+      </div>
+
+      <div style={{ position: "relative" }}>
+        {/* trilho vertical que liga as missões */}
+        <div style={{ position: "absolute", left: 13, top: 14, bottom: 14, width: 2, background: T.line }} />
+        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+          {trilha.semanas.map((w) => (
+            <MissaoJornada key={w.numero} w={w} trilha={trilha} ativaNum={ativaNum}
+              estadosPorAtividade={estadosPorAtividade} T={T} />
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Uma etapa da jornada: nó na linha do tempo + cartão da missão.
+function MissaoJornada({ w, trilha, ativaNum, estadosPorAtividade, T }) {
+  const isNow = w.numero === ativaNum;
+  const isPast = w.numero < ativaNum;
+  const tarefas = trilha.atividadesPorSemana[w.numero] ?? [];
+  const dc = tarefas.filter((tk) => estadosPorAtividade[tk.id] === "concluida").length;
+  const [aberto, setAberto] = useState(isNow);
+  const tom = isNow ? "alerta" : isPast ? "ok" : "neutro";
+  const rotulo = isPast ? "Encerrada" : isNow ? "Em andamento" : "A desbloquear";
+  const pct = tarefas.length ? Math.round((dc / tarefas.length) * 100) : 0;
+
+  // nó: encerrada = check; agora = ponto vivo; futura = cadeado
+  const no = isNow
+    ? { bg: T.bg2, br: T.gold, cor: T.gold, icone: null }
+    : isPast ? { bg: T.green, br: T.green, cor: "#0A1622", icone: "check" }
+    : { bg: T.bg, br: T.line, cor: T.sub, icone: "cadeado" };
+
+  return (
+    <div style={{ display: "flex", gap: 12, alignItems: "flex-start" }}>
+      <div style={{ width: 28, display: "flex", justifyContent: "center", flexShrink: 0, zIndex: 1 }}>
+        <span style={{ width: 28, height: 28, borderRadius: "50%", background: no.bg, border: `2px solid ${no.br}`, color: no.cor, display: "flex", alignItems: "center", justifyContent: "center", boxShadow: isNow ? `0 0 0 4px ${T.gold}22` : "none" }}>
+          {no.icone ? <Icone nome={no.icone} tam={14} grosso={no.icone === "check" ? 3 : 2} /> : <span style={{ width: 8, height: 8, borderRadius: "50%", background: T.gold }} />}
+        </span>
+      </div>
+
+      <div style={{ flex: 1, minWidth: 0, background: T.card, border: `1px solid ${isNow ? T.gold : T.line}`, borderWidth: isNow ? 1.5 : 1, borderRadius: 12, overflow: "hidden" }}>
+        <div style={{ padding: "12px 14px" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+            <span className="disp" style={{ fontSize: 14.5, fontWeight: 700 }}>Missão {w.numero}</span>
+            <StatusBadge tom={tom}>{rotulo}</StatusBadge>
+            <span className="num" style={{ marginLeft: "auto", fontSize: 11, color: T.sub }}>{fmtBR(String(w.inicio))}–{fmtBR(String(w.fim))}</span>
+          </div>
+          <div style={{ fontStyle: "italic", color: T.sub, fontSize: 13, marginTop: 6, lineHeight: 1.4 }}>{w.foco}</div>
+          {w.simulado && <div style={{ fontSize: 12, color: T.red, fontWeight: 700, marginTop: 6 }}>⚑ {w.simulado}</div>}
+
+          {isNow && tarefas.length > 0 && (
+            <div style={{ marginTop: 10 }}>
+              <BarraXP pct={pct} alt={5} brilho={false} />
+              <div className="num" style={{ fontSize: 11, color: T.sub, marginTop: 4 }}>{dc}/{tarefas.length} objetivos · <b style={{ color: T.gold }}>{pct}%</b></div>
             </div>
-          </SectionCard>
-        );
-      })}
+          )}
+
+          {tarefas.length > 0 && (
+            <button onClick={() => setAberto((v) => !v)}
+              style={{ marginTop: 10, border: "none", background: "transparent", color: T.sub, fontSize: 12, fontWeight: 600, padding: "4px 0", display: "flex", alignItems: "center", gap: 5 }}>
+              {aberto ? "▾ ocultar" : `▸ ver ${tarefas.length} ${tarefas.length === 1 ? "objetivo" : "objetivos"}`}
+            </button>
+          )}
+        </div>
+
+        {aberto && tarefas.length > 0 && (
+          <div style={{ borderTop: `1px solid ${T.line}`, padding: "8px 14px 12px" }}>
+            {tarefas.map((tk) => {
+              const estado = estadosPorAtividade[tk.id];
+              const ch = estado === "concluida";
+              return (
+                <div key={tk.id} className="chk" style={{ display: "flex", alignItems: "flex-start", gap: 9, padding: "8px 0", opacity: estado === "ignorada" ? 0.45 : 1 }}>
+                  <span style={{ marginTop: 3, width: 15, height: 15, borderRadius: "50%", border: `2px solid ${ch ? T.green : T.line}`, background: ch ? T.green : "transparent", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 8, color: "#0A1622", fontWeight: 800 }}>{ch ? "✓" : ""}</span>
+                  <span style={{ flex: 1, display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+                    <SubjDot disciplina={trilha.porCodigo[tk.disciplina_codigo]} /><Tag p={tk.prioridade} />
+                    <span style={{ fontSize: 13, color: ch ? T.sub : T.ink, textDecoration: ch ? "line-through" : "none", flexBasis: "100%" }}>{tk.texto}</span>
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
     </div>
   );
 }

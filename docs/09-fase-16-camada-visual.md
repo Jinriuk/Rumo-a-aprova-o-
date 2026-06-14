@@ -96,11 +96,21 @@ sem jargão de jogo** — linguagem para pais.
   patente/XP/missão/radar já integrados).
 - **16.3 Patentes/conquistas/marcos** — concluída (tela `Conquistas`
   com perfil, escada e grupos por raridade).
-- **16.4 Trilhas e missões** — base entregue na aba `Plano` e em
-  `MissaoAtual`; refino visual de jornada é evolução futura.
-- **16.5 Simulados / níveis** — superfícies existentes preservadas;
-  leitura pedagógica via `RadarDesempenho`/`Insights`.
-- **16.6 Coordenação / responsável** — coordenação reaproveita a camada;
-  responsável mantém leitura simples por decisão de produto.
-- **16.7 Polimento / QA** — build verde, unitários e E2E preservados
-  (E2E confere "Evolução de patentes"); contraste e mobile mantidos.
+- **16.4 Trilhas e missões** — concluída: aba `Plano` vira **jornada**
+  (linha do tempo com nó por missão, estado Encerrada/Em andamento/A
+  desbloquear, "onde estou" e barra da jornada). `VisaoEstudo → Plano`.
+- **16.5 Níveis e leitura pedagógica** — concluída: `Niveis.jsx` consome
+  a regra pura da Fase 15 (`niveisAluno.js`) e classifica cada matéria
+  (Base/Intermediário/Avançado) a partir das métricas já calculadas, com
+  nível geral e leitura "domina / em risco / foco". Sem inventar corte.
+- **16.6 Coordenação / responsável** — coordenação reaproveita a camada
+  (insígnia, níveis, jornada, conquistas em leitura); responsável mantém
+  leitura simples e sem jargão de jogo por decisão de produto.
+- **16.7 Polimento / QA** — marcas da insígnia centralizadas no escudo;
+  ícones do trilho via o conjunto SVG (consistência); build verde,
+  unitários (66 puros + banco) e E2E (42) preservados.
+
+### Novos componentes da Fase 16
+`Insignia` · `BarraXP` · `SeloRaridade` · `ConquistasRecentes` (faixa do
+"Hoje") · `NiveisPorMateria` (Desempenho) · `MissaoJornada` (linha do
+tempo do Plano).
