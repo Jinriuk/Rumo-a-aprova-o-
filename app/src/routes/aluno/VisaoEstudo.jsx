@@ -4,6 +4,7 @@
    banco decide o que cada um PODE; aqui só se esconde o que não cabe. */
 import React, { useEffect, useMemo, useState } from "react";
 import { SectionCard, Empty, Tag, SubjDot, Erro, BarraXP, StatusBadge } from "../../shared/ui/componentes.jsx";
+import { Icone } from "../../shared/ui/Icones.jsx";
 import { MenuPrincipal } from "../../shared/ui/MenuPrincipal.jsx";
 import { Cronometro } from "../../shared/ui/Cronometro.jsx";
 import { useTema } from "../../shared/branding/BrandingContext.jsx";
@@ -182,16 +183,18 @@ function MissaoJornada({ w, trilha, ativaNum, estadosPorAtividade, T }) {
   const rotulo = isPast ? "Encerrada" : isNow ? "Em andamento" : "A desbloquear";
   const pct = tarefas.length ? Math.round((dc / tarefas.length) * 100) : 0;
 
-  // nó: encerrada = check; agora = anel dourado; futura = cadeado
+  // nó: encerrada = check; agora = ponto vivo; futura = cadeado
   const no = isNow
-    ? { bg: T.bg2, br: T.gold, ic: "◉", cor: T.gold }
-    : isPast ? { bg: T.green, br: T.green, ic: "✓", cor: "#0A1622" }
-    : { bg: T.bg, br: T.line, ic: "🔒", cor: T.sub };
+    ? { bg: T.bg2, br: T.gold, cor: T.gold, icone: null }
+    : isPast ? { bg: T.green, br: T.green, cor: "#0A1622", icone: "check" }
+    : { bg: T.bg, br: T.line, cor: T.sub, icone: "cadeado" };
 
   return (
     <div style={{ display: "flex", gap: 12, alignItems: "flex-start" }}>
       <div style={{ width: 28, display: "flex", justifyContent: "center", flexShrink: 0, zIndex: 1 }}>
-        <span style={{ width: 28, height: 28, borderRadius: "50%", background: no.bg, border: `2px solid ${no.br}`, color: no.cor, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, fontWeight: 800, boxShadow: isNow ? `0 0 0 4px ${T.gold}22` : "none" }}>{no.ic}</span>
+        <span style={{ width: 28, height: 28, borderRadius: "50%", background: no.bg, border: `2px solid ${no.br}`, color: no.cor, display: "flex", alignItems: "center", justifyContent: "center", boxShadow: isNow ? `0 0 0 4px ${T.gold}22` : "none" }}>
+          {no.icone ? <Icone nome={no.icone} tam={14} grosso={no.icone === "check" ? 3 : 2} /> : <span style={{ width: 8, height: 8, borderRadius: "50%", background: T.gold }} />}
+        </span>
       </div>
 
       <div style={{ flex: 1, minWidth: 0, background: T.card, border: `1px solid ${isNow ? T.gold : T.line}`, borderWidth: isNow ? 1.5 : 1, borderRadius: 12, overflow: "hidden" }}>
