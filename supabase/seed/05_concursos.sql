@@ -19,7 +19,7 @@ insert into concursos (id, codigo, nome, organizacao, nivel, mes_prova, dia_prov
    6, 28,  'Prova historicamente entre fim de junho e início de julho.', 1),
   ('c0c00000-0000-4000-8000-000000000003', 'espcex', 'EsPCEx — Cadetes do Exército',     'Exército Brasileiro',   'medio',
    9, 28,  'Prova historicamente entre meados de setembro e início de outubro.', 2),
-  ('c0c00000-0000-4000-8000-000000000004', 'essa',   'EsSA/ESA — Sargentos das Armas',   'Exército Brasileiro',   'medio',
+  ('c0c00000-0000-4000-8000-000000000004', 'esa',    'ESA (EsSA) — Sargentos das Armas', 'Exército Brasileiro',   'medio',
    10, 1,  'Prova historicamente entre meados de setembro e meados de outubro.', 3),
   ('c0c00000-0000-4000-8000-000000000005', 'eear',   'EEAr — Sargentos da Aeronáutica (CFS)', 'Força Aérea Brasileira', 'medio',
    11, 16, 'Costuma ter DUAS edições por ano (≈junho e ≈novembro); data média da edição do 2º semestre.', 4),

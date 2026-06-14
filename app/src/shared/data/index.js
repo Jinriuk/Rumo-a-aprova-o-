@@ -87,9 +87,241 @@ export async function trilhaPadrao() {
   return data[0] ?? null;
 }
 
+// Config de um concurso (elimination_model, redacao_role, etc.).
+export async function carregarConcursoPorTag(examTag) {
+  const { data, error } = await supabase.from("concursos").select("*").eq("codigo", examTag).maybeSingle();
+  if (error) throw falha("concurso", error);
+  return data ?? null;
+}
+
 export async function listarConcursos() {
   const { data, error } = await supabase.from("concursos").select("*").order("ordem");
   if (error) throw falha("concursos", error);
+  return data;
+}
+
+/* ---------- fundação pedagógica (Fase 15.1 — global, só leitura) ---------- */
+
+// Catálogo de turmas comerciais com os concursos que cada uma cobre.
+export async function listarTurmasComerciais() {
+  const [tc, tcc] = await Promise.all([
+    supabase.from("turmas_comerciais").select("*").order("ordem"),
+    supabase.from("turmas_comerciais_concursos").select("*").order("ordem"),
+  ]);
+  for (const r of [tc, tcc]) if (r.error) throw falha("turmas comerciais", r.error);
+  const concursosPorTurma = {};
+  for (const lig of tcc.data) (concursosPorTurma[lig.turma_comercial_codigo] ??= []).push(lig);
+  return tc.data.map((t) => ({ ...t, concursos: concursosPorTurma[t.codigo] ?? [] }));
+}
+
+// Config OFICIAL de um concurso (referência do edital). Global.
+export async function configOficial(examTag) {
+  const { data, error } = await supabase.from("config_oficial").select("*").eq("exam_tag", examTag);
+  if (error) throw falha("config oficial", error);
+  return data;
+}
+
+// Config da ESCOLA para um concurso (override, isolado por RLS na
+// escola do usuário logado). Não passa escola_id: a RLS já restringe.
+export async function configEscola(examTag) {
+  const { data, error } = await supabase.from("config_escola").select("*").eq("exam_tag", examTag);
+  if (error) throw falha("config escola", error);
+  return data;
+}
+
+// Estrutura cadastrada de um concurso (Fase 15.2): prova, dias,
+// matérias, assuntos e subassuntos. Conteúdo global, só leitura.
+export async function carregarEstruturaProva(examTag) {
+  const [prova, dias, materias, assuntos] = await Promise.all([
+    supabase.from("provas").select("*").eq("exam_tag", examTag).maybeSingle(),
+    supabase.from("prova_dias").select("*").eq("exam_tag", examTag).order("ordem"),
+    supabase.from("prova_materias").select("*").eq("exam_tag", examTag).order("ordem"),
+    supabase.from("assuntos").select("*").eq("exam_tag", examTag).order("ordem"),
+  ]);
+  for (const r of [prova, dias, materias, assuntos]) if (r.error) throw falha("estrutura da prova", r.error);
+  const ids = (assuntos.data ?? []).map((a) => a.id);
+  let subassuntos = [];
+  if (ids.length) {
+    const s = await supabase.from("subassuntos").select("*").in("assunto_id", ids).order("ordem");
+    if (s.error) throw falha("subassuntos", s.error);
+    subassuntos = s.data;
+  }
+  return { prova: prova.data ?? null, dias: dias.data, materias: materias.data, assuntos: assuntos.data, subassuntos };
+}
+
+/* ---------- recorrência e tagueamento (Fase 15.7 — global, leitura) ---------- */
+
+// Provas anteriores tagueadas de um concurso.
+export async function carregarProvasAnteriores(examTag) {
+  const { data, error } = await supabase.from("provas_anteriores").select("*").eq("exam_tag", examTag).order("ano", { ascending: false });
+  if (error) throw falha("provas anteriores", error);
+  return data;
+}
+
+// Recorrência por assunto (todos os graus: estimada/validada/medida).
+export async function carregarRecorrencia(examTag) {
+  const { data, error } = await supabase.from("recorrencia_assunto").select("*").eq("exam_tag", examTag);
+  if (error) throw falha("recorrência", error);
+  return data;
+}
+
+// Recorrência MEDIDA ao vivo (view) — contagem do tagueamento real.
+export async function carregarRecorrenciaMedida(examTag) {
+  const { data, error } = await supabase.from("vw_recorrencia_medida").select("*").eq("exam_tag", examTag);
+  if (error) throw falha("recorrência medida", error);
+  return data;
+}
+
+/* ---------- níveis e onboarding (Fase 15.3) ---------- */
+
+// Níveis do aluno (geral + por matéria). A RLS decide o que sai:
+// coordenação vê os da escola; aluno vê o próprio; responsável o do vinculado.
+export async function carregarNivelAluno(alunoId) {
+  const { data, error } = await supabase.from("aluno_niveis").select("*").eq("aluno_id", alunoId).order("escopo");
+  if (error) throw falha("níveis do aluno", error);
+  return data;
+}
+
+// Define/ajusta o nível de um escopo ('geral' ou matéria). Só a
+// coordenação escreve (RLS); o gatilho registra o histórico.
+export async function salvarNivelAluno({ alunoId, escopo, nivel, origem, motivo }) {
+  const { escola } = await meuPerfil();
+  const { usuario } = { usuario: (await supabase.from("usuarios").select("id").limit(1)).data?.[0] };
+  const { data, error } = await supabase
+    .from("aluno_niveis")
+    .upsert(
+      { escola_id: escola.id, aluno_id: alunoId, escopo, nivel, origem, motivo, definido_por: usuario?.id ?? null, atualizado_em: new Date().toISOString() },
+      { onConflict: "aluno_id,escopo" }
+    )
+    .select().single();
+  if (error) throw falha("salvar nível", error);
+  return data;
+}
+
+// Histórico de alterações de nível (só coordenação lê).
+export async function historicoNivelAluno(alunoId) {
+  const { data, error } = await supabase
+    .from("aluno_nivel_historico").select("*").eq("aluno_id", alunoId).order("em", { ascending: false });
+  if (error) throw falha("histórico de nível", error);
+  return data;
+}
+
+// Alvo pedagógico do aluno (principal/secundário, data da prova,
+// especialidade/ciclo). Escrita só da coordenação (RLS de alunos).
+export async function atualizarAlvoPedagogico(alunoId, campos) {
+  const permitidos = ["concurso_id", "concurso_secundario_id", "data_prova_alvo", "especialidade", "ciclo", "turma_comercial_codigo"];
+  const patch = Object.fromEntries(Object.entries(campos).filter(([k]) => permitidos.includes(k)));
+  const { data, error } = await supabase.from("alunos").update(patch).eq("id", alunoId).select("id");
+  if (error) throw falha("atualizar alvo pedagógico", error);
+  if (!data?.length) throw new Error("atualizar alvo pedagógico: o banco recusou a alteração");
+}
+
+// Onboarding pedagógico (1:1 com o aluno).
+export async function carregarOnboarding(alunoId) {
+  const { data, error } = await supabase.from("aluno_onboarding").select("*").eq("aluno_id", alunoId).maybeSingle();
+  if (error) throw falha("onboarding", error);
+  return data ?? null;
+}
+
+export async function salvarOnboarding(alunoId, campos) {
+  const { escola } = await meuPerfil();
+  const { data, error } = await supabase
+    .from("aluno_onboarding")
+    .upsert({ aluno_id: alunoId, escola_id: escola.id, ...campos, atualizado_em: new Date().toISOString() }, { onConflict: "aluno_id" })
+    .select().single();
+  if (error) throw falha("salvar onboarding", error);
+  return data;
+}
+
+/* ---------- trilhas e missões (Fase 15.4) ---------- */
+
+// Planos de trilha de um concurso (global, só leitura).
+export async function carregarTrilhaPlanos(examTag) {
+  const { data, error } = await supabase.from("trilha_planos").select("*").eq("exam_tag", examTag).order("ordem");
+  if (error) throw falha("planos de trilha", error);
+  return data;
+}
+
+// Missões de um concurso (global). Filtro opcional por nível.
+export async function carregarMissoes(examTag, { nivel } = {}) {
+  let q = supabase.from("missoes").select("*").eq("exam_tag", examTag).order("ordem");
+  if (nivel) q = q.eq("nivel", nivel);
+  const { data, error } = await q;
+  if (error) throw falha("missões", error);
+  return data;
+}
+
+// Ajustes de missão da escola do usuário (isolado por RLS).
+export async function carregarMissoesEscola(examTag) {
+  // junta o exam_tag via missões (a tabela de ajuste não tem exam_tag)
+  const { data, error } = await supabase
+    .from("missoes_escola").select("*, missoes!inner(exam_tag)").eq("missoes.exam_tag", examTag);
+  if (error) throw falha("ajustes de missão da escola", error);
+  return data;
+}
+
+// Cria/ajusta o override de uma missão (só coordenação, via RLS).
+export async function salvarAjusteMissaoEscola({ missaoId, ativa, qtdQuestoes, xp, criterioConclusao, objetivo, desvioDoEdital }) {
+  const { escola, usuario } = await meuPerfil();
+  const { data, error } = await supabase
+    .from("missoes_escola")
+    .upsert(
+      {
+        escola_id: escola.id, missao_id: missaoId, ativa, qtd_questoes: qtdQuestoes, xp,
+        criterio_conclusao: criterioConclusao, objetivo, desvio_do_edital: !!desvioDoEdital,
+        ajustado_por: usuario?.id ?? null, atualizado_em: new Date().toISOString(),
+      },
+      { onConflict: "escola_id,missao_id" }
+    )
+    .select().single();
+  if (error) throw falha("salvar ajuste de missão", error);
+  return data;
+}
+
+/* ---------- gamificação: XP, patentes, conquistas (Fase 15.5) ---------- */
+
+// Catálogos globais (só leitura).
+export async function listarPatentes() {
+  const { data, error } = await supabase.from("patentes").select("*").order("ordem");
+  if (error) throw falha("patentes", error);
+  return data;
+}
+
+export async function listarConquistas() {
+  const { data, error } = await supabase.from("conquistas").select("*").order("ordem");
+  if (error) throw falha("conquistas", error);
+  return data;
+}
+
+// Progresso do aluno (XP e conquistas), isolado por RLS no exam_tag.
+export async function carregarGamificacaoAluno(alunoId, examTag) {
+  const [xp, conq] = await Promise.all([
+    supabase.from("aluno_xp_eventos").select("*").eq("aluno_id", alunoId).eq("exam_tag", examTag).order("em"),
+    supabase.from("aluno_conquistas").select("*").eq("aluno_id", alunoId).eq("exam_tag", examTag),
+  ]);
+  for (const r of [xp, conq]) if (r.error) throw falha("gamificação do aluno", r.error);
+  return { eventos: xp.data, conquistas: conq.data };
+}
+
+// Concede um evento de XP (só coordenação/servidor; aluno não se autopontua).
+export async function concederXp({ alunoId, examTag, origem, pontos, descricao, referenciaId }) {
+  const { escola, usuario } = await meuPerfil();
+  const { data, error } = await supabase
+    .from("aluno_xp_eventos")
+    .insert({ escola_id: escola.id, aluno_id: alunoId, exam_tag: examTag, origem, pontos, descricao, referencia_id: referenciaId ?? null, concedido_por: usuario?.id ?? null })
+    .select().single();
+  if (error) throw falha("conceder XP", error);
+  return data;
+}
+
+// Desbloqueia uma conquista para o aluno (idempotente por unique).
+export async function desbloquearConquista({ alunoId, examTag, conquistaId }) {
+  const { escola } = await meuPerfil();
+  const { data, error } = await supabase
+    .from("aluno_conquistas")
+    .upsert({ escola_id: escola.id, aluno_id: alunoId, exam_tag: examTag, conquista_id: conquistaId }, { onConflict: "aluno_id,conquista_id,exam_tag" })
+    .select().single();
+  if (error) throw falha("desbloquear conquista", error);
   return data;
 }
 
