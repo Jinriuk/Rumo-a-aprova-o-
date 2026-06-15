@@ -29,7 +29,7 @@ prática, três problemas operacionais:
 | 17.1 | Paridade produção/repositório | Produção sempre = código | **feito** (`deploy-checklist.md` + `scripts/checar-migrations.mjs`) |
 | 17.2 | Ambiente demo e E2E isolado | Separar demo, teste e produção | **preparado** — CI já isola via secrets; falta criar projeto E2E + setar secrets (`e2e-ambiente.md`) |
 | 17.3 | LGPD / região / infra | Supabase na região certa antes de dado real | **preparado** — plano/checklist prontos; falta criar projeto sa-east-1 (`lgpd-e-infra.md`) |
-| 17.4 | Backoffice interno seguro | Área interna invisível para escolas | pendente |
+| 17.4 | Backoffice interno seguro | Área interna invisível para escolas | **fundação feita** — migrations 0019/0020, rota `AreaAdmin`, `scripts/criar-super-admin.mjs`; telas de CRUD/implantação na 17.5 |
 | 17.5 | Implantação de escola | Fluxo repetível de cadastrar escola/alunos | pendente |
 | 17.6 | Monitoramento, logs e backups | Operar com controle | pendente |
 | 17.7 | Checklist de go-live | Validar que pode receber cliente real | pendente |
