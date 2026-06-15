@@ -61,3 +61,29 @@ não tem valor comercial, resetar é seguro.
 ## Critério de conclusão (17.2)
 O E2E roda N vezes sem corromper a escola demo. Atingido quando os secrets
 `E2E_SUPABASE_*` apontam para o projeto de teste.
+
+## Registro: episódio de flaky na área do aluno (Fase 17)
+
+Durante o fechamento da Fase 16/17, o E2E da **área do aluno** ficou
+vermelho em vários runs (o menu "Hoje" não aparecia em 15s) e depois
+**passou com o mesmo código de aplicação** (login do aluno em ~1.5s).
+Conclusões:
+
+- **Não era bug de produto:** as queries do aluno (metas/registros/
+  simulados/trilha/concursos) funcionam; coordenação e responsável
+  passavam; o aluno é o único teste que espera a tela carregar por
+  inteiro, logo o "canário" de degradação do banco demo **remoto e
+  compartilhado**.
+- **Não era latência determinística:** medida ~50ms; a falha foi
+  intermitente (concentrada em janelas de degradação do demo).
+- **Mitigações aplicadas (ficam):**
+  - `useSessao` não checa `souSuperAdmin()` em login por código
+    (aluno/responsável nunca são super_admin) → um round-trip a menos no
+    caminho mais sensível a latência.
+  - **Evidência no CI em qualquer falha do aluno** (`_apoio.loginAluno`):
+    a mensagem do erro embute console/página, **falhas de rede
+    (4xx/5xx)** e o texto visível da tela; e `playwright.config` retém
+    **trace + vídeo + screenshot** (além do HTML report). Não dá mais
+    para "não aparecer no log".
+- **Pendência obrigatória:** isolar o E2E em projeto Supabase próprio
+  (acima) elimina a causa-raiz da fragilidade.

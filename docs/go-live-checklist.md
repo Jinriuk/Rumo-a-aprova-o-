@@ -7,8 +7,14 @@
 ## Técnico
 - [✓] Build de produção verde
 - [✓] Unitários verdes (164/164) — regras, motor, RLS, RPCs, métricas
-- [⚠] E2E verde — corrigido o bug de fundo (useRecurso); confirmar o
-      run e **isolar o E2E** (Fase 17.2) para não sujar o demo
+- [✓] E2E verde — suíte completa passou no topo (`bded375`): 39 passed,
+      0 falhas, incluindo login e navegação do aluno (~1.5s). A falha
+      anterior na área do aluno **não se reproduziu**: era flaky de
+      ambiente (banco demo remoto/compartilhado), comprovado por
+      mesmo-código falhar e depois passar sem mudança de app. Mitigações
+      aplicadas: round-trip a menos no login por código + diagnóstico de
+      evidência no CI (ver `e2e-ambiente.md`). **Pendência obrigatória:**
+      isolar o E2E em projeto próprio (17.2)
 - [✓] RLS validada (`tests/isolamento.test.mjs`) + isolamento das RPCs
 - [✓] Produção alinhada com migrations (`0001–0021`; `scripts/checar-migrations.mjs`)
 - [✓] RPCs funcionando (painel agregado, backoffice)
