@@ -19,7 +19,13 @@ export function useSessao() {
         // Backoffice (17.4): o super_admin NÃO tem linha em `usuarios`
         // (não é de uma escola). Checa antes do perfil; se for, nem
         // tenta meuPerfil (que falharia por não achar o usuário).
-        const superAdmin = await db.souSuperAdmin();
+        // Otimização: super_admin entra SEMPRE por e-mail; login por
+        // código (aluno/responsável, @codigo.acesso.local) nunca é
+        // super_admin — então pula o round-trip da RPC nesse caminho
+        // (que é o mais sensível a latência: aluno no celular).
+        const email = sessao.user?.email ?? "";
+        const podeSerAdmin = !email.endsWith("@codigo.acesso.local");
+        const superAdmin = podeSerAdmin ? await db.souSuperAdmin() : false;
         if (superAdmin) {
           if (vivo) setEstado({ carregando: false, sessao, perfil: null, superAdmin: true, erro: null });
           return;
