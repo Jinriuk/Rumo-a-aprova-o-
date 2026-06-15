@@ -72,6 +72,33 @@ test("super_admin ativo vê TODAS as escolas (cross-tenant) e registra log", asy
   });
 });
 
+test("super_admin cria escola pelo backoffice e lê o detalhe (implantação)", async () => {
+  await comoSuperAdmin(true, async (c) => {
+    const r = await c.query(
+      "select public.backoffice_criar_escola('Escola Teste', 'escola-teste-x', 'Rio', 'RJ', 'padrao', 100) as id",
+    );
+    const id = r.rows[0].id;
+    assert.ok(id, "deveria devolver o id da nova escola");
+
+    const d = await c.query("select public.backoffice_detalhe_escola($1) as j", [id]);
+    const j = d.rows[0].j;
+    assert.equal(j.escola.nome, "Escola Teste");
+    assert.equal(j.escola.status, "implantacao", "nasce em implantação");
+    assert.equal(Number(j.alunos), 0);
+    assert.equal((j.coordenadores ?? []).length, 0, "ainda sem coordenador");
+
+    // a criação ficou registrada no admin_logs
+    const log = await c.query("select count(*)::int as n from admin_logs where acao = 'criar-escola' and escola_id = $1", [id]);
+    assert.equal(log.rows[0].n, 1);
+  });
+});
+
+test("coordenação NÃO cria escola pelo backoffice", async () => {
+  await como(IDS.coordA, async (c) => {
+    await esperaErro(c, /acesso negado/i, "select public.backoffice_criar_escola('X', 'x-intruso')");
+  });
+});
+
 test("super_admin INATIVO (ativo=false) é tratado como não-admin", async () => {
   await comoSuperAdmin(false, async (c) => {
     const sa = await c.query("select public.sou_super_admin() as ok");

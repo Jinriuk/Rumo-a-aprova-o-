@@ -608,3 +608,20 @@ export async function registrarAcaoAdmin(acao, escolaId = null, detalhe = {}) {
   if (error) { console.error("admin_log não registrado:", error.message); return { ok: false }; }
   return { ok: true };
 }
+
+// Criar escola pelo backoffice (RPC com porteiro no banco). Devolve o id.
+export async function backofficeCriarEscola({ nome, slug, cidade, uf, plano, limiteAlunos }) {
+  const { data, error } = await supabase.rpc("backoffice_criar_escola", {
+    p_nome: nome, p_slug: slug, p_cidade: cidade ?? null, p_uf: uf ?? null,
+    p_plano: plano ?? null, p_limite_alunos: limiteAlunos ?? null,
+  });
+  if (error) throw falha("criar escola", error);
+  return data;
+}
+
+// Detalhe da escola + dados do checklist de implantação (jsonb).
+export async function backofficeDetalheEscola(escolaId) {
+  const { data, error } = await supabase.rpc("backoffice_detalhe_escola", { p_escola: escolaId });
+  if (error) throw falha("detalhe da escola", error);
+  return data;
+}
