@@ -81,10 +81,23 @@ async function loginPorCodigo(page, codigo) {
 }
 
 export async function loginAluno(page, conta = CONTAS.alunoLucas) {
+  // DIAGNÓSTICO (17.x): captura erros de console/página para revelar,
+  // no log do CI, por que a área do aluno às vezes não conclui o
+  // carregamento. Só imprime quando a espera falha (caminho de erro).
+  const diag = [];
+  page.on("console", (m) => { if (m.type() === "error") diag.push(m.text()); });
+  page.on("pageerror", (e) => diag.push("pageerror: " + String(e)));
   await loginPorCodigo(page, conta.codigo);
   // espera o MENU do aluno (não só o cabeçalho): ele só aparece
   // depois que os dados carregam — navegação antes disso falharia
-  await expect(botaoVisivel(page, "Hoje")).toBeVisible({ timeout: 15_000 });
+  try {
+    await expect(botaoVisivel(page, "Hoje")).toBeVisible({ timeout: 15_000 });
+  } catch (e) {
+    const corpo = await page.locator("body").innerText().catch(() => "(sem corpo)");
+    console.log("DIAG loginAluno — erros console/página:\n" + (diag.join("\n") || "(nenhum)"));
+    console.log("DIAG loginAluno — texto visível (800):\n" + String(corpo).slice(0, 800));
+    throw e;
+  }
 }
 
 export async function loginResponsavel(page, conta = CONTAS.responsavelLucas) {
