@@ -35,10 +35,16 @@
 As 12 auditorias, vistas juntas, convergem em **quatro eixos**. Quase todo problema importante
 cai num deles:
 
-1. **O motor de progresso não existe ainda.** Gamificação, missões, níveis e XP estão
-   *modelados e testados*, mas são derivados na exibição — nada concede XP por evento nem fecha
-   missão automaticamente, e nada está ligado à UI. Aparece nas personas Aluno, Professor e
-   Pedagógica. É a maior lacuna de **valor**.
+1. **O motor de progresso não existe ainda — e há dois sistemas pedagógicos paralelos.**
+   *(verificado por leitura de imports, ver `13-verificacao-tecnica.md`)* O que o aluno vê
+   (XP, patente, conquistas, nível por matéria) vem de um motor **derivado ao vivo** das
+   métricas (`modules/motor/jargao.js`, `Conquistas.jsx`, `Niveis.jsx`) — ligado e funcional.
+   Já **todo o layer persistido das fases 15.x** (migrations 0008–0015: `aluno_niveis`,
+   `missoes`, `aluno_xp_eventos`, `aluno_conquistas`, `recorrencia`, estrutura de prova) está
+   *modelado, semeado e testado, porém dormente*: nenhuma função que lê/escreve essas tabelas é
+   chamada por tela. Falta o motor que concede XP por evento e fecha missão, e falta ligar o
+   layer DB à UI. Aparece nas personas Aluno, Professor, Coordenação e Pedagógica. É a maior
+   lacuna de **valor**.
 
 2. **Escala não está resolvida.** Front carrega-tudo/renderiza-tudo, agregação roda no cliente,
    índices não levam `escola_id` no prefixo, listas sem paginação. Aparece em Coordenação,

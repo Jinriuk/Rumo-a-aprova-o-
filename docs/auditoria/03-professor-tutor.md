@@ -21,7 +21,8 @@ existe nos dados; falta a camada de decisão pedagógica.
 - **Níveis por matéria com origem rastreável.** `aluno_niveis` guarda nível por escopo
   (geral + cada matéria) com `origem` (`calculado`/`manual`/`diagnostico`/`validar`) e
   histórico append-only (`aluno_nivel_historico`, gatilho que grava quem mudou e de quê para
-  quê). Isso é ouro para reunião pedagógica: dá para mostrar a trajetória.
+  quê). Isso é ouro para reunião pedagógica — *no banco*. Ressalva: ainda não há tela que
+  exponha esse histórico (ver seção 3), então o valor está modelado, não acessível.
 - **Classificação por desempenho honesta.** `niveisAluno.js`: abaixo de 20 questões não
   classifica (marca "validar"); "avançado" exige ≥70% E ≥100 questões. Não cria falsa
   precisão — o professor confia mais no rótulo.
@@ -43,8 +44,12 @@ existe nos dados; falta a camada de decisão pedagógica.
   um indicador que separe os dois casos para o professor de relance.
 - **Conteúdo real só para o CN.** Para orientar reforço em EsPCEx/EEAr, o professor não tem
   trilha/missões/assuntos completos — só CN tem as 9 semanas e 33 assuntos.
-- **Nível é definido manualmente pela coordenação** (`salvarNivelAluno`) ou calculado — não
-  há fluxo do professor revisar/validar nível em lote.
+- **O sistema de níveis persistido (`aluno_niveis`) está dormente.** *(verificado, ver
+  `13-verificacao-tecnica.md`)* As funções `salvarNivelAluno`/`carregarNivelAluno` não são
+  chamadas por nenhuma tela — coordenação/professor **não conseguem hoje definir nem ver** o
+  nível gravado via UI. O nível que aparece ao aluno (`Niveis.jsx`) é **calculado ao vivo das
+  métricas**, não o que a escola gravaria. Logo, o histórico de níveis bem modelado é, na
+  prática, inacessível pela interface.
 
 ## 4. O que está confuso
 

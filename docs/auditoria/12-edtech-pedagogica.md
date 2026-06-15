@@ -47,9 +47,22 @@ UI do aluno — a inteligência vive no código e nos testes, não na tela.
   concluída" automático nem histórico de XP — a jornada gamificada ainda não "acontece".
 - **Tagueamento de recorrência é amostra.** Há ~3 questões tagueadas (CPACN 2024); a
   recorrência "medida" cobre <1% do necessário. A estrutura existe; o dado real, quase não.
-- **Nada ligado à UI.** Os módulos pedagógicos (níveis, missões, gamificação, simulado,
-  recorrência) não são importados por tela — footprint zero no bundle. A inteligência está em
-  `*.js` puro e nos testes, não no produto que o aluno usa.
+- **Dois sistemas pedagógicos paralelos — o novo está dormente.** *(verificado por leitura de
+  imports, ver `13-verificacao-tecnica.md`)* O que o aluno vê é o motor **derivado ao vivo**,
+  herança do "Rumo ao Naval": `modules/motor/jargao.js` (XP/patente), `modules/motor/Conquistas.jsx`
+  (catálogo derivado de metas/registros/simulados) e `modules/desempenho/Niveis.jsx` (nível por
+  matéria calculado das métricas). Esse sistema está ligado e funciona. **Já todo o layer das
+  fases 15.x persistido no banco (migrations 0008–0015: `aluno_niveis`, `aluno_onboarding`,
+  `missoes`/`missoes_escola`, `aluno_xp_eventos`, `aluno_conquistas`, `recorrencia_assunto`,
+  estrutura de prova) está dormente**: as funções que leem/escrevem essas tabelas
+  (`carregarNivelAluno`, `salvarNivelAluno`, `concederXp`, `desbloquearConquista`,
+  `carregarMissoes`, `salvarAjusteMissaoEscola`, `carregarRecorrencia`, `carregarEstruturaProva`,
+  `salvarOnboarding`…) **não são chamadas por nenhuma tela**. Estão definidas no seam de dados,
+  semeadas e testadas, mas o produto não as usa. Exceções que de fato entram na UI: os helpers
+  de lógica pura `conteudo/provas.js` (pontuação de simulado) e `conteudo/niveisAluno.js`
+  (classificação) — este último alimentado por métricas ao vivo, não pela tabela `aluno_niveis`.
+  Ou seja: a inteligência nova existe, mas o aluno não recebe o nível/XP/missão que a escola
+  poderia gravar — porque a escola também não tem tela para gravá-los.
 
 ## 4. O que está confuso
 

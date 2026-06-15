@@ -24,6 +24,7 @@ recomendações e veredito) e está fundamentado em arquivos reais do repositór
 | [10-qa-testes.md](./10-qa-testes.md) | QA / Testes | 80 |
 | [11-devops-infra.md](./11-devops-infra.md) | DevOps / Infra / Observabilidade | 58 |
 | [12-edtech-pedagogica.md](./12-edtech-pedagogica.md) | EdTech / Pedagógica | 72 |
+| [13-verificacao-tecnica.md](./13-verificacao-tecnica.md) | **Verificação técnica** (cruzamento de fatos / correções) | — |
 
 **Nota geral do sistema: ~74/100 — Aprovado com ressalvas (não fechado).**
 Projeção pós-correções (Fases 19–24): ~88/100.

@@ -46,6 +46,11 @@ porque a comparação entre turmas é rasa frente ao que uma direção precisa p
   reunião ou prestação de conta aos pais — só a exportação LGPD de um aluno.
 - **Acompanhamento por concurso é limitado.** Dá para atribuir concurso ao aluno, mas falta
   um recorte "como está minha turma de EsPCEx vs. minha turma de CN".
+- **Gestão pedagógica das fases 15.x não está na tela.** *(verificado, ver
+  `13-verificacao-tecnica.md`)* O operacional (cadastrar, gerar credencial, trocar turma/
+  concurso, LGPD, marca) está ligado e funciona; mas definir nível do aluno, ajustar missões da
+  escola (`missoes_escola`), onboarding e configuração de concurso por escola (`config_escola`)
+  existem no banco e estão dormentes — não há UI da coordenação para operá-los.
 
 ## 4. O que está confuso
 
