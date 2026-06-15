@@ -625,3 +625,12 @@ export async function backofficeDetalheEscola(escolaId) {
   if (error) throw falha("detalhe da escola", error);
   return data;
 }
+
+// Atividade administrativa recente (admin_logs) — a RLS já restringe
+// a leitura ao super_admin. Para o painel de monitoramento (17.6).
+export async function backofficeLogs(limite = 30) {
+  const { data, error } = await supabase
+    .from("admin_logs").select("acao, escola_id, detalhe, em").order("em", { ascending: false }).limit(limite);
+  if (error) throw falha("atividade administrativa", error);
+  return data;
+}

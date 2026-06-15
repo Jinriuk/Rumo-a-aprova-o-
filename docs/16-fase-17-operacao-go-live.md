@@ -31,8 +31,8 @@ prática, três problemas operacionais:
 | 17.3 | LGPD / região / infra | Supabase na região certa antes de dado real | **preparado** — plano/checklist prontos; falta criar projeto sa-east-1 (`lgpd-e-infra.md`) |
 | 17.4 | Backoffice interno seguro | Área interna invisível para escolas | **fundação feita** — migrations 0019/0020, rota `AreaAdmin`, `scripts/criar-super-admin.mjs`; telas de CRUD/implantação na 17.5 |
 | 17.5 | Implantação de escola | Fluxo repetível de cadastrar escola/alunos | **parcial** — criar escola + detalhe + checklist no backoffice (0021); coordenador via `scripts/criar-coordenacao.mjs`; import CSV de alunos em lote ainda pendente |
-| 17.6 | Monitoramento, logs e backups | Operar com controle | pendente |
-| 17.7 | Checklist de go-live | Validar que pode receber cliente real | pendente |
+| 17.6 | Monitoramento, logs e backups | Operar com controle | **código feito** — `admin_logs` + "Atividade" no backoffice + `monitoramento-backup.md`; backups automáticos = infra sua |
+| 17.7 | Checklist de go-live | Validar que pode receber cliente real | **feito** — `go-live-checklist.md` |
 
 ---
 

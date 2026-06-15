@@ -20,9 +20,11 @@ const STATUS = { implantacao: "Em implantação", ativa: "Ativa", suspensa: "Sus
 export default function AreaAdmin() {
   const T = useTema();
   const { dados: escolas, carregando, erro, recarregar } = useRecurso(() => db.backofficeEscolas(), []);
+  const { dados: logs } = useRecurso(() => db.backofficeLogs(20), []);
   const [aberta, setAberta] = useState(null); // escola_id em detalhe
   const lista = escolas ?? [];
   const totalAlunos = lista.reduce((s, e) => s + Number(e.alunos || 0), 0);
+  const nomePorEscola = Object.fromEntries(lista.map((e) => [e.escola_id, e.nome]));
 
   return (
     <div>
@@ -75,6 +77,24 @@ export default function AreaAdmin() {
                       </div>
                       <span style={{ color: T.gold, fontWeight: 700, flexShrink: 0 }}>›</span>
                     </button>
+                  ))}
+                </div>
+              )}
+            </SectionCard>
+
+            <SectionCard titulo="Atividade administrativa" sub="Ações do operador (criação de escola, etc.) — trilha de auditoria." semPadding>
+              {(logs ?? []).length === 0 ? (
+                <div style={{ padding: 8 }}><EmptyState icone="🗒️" titulo="Sem atividade ainda" dica="As ações do backoffice aparecem aqui." /></div>
+              ) : (
+                <div style={{ display: "flex", flexDirection: "column" }}>
+                  {logs.map((l, i) => (
+                    <div key={i} style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 15px", borderBottom: i === logs.length - 1 ? "none" : `1px solid ${T.line}`, fontSize: 12.5 }}>
+                      <span style={{ flex: 1, minWidth: 0, color: T.ink }}>
+                        <b>{l.acao}</b>
+                        {l.escola_id && <span style={{ color: T.sub }}> · {nomePorEscola[l.escola_id] ?? l.detalhe?.nome ?? "escola"}</span>}
+                      </span>
+                      <span className="num" style={{ color: T.sub, flexShrink: 0 }}>{fmtData(l.em)}</span>
+                    </div>
                   ))}
                 </div>
               )}
