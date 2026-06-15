@@ -24,7 +24,10 @@ export default defineConfig({
   expect: { timeout: 10_000 },
   use: {
     baseURL,
-    trace: "on-first-retry",
+    // Fase 17 — evidência em qualquer falha (não só na 1ª retry):
+    // trace + vídeo + screenshot ficam anexados ao relatório/artefato.
+    trace: "retain-on-failure",
+    video: "retain-on-failure",
     screenshot: "only-on-failure",
     locale: "pt-BR",
     timezoneId: "America/Sao_Paulo",
