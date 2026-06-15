@@ -80,11 +80,32 @@ async function loginPorCodigo(page, codigo) {
   await page.getByRole("button", { name: "Entrar" }).click();
 }
 
+const soPath = (u) => { try { return new URL(u).pathname; } catch { return u; } };
+
 export async function loginAluno(page, conta = CONTAS.alunoLucas) {
+  // DIAGNÓSTICO (Fase 17): se a área do aluno não concluir, lança o erro
+  // COM evidência embutida na MENSAGEM (console/página, falhas de rede e
+  // o texto visível) — o reporter sempre mostra a mensagem da falha. Em
+  // paralelo, trace+vídeo+screenshot ficam no artefato (playwright.config).
+  // Só no caminho de erro — não mascara nada.
+  const diag = [];
+  const net = [];
+  page.on("console", (m) => { if (m.type() === "error") diag.push("console: " + m.text()); });
+  page.on("pageerror", (e) => diag.push("pageerror: " + String(e)));
+  page.on("requestfailed", (r) => net.push(`FAIL ${r.method()} ${soPath(r.url())} — ${r.failure()?.errorText ?? ""}`));
+  page.on("response", (r) => { if (r.status() >= 400) net.push(`${r.status()} ${soPath(r.url())}`); });
   await loginPorCodigo(page, conta.codigo);
-  // espera o MENU do aluno (não só o cabeçalho): ele só aparece
-  // depois que os dados carregam — navegação antes disso falharia
-  await expect(botaoVisivel(page, "Hoje")).toBeVisible({ timeout: 15_000 });
+  try {
+    await expect(botaoVisivel(page, "Hoje")).toBeVisible({ timeout: 15_000 });
+  } catch (_e) {
+    const corpo = await page.locator("body").innerText().catch(() => "(sem corpo)");
+    throw new Error(
+      "[DIAG] aluno não mostrou 'Hoje'." +
+      "\n[console/página]: " + (diag.join(" | ") || "(nenhum)") +
+      "\n[network 4xx/5xx/falha]: " + (net.join(" | ") || "(nenhum)") +
+      "\n[tela]: " + String(corpo).replace(/\s+/g, " ").trim().slice(0, 500),
+    );
+  }
 }
 
 export async function loginResponsavel(page, conta = CONTAS.responsavelLucas) {

@@ -5,7 +5,9 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { SectionCard, EmptyState, Botao, Erro, useInputStyle, StatCard } from "../../shared/ui/componentes.jsx";
 import { useTema } from "../../shared/branding/BrandingContext.jsx";
-import { todayISO, fmtBR } from "../../shared/regras/regras.js";
+import { todayISO } from "../../shared/regras/regras.js";
+import { resumirRegistros } from "../../shared/metricas/agregados.js";
+import { ListaRegistros } from "../../shared/ui/ListaRegistros.jsx";
 import { fmtHoras } from "./jargao.js";
 import * as db from "../../shared/data/index.js";
 
@@ -49,13 +51,10 @@ export function Registrar({ aluno, trilha, registros, aoMudar, minutosSugeridos 
   const hoje = todayISO();
   const resumo = useMemo(() => {
     const ls = registros.filter((r) => String(r.data) === hoje);
-    const q = ls.reduce((a, r) => a + (+r.questoes || 0), 0);
-    const min = ls.reduce((a, r) => a + (+r.minutos || 0), 0);
-    const cd = ls.filter((r) => r.acertos !== null).reduce((a, r) => a + (+r.questoes || 0), 0);
-    const cc = ls.filter((r) => r.acertos !== null).reduce((a, r) => a + (+r.acertos || 0), 0);
+    const { questoes, minutos, acc } = resumirRegistros(ls);
     const materias = [...new Set(ls.map((r) => r.disciplina_codigo))]
       .map((c) => trilha.porCodigo[c]?.nome).filter(Boolean);
-    return { q, min, acc: cd ? Math.round((cc / cd) * 100) : null, materias, n: ls.length };
+    return { q: questoes, min: minutos, acc, materias, n: ls.length };
   }, [registros, hoje, trilha]);
 
   async function adicionar() {
@@ -148,22 +147,7 @@ export function Registrar({ aluno, trilha, registros, aoMudar, minutosSugeridos 
         {recentes.length === 0 ? (
           <div style={{ padding: 8 }}><EmptyState icone="✎" titulo="Nada registrado ainda" dica="Seu primeiro registro aparece aqui e alimenta o radar de desempenho." /></div>
         ) : (
-          <div style={{ display: "flex", flexDirection: "column" }}>
-            {recentes.map((l, i) => {
-              const s = trilha.porCodigo[l.disciplina_codigo];
-              const acc = l.acertos !== null && l.questoes ? Math.round((l.acertos / l.questoes) * 100) : null;
-              return (
-                <div key={l.id} className="row" style={{ display: "flex", alignItems: "center", gap: 10, padding: "11px 14px", borderBottom: i === recentes.length - 1 ? "none" : `1px solid ${T.line}` }}>
-                  <span style={{ width: 9, height: 9, borderRadius: 3, background: s?.cor, flexShrink: 0 }} />
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontSize: 13.5, color: T.ink }}>{s?.nome}{l.topico ? <span style={{ color: T.sub }}> · {l.topico}</span> : null}</div>
-                    <div style={{ fontSize: 11.5, color: T.sub }}>{fmtBR(String(l.data))} · {l.questoes} questões{acc !== null ? ` · ${acc}% acerto` : ""}{l.minutos ? ` · ${l.minutos}min` : ""}</div>
-                  </div>
-                  <button onClick={() => apagar(l.id)} aria-label="Apagar registro" style={{ background: "transparent", border: "none", color: T.sub, fontSize: 22, width: 40, height: 40, flexShrink: 0, lineHeight: 1 }}>×</button>
-                </div>
-              );
-            })}
-          </div>
+          <ListaRegistros registros={recentes} porCodigo={trilha.porCodigo} aoApagar={apagar} rotuloAcerto />
         )}
       </SectionCard>
     </div>

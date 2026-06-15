@@ -2,52 +2,19 @@
    gestão, cards de ALERTA de risco (sem atividade, sem credencial,
    meta atrasada) e ranking resumido. Tudo leitura, dentro do tenant
    (a RLS já limita à escola). Clicar num alerta leva à aba útil. */
-import React, { useMemo, useState } from "react";
+import React, { useState } from "react";
 import { SectionCard, StatCard, EmptyState } from "../../shared/ui/componentes.jsx";
 import { useTema } from "../../shared/branding/BrandingContext.jsx";
-import { todayISO } from "../../shared/regras/regras.js";
 import { fmtHorasCurto } from "../motor/jargao.js";
 
-// agrega registros e metas por aluno (geral + últimos 7 dias)
-export function agregarEscola({ alunos, registros, metas }) {
-  const hoje = todayISO();
-  const d = new Date(`${hoje}T00:00:00`); d.setDate(d.getDate() - 6);
-  const corte = d.toISOString().slice(0, 10);
-
-  const metaAtivaPorAluno = {};
-  for (const m of metas) if (m.status === "ativa") metaAtivaPorAluno[m.aluno_id] = m;
-
-  return alunos.map((a) => {
-    const ls = registros.filter((r) => r.aluno_id === a.id);
-    const sem = ls.filter((r) => String(r.data) >= corte);
-    const q = ls.reduce((s, r) => s + (+r.questoes || 0), 0);
-    const qSem = sem.reduce((s, r) => s + (+r.questoes || 0), 0);
-    const minSem = sem.reduce((s, r) => s + (+r.minutos || 0), 0);
-    const cd = ls.filter((r) => r.acertos !== null).reduce((s, r) => s + (+r.questoes || 0), 0);
-    const cc = ls.filter((r) => r.acertos !== null).reduce((s, r) => s + (+r.acertos || 0), 0);
-    const diasSem = new Set(sem.map((r) => String(r.data))).size;
-
-    const meta = metaAtivaPorAluno[a.id];
-    const itens = meta?.meta_atividades ?? [];
-    const feitas = itens.filter((x) => x.estado === "concluida").length;
-    const consideradas = itens.filter((x) => x.estado !== "ignorada").length;
-    const metaIncompleta = consideradas > 0 && feitas < consideradas;
-
-    return {
-      aluno: a, q, qSem, minSem, diasSem,
-      acc: cd ? Math.round((cc / cd) * 100) : null,
-      semCredencial: !a.usuario_id,
-      semAtividade: sem.length === 0,
-      metaIncompleta, feitas, consideradas,
-    };
-  });
-}
-
-export function PainelGestao({ alunos, registros, metas, turmas, concursosPorId, aoIr }) {
+// `resumo` já vem agregado por aluno (RPC resumo_escola, adaptado em
+// adaptarResumoEscola) — o painel só lê e exibe; nenhuma varredura de
+// registros no cliente.
+export function PainelGestao({ resumo, aoIr }) {
   const T = useTema();
-  const ag = useMemo(() => agregarEscola({ alunos, registros, metas }), [alunos, registros, metas]);
+  const ag = resumo;
 
-  if (alunos.length === 0) {
+  if (ag.length === 0) {
     return (
       <SectionCard titulo="Painel de gestão">
         <EmptyState icone="📋" titulo="Nenhum aluno cadastrado ainda"
@@ -56,7 +23,7 @@ export function PainelGestao({ alunos, registros, metas, turmas, concursosPorId,
     );
   }
 
-  const total = alunos.length;
+  const total = ag.length;
   const ativos = ag.filter((x) => !x.semAtividade).length;
   const semAtividade = ag.filter((x) => x.semAtividade).length;
   const semCredencial = ag.filter((x) => x.semCredencial).length;

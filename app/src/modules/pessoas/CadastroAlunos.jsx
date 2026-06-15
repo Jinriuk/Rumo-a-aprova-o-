@@ -5,6 +5,7 @@
 import React, { useState } from "react";
 import { Card, Botao, Erro, useInputStyle } from "../../shared/ui/componentes.jsx";
 import { useTema } from "../../shared/branding/BrandingContext.jsx";
+import { limparNome, nomeValido } from "../../shared/validacao.js";
 import * as db from "../../shared/data/index.js";
 
 export function NovaTurma({ aoMudar }) {
@@ -14,10 +15,10 @@ export function NovaTurma({ aoMudar }) {
   const [ocupado, setOcupado] = useState(false);
 
   async function criar() {
-    if (!nome.trim() || ocupado) return;
+    if (!nomeValido(nome) || ocupado) return;
     setOcupado(true); setErro(null);
     try {
-      await db.criarTurma(nome.trim());
+      await db.criarTurma(limparNome(nome));
       setNome("");
       aoMudar?.();
     } catch (e) { setErro(e.message); }
@@ -32,7 +33,7 @@ export function NovaTurma({ aoMudar }) {
           <label style={lbl}>Nome da turma</label>
           <input value={nome} onChange={(e) => setNome(e.target.value)} placeholder="ex: Turma CN 2026 — manhã" style={inputS} />
         </div>
-        <Botao onClick={criar} disabled={!nome.trim() || ocupado}>{ocupado ? "Criando…" : "+ Criar turma"}</Botao>
+        <Botao onClick={criar} disabled={!nomeValido(nome) || ocupado}>{ocupado ? "Criando…" : "+ Criar turma"}</Botao>
       </div>
       <Erro>{erro}</Erro>
     </Card>
@@ -51,11 +52,13 @@ export function NovosAlunos({ turmas, trilhaPadrao, concursos = [], aoMudar }) {
   const [ocupado, setOcupado] = useState(false);
   const [feito, setFeito] = useState(null);
 
-  const lista = nomes.split("\n").map((n) => n.trim()).filter(Boolean);
+  const linhas = nomes.split("\n").map(limparNome).filter(Boolean);
+  const lista = linhas.filter(nomeValido);
+  const descartados = linhas.length - lista.length; // linhas com nome inválido (curto/longo demais)
   const emLote = lista.length > 1;
   // em lote o consentimento é registrado aluno a aluno depois,
   // porque cada um tem um responsável diferente
-  const pronto = lista.length > 0 && (emLote || !consentiu || consentimentoNome.trim());
+  const pronto = lista.length > 0 && (emLote || !consentiu || nomeValido(consentimentoNome));
 
   async function cadastrar() {
     if (!pronto || ocupado) return;
@@ -63,8 +66,8 @@ export function NovosAlunos({ turmas, trilhaPadrao, concursos = [], aoMudar }) {
     try {
       const concursoEscolhido = concursoId || concursos.find((c) => c.codigo === "cn")?.id || null;
       const alunos = await db.cadastrarAlunos(lista, turmaId || null, trilhaPadrao?.id ?? null, concursoEscolhido);
-      if (!emLote && consentiu && consentimentoNome.trim()) {
-        await db.registrarConsentimento(alunos[0].id, consentimentoNome.trim());
+      if (!emLote && consentiu && nomeValido(consentimentoNome)) {
+        await db.registrarConsentimento(alunos[0].id, limparNome(consentimentoNome));
       }
       // a meta da semana nasce agora, pelo motor — não espera a virada
       for (const a of alunos) {
@@ -129,6 +132,11 @@ export function NovosAlunos({ turmas, trilhaPadrao, concursos = [], aoMudar }) {
         </div>
       )}
 
+      {descartados > 0 && (
+        <div style={{ color: T.gold, fontSize: 12, marginTop: 10 }}>
+          {descartados} linha(s) ignorada(s): cada nome precisa ter de 2 a 80 caracteres.
+        </div>
+      )}
       <Botao onClick={cadastrar} disabled={!pronto || ocupado} style={{ marginTop: 14 }}>
         {ocupado ? "Cadastrando…" : emLote ? `+ Cadastrar ${lista.length} alunos` : "+ Cadastrar aluno"}
       </Botao>

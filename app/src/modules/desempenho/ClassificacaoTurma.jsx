@@ -6,7 +6,7 @@
 import React, { useMemo, useState } from "react";
 import { Card, Empty } from "../../shared/ui/componentes.jsx";
 import { useTema } from "../../shared/branding/BrandingContext.jsx";
-import { todayISO, fmtBR } from "../../shared/regras/regras.js";
+import { fmtBR } from "../../shared/regras/regras.js";
 import { provaDoConcurso, notaPct, totalAcertos, totalQuestoes } from "../conteudo/provas.js";
 
 const MEDALHAS = ["🥇", "🥈", "🥉"];
@@ -23,62 +23,54 @@ const CRITERIOS_ESTUDO = {
   dias: { rotulo: "Dias", v: (r) => r.dias },
 };
 
-export function ClassificacaoTurma({ alunos, turmas, registros, metas, simulados = [], concursosPorId }) {
+export function ClassificacaoTurma({ alunos, turmas, resumoPorAluno = {}, simulados = [], concursosPorId }) {
   const T = useTema();
   const [modo, setModo] = useState("estudos"); // estudos | simulados (Fase 11: dois rankings)
   const [criterio, setCriterio] = useState("questoes");
   const [turmaId, setTurmaId] = useState("");
   const [janela, setJanela] = useState("semana"); // semana (últimos 7 dias) | geral
 
+  // O agregado por aluno já vem pronto do banco; aqui só escolhemos a
+  // janela (geral/7d) e ordenamos. Sem varrer registros no cliente.
   const ranking = useMemo(() => {
-    const hoje = todayISO();
-    const d = new Date(`${hoje}T00:00:00`);
-    d.setDate(d.getDate() - 6);
-    const corte = d.toISOString().slice(0, 10);
-
-    const metaAtivaPorAluno = {};
-    for (const m of metas) if (m.status === "ativa") metaAtivaPorAluno[m.aluno_id] = m;
-
+    const geral = janela === "geral";
     const visiveis = alunos.filter(
       (a) => !turmaId || (a.alunos_turmas ?? []).some((v) => v.turma_id === turmaId),
     );
 
     return visiveis.map((a) => {
-      const ls = registros
-        .filter((r) => r.aluno_id === a.id)
-        .filter((r) => janela === "geral" || String(r.data) >= corte);
-      const q = ls.reduce((s, r) => s + (+r.questoes || 0), 0);
-      const cd = ls.filter((r) => r.acertos !== null).reduce((s, r) => s + (+r.questoes || 0), 0);
-      const cc = ls.filter((r) => r.acertos !== null).reduce((s, r) => s + (+r.acertos || 0), 0);
-      const minutos = ls.reduce((s, r) => s + (+r.minutos || 0), 0);
-      const dias = new Set(ls.map((r) => String(r.data))).size;
-
-      const meta = metaAtivaPorAluno[a.id];
-      const itens = meta?.meta_atividades ?? [];
-      const feitas = itens.filter((x) => x.estado === "concluida").length;
-      const consideradas = itens.filter((x) => x.estado !== "ignorada").length;
-      const metaPct = consideradas ? Math.round((feitas / consideradas) * 100) : null;
-
+      const r = resumoPorAluno[a.id];
       return {
-        aluno: a, q, minutos, dias,
-        acc: cd ? Math.round((cc / cd) * 100) : null,
-        metaPct, feitas, consideradas,
+        aluno: a,
+        q: r ? (geral ? r.q : r.qSem) : 0,
+        minutos: r ? (geral ? r.minutos : r.minSem) : 0,
+        dias: r ? (geral ? r.dias : r.diasSem) : 0,
+        acc: r ? (geral ? r.acc : r.accSem) : null,
+        metaPct: r?.metaPct ?? null,
+        feitas: r?.feitas ?? 0,
+        consideradas: r?.consideradas ?? 0,
       };
     }).sort((x, y) => {
       const c = CRITERIOS_ESTUDO[criterio];
       return (c.v(y) - c.v(x)) || (y.q - x.q) || ((y.acc ?? -1) - (x.acc ?? -1)) || (y.minutos - x.minutos);
     });
-  }, [alunos, registros, metas, turmaId, janela, criterio]);
+  }, [alunos, resumoPorAluno, turmaId, janela, criterio]);
 
   // RANKING 2 — Simulados: a nota como a PROVA classificaria (melhor
-  // simulado de cada aluno na janela; nota pela estrutura do concurso)
+  // simulado de cada aluno na janela; nota pela estrutura do concurso).
+  // Simulados são indexados por aluno uma vez (Map) — sem O(n×m).
   const rankingSim = useMemo(() => {
+    const simPorAluno = new Map();
+    for (const s of simulados) {
+      const arr = simPorAluno.get(s.aluno_id);
+      if (arr) arr.push(s); else simPorAluno.set(s.aluno_id, [s]);
+    }
     const visiveis = alunos.filter(
       (a) => !turmaId || (a.alunos_turmas ?? []).some((v) => v.turma_id === turmaId),
     );
     return visiveis.map((a) => {
       const prova = provaDoConcurso(concursosPorId?.[a.concurso_id]?.codigo);
-      const meus = simulados.filter((s) => s.aluno_id === a.id);
+      const meus = simPorAluno.get(a.id) ?? [];
       if (!meus.length) return { aluno: a, prova, melhor: null };
       const melhor = [...meus].sort((x, y) => notaPct(prova, y.acertos) - notaPct(prova, x.acertos))[0];
       return {

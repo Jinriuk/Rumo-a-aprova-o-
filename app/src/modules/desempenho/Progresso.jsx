@@ -8,6 +8,7 @@ import {
 import { Card, Empty } from "../../shared/ui/componentes.jsx";
 import { useTema } from "../../shared/branding/BrandingContext.jsx";
 import { todayISO, fmtBR } from "../../shared/regras/regras.js";
+import { resumirRegistros } from "../../shared/metricas/agregados.js";
 import * as db from "../../shared/data/index.js";
 
 const RANGES = [
@@ -50,19 +51,19 @@ export function Progresso({ registros, trilha }) {
 
   const porSemana = useMemo(() => trilha.semanas.map((w) => {
     const wl = logs.filter((l) => l.data >= w.inicio && l.data <= w.fim);
-    const q = wl.reduce((a, l) => a + (+l.questoes || 0), 0);
-    const cd = wl.filter((l) => l.acertos !== null).reduce((a, l) => a + (+l.questoes || 0), 0);
-    const cc = wl.filter((l) => l.acertos !== null).reduce((a, l) => a + (+l.acertos || 0), 0);
-    return { label: `S${w.numero}`, q, acc: cd ? Math.round((cc / cd) * 100) : null };
+    const { questoes, acc } = resumirRegistros(wl);
+    return { label: `S${w.numero}`, q: questoes, acc };
   }), [registros, trilha]);
   const temSemana = porSemana.some((s) => s.q > 0);
 
   const porMat = trilha.disciplinas.map((s) => {
     const ls = logs.filter((l) => l.disciplina_codigo === s.codigo);
-    const d = ls.reduce((a, l) => a + (+l.questoes || 0), 0);
-    const c = ls.reduce((a, l) => a + (l.acertos === null ? 0 : +l.acertos), 0);
-    const cd = ls.filter((l) => l.acertos !== null).reduce((a, l) => a + (+l.questoes || 0), 0);
-    return { id: s.codigo, short: s.abrev, color: s.cor, q: d, acc: cd ? Math.round((c / cd) * 100) : 0, hasAcc: cd > 0 };
+    const { questoes, comAcertoQuestoes, acertos } = resumirRegistros(ls);
+    return {
+      id: s.codigo, short: s.abrev, color: s.cor, q: questoes,
+      acc: comAcertoQuestoes ? Math.round((acertos / comAcertoQuestoes) * 100) : 0,
+      hasAcc: comAcertoQuestoes > 0,
+    };
   });
   const comAcc = porMat.filter((s) => s.hasAcc);
   const comQ = porMat.filter((s) => s.q > 0);

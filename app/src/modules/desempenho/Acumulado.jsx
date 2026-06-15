@@ -9,6 +9,7 @@ import {
 } from "recharts";
 import { Card, Empty } from "../../shared/ui/componentes.jsx";
 import { useTema } from "../../shared/branding/BrandingContext.jsx";
+import { resumirRegistros } from "../../shared/metricas/agregados.js";
 
 const fmtH = (min) => {
   if (!min) return "—";
@@ -59,9 +60,7 @@ export function Acumulado({ registros, trilha }) {
 
   const porMeta = useMemo(() => trilha.semanas.map((w) => {
     const wl = logs.filter((l) => l.data >= String(w.inicio) && l.data <= String(w.fim));
-    const cd = wl.filter((l) => l.acertos !== null).reduce((a, l) => a + (+l.questoes || 0), 0);
-    const cc = wl.filter((l) => l.acertos !== null).reduce((a, l) => a + (+l.acertos || 0), 0);
-    return { label: `S${w.numero}`, acc: cd ? Math.round((cc / cd) * 100) : null };
+    return { label: `S${w.numero}`, acc: resumirRegistros(wl).acc };
   }), [registros, trilha]);
 
   const treemapDados = linhas
