@@ -6,6 +6,7 @@ import Login from "./routes/publico/Login.jsx";
 import AreaAluno from "./routes/aluno/AreaAluno.jsx";
 import AreaEscola from "./routes/escola/AreaEscola.jsx";
 import AreaResponsavel from "./routes/responsavel/AreaResponsavel.jsx";
+import AreaAdmin from "./routes/admin/AreaAdmin.jsx";
 import { useSessao } from "./shared/hooks/useSessao.js";
 import { BrandingProvider, useTema } from "./shared/branding/BrandingContext.jsx";
 import { FONTES_CSS } from "./shared/ui/tema.js";
@@ -18,10 +19,21 @@ const AREAS = {
 };
 
 export default function App() {
-  const { carregando, sessao, perfil, erro } = useSessao();
+  const { carregando, sessao, perfil, superAdmin, erro } = useSessao();
 
   if (carregando) return <TelaNeutra>Carregando…</TelaNeutra>;
   if (!sessao) return <Login />;
+
+  // Backoffice interno (17.4): invisível para qualquer papel de escola;
+  // só aparece para super_admin (gate no banco, não só na tela).
+  if (superAdmin) {
+    return (
+      <BrandingProvider escola={{ nome: "Backoffice", slug: "admin", logo_url: null, cor_acento: null }}>
+        <Casca><AreaAdmin /></Casca>
+      </BrandingProvider>
+    );
+  }
+
   if (erro || !perfil) {
     return (
       <TelaNeutra>

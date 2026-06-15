@@ -578,3 +578,33 @@ export async function registrarAcesso(escolaId, alunoId, usuarioId, papel, acao)
   }
   return { ok: true };
 }
+
+/* ---------- backoffice interno (super_admin) — Fase 17.4 ---------- */
+
+// O App pergunta isto para decidir se mostra o backoffice. Resiliente:
+// se a RPC não existir (banco antigo) ou for negada, trata como NÃO
+// super_admin — login normal nunca quebra por causa disto.
+export async function souSuperAdmin() {
+  const { data, error } = await supabase.rpc("sou_super_admin");
+  if (error) return false;
+  return data === true;
+}
+
+// Resumo de todas as escolas (cross-tenant). A RPC tem porteiro
+// eh_super_admin no banco — quem não é super_admin recebe erro.
+export async function backofficeEscolas() {
+  const { data, error } = await supabase.rpc("backoffice_escolas");
+  if (error) throw falha("escolas (backoffice)", error);
+  return data;
+}
+
+// Trilha de auditoria do operador. `super_admin_id` é o próprio (RLS).
+export async function registrarAcaoAdmin(acao, escolaId = null, detalhe = {}) {
+  const { data: s } = await supabase.auth.getSession();
+  const uid = s?.session?.user?.id;
+  if (!uid) return { ok: false };
+  const { error } = await supabase.from("admin_logs")
+    .insert({ super_admin_id: uid, acao, escola_id: escolaId, detalhe });
+  if (error) { console.error("admin_log não registrado:", error.message); return { ok: false }; }
+  return { ok: true };
+}
