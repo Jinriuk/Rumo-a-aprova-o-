@@ -7,7 +7,15 @@ import { Card, Botao, Erro, useInputStyle } from "../../shared/ui/componentes.js
 import { useTema } from "../../shared/branding/BrandingContext.jsx";
 import { limparNome, nomeValido } from "../../shared/validacao.js";
 import { mensagemAmigavel } from "../../shared/lib/erros.js";
+import { comConcorrenciaLimitada } from "../../shared/lib/concorrencia.js";
 import * as db from "../../shared/data/index.js";
+
+// Fase B-min, B.6: cadastro em lote pode trazer 300+ nomes de uma vez.
+// Gerar a meta de cada um é uma chamada de Edge Function (rede); um
+// `for` sequencial somaria centenas de viagens de rede uma atrás da
+// outra. Um teto de chamadas em paralelo evita tanto a espera longa
+// quanto sobrecarregar a função com 300+ chamadas simultâneas.
+const CONCORRENCIA_GERAR_META = 10;
 
 export function NovaTurma({ aoMudar }) {
   const { input: inputS, label: lbl } = useInputStyle();
@@ -71,9 +79,9 @@ export function NovosAlunos({ turmas, trilhaPadrao, concursos = [], aoMudar }) {
         await db.registrarConsentimento(alunos[0].id, limparNome(consentimentoNome));
       }
       // a meta da semana nasce agora, pelo motor — não espera a virada
-      for (const a of alunos) {
-        await db.gerarMeta(a.id).catch((e) => console.error(`gerar meta (aluno ${a.id}):`, e.message));
-      }
+      await comConcorrenciaLimitada(alunos, CONCORRENCIA_GERAR_META, (a) =>
+        db.gerarMeta(a.id).catch((e) => console.error(`gerar meta (aluno ${a.id}):`, e.message)),
+      );
       setFeito(`${alunos.length} aluno(s) cadastrado(s). Gere as credenciais na lista abaixo.`);
       setNomes(""); setConsentimentoNome(""); setConsentiu(false);
       aoMudar?.();
