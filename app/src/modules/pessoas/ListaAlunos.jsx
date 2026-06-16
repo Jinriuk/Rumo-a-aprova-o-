@@ -6,6 +6,7 @@ import React, { useMemo, useState } from "react";
 import { SectionCard, EmptyState, Erro, StatusBadge, BotaoMini, MaisAcoes } from "../../shared/ui/componentes.jsx";
 import { useTema } from "../../shared/branding/BrandingContext.jsx";
 import { limparNome, nomeValido } from "../../shared/validacao.js";
+import { mensagemAmigavel } from "../../shared/lib/erros.js";
 import * as db from "../../shared/data/index.js";
 
 export function ListaAlunos({ alunos, consentimentos, concursos = [], turmas = [], resumoPorAluno = {}, aoMudar, aoGerarCredencial, aoVerAluno }) {
@@ -19,7 +20,7 @@ export function ListaAlunos({ alunos, consentimentos, concursos = [], turmas = [
 
   async function comAcao(aluno, fn) {
     setOcupado(aluno.id); setErro(null);
-    try { await fn(); aoMudar?.(); } catch (e) { setErro(e.message); }
+    try { await fn(); aoMudar?.(); } catch (e) { setErro(mensagemAmigavel(e, "acao")); }
     setOcupado(null);
   }
 
@@ -56,7 +57,7 @@ export function ListaAlunos({ alunos, consentimentos, concursos = [], turmas = [
       link.href = URL.createObjectURL(blob);
       link.download = `dados-${a.nome.toLowerCase().replace(/\s+/g, "-")}.json`;
       link.click(); URL.revokeObjectURL(link.href);
-    } catch (e) { setErro(e.message); }
+    } catch (e) { setErro(mensagemAmigavel(e, "acao")); }
     setOcupado(null);
   }
   const excluir = (a) => {

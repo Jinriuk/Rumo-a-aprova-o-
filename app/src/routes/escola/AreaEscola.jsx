@@ -14,6 +14,7 @@ import { PainelGestao } from "../../modules/desempenho/PainelGestao.jsx";
 import { FichaAluno } from "../../modules/desempenho/FichaAluno.jsx";
 import { useRecurso } from "../../shared/hooks/useRecurso.js";
 import { adaptarResumoEscola } from "../../shared/metricas/agregados.js";
+import { mensagemAmigavel } from "../../shared/lib/erros.js";
 import * as db from "../../shared/data/index.js";
 
 const VAZIO = { turmas: [], alunos: [], consentimentos: [], logs: [], trilha: null, concursos: [], resumo: [], simuladosEscola: [] };
@@ -142,12 +143,12 @@ function Turmas({ turmas, alunos, porAluno, aoMudar, aoVerRanking, aoVerAluno })
   async function renomear(t) {
     const nome = window.prompt("Novo nome da turma:", t.nome);
     if (!nome || nome.trim() === t.nome) return;
-    try { await db.renomearTurma(t.id, nome.trim()); aoMudar?.(); } catch (e) { window.alert(e.message); }
+    try { await db.renomearTurma(t.id, nome.trim()); aoMudar?.(); } catch (e) { window.alert(mensagemAmigavel(e, "salvar")); }
   }
   async function excluir(t, n) {
     if (n > 0) { window.alert(`A turma "${t.nome}" tem ${n} aluno(s). Mova os alunos antes de excluir.`); return; }
     if (!window.confirm(`Excluir a turma "${t.nome}"? Esta ação não tem volta.`)) return;
-    try { await db.removerTurma(t.id); aoMudar?.(); } catch (e) { window.alert(e.message); }
+    try { await db.removerTurma(t.id); aoMudar?.(); } catch (e) { window.alert(mensagemAmigavel(e, "acao")); }
   }
 
   return (

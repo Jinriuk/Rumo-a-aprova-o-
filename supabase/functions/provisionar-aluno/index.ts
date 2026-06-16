@@ -90,6 +90,6 @@ Deno.serve(async (req) => {
     return json({ codigo, papel, nome: nomeUsuario });
   } catch (e) {
     console.error("provisionar-aluno:", e);
-    return json({ error: "falha ao provisionar acesso", detail: String(e?.message ?? e) }, 500);
+    return json({ error: "falha ao provisionar acesso" }, 500);
   }
 });

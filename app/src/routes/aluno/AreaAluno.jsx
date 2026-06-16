@@ -8,6 +8,7 @@ import { Empty, Erro } from "../../shared/ui/componentes.jsx";
 import { VisaoEstudo } from "./VisaoEstudo.jsx";
 import { diasParaProva } from "../../modules/conteudo/concursos.js";
 import { fmtBR } from "../../shared/regras/regras.js";
+import { mensagemAmigavel } from "../../shared/lib/erros.js";
 import * as db from "../../shared/data/index.js";
 
 export default function AreaAluno({ perfil }) {
@@ -41,7 +42,7 @@ export default function AreaAluno({ perfil }) {
         setConcurso(c);
         setProva(diasParaProva({ semanasTrilha, concurso: c }));
       } catch (e) {
-        if (vivo) setErro(e.message);
+        if (vivo) setErro(mensagemAmigavel(e, "carregar"));
       }
     })();
     return () => { vivo = false; };

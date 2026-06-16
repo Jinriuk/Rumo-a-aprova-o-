@@ -9,6 +9,7 @@ import { todayISO } from "../../shared/regras/regras.js";
 import { resumirRegistros } from "../../shared/metricas/agregados.js";
 import { ListaRegistros } from "../../shared/ui/ListaRegistros.jsx";
 import { fmtHoras } from "./jargao.js";
+import { mensagemAmigavel } from "../../shared/lib/erros.js";
 import * as db from "../../shared/data/index.js";
 
 // Tempo AMIGÁVEL (Fase 4 do doc): aceita "45min", "1h", "1h30", "90".
@@ -70,13 +71,13 @@ export function Registrar({ aluno, trilha, registros, aoMudar, minutosSugeridos 
       });
       setF({ ...branco, data: f.data, disciplina_codigo: f.disciplina_codigo });
       aoMudar?.();
-    } catch (e) { setErro(e.message); }
+    } catch (e) { setErro(mensagemAmigavel(e, "salvar")); }
     setOcupado(false);
   }
 
   async function apagar(id) {
     setErro(null);
-    try { await db.removerRegistro(id); aoMudar?.(); } catch (e) { setErro(e.message); }
+    try { await db.removerRegistro(id); aoMudar?.(); } catch (e) { setErro(mensagemAmigavel(e, "acao")); }
   }
 
   const recentes = registros.slice(0, 12);

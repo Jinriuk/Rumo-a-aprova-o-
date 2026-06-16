@@ -6,6 +6,7 @@ import React, { useState } from "react";
 import { Card, Botao, Erro, useInputStyle } from "../../shared/ui/componentes.jsx";
 import { useTema } from "../../shared/branding/BrandingContext.jsx";
 import { limparNome, nomeValido } from "../../shared/validacao.js";
+import { mensagemAmigavel } from "../../shared/lib/erros.js";
 import * as db from "../../shared/data/index.js";
 
 export function NovaTurma({ aoMudar }) {
@@ -21,7 +22,7 @@ export function NovaTurma({ aoMudar }) {
       await db.criarTurma(limparNome(nome));
       setNome("");
       aoMudar?.();
-    } catch (e) { setErro(e.message); }
+    } catch (e) { setErro(mensagemAmigavel(e, "salvar")); }
     setOcupado(false);
   }
 
@@ -71,12 +72,12 @@ export function NovosAlunos({ turmas, trilhaPadrao, concursos = [], aoMudar }) {
       }
       // a meta da semana nasce agora, pelo motor — não espera a virada
       for (const a of alunos) {
-        await db.gerarMeta(a.id).catch((e) => console.error(`meta de ${a.nome}:`, e.message));
+        await db.gerarMeta(a.id).catch((e) => console.error(`gerar meta (aluno ${a.id}):`, e.message));
       }
       setFeito(`${alunos.length} aluno(s) cadastrado(s). Gere as credenciais na lista abaixo.`);
       setNomes(""); setConsentimentoNome(""); setConsentiu(false);
       aoMudar?.();
-    } catch (e) { setErro(e.message); }
+    } catch (e) { setErro(mensagemAmigavel(e, "salvar")); }
     setOcupado(false);
   }
 

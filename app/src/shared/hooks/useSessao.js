@@ -3,6 +3,7 @@
    mostrar; quem decide o dado é o banco (Doc 6, seção 5). */
 import { useEffect, useState } from "react";
 import * as db from "../data/index.js";
+import { mensagemAmigavel } from "../lib/erros.js";
 
 export function useSessao() {
   const [estado, setEstado] = useState({ carregando: true, sessao: null, perfil: null, superAdmin: false, erro: null });
@@ -33,12 +34,12 @@ export function useSessao() {
         const perfil = await db.meuPerfil();
         if (vivo) setEstado({ carregando: false, sessao, perfil, superAdmin: false, erro: null });
       } catch (e) {
-        if (vivo) setEstado({ carregando: false, sessao, perfil: null, superAdmin: false, erro: e.message });
+        if (vivo) setEstado({ carregando: false, sessao, perfil: null, superAdmin: false, erro: mensagemAmigavel(e, "carregar") });
       }
     }
 
     db.sessaoAtual().then(carregarPerfil).catch((e) => {
-      if (vivo) setEstado({ carregando: false, sessao: null, perfil: null, superAdmin: false, erro: e.message });
+      if (vivo) setEstado({ carregando: false, sessao: null, perfil: null, superAdmin: false, erro: mensagemAmigavel(e, "carregar") });
     });
 
     const parar = db.aoMudarSessao((sessao) => {

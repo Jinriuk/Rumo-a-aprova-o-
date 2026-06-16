@@ -9,6 +9,7 @@ import { useTrilha } from "../../modules/conteudo/useTrilha.js";
 import { calcularMetricas } from "../../modules/desempenho/metricas.js";
 import { diasParaProva } from "../../modules/conteudo/concursos.js";
 import { semanaAtual, fmtBR } from "../../shared/regras/regras.js";
+import { mensagemAmigavel } from "../../shared/lib/erros.js";
 import * as db from "../../shared/data/index.js";
 
 export default function AreaResponsavel({ perfil }) {
@@ -47,7 +48,7 @@ export default function AreaResponsavel({ perfil }) {
         if (!vivo) return;
         setConcurso(c);
         setProva(diasParaProva({ semanasTrilha, concurso: c }));
-      } catch (e) { if (vivo) setErro(e.message); }
+      } catch (e) { if (vivo) setErro(mensagemAmigavel(e, "carregar")); }
     })();
     return () => { vivo = false; };
   }, []);

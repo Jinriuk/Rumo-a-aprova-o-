@@ -2,6 +2,7 @@
    método é do operador; a escola e o aluno consomem). */
 import { useEffect, useState } from "react";
 import * as db from "../../shared/data/index.js";
+import { mensagemAmigavel } from "../../shared/lib/erros.js";
 
 export function useTrilha(trilhaId) {
   const [estado, setEstado] = useState({ carregando: true, erro: null, trilha: null });
@@ -23,7 +24,7 @@ export function useTrilha(trilhaId) {
           trilha: { ...dados, porCodigo, atividadesPorId, atividadesPorSemana },
         });
       })
-      .catch((e) => vivo && setEstado({ carregando: false, erro: e.message, trilha: null }));
+      .catch((e) => vivo && setEstado({ carregando: false, erro: mensagemAmigavel(e, "carregar"), trilha: null }));
     return () => { vivo = false; };
   }, [trilhaId]);
 

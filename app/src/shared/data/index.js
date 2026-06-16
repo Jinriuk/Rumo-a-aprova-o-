@@ -361,6 +361,7 @@ export async function criarTurma(nome) {
   const { data, error } = await supabase
     .from("turmas").insert({ escola_id: escola.id, nome }).select().single();
   if (error) throw falha("criar turma", error);
+  await registrarLogCoordenacao("criou-turma", { entidade: "turma", entidadeId: data.id, detalhe: { nome } });
   return data;
 }
 
@@ -368,11 +369,13 @@ export async function renomearTurma(turmaId, nome) {
   const { data, error } = await supabase.from("turmas").update({ nome }).eq("id", turmaId).select("id");
   if (error) throw falha("renomear turma", error);
   if (!data?.length) throw new Error("renomear turma: o banco recusou a alteração");
+  await registrarLogCoordenacao("renomeou-turma", { entidade: "turma", entidadeId: turmaId, detalhe: { nome } });
 }
 
 export async function removerTurma(turmaId) {
   const { error } = await supabase.from("turmas").delete().eq("id", turmaId);
   if (error) throw falha("excluir turma", error);
+  await registrarLogCoordenacao("excluiu-turma", { entidade: "turma", entidadeId: turmaId });
 }
 
 export async function listarAlunos() {
@@ -397,6 +400,7 @@ export async function cadastrarAlunos(nomes, turmaId, trilhaId, concursoId) {
     const { error: e2 } = await supabase.from("alunos_turmas").insert(v);
     if (e2) throw falha("vincular turma", e2);
   }
+  await registrarLogCoordenacao("importou-alunos", { entidade: "aluno", detalhe: { quantidade: data.length, turma_id: turmaId ?? null } });
   return data;
 }
 
@@ -537,6 +541,9 @@ export async function atualizarMarca(escolaId, marca) {
   const { data, error } = await supabase.from("escolas").update(marca).eq("id", escolaId).select("id");
   if (error) throw falha("marca", error);
   if (!data?.length) throw new Error("marca: o banco recusou a alteração (verifique seu papel)");
+  // nunca logar o conteúdo do logo/cor em si é sensível pessoal — mas registrar
+  // QUE a marca mudou tem valor de auditoria (ex.: branding trocado por engano).
+  await registrarLogCoordenacao("atualizou-marca", { entidade: "escola", entidadeId: escolaId, detalhe: { campos: Object.keys(marca) } });
 }
 
 /* ---------- conformidade ---------- */
@@ -577,6 +584,26 @@ export async function registrarAcesso(escolaId, alunoId, usuarioId, papel, acao)
     return { ok: false, erro: error.message };
   }
   return { ok: true };
+}
+
+// Trilha mínima de ações sensíveis da coordenação (Fase A.8): turma e
+// marca alteradas, alunos importados — hoje sem rastro nenhum. Best-effort
+// e silencioso como registrarAcesso: uma falha de log NUNCA pode derrubar
+// a ação que está sendo logada.
+async function registrarLogCoordenacao(acao, { entidade = null, entidadeId = null, detalhe = {} } = {}) {
+  try {
+    const { usuario, escola } = await meuPerfil();
+    if (usuario.papel !== "coordenacao") return { ok: false };
+    const { error } = await supabase.from("logs_coordenacao").insert({
+      escola_id: escola.id, usuario_id: usuario.id, papel: usuario.papel,
+      acao, entidade, entidade_id: entidadeId, detalhe,
+    });
+    if (error) { console.error("log de coordenação não registrado:", error.message); return { ok: false }; }
+    return { ok: true };
+  } catch (e) {
+    console.error("log de coordenação não registrado:", e.message);
+    return { ok: false };
+  }
 }
 
 /* ---------- backoffice interno (super_admin) — Fase 17.4 ---------- */

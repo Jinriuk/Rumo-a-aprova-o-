@@ -18,6 +18,7 @@ const TABELAS_ISOLADAS = [
   "vinculos_responsaveis", "metas", "meta_atividades",
   "registros_estudo", "simulados", "consentimentos", "logs_acesso",
   "config_escola", // Fase 15.1: override pedagógico por escola, isolado
+  "logs_coordenacao", // Fase A.8: trilha de ações sensíveis da coordenação
 ];
 
 // ---------- LEITURA: nada da outra escola, em NENHUMA tabela ----------

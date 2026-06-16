@@ -15,6 +15,7 @@
    );
 */
 import { useCallback, useEffect, useState } from "react";
+import { mensagemAmigavel } from "../lib/erros.js";
 
 export function useRecurso(carregar, deps = []) {
   const [estado, setEstado] = useState({ dados: null, carregando: true, erro: null });
@@ -29,7 +30,7 @@ export function useRecurso(carregar, deps = []) {
     Promise.resolve()
       .then(carregar)
       .then((dados) => vivo && setEstado({ dados, carregando: false, erro: null }))
-      .catch((e) => vivo && setEstado((prev) => ({ dados: prev.dados, carregando: false, erro: e.message })));
+      .catch((e) => vivo && setEstado((prev) => ({ dados: prev.dados, carregando: false, erro: mensagemAmigavel(e, "carregar") })));
     return () => { vivo = false; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [...deps, versao]);

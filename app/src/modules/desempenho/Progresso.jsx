@@ -9,6 +9,7 @@ import { Card, Empty } from "../../shared/ui/componentes.jsx";
 import { useTema } from "../../shared/branding/BrandingContext.jsx";
 import { todayISO, fmtBR } from "../../shared/regras/regras.js";
 import { resumirRegistros } from "../../shared/metricas/agregados.js";
+import { mensagemAmigavel } from "../../shared/lib/erros.js";
 import * as db from "../../shared/data/index.js";
 
 const RANGES = [
@@ -181,7 +182,7 @@ export function Simulados({ aluno, simulados, podeEditar, semanaAtiva, concurso,
       });
       setF(blank);
       aoMudar?.();
-    } catch (e) { setErro(e.message); }
+    } catch (e) { setErro(mensagemAmigavel(e, "salvar")); }
   }
 
   async function apagar(id) {
@@ -189,7 +190,7 @@ export function Simulados({ aluno, simulados, podeEditar, semanaAtiva, concurso,
     try {
       await db.removerSimulado(id);
       aoMudar?.();
-    } catch (e) { setErro(e.message); }
+    } catch (e) { setErro(mensagemAmigavel(e, "acao")); }
   }
 
   const chart = simulados.map((s) => ({
