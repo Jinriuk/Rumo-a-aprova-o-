@@ -2,12 +2,15 @@
    desempenho"; ação importante "Gerar credencial"; secundárias
    (responsável, exportar/excluir LGPD) recolhidas em "Mais ações".
    Status visual claro com selos. */
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { SectionCard, EmptyState, Erro, StatusBadge, BotaoMini, MaisAcoes } from "../../shared/ui/componentes.jsx";
 import { useTema } from "../../shared/branding/BrandingContext.jsx";
 import { limparNome, nomeValido } from "../../shared/validacao.js";
 import { mensagemAmigavel } from "../../shared/lib/erros.js";
+import { paginar } from "../../shared/lib/paginacao.js";
 import * as db from "../../shared/data/index.js";
+
+const POR_PAGINA = 50; // Fase B-min, B.2 — escola com 300–500 alunos não renderiza tudo de uma vez
 
 export function ListaAlunos({ alunos, consentimentos, concursos = [], turmas = [], resumoPorAluno = {}, aoMudar, aoGerarCredencial, aoVerAluno }) {
   const T = useTema();
@@ -16,6 +19,7 @@ export function ListaAlunos({ alunos, consentimentos, concursos = [], turmas = [
   const [busca, setBusca] = useState("");
   const [fTurma, setFTurma] = useState("");
   const [fStatus, setFStatus] = useState("");
+  const [pagina, setPagina] = useState(1);
   const comConsentimento = useMemo(() => new Set(consentimentos.map((c) => c.aluno_id)), [consentimentos]);
 
   async function comAcao(aluno, fn) {
@@ -81,6 +85,15 @@ export function ListaAlunos({ alunos, consentimentos, concursos = [], turmas = [
       });
   }, [alunos, busca, fTurma, fStatus, resumoPorAluno, comConsentimento]);
 
+  // nova busca/filtro sempre volta para a página 1 — senão a escola
+  // pode "perder" a lista numa página vazia depois de filtrar
+  useEffect(() => { setPagina(1); }, [busca, fTurma, fStatus]);
+
+  const { itens: pagina_itens, pagina: paginaAtual, totalPaginas } = useMemo(
+    () => paginar(filtrados, pagina, POR_PAGINA),
+    [filtrados, pagina],
+  );
+
   const selS = { background: T.bg, border: `1px solid ${T.line}`, color: T.ink, borderRadius: 8, padding: "7px 9px", fontSize: 12.5 };
 
   return (
@@ -109,7 +122,7 @@ export function ListaAlunos({ alunos, consentimentos, concursos = [], turmas = [
         <div style={{ padding: 8 }}><EmptyState icone="👥" titulo={busca ? "Nenhum aluno encontrado" : "Nenhum aluno ainda"} dica={busca ? "Tente outro nome." : "Cadastre alunos no formulário acima — um a um ou em lote."} /></div>
       ) : (
         <div style={{ display: "flex", flexDirection: "column" }}>
-          {filtrados.map((a, i) => {
+          {pagina_itens.map((a, i) => {
             const turmaAtual = (a.alunos_turmas ?? [])[0]?.turma_id ?? "";
             const temCred = !!a.usuario_id;
             const temCons = comConsentimento.has(a.id);
@@ -117,7 +130,7 @@ export function ListaAlunos({ alunos, consentimentos, concursos = [], turmas = [
             const r = resumoPorAluno[a.id];
             const selMini = { background: T.bg, border: `1px solid ${T.line}`, color: T.sub, borderRadius: 7, padding: "5px 9px", fontSize: 11.5, maxWidth: "100%" };
             return (
-              <div key={a.id} style={{ padding: "13px 15px", borderBottom: i === filtrados.length - 1 ? "none" : `1px solid ${T.line}` }}>
+              <div key={a.id} style={{ padding: "13px 15px", borderBottom: i === pagina_itens.length - 1 ? "none" : `1px solid ${T.line}` }}>
                 <div style={{ display: "flex", gap: 10, alignItems: "flex-start", flexWrap: "wrap" }}>
                   <div style={{ flex: 1, minWidth: 180 }}>
                     <div style={{ fontSize: 14.5, fontWeight: 700 }}>{a.nome}</div>
@@ -166,6 +179,19 @@ export function ListaAlunos({ alunos, consentimentos, concursos = [], turmas = [
               </div>
             );
           })}
+        </div>
+      )}
+      {totalPaginas > 1 && (
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 12, padding: "13px 15px", borderTop: `1px solid ${T.line}` }}>
+          <button onClick={() => setPagina((p) => p - 1)} disabled={paginaAtual <= 1}
+            style={{ border: `1px solid ${T.line}`, background: "transparent", color: paginaAtual <= 1 ? T.sub : T.gold, borderRadius: 8, padding: "7px 14px", fontSize: 12.5, fontWeight: 700, opacity: paginaAtual <= 1 ? 0.5 : 1 }}>
+            ‹ Anterior
+          </button>
+          <span style={{ fontSize: 12.5, color: T.sub }}>página {paginaAtual} de {totalPaginas}</span>
+          <button onClick={() => setPagina((p) => p + 1)} disabled={paginaAtual >= totalPaginas}
+            style={{ border: `1px solid ${T.line}`, background: "transparent", color: paginaAtual >= totalPaginas ? T.sub : T.gold, borderRadius: 8, padding: "7px 14px", fontSize: 12.5, fontWeight: 700, opacity: paginaAtual >= totalPaginas ? 0.5 : 1 }}>
+            Próxima ›
+          </button>
         </div>
       )}
     </SectionCard>

@@ -124,20 +124,31 @@ export default function AreaEscola({ perfil }) {
 function Turmas({ turmas, alunos, porAluno, aoMudar, aoVerRanking, aoVerAluno }) {
   const T = useTema();
   const [turmaAberta, setTurmaAberta] = useState(null);
-  const alunosDaTurma = (turmaId) =>
-    alunos.filter((a) => (a.alunos_turmas ?? []).some((v) => v.turma_id === turmaId));
 
-  function statsTurma(turmaId) {
-    const da = alunos.filter((a) => (a.alunos_turmas ?? []).some((v) => v.turma_id === turmaId));
-    const linhas = da.map((a) => porAluno[a.id]).filter(Boolean);
-    const comAcc = linhas.filter((x) => x.acc != null);
-    return {
-      n: da.length,
-      questoes: linhas.reduce((s, x) => s + x.q, 0),
-      acerto: comAcc.length ? Math.round(comAcc.reduce((s, x) => s + x.acc, 0) / comAcc.length) : null,
-      risco: linhas.filter((x) => x.semAtividade).length,
-    };
-  }
+  // Fase B-min, B.6: antes recalculava alunos+stats de TODAS as turmas
+  // a cada render (inclusive ao só abrir/fechar uma turma) — O(turmas
+  // × alunos) repetido sem necessidade. Agora é uma passada só por turma.
+  const porTurma = useMemo(() => {
+    const mapa = new Map(turmas.map((t) => [t.id, { alunos: [], n: 0, questoes: 0, acerto: null, risco: 0 }]));
+    for (const a of alunos) {
+      for (const v of a.alunos_turmas ?? []) {
+        const entrada = mapa.get(v.turma_id);
+        if (entrada) entrada.alunos.push(a);
+      }
+    }
+    for (const entrada of mapa.values()) {
+      const linhas = entrada.alunos.map((a) => porAluno[a.id]).filter(Boolean);
+      const comAcc = linhas.filter((x) => x.acc != null);
+      entrada.n = entrada.alunos.length;
+      entrada.questoes = linhas.reduce((s, x) => s + x.q, 0);
+      entrada.acerto = comAcc.length ? Math.round(comAcc.reduce((s, x) => s + x.acc, 0) / comAcc.length) : null;
+      entrada.risco = linhas.filter((x) => x.semAtividade).length;
+    }
+    return mapa;
+  }, [turmas, alunos, porAluno]);
+  const vazia = { alunos: [], n: 0, questoes: 0, acerto: null, risco: 0 };
+  const alunosDaTurma = (turmaId) => (porTurma.get(turmaId) ?? vazia).alunos;
+  const statsTurma = (turmaId) => porTurma.get(turmaId) ?? vazia;
 
   // a escola gerencia as próprias turmas: renomear e excluir (Fase 10)
   async function renomear(t) {
