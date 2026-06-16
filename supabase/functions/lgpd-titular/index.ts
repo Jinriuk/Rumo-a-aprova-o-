@@ -48,6 +48,6 @@ Deno.serve(async (req) => {
     return json({ ok: true, contas_removidas: contas.length });
   } catch (e) {
     console.error("lgpd-titular:", e);
-    return json({ error: "falha no pedido do titular", detail: String(e?.message ?? e) }, 500);
+    return json({ error: "falha no pedido do titular" }, 500);
   }
 });

@@ -7,6 +7,7 @@ import React, { useState } from "react";
 import { SectionCard, EmptyState, Erro, StatusBadge } from "../../shared/ui/componentes.jsx";
 import { useTema } from "../../shared/branding/BrandingContext.jsx";
 import { L, PRIORIDADE, xpPorPrioridade, questoesSugeridas } from "./jargao.js";
+import { mensagemAmigavel } from "../../shared/lib/erros.js";
 import * as db from "../../shared/data/index.js";
 
 export function MetaSemana({ meta, trilha, podeEditar, aoMudar }) {
@@ -40,7 +41,7 @@ export function MetaSemana({ meta, trilha, podeEditar, aoMudar }) {
     try {
       await db.definirEstadoAtividade(item.id, novo);
       aoMudar?.();
-    } catch (e) { setErro(e.message); }
+    } catch (e) { setErro(mensagemAmigavel(e, "acao")); }
     setOcupado(null);
   }
 

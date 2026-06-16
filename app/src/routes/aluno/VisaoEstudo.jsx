@@ -22,6 +22,7 @@ import { RadarDesempenho } from "../../modules/desempenho/RadarDesempenho.jsx";
 import { NiveisPorMateria } from "../../modules/desempenho/Niveis.jsx";
 import { calcularMetricas } from "../../modules/desempenho/metricas.js";
 import { semanaAtual, fmtBR } from "../../shared/regras/regras.js";
+import { mensagemAmigavel } from "../../shared/lib/erros.js";
 import * as db from "../../shared/data/index.js";
 
 export function VisaoEstudo({ aluno, podeEditar, concurso = null, contexto = "Plano de estudos" }) {
@@ -40,7 +41,7 @@ export function VisaoEstudo({ aluno, podeEditar, concurso = null, contexto = "Pl
     let vivo = true;
     Promise.all([db.listarMetas(aluno.id), db.listarRegistros(aluno.id), db.listarSimulados(aluno.id)])
       .then(([metas, registros, simulados]) => vivo && setDados({ carregando: false, metas, registros, simulados, erro: null }))
-      .catch((e) => vivo && setDados((d) => ({ ...d, carregando: false, erro: e.message })));
+      .catch((e) => vivo && setDados((d) => ({ ...d, carregando: false, erro: mensagemAmigavel(e, "carregar") })));
     return () => { vivo = false; };
   }, [aluno?.id, versao]);
 

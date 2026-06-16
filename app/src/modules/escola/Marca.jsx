@@ -5,6 +5,7 @@ import React, { useState } from "react";
 import { SectionCard, Botao, Erro, useInputStyle } from "../../shared/ui/componentes.jsx";
 import { useTema, useBranding } from "../../shared/branding/BrandingContext.jsx";
 import { BASE, luminancia, garantirLegivel } from "../../shared/ui/tema.js";
+import { mensagemAmigavel } from "../../shared/lib/erros.js";
 import * as db from "../../shared/data/index.js";
 
 export function Marca({ escola, aoMudar }) {
@@ -30,7 +31,7 @@ export function Marca({ escola, aoMudar }) {
       aplicarMarca(marca); // aplica em TODO o sistema na hora, sem recarregar
       setOk(true);
       aoMudar?.();
-    } catch (e) { setErro(e.message); }
+    } catch (e) { setErro(mensagemAmigavel(e, "salvar")); }
     setOcupado(false);
   }
 

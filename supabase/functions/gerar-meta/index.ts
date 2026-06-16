@@ -30,6 +30,6 @@ Deno.serve(async (req) => {
     return json({ meta_id: data });
   } catch (e) {
     console.error("gerar-meta:", e);
-    return json({ error: "falha ao gerar meta", detail: String(e?.message ?? e) }, 500);
+    return json({ error: "falha ao gerar meta" }, 500);
   }
 });

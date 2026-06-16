@@ -25,6 +25,6 @@ Deno.serve(async (req) => {
     return json({ ok: true, resultado: data });
   } catch (e) {
     console.error("virar-semana:", e);
-    return json({ error: "falha na virada de semana", detail: String(e?.message ?? e) }, 500);
+    return json({ error: "falha na virada de semana" }, 500);
   }
 });

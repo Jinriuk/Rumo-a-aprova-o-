@@ -9,6 +9,7 @@ import { SectionCard, Empty, Erro, EmptyState, StatCard, Botao, useInputStyle } 
 import { useTema } from "../../shared/branding/BrandingContext.jsx";
 import { useRecurso } from "../../shared/hooks/useRecurso.js";
 import { nomeValido, limparNome } from "../../shared/validacao.js";
+import { mensagemAmigavel } from "../../shared/lib/erros.js";
 import * as db from "../../shared/data/index.js";
 
 const fmtData = (iso) => {
@@ -139,7 +140,7 @@ function NovaEscola({ aoCriar }) {
       });
       setF({ nome: "", slug: "", cidade: "", uf: "", plano: "", limite: "" });
       aoCriar?.();
-    } catch (e) { setErro(e.message); }
+    } catch (e) { setErro(mensagemAmigavel(e, "salvar")); }
     setOcupado(false);
   }
 
