@@ -14,6 +14,7 @@ import { MetaSemana } from "../../modules/motor/MetaSemana.jsx";
 import { Registrar } from "../../modules/motor/Registrar.jsx";
 import { Arquivo } from "../../modules/motor/Arquivo.jsx";
 import { Conquistas, ConquistasRecentes } from "../../modules/motor/Conquistas.jsx";
+import { TrilhaConcurso } from "../../modules/conteudo/TrilhaConcurso.jsx";
 import { calcularXP, patente } from "../../modules/motor/jargao.js";
 import { Progresso, Simulados } from "../../modules/desempenho/Progresso.jsx";
 import { InsightsDesempenho } from "../../modules/desempenho/Insights.jsx";
@@ -71,7 +72,7 @@ export function VisaoEstudo({ aluno, podeEditar, concurso = null, contexto = "Pl
   const xp = calcularXP({ metas: dados.metas, totalQuestoes: m?.totDone ?? 0, simulados: dados.simulados.length });
 
   const ABAS = [
-    ["hoje", "Hoje", null, "ancora"], ["registrar", "Registrar", null, "lapis"],
+    ["hoje", "Hoje", null, "ancora"], ["concurso", "Trilha", null, "escudo"], ["registrar", "Registrar", null, "lapis"],
     ["desempenho", "Desempenho", null, "grafico"], ["simulados", "Simulados", null, "alvo"],
     ["conquistas", "Conquistas", null, "medalha"], ["historico", "Histórico", null, "arquivo"], ["plano", "Plano", null, "mapa"],
   ].filter(([k]) => podeEditar || k !== "registrar").map(
@@ -105,6 +106,9 @@ export function VisaoEstudo({ aluno, podeEditar, concurso = null, contexto = "Pl
               </button>
             )}
           </div>
+        )}
+        {tab === "concurso" && (
+          <TrilhaConcurso examTag={concurso?.codigo ?? null} concursoNome={concurso?.nome ?? null} />
         )}
         {tab === "registrar" && podeEditar && (
           <Registrar aluno={aluno} trilha={trilha} registros={dados.registros}

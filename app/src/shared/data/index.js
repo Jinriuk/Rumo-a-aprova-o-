@@ -259,6 +259,22 @@ export async function carregarMissoes(examTag, { nivel } = {}) {
   return data;
 }
 
+// Plano pedagógico COMPLETO de um concurso (Fase 15.4), por exam_tag:
+// horizontes (trilha_planos), missões oficiais e os ajustes da escola
+// (estes isolados por RLS). É o ponto único que a UI usa para mostrar a
+// "trilha do concurso" do aluno — derivada do exam_tag dele, NUNCA de
+// uma trilha fixa. A montagem/regra de exibição fica em conteudo/missoes.js
+// (lógica pura), não aqui: o seam só busca.
+export async function carregarPlanoConcurso(examTag) {
+  if (!examTag) return { planos: [], missoes: [], ajustesEscola: [] };
+  const [planos, missoes, ajustesEscola] = await Promise.all([
+    carregarTrilhaPlanos(examTag),
+    carregarMissoes(examTag),
+    carregarMissoesEscola(examTag),
+  ]);
+  return { planos, missoes, ajustesEscola };
+}
+
 // Ajustes de missão da escola do usuário (isolado por RLS).
 export async function carregarMissoesEscola(examTag) {
   // junta o exam_tag via missões (a tabela de ajuste não tem exam_tag)

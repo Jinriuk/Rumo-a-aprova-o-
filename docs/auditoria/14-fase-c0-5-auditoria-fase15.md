@@ -1,7 +1,8 @@
 # Relatório Preliminar — Fase C0.5 (Bloco A): Auditoria da Fase 15 + estado do motor C0
 
-> **Status:** Bloco A (auditoria seca) **concluído**. Bloco B (rebuild destrutivo da base demo)
-> **NÃO executado** — aguarda autorização explícita e definição de ambiente (ver §11).
+> **Status:** Bloco A (auditoria seca) **concluído** + **fiação da Fase 15 ao runtime concluída**
+> (autorizada pelo usuário, não-destrutiva — §8). Bloco B (rebuild da base demo) e integração da
+> Fase C0 **NÃO executados** — aguardam autorização/decisão (ver §C0 e §11).
 >
 > Nenhum dado foi apagado. Nenhuma migration foi aplicada em ambiente remoto. Todo o trabalho de
 > runtime foi feito em um Postgres **local efêmero** (`/tmp/rumo_pg`, porta 54322), criado e
@@ -20,8 +21,8 @@
 | A Fase 15 está **conectada na UI**? | **Não.** Nenhuma tela do aluno nem da coordenação chama `carregarMissoes`, `carregarTrilhaPlanos`, `carregarEstruturaProva` ou `carregarConcursoPorTag`. É código **morto em runtime**. |
 | Novos alunos recebem **trilha correta por prova**? | **Não.** Todo aluno novo recebe a **trilha fixa CN ("Colégio Naval — CPACN/2026")**, independente do concurso-alvo. **Provado em runtime** (ver §A.5). |
 | O sistema reaproveita o **plano fixo do Lucas Demo**? | **Sim.** Existe uma única trilha (a do Lucas/CN) e `trilhaPadrao()` sempre devolve ela. O `concurso_id` é gravado no aluno mas **não influencia o plano/meta**. |
-| A **Fase C0** (motor de progresso persistido com ledger `aluno_eventos_progresso`) está presente? | **Não.** Não existe migration `motor_progresso` nem tabela `aluno_eventos_progresso` em nenhuma das branches. O que existe é a **Fase 15.5** (`aluno_xp_eventos`), com XP concedido **manualmente pela coordenação**, sem gatilho automático. Ver §C0. |
-| A C0 está **ativa na demo**? | **Não se aplica ainda** — a C0, como descrita no briefing, não está implantada neste repositório. |
+| A **Fase C0** (motor de progresso persistido com ledger `aluno_eventos_progresso`) está presente? | **Existe, mas NÃO mergeada.** Está pronta na branch `claude/demo-base-realista-auditoria-t5ji99` como `0022_motor_progresso.sql`, com **colisão de numeração** (no main, `0022` é `logs_coordenacao`). Não está nesta branch nem no main. Ver §C0 (atualizada). |
+| A C0 está **ativa na demo**? | **Não** — a migration C0 não está integrada na linha principal. Decisão pendente (não recriar do zero). |
 
 **Veredito do Bloco A:** a Fase 15 está *arquiteturalmente completa e testada no banco*, porém
 **pedagogicamente desconectada** do runtime. O sintoma relatado ("todo aluno vê o plano do Lucas
@@ -159,36 +160,105 @@ seed e fetcher já existem; falta **ligar**.
 
 ---
 
-## C0 — Estado do "motor C0" descrito no briefing
+## C0 — Estado do "motor C0" descrito no briefing (ATUALIZADO após investigação de branches)
 
 O briefing assume que a Fase C0 criou `aluno_eventos_progresso` (ledger), XP persistido com
 idempotência, patente derivada do XP persistido e migration `~0016_motor_progresso.sql`.
 
-**Achado:** **nada disso existe neste repositório** (nem em `claude/naval-system-build-g9h0t5`):
+**Achado inicial:** não está nesta branch (`phase-c0-5-audit-rebuild`) nem no main — migrations vão
+de `0001` a `0023`, e `0016` é `0016_painel_agregado.sql`.
 
-- Migrations vão de `0001` a `0023`; `0016` é `0016_painel_agregado.sql`. Não há `motor_progresso`.
-- Não há tabela `aluno_eventos_progresso`. `grep` por `aluno_eventos_progresso`/`motor_progresso`/
-  `ledger` não encontra a estrutura — a única menção a "ledger" é um **comentário** em
-  `gamificacao.js` referindo-se a `aluno_xp_eventos` (Fase 15.5).
-- A Fase 15.5 concede XP **manualmente** (`concederXp` exige papel `coordenacao`; "aluno não se
-  autopontua"), sem gatilho automático a partir de estudo/missão/simulado.
+**Achado após varrer todas as branches remotas (a pedido):** **a Fase C0 EXISTE e está bem
+construída**, porém em uma branch **não mergeada**:
+`origin/claude/demo-base-realista-auditoria-t5ji99`. Commits:
+`feat(progresso): motor mínimo persistido de progresso (Fase C0)` →
+`feat(progresso): renomeia migration 0016→0022 e adiciona E2E do motor` →
+`docs(progresso): relatório de validação da migration 0022 e E2E do motor`.
 
-**Implicação para o alerta de migração do briefing (§5):** não há migration C0 a renumerar — ela
-não está aqui. **Antes de qualquer Bloco B**, é preciso decidir: (a) a Fase C0 será (re)implementada
-nesta linha como `0024_motor_progresso.sql`, ou (b) o briefing aponta para um repositório/branch
-diferente do que está nesta sessão. **Não presumir** que C0 existe.
+A migration `0022_motor_progresso.sql` dessa branch cria:
+- tabela **`aluno_eventos_progresso`** (ledger) com índices e RLS;
+- funções `app.xp_por_prioridade`, `app.xp_simulado`, `app.desbloquear_conquista_basica`;
+- **gatilhos automáticos** `trg_progresso_registro`, `trg_progresso_missao`, `trg_progresso_simulado`
+  (XP nasce do estudo/missão/simulado — sem lançamento manual);
+- view de histórico (herda RLS), `app.backfill_progresso(escola)` para dados existentes;
+- policies (`evprog_select` por authenticated; `evprog_ajuste_coordenacao` por insert).
+
+### Problema de integração (exatamente o alerta do briefing §5)
+
+A branch C0 **ramificou em 0015** e **não contém as migrations 0016–0021** (painel_agregado,
+revokes, backoffice, logs_coordenacao). Ela numerou seu motor como `0022_motor_progresso.sql` — mas
+no main **`0022` já é `0022_logs_coordenacao.sql`** e o topo é `0023`. Logo:
+
+| | main / esta branch | branch C0 (`demo-base-realista-…`) |
+|---|---|---|
+| 0016–0021 | painel/backoffice/logs/índices | **ausentes** |
+| 0022 | `logs_coordenacao` | `motor_progresso` ← **colisão** |
+| 0023 | `indices_escala_coordenacao` | ausente |
+
+**Conclusão:** a C0 está "ausente" **por branch não mergeada + colisão de numeração**, e **não por
+nunca ter sido construída**. Conforme instrução do usuário ("se for ausência por branch/migration
+não mergeada, documente e pare para decisão antes de recriar C0 do zero"), **NÃO recriei a C0** e
+**NÃO a mergeei**. Recomendação para integração (decisão pendente):
+1. **Renomear** `0022_motor_progresso.sql` → **`0024_motor_progresso.sql`** (próximo após 0023);
+2. fazer cherry-pick/rebase dos 3 commits da branch C0 sobre o main atual (que já tem 0016–0021);
+3. revalidar `reset-db.sh` + testes + o E2E do motor que a branch trouxe;
+4. rodar `app.backfill_progresso` por escola para popular o ledger de dados já existentes.
+
+Isso fica para uma fase de integração própria (P0), **com sua autorização** — não foi executado aqui.
 
 ---
 
-## 9. Testes executados (Bloco A)
+## 8. Correções feitas — fiação da Fase 15 ao runtime (não-destrutivo)
+
+> Autorizado pelo usuário após o Bloco A: *"Ligar a Fase 15 primeiro, sem rebuild da base demo."*
+> Tudo em nível de código + validação em Postgres local. **Nenhuma migration aplicada em remoto,
+> nenhum dado apagado, RLS intacta.**
+
+**Princípio:** o plano/trilha que o aluno e a coordenação enxergam passa a vir do **`exam_tag` do
+próprio aluno** (derivado do concurso-alvo), lido de `trilha_planos`/`missoes` — nunca de uma trilha
+fixa. A regra de seleção fica na **lógica pura** (`conteudo/missoes.js`), não duplicada no front.
+
+| Arquivo | Mudança |
+|---|---|
+| `app/src/shared/data/index.js` | **+** `carregarPlanoConcurso(examTag)` — ponto único que busca `trilha_planos` + `missoes` + ajustes da escola (estes isolados por RLS). |
+| `app/src/modules/conteudo/missoes.js` | `montarMissoesDoAluno` agora aceita **`nivel` opcional** — sem nível, devolve todas as missões do alvo (visão "trilha do concurso"); anti-furo (`exam_tag`) e ajustes da escola continuam sempre. |
+| `app/src/modules/conteudo/TrilhaConcurso.jsx` | **novo** componente: renderiza horizontes da trilha + missões do concurso, com prioridade, matéria, critério, XP e badge de desvio da escola. Serve aluno e coordenação. |
+| `app/src/routes/aluno/VisaoEstudo.jsx` | **+** aba **"Trilha"** (`concurso`) renderizando `TrilhaConcurso` a partir de `concurso.codigo`. |
+| `app/src/modules/desempenho/FichaAluno.jsx` | **+** seção `TrilhaConcurso` (compacta): a coordenação vê o concurso-alvo **e** a trilha/missões reais por prova do aluno. |
+| `tests/trilha-concurso-db.test.mjs` | **novo** — 4 testes (DB + lógica) provando coerência/distinção por prova e que aluno novo de EPCAR recebe missões de EPCAR. |
+| `app/e2e/aluno.spec.js` | **+** navegação/asserção da aba "Trilha". |
+
+**O que NÃO foi tocado (de propósito):** o motor de `metas`/`atividades_modelo` (execução semanal)
+segue intacto — não foi refeito nem removido. A meta semanal legada ainda usa a trilha CN porque só
+há `atividades_modelo` de CN seedados; gerar metas semanais **por prova** exige seed de
+`atividades_modelo` por concurso (conteúdo) e é **pendência P1**, fora do escopo desta fiação. O
+sintoma central ("aluno vê o plano do Lucas") está resolvido na camada de **trilha/missões por
+concurso**, que é a leitura pedagógica que aluno e coordenação passam a ver.
+
+### Prova do conserto (runtime, Postgres local)
+
+Antes: aluno EPCAR recebia meta de CN. Agora, a aba "Trilha" do mesmo aluno (e a ficha na
+coordenação) lê por `exam_tag='epcar'`:
+
+```
+aluno NOVO de EPCAR → missões de EPCAR (ex.: "Redação que Pontua") · nenhuma missão de CN
+trilhas DISTINTAS por prova: CN e EPCAR não compartilham nenhuma missão
+cada um dos 5 concursos (cn/epcar/esa/eear/espcex): trilha + missões próprias e coerentes
+```
+
+(Testes `tests/trilha-concurso-db.test.mjs`, todos verdes.)
+
+---
+
+## 9. Testes executados (Bloco A + fiação)
 
 | Comando | Resultado |
 |---|---|
 | `bash tests/reset-db.sh` (Postgres local) | ✅ 23 migrations + seeds aplicados 2× sem erro |
-| `node --test` (tests/) | ✅ **184/184 passam** (unit + banco + isolamento RLS) |
+| `node --test` (tests/) | ✅ **188/188 passam** (unit + banco + isolamento RLS + 4 novos da fiação) |
 | SQL de simulação de cadastro por concurso | ✅ executado — evidência em §A.5 |
-| Build do front (`vite build`) | ⏳ não executado neste bloco (sem mudança de código ainda) |
-| Playwright/E2E | ⏳ não executado — exige Supabase real + GoTrue (seed 04); fora do escopo do Bloco A |
+| Build do front (`vite build`) | ✅ **verde** (922 módulos; só o aviso pré-existente de tamanho de chunk) |
+| Playwright/E2E | ⏳ não executado — exige Supabase real + GoTrue (seed 04). Aba "Trilha" adicionada à spec do aluno para quando rodar. |
 
 > Ambiente: container efêmero sem Supabase remoto configurado (sem variáveis de conexão). Por isso
 > a prova de runtime foi feita em Postgres local, que reproduz fielmente schema + RLS (os testes de
@@ -198,10 +268,13 @@ diferente do que está nesta sessão. **Não presumir** que C0 existe.
 
 ## 10. Pendências (priorizadas)
 
-- **P0 — Fiação Fase 15 → runtime.** Geração de plano por `exam_tag`; aluno e coordenação lendo
-  `trilha_planos`/`missoes` corretos. Sem isso, a venda "trilha por concurso" é falsa.
-- **P0 — Decidir sobre a Fase C0.** Ela não existe aqui. Definir se entra como `0024_motor_progresso`
-  ou se o briefing aponta para outro repo. Bloqueia "C0 ativa na demo".
+- ~~**P0 — Fiação Fase 15 → runtime.**~~ ✅ **FEITO** (§8): aluno e coordenação leem
+  `trilha_planos`/`missoes` por `exam_tag`; aluno novo não depende mais da trilha fixa do Lucas.
+- **P0 — Integrar a Fase C0.** Ela existe na branch `demo-base-realista-auditoria-t5ji99` mas não
+  está mergeada e colide na numeração (renomear p/ `0024_motor_progresso`, rebase sobre o main,
+  revalidar). **Documentado e parado para decisão** (§C0). Bloqueia "C0 ativa na demo".
+- **P1 — Meta semanal por prova.** A execução semanal (`metas`/`atividades_modelo`) ainda é CN-only;
+  gerar metas semanais por `exam_tag` exige seed de `atividades_modelo` por concurso (conteúdo).
 - **P1 — Seed pedagógico assimétrico.** EPCAR/ESA/EEAR sem `assuntos/subassuntos`/recorrência;
   preencher para a demo ser forte nos 5 concursos.
 - **P1 — Base demo poluída.** `Colégio Vitrine Naval` + `Curso Beta`; sem flag `demo` explícita
@@ -214,10 +287,13 @@ diferente do que está nesta sessão. **Não presumir** que C0 existe.
 
 ## 11. Decisão de prontidão e o que falta para o Bloco B
 
-- **Pode seguir para C1?** Não antes de resolver os dois P0.
-- **Base demo pronta para deck/reunião?** **Não ainda** — todo aluno mostra o plano do Lucas/CN.
-- **Ainda existe dependência do plano do Lucas?** **Sim** (causa única, §3).
-- **C0 ativa em runtime?** **Não** — C0 não está implantada neste repo.
+- **Pode seguir para C1?** Falta só **integrar a C0** (P0, decisão pendente) — a fiação da Fase 15
+  já está feita e testada.
+- **Base demo pronta para deck/reunião?** A **trilha por concurso** já aparece corretamente; falta
+  o rebuild da base demo (Bloco B, não autorizado ainda) e a integração da C0 para o "progresso".
+- **Ainda existe dependência do plano do Lucas?** Na **trilha/missões por concurso, NÃO** (resolvido,
+  §8). Na **meta semanal legada**, ainda sim (P1 — exige seed de `atividades_modelo` por prova).
+- **C0 ativa em runtime?** **Ainda não** — existe pronta na branch C0, aguardando integração (§C0).
 
 ### Por que paro aqui (conforme regra do briefing)
 

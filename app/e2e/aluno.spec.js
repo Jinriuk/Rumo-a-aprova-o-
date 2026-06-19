@@ -64,8 +64,11 @@ test("registro: tempo em formato livre é entendido (1h30)", async ({ page }) =>
   await expect(page.getByText(/90 minutos/)).toBeVisible();
 });
 
-test("navega por Desempenho, Simulados, Conquistas, Histórico e Plano", async ({ page }) => {
+test("navega por Trilha, Desempenho, Simulados, Conquistas, Histórico e Plano", async ({ page }) => {
   const erros = coletarErros(page);
+
+  await irParaAba(page, "Trilha");
+  await expect(page.getByText(/Trilha do concurso|Missões do seu concurso/).first()).toBeVisible();
 
   await irParaAba(page, "Desempenho");
   await expect(page.getByText(/Radar de bordo|Eficiência por setor|Inteligência incompleta/).first()).toBeVisible();

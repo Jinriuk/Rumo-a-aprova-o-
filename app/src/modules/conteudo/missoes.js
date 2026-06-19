@@ -80,11 +80,14 @@ function recorteOficial(missao) {
 
 /* Monta a lista final de missões do aluno: filtra pelo alvo, pelo
    nível, aplica os ajustes da escola e ordena. Junta tudo o que as
-   subfases anteriores cadastraram, respeitando a config oficial. */
+   subfases anteriores cadastraram, respeitando a config oficial.
+   `nivel` é OPCIONAL: omitido, devolve TODAS as missões do alvo
+   (visão "trilha do concurso", sem cortar por nível). A regra
+   anti-furo (exam_tag) e os ajustes da escola valem sempre. */
 export function montarMissoesDoAluno({ missoes = [], examTagAtivo, nivel, ajustesEscola = [] }) {
   const ajustePorMissao = new Map(ajustesEscola.map((a) => [a.missao_id, a]));
   return missoesDoAlvo(missoes, examTagAtivo)
-    .filter((m) => missoesParaNivel([m], nivel).length > 0)
+    .filter((m) => !nivel || missoesParaNivel([m], nivel).length > 0)
     .map((m) => aplicarAjusteEscola(m, ajustePorMissao.get(m.id)))
     .filter(Boolean)
     .sort((a, b) => (a.ordem ?? 0) - (b.ordem ?? 0));

@@ -9,6 +9,7 @@ import { useTrilha } from "../conteudo/useTrilha.js";
 import { useRecurso } from "../../shared/hooks/useRecurso.js";
 import { calcularMetricas } from "./metricas.js";
 import { ResumoResponsavel } from "./ResumoResponsavel.jsx";
+import { TrilhaConcurso } from "../conteudo/TrilhaConcurso.jsx";
 import { ListaRegistros } from "../../shared/ui/ListaRegistros.jsx";
 import { calcularXP, patente, fmtHoras } from "../motor/jargao.js";
 import { semanaAtual } from "../../shared/regras/regras.js";
@@ -80,6 +81,10 @@ export function FichaAluno({ aluno, concurso }) {
       {/* o corpo condensado: mesmo formato do responsável */}
       <ResumoResponsavel aluno={aluno} m={m} meta={meta} trilha={trilha}
         simulados={dados.simulados} semanaAtiva={semanaAtiva} concurso={concurso} />
+
+      {/* trilha/missões REAIS do concurso-alvo (Fase 15.4 ligada): a
+          coordenação vê o plano por prova do aluno, não uma trilha fixa. */}
+      <TrilhaConcurso examTag={concurso?.codigo ?? null} concursoNome={concurso?.nome ?? null} compacto />
 
       {/* histórico recente do que ele tem feito */}
       <SectionCard titulo="Últimos registros de estudo" sub="O que o aluno lançou mais recentemente." semPadding>
