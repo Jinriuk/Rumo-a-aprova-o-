@@ -138,7 +138,7 @@ export function ListaAlunos({ alunos, consentimentos, concursos = [], turmas = [
                     {r && (
                       <div className="num" style={{ fontSize: 11.5, color: T.sub, marginTop: 3 }}>
                         <b style={{ color: T.ink }}>{r.qSem}</b> questões (7d) · acerto{" "}
-                        <b style={{ color: r.acc == null ? T.sub : r.acc >= 70 ? T.green : r.acc >= 55 ? T.gold : T.red }}>{r.acc == null ? "—" : `${r.acc}%`}</b>
+                        <b style={{ color: r.accSem == null ? T.sub : r.accSem >= 70 ? T.green : r.accSem >= 55 ? T.gold : T.red }}>{r.accSem == null ? "—" : `${r.accSem}%`}</b>
                         {" · "}<b style={{ color: r.diasSem >= 3 ? T.ink : T.red }}>{r.diasSem}</b> dias
                         {r.consideradas > 0 && <> · meta <b style={{ color: r.feitas >= r.consideradas ? T.green : T.gold }}>{r.feitas}/{r.consideradas}</b></>}
                       </div>

@@ -205,7 +205,7 @@ function Turmas({ turmas, alunos, porAluno, aoMudar, aoVerRanking, aoVerAluno })
                               <div style={{ fontSize: 13.5, fontWeight: 700, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{a.nome}</div>
                               {r && (
                                 <div className="num" style={{ fontSize: 11, color: T.sub, marginTop: 1 }}>
-                                  {r.qSem} questões (7d) · acerto <b style={{ color: r.acc == null ? T.sub : r.acc >= 70 ? T.green : T.gold }}>{r.acc == null ? "—" : `${r.acc}%`}</b> · {r.diasSem} dias
+                                  {r.qSem} questões (7d) · acerto <b style={{ color: r.accSem == null ? T.sub : r.accSem >= 70 ? T.green : T.gold }}>{r.accSem == null ? "—" : `${r.accSem}%`}</b> · {r.diasSem} dias
                                   {r.semAtividade && <b style={{ color: T.red }}> · sem atividade</b>}
                                 </div>
                               )}
