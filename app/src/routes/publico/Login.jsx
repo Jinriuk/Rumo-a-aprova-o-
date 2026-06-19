@@ -33,9 +33,9 @@ export default function Login() {
   const pronto = modo === "codigo" ? db.normalizarCodigo(codigo).length >= 12 : email && senha;
 
   return (
-    <div style={{ background: `radial-gradient(1200px 600px at 50% -10%, ${T.bg2}, ${T.bg})`, minHeight: "100vh", color: T.ink, fontFamily: "Archivo, system-ui, sans-serif", display: "flex", alignItems: "center", justifyContent: "center", padding: 18 }}>
+    <div style={{ background: `repeating-linear-gradient(45deg, transparent, transparent 30px, rgba(30,58,85,0.25) 30px, rgba(30,58,85,0.25) 31px), repeating-linear-gradient(-45deg, transparent, transparent 30px, rgba(30,58,85,0.25) 30px, rgba(30,58,85,0.25) 31px), radial-gradient(1200px 600px at 50% -10%, ${T.bg2}, ${T.bg})`, minHeight: "100vh", color: T.ink, fontFamily: "Archivo, system-ui, sans-serif", display: "flex", alignItems: "center", justifyContent: "center", padding: 18 }}>
       <style>{FONTES_CSS}</style>
-      <div style={{ width: "100%", maxWidth: 380, background: T.card, border: `1px solid ${T.line}`, borderRadius: 16, padding: 22 }}>
+      <div style={{ width: "100%", maxWidth: 380, background: T.card, border: `1px solid ${T.line}`, borderTop: `4px solid ${T.gold}`, borderRadius: 16, padding: 22 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 16 }}>
           <div className="disp" style={{ width: 42, height: 42, borderRadius: 9, background: `linear-gradient(135deg,${T.gold},#9c7d2e)`, display: "flex", alignItems: "center", justifyContent: "center", color: "#0A1622", fontWeight: 700, fontSize: 20 }}>⚓</div>
           <div>
@@ -66,15 +66,15 @@ export default function Login() {
               <label style={{ fontSize: 12, color: T.sub, marginBottom: 6, display: "block", textTransform: "uppercase", letterSpacing: 0.4 }}>Código de acesso</label>
               <input value={codigo} autoComplete="off" autoCapitalize="characters"
                 onChange={(e) => { setCodigo(e.target.value.toUpperCase()); setErr(""); }}
-                placeholder="XXXX-XXXX-XXXX"
-                style={{ ...inputS, letterSpacing: 2, textAlign: "center", fontFamily: "monospace" }} />
+                placeholder="Ex.: LUCASDEMO2026"
+                style={{ ...inputS, letterSpacing: 1.5, textAlign: "center", fontFamily: "monospace" }} />
             </>
           ) : (
             <>
               <label style={{ fontSize: 12, color: T.sub, marginBottom: 6, display: "block", textTransform: "uppercase", letterSpacing: 0.4 }}>E-mail</label>
-              <input type="email" value={email} onChange={(e) => { setEmail(e.target.value); setErr(""); }} style={{ ...inputS, marginBottom: 12 }} />
+              <input type="email" value={email} placeholder="coordenacao@escola.com.br" onChange={(e) => { setEmail(e.target.value); setErr(""); }} style={{ ...inputS, marginBottom: 12 }} />
               <label style={{ fontSize: 12, color: T.sub, marginBottom: 6, display: "block", textTransform: "uppercase", letterSpacing: 0.4 }}>Senha</label>
-              <input type="password" value={senha} onChange={(e) => { setSenha(e.target.value); setErr(""); }} style={inputS} />
+              <input type="password" value={senha} placeholder="Senha de acesso" onChange={(e) => { setSenha(e.target.value); setErr(""); }} style={inputS} />
             </>
           )}
           {err && <div style={{ color: T.red, fontSize: 12.5, marginTop: 8 }}>{err}</div>}
