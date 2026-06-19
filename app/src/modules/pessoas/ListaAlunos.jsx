@@ -12,13 +12,13 @@ import * as db from "../../shared/data/index.js";
 
 const POR_PAGINA = 50; // Fase B-min, B.2 — escola com 300–500 alunos não renderiza tudo de uma vez
 
-export function ListaAlunos({ alunos, consentimentos, concursos = [], turmas = [], resumoPorAluno = {}, aoMudar, aoGerarCredencial, aoVerAluno }) {
+export function ListaAlunos({ alunos, consentimentos, concursos = [], turmas = [], resumoPorAluno = {}, aoMudar, aoGerarCredencial, aoVerAluno, filtroStatusInicial = "" }) {
   const T = useTema();
   const [erro, setErro] = useState(null);
   const [ocupado, setOcupado] = useState(null);
   const [busca, setBusca] = useState("");
   const [fTurma, setFTurma] = useState("");
-  const [fStatus, setFStatus] = useState("");
+  const [fStatus, setFStatus] = useState(filtroStatusInicial);
   const [pagina, setPagina] = useState(1);
   const comConsentimento = useMemo(() => new Set(consentimentos.map((c) => c.aluno_id)), [consentimentos]);
 
