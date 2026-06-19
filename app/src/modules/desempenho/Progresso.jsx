@@ -193,11 +193,13 @@ export function Simulados({ aluno, simulados, podeEditar, semanaAtiva, concurso,
     } catch (e) { setErro(mensagemAmigavel(e, "acao")); }
   }
 
-  const chart = simulados.map((s) => ({
-    label: fmtBR(String(s.data)),
-    nota: notaPct(prova, s.acertos),
-    tot: totalAcertos(prova, s.acertos),
-  }));
+  const chart = [...simulados]
+    .sort((a, b) => String(a.data).localeCompare(String(b.data)))
+    .map((s) => ({
+      label: fmtBR(String(s.data)),
+      nota: notaPct(prova, s.acertos),
+      tot: totalAcertos(prova, s.acertos),
+    }));
 
   const ultimo = simulados.length ? [...simulados].sort((a, b) => String(a.data).localeCompare(String(b.data)))[simulados.length - 1] : null;
   const evolucao = chart.length >= 2 ? chart[chart.length - 1].nota - chart[chart.length - 2].nota : null;
