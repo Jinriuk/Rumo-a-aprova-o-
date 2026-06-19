@@ -256,6 +256,21 @@ Após sua decisão ("reconciliar histórico" + "ligar o front ao ledger"), feito
 - **Pendente (remoto):** aplicar `0022_logs_coordenacao` + `0023_indices` no remoto (ausentes lá) —
   passos no runbook, **com sua autorização**. O motor já está no remoto; não reaplicar.
 
+### Investigação objeto-a-objeto (a pedido) — `docs/COMPARACAO_MIGRATIONS_REPO_REMOTO.md`
+
+Comparei migration a migration e verifiquei a existência de cada objeto no remoto. Confirmado:
+- **Faltam no remoto:** `0022_logs_coordenacao` (tabela `logs_coordenacao` + índice + 2 policies) e
+  `0023_indices_escala_coordenacao` (4 índices) — **todos AUSENTES**.
+- **Motor C0 completo no remoto:** `aluno_eventos_progresso`, `vw_aluno_xp_total`, 3 triggers e
+  `app.backfill_progresso` — **todos OK** (aplicado como `0022_motor_progresso`).
+- **Impacto real:** sem `logs_coordenacao`, a auditoria de coordenação (Fase A.8) está **inativa no
+  remoto**; sem os índices (Fase B-min), as consultas da coordenação por escola rodam sem índice
+  (gargalo a 300–500 alunos). Não é só cosmético.
+- **Sequenciamento (decisão do usuário):** ligar o front ao ledger fica **para depois** de aplicar
+  essas 2 migrations no remoto, para não misturar os dois problemas. A ligação já está na branch
+  (commit isolado, atrás de fallback seguro, nada no remoto) e pode ser revertida se preferir
+  separá-la até a reconciliação do remoto concluir.
+
 ---
 
 ## 8. Correções feitas — fiação da Fase 15 ao runtime (não-destrutivo)
