@@ -71,7 +71,7 @@ export default function AreaEscola({ perfil }) {
 
         <div className="fade" key={tab + (alunoAberto?.id ?? "")}>
           {erro && <Erro>{erro}</Erro>}
-          {carregando && <Empty txt="Carregando…" />}
+          {carregando && <Empty txt="Carregando dados da escola…" />}
 
           {!carregando && alunoAberto && (
             <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>

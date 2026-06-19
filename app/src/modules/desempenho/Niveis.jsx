@@ -45,7 +45,7 @@ export function NiveisPorMateria({ m, trilha, diasParaProva }) {
   const comDado = linhas.filter((l) => l.nivel);
   if (!comDado.length) {
     return (
-      <SectionCard titulo="Estimativa de nível por matéria" sub="Regra pedagógica da Fase 15">
+      <SectionCard titulo="Estimativa de nível por matéria" sub="Baseada em acerto e volume de questões resolvidas">
         <EmptyState icone="◔" titulo="Ainda sem evidência suficiente"
           dica="Resolva ao menos 20 questões por matéria para o sistema classificar seu nível com segurança — sem chutar." />
       </SectionCard>
@@ -54,7 +54,7 @@ export function NiveisPorMateria({ m, trilha, diasParaProva }) {
 
   return (
     <SectionCard titulo="Estimativa de nível por matéria"
-      sub="Classificação por desempenho (acerto + volume) — regra da Fase 15"
+      sub="Classificação por acerto e volume de questões resolvidas"
       acao={geral.nivel
         ? <StatusBadge tom={TOM_NIVEL[geral.nivel] ?? "neutro"}>Geral: {ROTULO_NIVEL[geral.nivel]}</StatusBadge>
         : <StatusBadge tom="neutro">Geral: a validar</StatusBadge>}>

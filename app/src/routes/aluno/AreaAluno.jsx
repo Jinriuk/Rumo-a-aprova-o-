@@ -59,7 +59,7 @@ export default function AreaAluno({ perfil }) {
       <Cabecalho subtitulo={subtitulo} diasProva={prova?.dias ?? null} nomeUsuario={perfil.usuario.nome} />
       <main className="com-sidebar" style={{ maxWidth: 1080, margin: "0 auto", padding: "18px max(16px, env(safe-area-inset-right)) calc(88px + env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left))" }}>
         {erro && <Erro>{erro}</Erro>}
-        {aluno === undefined && !erro && <Empty txt="Carregando…" />}
+        {aluno === undefined && !erro && <Empty txt="Preparando painel de estudos…" />}
         {aluno === null && <Empty txt="Sua conta não está ligada a um aluno. Fale com a coordenação." />}
         {aluno && <VisaoEstudo aluno={aluno} podeEditar concurso={concurso} contexto={concurso ? concurso.nome.split(" (")[0] : "Plano de estudos"} />}
       </main>

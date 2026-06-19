@@ -63,9 +63,9 @@ export function VisaoEstudo({ aluno, podeEditar, concurso = null, contexto = "Pl
     });
   }, [dados, trilha, semanaAtiva]);
 
-  if (carregandoTrilha || dados.carregando) return <Empty txt="Carregando…" />;
+  if (carregandoTrilha || dados.carregando) return <Empty txt="Carregando missão…" />;
   if (erroTrilha || dados.erro) return <Erro>{erroTrilha || dados.erro}</Erro>;
-  if (!trilha) return <Empty txt="Aluno sem trilha de estudo." />;
+  if (!trilha) return <Empty txt="Trilha de estudos não configurada — fale com a coordenação." />;
 
   const itensMeta = (meta?.meta_atividades ?? []);
   const pendentes = itensMeta.filter((x) => x.estado === "pendente").length;
