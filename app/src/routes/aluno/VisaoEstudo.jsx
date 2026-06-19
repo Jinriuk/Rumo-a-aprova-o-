@@ -14,6 +14,7 @@ import { MetaSemana } from "../../modules/motor/MetaSemana.jsx";
 import { Registrar } from "../../modules/motor/Registrar.jsx";
 import { Arquivo } from "../../modules/motor/Arquivo.jsx";
 import { Conquistas, ConquistasRecentes } from "../../modules/motor/Conquistas.jsx";
+import { TrilhaConcurso } from "../../modules/conteudo/TrilhaConcurso.jsx";
 import { calcularXP, patente } from "../../modules/motor/jargao.js";
 import { Progresso, Simulados } from "../../modules/desempenho/Progresso.jsx";
 import { InsightsDesempenho } from "../../modules/desempenho/Insights.jsx";
@@ -28,7 +29,7 @@ import * as db from "../../shared/data/index.js";
 export function VisaoEstudo({ aluno, podeEditar, concurso = null, contexto = "Plano de estudos" }) {
   const T = useTema();
   const [tab, setTab] = useState("hoje");
-  const [dados, setDados] = useState({ carregando: true, metas: [], registros: [], simulados: [], erro: null });
+  const [dados, setDados] = useState({ carregando: true, metas: [], registros: [], simulados: [], xpPersistido: null, erro: null });
   const { trilha, carregando: carregandoTrilha, erro: erroTrilha } = useTrilha(aluno?.trilha_id);
   const [versao, setVersao] = useState(0);
   const [minutosSugeridos, setMinutosSugeridos] = useState(0);
@@ -39,8 +40,8 @@ export function VisaoEstudo({ aluno, podeEditar, concurso = null, contexto = "Pl
   useEffect(() => {
     if (!aluno) return;
     let vivo = true;
-    Promise.all([db.listarMetas(aluno.id), db.listarRegistros(aluno.id), db.listarSimulados(aluno.id)])
-      .then(([metas, registros, simulados]) => vivo && setDados({ carregando: false, metas, registros, simulados, erro: null }))
+    Promise.all([db.listarMetas(aluno.id), db.listarRegistros(aluno.id), db.listarSimulados(aluno.id), db.carregarXpPersistido(aluno.id)])
+      .then(([metas, registros, simulados, xpPersistido]) => vivo && setDados({ carregando: false, metas, registros, simulados, xpPersistido, erro: null }))
       .catch((e) => vivo && setDados((d) => ({ ...d, carregando: false, erro: mensagemAmigavel(e, "carregar") })));
     return () => { vivo = false; };
   }, [aluno?.id, versao]);
@@ -68,10 +69,14 @@ export function VisaoEstudo({ aluno, podeEditar, concurso = null, contexto = "Pl
 
   const itensMeta = (meta?.meta_atividades ?? []);
   const pendentes = itensMeta.filter((x) => x.estado === "pendente").length;
-  const xp = calcularXP({ metas: dados.metas, totalQuestoes: m?.totDone ?? 0, simulados: dados.simulados.length });
+  // XP da FONTE DE VERDADE (ledger persistido, Fase C0). Se o aluno ainda
+  // não tem eventos (base nova/antes do backfill), cai na estimativa legada.
+  const xp = dados.xpPersistido?.eventos?.length
+    ? dados.xpPersistido.total
+    : calcularXP({ metas: dados.metas, totalQuestoes: m?.totDone ?? 0, simulados: dados.simulados.length });
 
   const ABAS = [
-    ["hoje", "Hoje", null, "ancora"], ["registrar", "Registrar", null, "lapis"],
+    ["hoje", "Hoje", null, "ancora"], ["concurso", "Trilha", null, "escudo"], ["registrar", "Registrar", null, "lapis"],
     ["desempenho", "Desempenho", null, "grafico"], ["simulados", "Simulados", null, "alvo"],
     ["conquistas", "Conquistas", null, "medalha"], ["historico", "Histórico", null, "arquivo"], ["plano", "Plano", null, "mapa"],
   ].filter(([k]) => podeEditar || k !== "registrar").map(
@@ -105,6 +110,9 @@ export function VisaoEstudo({ aluno, podeEditar, concurso = null, contexto = "Pl
               </button>
             )}
           </div>
+        )}
+        {tab === "concurso" && (
+          <TrilhaConcurso examTag={concurso?.codigo ?? null} concursoNome={concurso?.nome ?? null} />
         )}
         {tab === "registrar" && podeEditar && (
           <Registrar aluno={aluno} trilha={trilha} registros={dados.registros}

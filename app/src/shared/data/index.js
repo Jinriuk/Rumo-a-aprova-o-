@@ -259,6 +259,22 @@ export async function carregarMissoes(examTag, { nivel } = {}) {
   return data;
 }
 
+// Plano pedagógico COMPLETO de um concurso (Fase 15.4), por exam_tag:
+// horizontes (trilha_planos), missões oficiais e os ajustes da escola
+// (estes isolados por RLS). É o ponto único que a UI usa para mostrar a
+// "trilha do concurso" do aluno — derivada do exam_tag dele, NUNCA de
+// uma trilha fixa. A montagem/regra de exibição fica em conteudo/missoes.js
+// (lógica pura), não aqui: o seam só busca.
+export async function carregarPlanoConcurso(examTag) {
+  if (!examTag) return { planos: [], missoes: [], ajustesEscola: [] };
+  const [planos, missoes, ajustesEscola] = await Promise.all([
+    carregarTrilhaPlanos(examTag),
+    carregarMissoes(examTag),
+    carregarMissoesEscola(examTag),
+  ]);
+  return { planos, missoes, ajustesEscola };
+}
+
 // Ajustes de missão da escola do usuário (isolado por RLS).
 export async function carregarMissoesEscola(examTag) {
   // junta o exam_tag via missões (a tabela de ajuste não tem exam_tag)
@@ -331,6 +347,53 @@ export async function desbloquearConquista({ alunoId, examTag, conquistaId }) {
     .select().single();
   if (error) throw falha("desbloquear conquista", error);
   return data;
+}
+
+/* ---------- motor de progresso persistido (Fase C0) ---------- */
+
+// Rollout em fases: se a migration 0024 não estiver aplicada num
+// ambiente (ex.: demo antiga), a tabela não existe. Aqui o motor é
+// ADITIVO: se a leitura falhar (tabela ausente), degrada para vazio e o
+// front cai na estimativa legada — não derruba a tela. Erro fica no
+// console para diagnóstico. Quando 0024 existe, a leitura é normal.
+function tabelaInexistente(error) {
+  const c = error?.code || error?.causa?.code;
+  return c === "42P01" || c === "PGRST205" || /does not exist|could not find the table/i.test(error?.message || "");
+}
+
+// Eventos de progresso do aluno (ledger real). A RLS decide o que sai:
+// aluno vê o próprio, coordenação a escola, responsável o vinculado.
+// O aluno NÃO escreve aqui — quem grava é o gatilho no servidor.
+export async function carregarEventosProgresso(alunoId, { limite = 50 } = {}) {
+  const { data, error } = await supabase
+    .from("aluno_eventos_progresso")
+    .select("*")
+    .eq("aluno_id", alunoId)
+    .order("criado_em", { ascending: false })
+    .limit(limite);
+  if (error) {
+    if (tabelaInexistente(error)) { console.warn("motor de progresso ainda não migrado neste ambiente"); return []; }
+    throw falha("eventos de progresso", error);
+  }
+  return data;
+}
+
+// XP persistido do aluno: soma do ledger (todos os eventos válidos).
+// Devolve { eventos, total } — o total é a verdade; patente deriva dele.
+export async function carregarXpPersistido(alunoId) {
+  const { data, error } = await supabase
+    .from("aluno_eventos_progresso")
+    .select("xp_delta, status, tipo_evento")
+    .eq("aluno_id", alunoId);
+  if (error) {
+    if (tabelaInexistente(error)) { console.warn("motor de progresso ainda não migrado neste ambiente"); return { eventos: [], total: 0 }; }
+    throw falha("XP persistido", error);
+  }
+  const total = (data ?? []).reduce(
+    (a, e) => a + (e.status === "estornado" ? 0 : (+e.xp_delta || 0)),
+    0,
+  );
+  return { eventos: data ?? [], total };
 }
 
 /* ---------- pessoas ---------- */
