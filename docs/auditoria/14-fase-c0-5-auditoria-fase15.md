@@ -206,6 +206,38 @@ não mergeada, documente e pare para decisão antes de recriar C0 do zero"), **N
 
 Isso fica para uma fase de integração própria (P0), **com sua autorização** — não foi executado aqui.
 
+### ⚠️ Estado REAL do Supabase remoto (leitura via MCP — projeto `Rumo-a-aprova-o-` / `bdjkgrzfzoamchdpobbl`)
+
+Com o Supabase conectado, li (somente leitura) as migrations e tabelas do projeto remoto. O quadro
+muda e **exige decisão antes de qualquer migration**:
+
+- **A Fase C0 JÁ ESTÁ APLICADA no remoto.** A migration `0022_motor_progresso` consta como aplicada
+  em **2026-06-19**, e a tabela **`aluno_eventos_progresso` existe com 346 linhas** — o ledger está
+  vivo e populado no banco remoto.
+- **O remoto DIVERGIU do main do repositório.** O remoto **não tem** `0022_logs_coordenacao` nem
+  `0023_indices_escala_coordenacao` (a tabela `logs_coordenacao` **não existe** lá); o main **não
+  tem** `0022_motor_progresso`. Ou seja, o número `0022` aponta para migrations **diferentes** em
+  cada lado.
+
+| Migration | Repo / main | Supabase remoto |
+|---|:--:|:--:|
+| 0016–0021 (painel, backoffice, revokes) | ✅ | ✅ |
+| `0022_logs_coordenacao` | ✅ | ❌ **ausente** (tabela `logs_coordenacao` não existe) |
+| `0023_indices_escala_coordenacao` | ✅ | ❌ **ausente** |
+| `0022_motor_progresso` (C0, ledger) | ❌ (só na branch C0) | ✅ **aplicada, 346 eventos** |
+
+**Implicações:**
+1. Minha fiação da Fase 15 (§8) é **front-only** e **compatível com o remoto** — lê
+   `trilha_planos` (12) e `missoes` (8), que já existem lá. Nada a migrar para ela funcionar.
+2. A C0 está ativa no **banco** remoto, mas o **front ainda NÃO usa o ledger**: o XP da UI é
+   calculado por `jargao.js` (a partir de metas/simulados), ignorando `aluno_eventos_progresso`.
+   É o **"fallback legado mascarando o ledger"** que o briefing alerta — ligar o front ao ledger é
+   um próximo passo (depende da reconciliação abaixo).
+3. **NÃO aplicar nada** até reconciliar a numeração. Proposta (a decidir, não executada):
+   renomear o motor para **`0024_motor_progresso`** no repositório; trazer `logs_coordenacao` e os
+   índices `0022/0023` para o remoto; alinhar o histórico para crescente e reproduzível em ambos os
+   lados **antes** de qualquer Bloco B. Como há divergência, **paro e proponho** (regra §5/§13).
+
 ---
 
 ## 8. Correções feitas — fiação da Fase 15 ao runtime (não-destrutivo)
