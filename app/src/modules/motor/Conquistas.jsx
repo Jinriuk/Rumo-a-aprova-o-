@@ -62,7 +62,7 @@ export function Conquistas({ nome, xp, m, metas, simulados }) {
   const conquistas = catalogoConquistas({ m, metas, simulados });
   const desbloqueadas = conquistas.filter((c) => c.atual >= c.alvo).length;
   const grupos = [...new Set(conquistas.map((c) => c.grupo))];
-  const gIconeDe = (g) => conquistas.find((c) => c.grupo === g)?.gIcone ?? “estrela”;
+  const gIconeDe = (g) => conquistas.find((c) => c.grupo === g)?.gIcone ?? "estrela";
   const [verCarreira, setVerCarreira] = useState(false);
   const [gruposExpandidos, setGruposExpandidos] = useState(new Set());
 
@@ -72,72 +72,72 @@ export function Conquistas({ nome, xp, m, metas, simulados }) {
   const patentesVisiveis = verCarreira ? PATENTES : PATENTES.slice(inicioJanela, fimJanela);
 
   return (
-    <div style={{ display: “flex”, flexDirection: “column”, gap: 18 }}>
+    <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
       {/* ===== HERO: patente atual com insígnia ===== */}
-      <div style={{ position: “relative”, overflow: “hidden”, background: `linear-gradient(135deg, ${T.cardHi}, ${T.card})`, border: `1.5px solid ${T.gold}55`, borderRadius: 16, padding: “24px 18px 20px”, textAlign: “center” }}>
-        <div style={{ position: “absolute”, inset: 0, background: `radial-gradient(circle at 50% -20%, ${T.gold}22, transparent 60%)`, pointerEvents: “none” }} />
-        <div style={{ display: “flex”, justifyContent: “center” }}>
+      <div style={{ position: "relative", overflow: "hidden", background: `linear-gradient(135deg, ${T.cardHi}, ${T.card})`, border: `1.5px solid ${T.gold}55`, borderRadius: 16, padding: "24px 18px 20px", textAlign: "center" }}>
+        <div style={{ position: "absolute", inset: 0, background: `radial-gradient(circle at 50% -20%, ${T.gold}22, transparent 60%)`, pointerEvents: "none" }} />
+        <div style={{ display: "flex", justifyContent: "center" }}>
           <Insignia patente={p} tam={92} />
         </div>
-        <div className=”disp” style={{ fontSize: 23, fontWeight: 800, marginTop: 12 }}>{p.nome} {nome}</div>
+        <div className="disp" style={{ fontSize: 23, fontWeight: 800, marginTop: 12 }}>{p.nome} {nome}</div>
         <div style={{ fontSize: 13, color: T.sub, marginTop: 4 }}>
-          nível {p.nivel} de {PATENTES.length} · {p.faixa === “oficial” ? “Oficialato” : “Praças”}
+          nível {p.nivel} de {PATENTES.length} · {p.faixa === "oficial" ? "Oficialato" : "Praças"}
         </div>
-        {p.lema && <div style={{ fontSize: 12.5, color: T.gold, marginTop: 6, fontStyle: “italic”, maxWidth: 360, marginInline: “auto” }}>”{p.lema}”</div>}
+        {p.lema && <div style={{ fontSize: 12.5, color: T.gold, marginTop: 6, fontStyle: "italic", maxWidth: 360, marginInline: "auto" }}>"{p.lema}"</div>}
 
         {p.proxXp != null && (
-          <div style={{ maxWidth: 420, margin: “14px auto 0” }}>
+          <div style={{ maxWidth: 420, margin: "14px auto 0" }}>
             <BarraXP pct={p.pctProx} alt={9} />
             <div style={{ fontSize: 12, color: T.sub, marginTop: 6 }}>
-              faltam <b className=”num” style={{ color: T.gold }}>{(p.proxXp - xp).toLocaleString(“pt-BR”)} XP</b> para <b style={{ color: T.ink }}>{p.proxNome}</b>
+              faltam <b className="num" style={{ color: T.gold }}>{(p.proxXp - xp).toLocaleString("pt-BR")} XP</b> para <b style={{ color: T.ink }}>{p.proxNome}</b>
             </div>
           </div>
         )}
 
-        <div style={{ display: “flex”, justifyContent: “center”, gap: 26, marginTop: 16, flexWrap: “wrap” }}>
+        <div style={{ display: "flex", justifyContent: "center", gap: 26, marginTop: 16, flexWrap: "wrap" }}>
           {[
-            [“XP total”, xp.toLocaleString(“pt-BR”)],
-            [“Conquistas”, `${desbloqueadas}/${conquistas.length}`],
-            [“Ofensiva”, `${m.streak} ${m.streak === 1 ? “dia” : “dias”}`],
+            ["XP total", xp.toLocaleString("pt-BR")],
+            ["Conquistas", `${desbloqueadas}/${conquistas.length}`],
+            ["Ofensiva", `${m.streak} ${m.streak === 1 ? "dia" : "dias"}`],
           ].map(([r, v]) => (
             <div key={r}>
-              <div className=”num disp” style={{ fontSize: 21, fontWeight: 800, color: T.gold }}>{v}</div>
-              <div style={{ fontSize: 10.5, color: T.sub, textTransform: “uppercase”, letterSpacing: 0.6, marginTop: 2 }}>{r}</div>
+              <div className="num disp" style={{ fontSize: 21, fontWeight: 800, color: T.gold }}>{v}</div>
+              <div style={{ fontSize: 10.5, color: T.sub, textTransform: "uppercase", letterSpacing: 0.6, marginTop: 2 }}>{r}</div>
             </div>
           ))}
         </div>
       </div>
 
       {/* ===== EVOLUÇÃO DE PATENTES ===== */}
-      <div style={{ background: T.card, border: `1px solid ${T.line}`, borderRadius: 16, overflow: “hidden” }}>
-        <div style={{ padding: “15px 18px”, borderBottom: `1px solid ${T.line}` }}>
-          <div className=”disp” style={{ fontSize: 17, fontWeight: 700 }}>Evolução de patentes</div>
+      <div style={{ background: T.card, border: `1px solid ${T.line}`, borderRadius: 16, overflow: "hidden" }}>
+        <div style={{ padding: "15px 18px", borderBottom: `1px solid ${T.line}` }}>
+          <div className="disp" style={{ fontSize: 17, fontWeight: 700 }}>Evolução de patentes</div>
           <div style={{ fontSize: 12.5, color: T.sub, marginTop: 3 }}>Praças sobem por chevrons; oficiais, por estrelas. Cada patente vem de XP — e XP só vem de estudo real.</div>
         </div>
-        <div style={{ display: “grid”, gridTemplateColumns: “repeat(auto-fill,minmax(260px,1fr))” }}>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(260px,1fr))" }}>
           {patentesVisiveis.map((pt, idx) => {
             const i = verCarreira ? idx : inicioJanela + idx;
             const ok = xp >= pt.xp;
             const atual = p.nivel === i + 1;
             return (
-              <div key={pt.nome} style={{ display: “flex”, alignItems: “center”, gap: 13, padding: “13px 18px”, borderBottom: `1px solid ${T.line}`, background: atual ? `linear-gradient(90deg, ${T.gold}14, transparent)` : “transparent”, borderLeft: `3px solid ${atual ? T.gold : “transparent”}` }}>
+              <div key={pt.nome} style={{ display: "flex", alignItems: "center", gap: 13, padding: "13px 18px", borderBottom: `1px solid ${T.line}`, background: atual ? `linear-gradient(90deg, ${T.gold}14, transparent)` : "transparent", borderLeft: `3px solid ${atual ? T.gold : "transparent"}` }}>
                 <Insignia patente={pt} tam={38} bloqueada={!ok} />
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <div className=”disp” style={{ fontSize: 15, fontWeight: 700, color: ok ? T.ink : T.sub }}>
+                  <div className="disp" style={{ fontSize: 15, fontWeight: 700, color: ok ? T.ink : T.sub }}>
                     {pt.nome}
-                    {atual && <span style={{ fontSize: 9.5, color: “#0A1622”, background: T.gold, fontWeight: 800, textTransform: “uppercase”, letterSpacing: 0.5, marginLeft: 8, borderRadius: 5, padding: “2px 7px”, verticalAlign: “2px” }}>atual</span>}
+                    {atual && <span style={{ fontSize: 9.5, color: "#0A1622", background: T.gold, fontWeight: 800, textTransform: "uppercase", letterSpacing: 0.5, marginLeft: 8, borderRadius: 5, padding: "2px 7px", verticalAlign: "2px" }}>atual</span>}
                   </div>
-                  <div className=”num” style={{ fontSize: 11.5, color: T.sub, marginTop: 1 }}>
-                    nível {i + 1} · {pt.xp.toLocaleString(“pt-BR”)} XP{!ok && <> · <span style={{ color: T.gold }}>faltam {(pt.xp - xp).toLocaleString(“pt-BR”)}</span></>}
+                  <div className="num" style={{ fontSize: 11.5, color: T.sub, marginTop: 1 }}>
+                    nível {i + 1} · {pt.xp.toLocaleString("pt-BR")} XP{!ok && <> · <span style={{ color: T.gold }}>faltam {(pt.xp - xp).toLocaleString("pt-BR")}</span></>}
                   </div>
                 </div>
               </div>
             );
           })}
         </div>
-        <div style={{ padding: “11px 18px”, borderTop: `1px solid ${T.line}` }}>
+        <div style={{ padding: "11px 18px", borderTop: `1px solid ${T.line}` }}>
           <button onClick={() => setVerCarreira((v) => !v)}
-            style={{ border: “none”, background: “transparent”, color: T.gold, fontSize: 13, fontWeight: 700, padding: 0, cursor: “pointer” }}>
+            style={{ border: "none", background: "transparent", color: T.gold, fontSize: 13, fontWeight: 700, padding: 0, cursor: "pointer" }}>
             {verCarreira ? `▴ Mostrar só minha posição` : `▾ Ver carreira completa (${PATENTES.length} patentes)`}
           </button>
         </div>
@@ -156,36 +156,36 @@ export function Conquistas({ nome, xp, m, metas, simulados }) {
         const restantes = bloq.length - (expandido ? 0 : Math.min(1, bloq.length));
 
         return (
-          <div key={g} style={{ background: T.card, border: `1px solid ${T.line}`, borderRadius: 16, overflow: “hidden” }}>
-            <div style={{ display: “flex”, alignItems: “center”, gap: 10, padding: “14px 18px”, borderBottom: `1px solid ${T.line}` }}>
+          <div key={g} style={{ background: T.card, border: `1px solid ${T.line}`, borderRadius: 16, overflow: "hidden" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "14px 18px", borderBottom: `1px solid ${T.line}` }}>
               <span style={{ color: T.gold }}><Icone nome={gIconeDe(g)} tam={19} /></span>
-              <div className=”disp” style={{ fontSize: 17, fontWeight: 700, flex: 1 }}>{g}</div>
-              <span className=”num” style={{ fontSize: 12, fontWeight: 700, color: okGrupo ? T.gold : T.sub, border: `1px solid ${okGrupo ? T.gold + “55” : T.line}`, background: okGrupo ? `${T.gold}12` : “transparent”, borderRadius: 8, padding: “3px 10px” }}>
+              <div className="disp" style={{ fontSize: 17, fontWeight: 700, flex: 1 }}>{g}</div>
+              <span className="num" style={{ fontSize: 12, fontWeight: 700, color: okGrupo ? T.gold : T.sub, border: `1px solid ${okGrupo ? T.gold + "55" : T.line}`, background: okGrupo ? `${T.gold}12` : "transparent", borderRadius: 8, padding: "3px 10px" }}>
                 {okGrupo}/{doGrupo.length}
               </span>
             </div>
-            <div style={{ display: “grid”, gridTemplateColumns: “repeat(auto-fill,minmax(260px,1fr))”, gap: 0 }}>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(260px,1fr))", gap: 0 }}>
               {visiveis.map((c) => {
                 const ok = c.atual >= c.alvo;
                 const pct = Math.min(100, Math.round((c.atual / c.alvo) * 100));
                 return (
-                  <div key={c.nome} style={{ display: “flex”, gap: 14, alignItems: “center”, padding: “16px 18px”, borderBottom: `1px solid ${T.line}` }}>
+                  <div key={c.nome} style={{ display: "flex", gap: 14, alignItems: "center", padding: "16px 18px", borderBottom: `1px solid ${T.line}` }}>
                     <Medalhao icone={c.icone} ok={ok} T={T} />
                     <div style={{ flex: 1, minWidth: 0 }}>
-                      <div className=”disp” style={{ fontSize: 15, fontWeight: 700, color: ok ? T.gold : T.ink, display: “flex”, alignItems: “center”, gap: 6, flexWrap: “wrap” }}>
-                        {c.nome} {ok && <Icone nome=”check” tam={14} grosso={3} />}
+                      <div className="disp" style={{ fontSize: 15, fontWeight: 700, color: ok ? T.gold : T.ink, display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
+                        {c.nome} {ok && <Icone nome="check" tam={14} grosso={3} />}
                         <SeloRaridade raridade={c.raridade} />
                       </div>
                       <div style={{ fontSize: 12.5, color: T.sub, lineHeight: 1.45, marginTop: 2 }}>{c.req}</div>
                       {!ok ? (
                         <div style={{ marginTop: 8 }}>
                           <BarraXP pct={pct} alt={5} brilho={false} />
-                          <div className=”num” style={{ fontSize: 11, color: T.sub, marginTop: 4 }}>
-                            {c.atual.toLocaleString(“pt-BR”)}{c.sufixo ?? “”} de {c.alvo.toLocaleString(“pt-BR”)}{c.sufixo ?? “”} · <b style={{ color: T.gold }}>{pct}%</b>
+                          <div className="num" style={{ fontSize: 11, color: T.sub, marginTop: 4 }}>
+                            {c.atual.toLocaleString("pt-BR")}{c.sufixo ?? ""} de {c.alvo.toLocaleString("pt-BR")}{c.sufixo ?? ""} · <b style={{ color: T.gold }}>{pct}%</b>
                           </div>
                         </div>
                       ) : (
-                        <div style={{ fontSize: 11, color: T.green, fontWeight: 700, marginTop: 5, textTransform: “uppercase”, letterSpacing: 0.5 }}>✓ Desbloqueada</div>
+                        <div style={{ fontSize: 11, color: T.green, fontWeight: 700, marginTop: 5, textTransform: "uppercase", letterSpacing: 0.5 }}>✓ Desbloqueada</div>
                       )}
                     </div>
                   </div>
@@ -193,15 +193,15 @@ export function Conquistas({ nome, xp, m, metas, simulados }) {
               })}
             </div>
             {(restantes > 0 || expandido) && (
-              <div style={{ padding: “11px 18px”, borderTop: `1px solid ${T.line}` }}>
+              <div style={{ padding: "11px 18px", borderTop: `1px solid ${T.line}` }}>
                 <button
                   onClick={() => setGruposExpandidos((prev) => {
                     const next = new Set(prev);
                     if (next.has(g)) next.delete(g); else next.add(g);
                     return next;
                   })}
-                  style={{ border: “none”, background: “transparent”, color: T.gold, fontSize: 13, fontWeight: 700, padding: 0, cursor: “pointer” }}>
-                  {expandido ? “▴ Ver menos” : `▾ Ver mais (${restantes} ${restantes === 1 ? “conquista” : “conquistas”})`}
+                  style={{ border: "none", background: "transparent", color: T.gold, fontSize: 13, fontWeight: 700, padding: 0, cursor: "pointer" }}>
+                  {expandido ? "▴ Ver menos" : `▾ Ver mais (${restantes} ${restantes === 1 ? "conquista" : "conquistas"})`}
                 </button>
               </div>
             )}

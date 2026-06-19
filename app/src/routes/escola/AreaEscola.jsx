@@ -22,6 +22,7 @@ const VAZIO = { turmas: [], alunos: [], consentimentos: [], logs: [], trilha: nu
 export default function AreaEscola({ perfil }) {
   const T = useTema();
   const [tab, setTab] = useState("painel");
+  const [filtroAlunosStatus, setFiltroAlunosStatus] = useState("");
   const { dados: carregado, carregando, erro, recarregar } = useRecurso(
     () => Promise.all([
       db.listarTurmas(), db.listarAlunos(), db.listarConsentimentos(), db.listarLogsAcesso(),
@@ -37,7 +38,8 @@ export default function AreaEscola({ perfil }) {
   const aoTopo = () => window.scrollTo({ top: 0, left: 0, behavior: "instant" });
   useEffect(aoTopo, []); // entrar no sistema = nascer no topo
 
-  function irPara(t) { setTab(t); setAlunoAberto(null); aoTopo(); }
+  function irPara(t) { setFiltroAlunosStatus(""); setTab(t); setAlunoAberto(null); aoTopo(); }
+  function irParaFiltrado(tab, filtro) { setFiltroAlunosStatus(filtro ?? ""); setTab(tab); setAlunoAberto(null); aoTopo(); }
 
   function verAluno(aluno) {
     setAlunoAberto(aluno);
@@ -79,7 +81,7 @@ export default function AreaEscola({ perfil }) {
           )}
 
           {!carregando && !alunoAberto && tab === "painel" && (
-            <PainelGestao resumo={resumoLista} aoIr={irPara} />
+            <PainelGestao resumo={resumoLista} aoIr={irPara} aoIrFiltrado={irParaFiltrado} />
           )}
 
           {!carregando && !alunoAberto && tab === "alunos" && (
@@ -87,7 +89,8 @@ export default function AreaEscola({ perfil }) {
               <NovosAlunos turmas={dados.turmas} trilhaPadrao={dados.trilha} concursos={dados.concursos} aoMudar={recarregar} />
               <ListaAlunos alunos={dados.alunos} consentimentos={dados.consentimentos} concursos={dados.concursos}
                 turmas={dados.turmas} resumoPorAluno={resumoPorAluno}
-                aoMudar={recarregar} aoGerarCredencial={setCredencial} aoVerAluno={verAluno} />
+                aoMudar={recarregar} aoGerarCredencial={setCredencial} aoVerAluno={verAluno}
+                filtroStatusInicial={filtroAlunosStatus} />
             </div>
           )}
 
