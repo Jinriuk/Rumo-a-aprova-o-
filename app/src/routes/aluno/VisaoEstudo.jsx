@@ -100,7 +100,7 @@ export function VisaoEstudo({ aluno, podeEditar, concurso = null, contexto = "Pl
           <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
             <FaixaAspirante nome={aluno.nome.split(" ")[0]} contexto={contexto} xp={xp} streak={m?.streak ?? 0}
               aoAbrirConquistas={() => irAba("conquistas")} />
-            <MissaoAtual meta={meta} trilha={trilha} m={m} />
+            <MissaoAtual meta={meta} trilha={trilha} m={m} aoAvancar={podeEditar ? irAba : undefined} />
             <MetaSemana meta={meta} trilha={trilha} podeEditar={podeEditar} aoMudar={recarregar} />
             {m && <ConquistasRecentes m={m} metas={dados.metas} simulados={dados.simulados} aoAbrir={() => irAba("conquistas")} />}
             {podeEditar && (
@@ -121,10 +121,10 @@ export function VisaoEstudo({ aluno, podeEditar, concurso = null, contexto = "Pl
         {tab === "desempenho" && (
           <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
             {m && <InsightsDesempenho m={m} />}
-            <NiveisPorMateria m={m} trilha={trilha} />
-            <RadarDesempenho m={m} trilha={trilha} aoRegistrar={podeEditar ? () => irAba("registrar") : null} />
-            <Acumulado registros={dados.registros} trilha={trilha} />
             <Progresso registros={dados.registros} trilha={trilha} />
+            <RadarDesempenho m={m} trilha={trilha} aoRegistrar={podeEditar ? () => irAba("registrar") : null} />
+            <NiveisPorMateria m={m} trilha={trilha} />
+            <Acumulado registros={dados.registros} trilha={trilha} />
           </div>
         )}
         {tab === "simulados" && (
