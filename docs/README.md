@@ -64,5 +64,6 @@ Auditoria multivisão (12 perspectivas) + auditorias de fase. Índice próprio e
 
 - [relatorio-fase-a.md](./relatorios/relatorio-fase-a.md)
 - [relatorio-fase-b-min.md](./relatorios/relatorio-fase-b-min.md)
+- [relatorio-fase-r-higienizacao-branches.md](./relatorios/relatorio-fase-r-higienizacao-branches.md)
 - [RECONCILIACAO_MIGRATIONS_C0.md](./relatorios/RECONCILIACAO_MIGRATIONS_C0.md)
 - [COMPARACAO_MIGRATIONS_REPO_REMOTO.md](./relatorios/COMPARACAO_MIGRATIONS_REPO_REMOTO.md)
