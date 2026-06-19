@@ -1,7 +1,11 @@
 # Reconciliação de migrations — Fase C0 × main (Fase C0.5)
 
-> **Status:** preparado no repositório, **nada aplicado no Supabase remoto**. Requer sua revisão do
-> diff e autorização antes de qualquer `apply` no remoto.
+> **Status:** ✅ **CONCLUÍDA** (repo + remoto). Em 2026-06-19, com autorização do usuário, as duas
+> migrations ausentes foram aplicadas no Supabase remoto (`0022_logs_coordenacao` e
+> `0023_indices_escala_coordenacao`). Todos os objetos verificados presentes; advisor de segurança
+> sem regressão. Resíduo cosmético: o registro do motor no remoto mantém o rótulo
+> `0022_motor_progresso` (o rename para `0024` foi bloqueado por política e é apenas estético — o
+> schema está consistente).
 > Data: 2026-06-19.
 
 ## 1. O problema (divergência confirmada)
@@ -61,11 +65,12 @@ O remoto está com o motor, mas **sem** `logs_coordenacao` e os índices de esca
 - **Ordem no remoto:** aplicar 0022_logs_coordenacao e 0023_indices é seguro mesmo com o motor já
   presente, pois não há dependência entre eles.
 
-## 5. Checklist de aplicação no remoto (quando autorizado)
+## 5. Checklist de aplicação no remoto — EXECUTADO em 2026-06-19
 
-- [ ] Backup/export lógico do remoto (ou snapshot do projeto).
-- [ ] `apply_migration name=0022_logs_coordenacao` (conteúdo de `supabase/migrations/0022_logs_coordenacao.sql`).
-- [ ] `apply_migration name=0023_indices_escala_coordenacao`.
-- [ ] Conferir `list_tables` → `logs_coordenacao` presente; `list_migrations` crescente.
-- [ ] (Opcional) `app.backfill_progresso` por escola, se quiser preencher histórico antigo.
-- [ ] Rodar smoke test de leitura (coordenação vê logs; aluno vê XP do ledger).
+- [x] `apply_migration name=0022_logs_coordenacao` → `{success:true}`.
+- [x] `apply_migration name=0023_indices_escala_coordenacao` → `{success:true}`.
+- [x] Verificação de objetos: `logs_coordenacao` (RLS ativa) + 4 índices de escala → todos **OK**.
+- [x] Migrations registradas em `schema_migrations` (`0022_logs_coordenacao`, `0023_indices…`).
+- [x] `get_advisors(security)` → sem regressão (warnings restantes são pré-existentes).
+- [ ] (Opcional, não feito) `app.backfill_progresso` por escola — o ledger já tem 346 eventos.
+- [ ] (Cosmético, bloqueado por política) rename do rótulo `0022_motor_progresso` → `0024` no remoto.

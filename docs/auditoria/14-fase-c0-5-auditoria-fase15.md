@@ -271,6 +271,20 @@ Comparei migration a migration e verifiquei a existência de cada objeto no remo
   (commit isolado, atrás de fallback seguro, nada no remoto) e pode ser revertida se preferir
   separá-la até a reconciliação do remoto concluir.
 
+### ✅ Reconciliação do REMOTO executada (autorizada) — 2026-06-19
+
+Com sua autorização, apliquei no Supabase remoto as duas migrations ausentes:
+- `0022_logs_coordenacao` → `{success:true}` (tabela + índice + 2 policies, RLS ativa).
+- `0023_indices_escala_coordenacao` → `{success:true}` (4 índices de escala).
+
+Verificação pós-apply: todos os objetos **OK** no remoto; `get_advisors(security)` **sem regressão**
+(warnings restantes são pré-existentes — search_path de 2 helpers do motor e SECURITY DEFINER do
+backoffice). Efeitos: a **auditoria de coordenação** volta a registrar no remoto e os **índices de
+escala** (Fase B-min) passam a valer. Resíduo cosmético: o rótulo do motor no remoto segue
+`0022_motor_progresso` (rename para `0024` bloqueado por política; só estético — schema consistente).
+Repo e remoto agora têm o **mesmo conjunto de objetos**. A ligação do front ao ledger permanece na
+branch, pronta para ativar (decisão de manter, não reverter).
+
 ---
 
 ## 8. Correções feitas — fiação da Fase 15 ao runtime (não-destrutivo)
