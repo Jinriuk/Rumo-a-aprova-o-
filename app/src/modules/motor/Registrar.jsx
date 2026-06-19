@@ -76,6 +76,9 @@ export function Registrar({ aluno, trilha, registros, aoMudar, minutosSugeridos 
   }
 
   async function apagar(id) {
+    // #18 — confirmação obrigatória: um toque acidental no × (sobretudo em
+    // mobile) não pode apagar um registro de estudo sem aviso.
+    if (typeof window !== "undefined" && !window.confirm("Remover este registro de estudo? Esta ação não pode ser desfeita.")) return;
     setErro(null);
     try { await db.removerRegistro(id); aoMudar?.(); } catch (e) { setErro(mensagemAmigavel(e, "acao")); }
   }

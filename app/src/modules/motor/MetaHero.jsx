@@ -6,7 +6,7 @@ import React from "react";
 import { StatCard, StatusBadge, BarraXP } from "../../shared/ui/componentes.jsx";
 import { Insignia } from "../../shared/ui/Insignia.jsx";
 import { useTema } from "../../shared/branding/BrandingContext.jsx";
-import { fmtBR, todayISO, daysBetween } from "../../shared/regras/regras.js";
+import { fmtBR, fmtBRDiaSemana, todayISO, daysBetween } from "../../shared/regras/regras.js";
 import { L, patente, fmtHoras, fmtHorasCurto, xpPorPrioridade } from "./jargao.js";
 
 export function FaixaAspirante({ nome, contexto, xp, streak, aoAbrirConquistas }) {
@@ -176,7 +176,7 @@ export function MissaoAtual({ meta, trilha, m, aoAvancar }) {
             <StatCard rotulo={L.precisao} valor={`${m.acerto}%`} sub="acerto geral" icone="◎" tom={m.acerto >= 70 ? "ok" : m.acerto > 0 ? "alerta" : "neutro"} />
             <StatCard rotulo={L.horas} valor={fmtHoras(m.minutosTotais ?? 0)} sub="tempo registrado" icone="◷" />
             <StatCard rotulo={L.alvos} valor={m.totDone} sub={`${m.qSem} nesta semana`} icone="✦" />
-            <StatCard rotulo={L.ritmo} valor={fmtHorasCurto(m.mediaMinutosDia ?? 0)} sub={`ofensiva: ${m.streak} 🔥`} icone="⧗" />
+            <StatCard rotulo={L.ritmo} valor={fmtHorasCurto(m.mediaMinutosDia ?? 0)} sub={m.streak > 0 ? `ofensiva: ${m.streak} 🔥` : "retomando o ritmo"} icone="⧗" />
           </div>
         </div>
       )}
@@ -185,7 +185,9 @@ export function MissaoAtual({ meta, trilha, m, aoAvancar }) {
       {proxima ? (() => {
         const diasDesbloqueio = Math.max(0, daysBetween(new Date(todayISO()), new Date(String(proxima.inicio))));
         const explicacao = pendentes === 0
-          ? diasDesbloqueio === 0 ? "A próxima missão começa hoje." : `Começa em ${diasDesbloqueio === 1 ? "1 dia" : `${diasDesbloqueio} dias`}.`
+          ? diasDesbloqueio === 0
+            ? "Disponível hoje à meia-noite."
+            : `Disponível em ${fmtBRDiaSemana(String(proxima.inicio))} — ${diasDesbloqueio === 1 ? "1 dia" : `${diasDesbloqueio} dias`}.`
           : "Complete os objetivos desta missão para avançar.";
         return (
           <div style={{ display: "flex", alignItems: "center", gap: 12, background: T.card, border: `1px solid ${T.line}`, borderRadius: 12, padding: "11px 14px" }}>

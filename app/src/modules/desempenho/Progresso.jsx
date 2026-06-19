@@ -155,13 +155,26 @@ export function Progresso({ registros, trilha }) {
 /* ---------- Simulados (estrutura POR CONCURSO + validação + objetivo) ---------- */
 import { provaDoConcurso, materiasDaProva, totalQuestoes, totalAcertos, notaPct, objetivoSugerido } from "../conteudo/provas.js";
 
+// #28 — sugere "Simulado N" sem duplicar: pega o maior N já existente + 1.
+// Não impede nome customizado; só evita o default repetido.
+function proximoNomeSimulado(simulados) {
+  let max = 0;
+  for (const s of simulados ?? []) {
+    const mt = String(s?.nome ?? "").match(/^Simulado\s+(\d+)$/i);
+    if (mt) max = Math.max(max, +mt[1]);
+  }
+  return `Simulado ${max + 1}`;
+}
+
 export function Simulados({ aluno, simulados, podeEditar, semanaAtiva, concurso, aoMudar }) {
   const T = useTema();
   const prova = provaDoConcurso(concurso?.codigo);
   const materias = materiasDaProva(prova);
   const totalMax = totalQuestoes(prova);
 
-  const blank = { nome: semanaAtiva?.simulado || `Simulado ${prova.rotulo}`, data: todayISO(), ...Object.fromEntries(materias.map((m) => [m.k, ""])) };
+  // nome default: o simulado planejado da semana tem prioridade; senão,
+  // próximo número livre (Simulado 1, 2, 3…) com base no histórico.
+  const blank = { nome: semanaAtiva?.simulado || proximoNomeSimulado(simulados), data: todayISO(), ...Object.fromEntries(materias.map((m) => [m.k, ""])) };
   const [f, setF] = useState(blank);
   const [erro, setErro] = useState(null);
   const set = (k, v) => setF({ ...f, [k]: v });
@@ -180,7 +193,8 @@ export function Simulados({ aluno, simulados, podeEditar, semanaAtiva, concurso,
         escola_id: aluno.escola_id, aluno_id: aluno.id, nome: f.nome, data: f.data,
         acertos: Object.fromEntries(materias.map((m) => [m.k, Math.min(+f[m.k] || 0, m.max)])),
       });
-      setF(blank);
+      // reseta com o próximo número livre, já contando o que acabou de entrar
+      setF({ ...blank, nome: semanaAtiva?.simulado || proximoNomeSimulado([...simulados, { nome: f.nome }]) });
       aoMudar?.();
     } catch (e) { setErro(mensagemAmigavel(e, "salvar")); }
   }
