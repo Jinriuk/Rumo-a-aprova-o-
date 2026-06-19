@@ -238,6 +238,24 @@ muda e **exige decisão antes de qualquer migration**:
    índices `0022/0023` para o remoto; alinhar o histórico para crescente e reproduzível em ambos os
    lados **antes** de qualquer Bloco B. Como há divergência, **paro e proponho** (regra §5/§13).
 
+### ✅ Reconciliação executada NO REPOSITÓRIO + front ligado ao ledger (autorizado pelo usuário)
+
+Após sua decisão ("reconciliar histórico" + "ligar o front ao ledger"), feito em nível de repositório
+(**nada aplicado no remoto** — aguarda revisão do diff; runbook em `docs/RECONCILIACAO_MIGRATIONS_C0.md`):
+
+- **`supabase/migrations/0024_motor_progresso.sql`** — motor C0 renumerado 0022 → **0024** (body
+  idêntico ao do remoto, idempotente). Repo agora tem histórico crescente: `0001 … 0023, 0024`.
+- **Front ligado ao ledger** (acaba o "fallback legado mascarando a C0"):
+  `data/index.js` (`carregarEventosProgresso`/`carregarXpPersistido`, com degradação segura se a
+  tabela não existir), `jargao.js` (`xpTotal` = soma do ledger; `calcularXP` vira só fallback),
+  `VisaoEstudo` e `FichaAluno` (XP do ledger quando há eventos), `HistoricoProgresso.jsx`
+  (coordenação vê o histórico real).
+- **Testes:** `tests/progresso.test.mjs` + `tests/progresso-db.test.mjs` + `app/e2e/motor-progresso.spec.js`.
+  Suíte local: **204/204 verde**; `vite build` verde. Ledger populado pelo seed via gatilhos
+  (ex.: Lucas com 6 eventos / 100 XP de simulado).
+- **Pendente (remoto):** aplicar `0022_logs_coordenacao` + `0023_indices` no remoto (ausentes lá) —
+  passos no runbook, **com sua autorização**. O motor já está no remoto; não reaplicar.
+
 ---
 
 ## 8. Correções feitas — fiação da Fase 15 ao runtime (não-destrutivo)

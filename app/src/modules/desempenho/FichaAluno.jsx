@@ -10,6 +10,7 @@ import { useRecurso } from "../../shared/hooks/useRecurso.js";
 import { calcularMetricas } from "./metricas.js";
 import { ResumoResponsavel } from "./ResumoResponsavel.jsx";
 import { TrilhaConcurso } from "../conteudo/TrilhaConcurso.jsx";
+import { HistoricoProgresso } from "./HistoricoProgresso.jsx";
 import { ListaRegistros } from "../../shared/ui/ListaRegistros.jsx";
 import { calcularXP, patente, fmtHoras } from "../motor/jargao.js";
 import { semanaAtual } from "../../shared/regras/regras.js";
@@ -19,12 +20,12 @@ export function FichaAluno({ aluno, concurso }) {
   const T = useTema();
   const { dados: carregado, carregando: carregandoDados, erro: erroDados } = useRecurso(
     () => (aluno
-      ? Promise.all([db.listarMetas(aluno.id), db.listarRegistros(aluno.id), db.listarSimulados(aluno.id)])
-          .then(([metas, registros, simulados]) => ({ metas, registros, simulados }))
-      : Promise.resolve({ metas: [], registros: [], simulados: [] })),
+      ? Promise.all([db.listarMetas(aluno.id), db.listarRegistros(aluno.id), db.listarSimulados(aluno.id), db.carregarXpPersistido(aluno.id)])
+          .then(([metas, registros, simulados, xpPersistido]) => ({ metas, registros, simulados, xpPersistido }))
+      : Promise.resolve({ metas: [], registros: [], simulados: [], xpPersistido: null })),
     [aluno?.id],
   );
-  const dados = carregado ?? { metas: [], registros: [], simulados: [] };
+  const dados = carregado ?? { metas: [], registros: [], simulados: [], xpPersistido: null };
   const { trilha, carregando: carregandoTrilha, erro: erroTrilha } = useTrilha(aluno?.trilha_id);
 
   const semanasRegras = useMemo(
@@ -48,7 +49,10 @@ export function FichaAluno({ aluno, concurso }) {
   if (!m || !semanaAtiva) return <Empty txt="Fora do período da trilha deste aluno." />;
 
   const meta = dados.metas.find((x) => x.status === "ativa") ?? dados.metas[0] ?? null;
-  const xp = calcularXP({ metas: dados.metas, totalQuestoes: m.totDone, simulados: dados.simulados.length });
+  // XP da fonte de verdade (ledger C0); fallback na estimativa legada.
+  const xp = dados.xpPersistido?.eventos?.length
+    ? dados.xpPersistido.total
+    : calcularXP({ metas: dados.metas, totalQuestoes: m.totDone, simulados: dados.simulados.length });
   const p = patente(xp);
   const turma = (aluno.alunos_turmas ?? []).map((v) => v.turmas?.nome).filter(Boolean)[0];
   const recentes = dados.registros.slice(0, 8);
@@ -85,6 +89,10 @@ export function FichaAluno({ aluno, concurso }) {
       {/* trilha/missões REAIS do concurso-alvo (Fase 15.4 ligada): a
           coordenação vê o plano por prova do aluno, não uma trilha fixa. */}
       <TrilhaConcurso examTag={concurso?.codigo ?? null} concursoNome={concurso?.nome ?? null} compacto />
+
+      {/* histórico do motor de progresso persistido (Fase C0): eventos
+          reais do ledger, não estimativa do front. */}
+      <HistoricoProgresso alunoId={aluno.id} />
 
       {/* histórico recente do que ele tem feito */}
       <SectionCard titulo="Últimos registros de estudo" sub="O que o aluno lançou mais recentemente." semPadding>
