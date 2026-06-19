@@ -111,7 +111,7 @@ jobs:
             printf 'VITE_SUPABASE_URL=%s\nVITE_SUPABASE_ANON_KEY=%s\n' "$E2E_URL" "$E2E_KEY" > .env.production.local
             echo "E2E isolado: build apontando para o projeto de teste (não toca no demo)."
           else
-            echo "::warning::E2E_SUPABASE_URL ausente — E2E roda contra o ambiente padrão (demo). Configure os secrets E2E_SUPABASE_URL / E2E_SUPABASE_ANON_KEY para isolar (ver docs/e2e-ambiente.md)."
+            echo "::warning::E2E_SUPABASE_URL ausente — E2E roda contra o ambiente padrão (demo). Configure os secrets E2E_SUPABASE_URL / E2E_SUPABASE_ANON_KEY para isolar (ver docs/operacao/e2e-ambiente.md)."
           fi
 
       - name: Build de produção

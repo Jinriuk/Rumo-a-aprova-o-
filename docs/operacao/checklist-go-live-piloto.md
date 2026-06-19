@@ -1,24 +1,24 @@
 # Checklist de go-live do piloto (Fase A.9)
 
-> Diferença em relação a `docs/go-live-checklist.md`: aquele é sobre o
+> Diferença em relação a `docs/operacao/go-live-checklist.md`: aquele é sobre o
 > **sistema** estar pronto para receber o primeiro cliente real (uma vez
 > só). Este é o checklist a rodar **a cada escola** que entra no piloto —
 > antes de entregar acesso a ela.
 
 ## Antes de criar a escola
 
-- [ ] Sistema passou pelo gate de `docs/go-live-checklist.md` (build,
+- [ ] Sistema passou pelo gate de `docs/operacao/go-live-checklist.md` (build,
       testes, RLS, região do banco adequada ao dado real).
-- [ ] Backup confirmado e testado (`docs/backup-retencao-lgpd.md`).
+- [ ] Backup confirmado e testado (`docs/operacao/backup-retencao-lgpd.md`).
 - [ ] Política de rollback conhecida pela pessoa que vai operar
-      (`docs/rollback.md`).
+      (`docs/operacao/rollback.md`).
 - [ ] Canal de suporte e responsável definidos (quem a escola contata se
       algo der errado).
 - [ ] Canal de emergência definido (quem decide suspender acesso, e como
-      — `docs/rollback.md`, Cenário 4).
+      — `docs/operacao/rollback.md`, Cenário 4).
 - [ ] Confirmado que esta escola vai para a **base correta** (separação
       demo/piloto — nunca misturar dado real de aluno com a base
-      `bdjkgrzfzoamchdpobbl` rotulada demo, ver `docs/lgpd-e-infra.md`).
+      `bdjkgrzfzoamchdpobbl` rotulada demo, ver `docs/operacao/lgpd-e-infra.md`).
 
 ## Criação e configuração da escola
 

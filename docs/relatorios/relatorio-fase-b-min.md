@@ -87,10 +87,10 @@ módulos):
 - `app/src/shared/lib/concorrencia.js` — `comConcorrenciaLimitada(itens, limite, fn)`.
 - `supabase/migrations/0023_indices_escala_coordenacao.sql` — 4 índices em `escola_id`.
 - `supabase/seed-volume/massa_coordenacao.sql` — massa sintética de ~480 alunos (B.7).
-- `docs/massa-volume-coordenacao.md` — como usar/limpar a massa, e por que fica fora de `supabase/seed/`.
+- `docs/operacao/massa-volume-coordenacao.md` — como usar/limpar a massa, e por que fica fora de `supabase/seed/`.
 - `tests/paginacao.test.mjs`, `tests/concorrencia.test.mjs` — testes das funções puras.
 - `tests/volume-coordenacao-db.test.mjs` — teste de volume/isolamento/índices em escola descartável.
-- `docs/relatorio-fase-b-min.md` — este relatório.
+- `docs/relatorios/relatorio-fase-b-min.md` — este relatório.
 
 **Modificados:**
 - `app/src/modules/pessoas/ListaAlunos.jsx` — paginação (50/página) da lista renderizada, controles prev/próxima, reset de página ao filtrar.
@@ -191,7 +191,7 @@ gerada pelo motor real (`app.gerar_meta`). **Idempotente de verdade:** ids
 determinísticos + `on conflict do nothing` em todo insert — rodar N vezes
 dá o mesmo resultado. Fica **fora** de `supabase/seed/` de propósito, para
 não ser apanhado pelo glob `[0-9][0-9]_*.sql` do `tests/reset-db.sh` e
-inflar a suíte padrão. Documentado em `docs/massa-volume-coordenacao.md`.
+inflar a suíte padrão. Documentado em `docs/operacao/massa-volume-coordenacao.md`.
 
 ### Testes (B.8)
 - `tests/paginacao.test.mjs` (5 casos), `tests/concorrencia.test.mjs`
@@ -203,8 +203,8 @@ inflar a suíte padrão. Documentado em `docs/massa-volume-coordenacao.md`.
   generoso; **limpa tudo** em `test.after` (delete cascade da escola).
 
 ### Documentação
-`docs/massa-volume-coordenacao.md` (uso/idempotência/limpeza da massa) e
-este relatório. `docs/operacao.md` da Fase A permanece válido.
+`docs/operacao/massa-volume-coordenacao.md` (uso/idempotência/limpeza da massa) e
+este relatório. `docs/operacao/operacao.md` da Fase A permanece válido.
 
 ## 5. Performance e volume
 
@@ -307,7 +307,7 @@ $ EXPLAIN ... where escola_id = '...'   (filtro seletivo)
 | P2 | E2E e teste manual da paginação/turmas não rodados nesta sessão | ambiente sem browser (Chromium bloqueado na allowlist de rede) — igual à Fase A | §7; CI do GitHub |
 | P2 | Carga real com 500 alunos + muitas escolas coexistindo não medida em produção | requer ambiente de staging com dados de várias escolas; o ganho dos índices só aparece nesse cenário | §5 |
 | P3 | Filtro/busca segue client-side (não no banco) | justificado nesta escala (abas Painel/Ranking precisam do conjunto inteiro); virar DB-side exigiria API paralela + lógica duplicada | §4 (B.3) |
-| P3 | `Turmas.renomear/excluir` ainda usa `window.prompt/confirm` sem trava de "ocupado" | herdado da Fase A (P3 de lá); fora do escopo mínimo de performance | `docs/relatorio-fase-a.md` §5 |
+| P3 | `Turmas.renomear/excluir` ainda usa `window.prompt/confirm` sem trava de "ocupado" | herdado da Fase A (P3 de lá); fora do escopo mínimo de performance | `docs/relatorios/relatorio-fase-a.md` §5 |
 
 Nenhuma pendência P0 ou P1 introduzida por esta fase.
 

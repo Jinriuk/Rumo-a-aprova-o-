@@ -7,8 +7,8 @@ amanhã, conseguimos operar, corrigir, voltar atrás, entender erros e
 evitar falhas graves?** A resposta, depois do trabalho abaixo, é **sim,
 com duas pendências de infraestrutura já conhecidas e documentadas**
 (região do banco em `sa-east-1` e backup confirmado — ambas decisões de
-plano/infra, não de código, já registradas em `docs/lgpd-e-infra.md` e
-`docs/backup-retencao-lgpd.md`).
+plano/infra, não de código, já registradas em `docs/operacao/lgpd-e-infra.md` e
+`docs/operacao/backup-retencao-lgpd.md`).
 
 O trabalho não foi de expansão: nenhuma tela nova de produto, nenhuma
 regra pedagógica mudou, nenhuma dependência externa obrigatória foi
@@ -25,8 +25,8 @@ estava, sem nenhuma política enfraquecida.
 - `app/src/shared/ui/ErroFronteira.jsx` — error boundary do React.
 - `supabase/migrations/0022_logs_coordenacao.sql` — nova tabela de auditoria.
 - `tests/logs-coordenacao-db.test.mjs` — testes de RLS da tabela nova.
-- `docs/operacao.md`, `docs/rollback.md`, `docs/backup-retencao-lgpd.md`,
-  `docs/checklist-go-live-piloto.md`, `docs/ambientes-e-variaveis.md`.
+- `docs/operacao/operacao.md`, `docs/operacao/rollback.md`, `docs/operacao/backup-retencao-lgpd.md`,
+  `docs/operacao/checklist-go-live-piloto.md`, `docs/operacao/ambientes-e-variaveis.md`.
 
 **Modificados:**
 - `app/src/main.jsx` — instala captura global de erro + error boundary.
@@ -58,15 +58,15 @@ foi alterado.
 ## 3. Correções implementadas (por categoria)
 
 ### A.1 — Documentação operacional
-Criados `docs/operacao.md` (runbook central: erros, observabilidade,
-travas, login, logs, RLS, suporte), `docs/rollback.md` (runbook de
-reversão por cenário), `docs/backup-retencao-lgpd.md` (política de
+Criados `docs/operacao/operacao.md` (runbook central: erros, observabilidade,
+travas, login, logs, RLS, suporte), `docs/operacao/rollback.md` (runbook de
+reversão por cenário), `docs/operacao/backup-retencao-lgpd.md` (política de
 backup/retenção/LGPD). Todos cross-referenciam os documentos da Fase 17
 já existentes (`deploy-checklist.md`, `lgpd-e-infra.md`,
 `monitoramento-backup.md`, `go-live-checklist.md`) em vez de duplicá-los.
 
 ### A.2 — Separação de ambientes
-`docs/ambientes-e-variaveis.md` documenta os 4 ambientes em uso (dev
+`docs/operacao/ambientes-e-variaveis.md` documenta os 4 ambientes em uso (dev
 local, CI unitários, CI E2E, demo/produção atual) e tabula toda variável
 de ambiente do sistema com sensibilidade e obrigatoriedade. Confirmado
 por leitura de código que `service_role` não aparece em nenhum arquivo do
@@ -78,7 +78,7 @@ Investigado: ~55 bits de entropia no código de acesso, sem rate limit
 customizado no código do projeto — a proteção contra força bruta é a do
 próprio Supabase Auth (não enfraquecida, não contornada, não
 reimplementada por fora). Reemissão de credencial já existe. Documentado
-em `docs/operacao.md` §4 como postura aceita, com pendência explícita:
+em `docs/operacao/operacao.md` §4 como postura aceita, com pendência explícita:
 confirmar no painel do Supabase, antes do piloto, que os limites de rate
 limit do Auth estão calibrados para o volume esperado. Nenhuma gambiarra
 foi introduzida.
@@ -126,8 +126,8 @@ padrão de `logs_acesso`) e conectados os 5 pontos de gravação
 ao gravar o log nunca impede a ação principal.
 
 ### A.9 — Checklist de go-live do piloto
-Criado `docs/checklist-go-live-piloto.md`: checklist por escola (distinto
-do checklist de sistema já existente em `docs/go-live-checklist.md`),
+Criado `docs/operacao/checklist-go-live-piloto.md`: checklist por escola (distinto
+do checklist de sistema já existente em `docs/operacao/go-live-checklist.md`),
 cobrindo criação da escola, coordenação, alunos, responsáveis,
 credenciais, concurso/trilha, suporte e canal de emergência.
 
@@ -149,12 +149,12 @@ credenciais, concurso/trilha, suporte e canal de emergência.
 
 | Prioridade | Risco | Por que não foi resolvido agora | Onde está documentado |
 |---|---|---|---|
-| P1 | Banco de produção/demo ainda em `us-east-1`, não `sa-east-1` — bloqueia dado real de menor | decisão de infraestrutura/custo, fora do escopo de código desta fase | `docs/lgpd-e-infra.md` |
-| P1 | Backup automático não confirmado para o plano em uso | decisão de infraestrutura/custo | `docs/backup-retencao-lgpd.md` |
-| P2 | Sem rate limit customizado no login além do padrão do Supabase Auth | mudança maior que "proteção mínima segura"; instrução explícita de não enfraquecer/contornar o Auth | `docs/operacao.md` §4 |
-| P2 | Política de retenção de dado após saída de aluno/escola não definida | decisão de produto/negócio, não técnica | `docs/backup-retencao-lgpd.md` |
-| P3 | `Turmas.renomear`/`excluir` (em `AreaEscola.jsx`) sem trava de "ocupado" explícita no `window.prompt`/`confirm` | risco baixo (ação pouco frequente, efeito idempotente o suficiente); corrigir exigiria tocar no padrão prompt/confirm, fora do escopo mínimo desta fase | `docs/operacao.md` §3 |
-| P3 | Suporte/canal de emergência do piloto ainda não nomeados (pessoa/canal) | decisão organizacional, não técnica | `docs/checklist-go-live-piloto.md` |
+| P1 | Banco de produção/demo ainda em `us-east-1`, não `sa-east-1` — bloqueia dado real de menor | decisão de infraestrutura/custo, fora do escopo de código desta fase | `docs/operacao/lgpd-e-infra.md` |
+| P1 | Backup automático não confirmado para o plano em uso | decisão de infraestrutura/custo | `docs/operacao/backup-retencao-lgpd.md` |
+| P2 | Sem rate limit customizado no login além do padrão do Supabase Auth | mudança maior que "proteção mínima segura"; instrução explícita de não enfraquecer/contornar o Auth | `docs/operacao/operacao.md` §4 |
+| P2 | Política de retenção de dado após saída de aluno/escola não definida | decisão de produto/negócio, não técnica | `docs/operacao/backup-retencao-lgpd.md` |
+| P3 | `Turmas.renomear`/`excluir` (em `AreaEscola.jsx`) sem trava de "ocupado" explícita no `window.prompt`/`confirm` | risco baixo (ação pouco frequente, efeito idempotente o suficiente); corrigir exigiria tocar no padrão prompt/confirm, fora do escopo mínimo desta fase | `docs/operacao/operacao.md` §3 |
+| P3 | Suporte/canal de emergência do piloto ainda não nomeados (pessoa/canal) | decisão organizacional, não técnica | `docs/operacao/checklist-go-live-piloto.md` |
 
 ## 6. Testes executados
 
@@ -221,5 +221,5 @@ infraestrutura/contrato, não de código, e já estavam identificados antes
 desta fase. Nenhuma regra pedagógica, nenhuma política de RLS e nenhum
 teste existente foi alterado ou mascarado. Recomendação: rodar a suíte
 E2E completa no CI (já configurada) e o checklist
-`docs/checklist-go-live-piloto.md` para a primeira escola antes de
+`docs/operacao/checklist-go-live-piloto.md` para a primeira escola antes de
 liberar acesso real.

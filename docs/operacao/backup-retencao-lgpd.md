@@ -1,8 +1,8 @@
 # Backup, retenção e LGPD (Fase A.1)
 
 > Este documento consolida, em formato de **política operacional**, o que
-> já está levantado em `docs/lgpd-e-infra.md` (inventário de dados, gate
-> de região) e `docs/monitoramento-backup.md` (o que monitorar). Aqui o
+> já está levantado em `docs/operacao/lgpd-e-infra.md` (inventário de dados, gate
+> de região) e `docs/operacao/monitoramento-backup.md` (o que monitorar). Aqui o
 > foco é: o que fazer, com que frequência, e quem decide.
 
 ## Backup
@@ -51,11 +51,11 @@ esquecido, não resolvido a force por este trabalho.
 - **`admin_logs`**: ações do operador (criação de escola, etc.).
 
 Nenhuma dessas trilhas grava dado sensível em si (nome de aluno, CPF,
-etc.) — só identificadores e a ação. Ver `docs/operacao.md` para como
+etc.) — só identificadores e a ação. Ver `docs/operacao/operacao.md` para como
 consultar cada uma.
 
 ## Checklist de conformidade antes de dado real (resumo)
 
-Já detalhado em `docs/lgpd-e-infra.md` — não duplicado aqui. Os itens que
+Já detalhado em `docs/operacao/lgpd-e-infra.md` — não duplicado aqui. Os itens que
 **bloqueiam** dado real de aluno: projeto em `sa-east-1`, backup
 confirmado, e o gate de região respeitado.

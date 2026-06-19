@@ -38,7 +38,7 @@ prática, três problemas operacionais:
 
 ### 17.1 — Paridade produção × repositório
 **Problema:** produção ficou atrás das migrations.
-**Entregas:** `docs/deploy-checklist.md`; `scripts/checar-migrations.mjs`
+**Entregas:** `docs/operacao/deploy-checklist.md`; `scripts/checar-migrations.mjs`
 (compara migrations aplicadas × arquivos do repo); ordem de deploy
 (migration primeiro, front depois, quando o front depender do banco);
 política de rollback.

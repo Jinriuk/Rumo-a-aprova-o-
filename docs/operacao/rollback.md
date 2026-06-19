@@ -1,6 +1,6 @@
 # Rollback (Fase A.1)
 
-> A política de migrations já está definida em `docs/deploy-checklist.md`
+> A política de migrations já está definida em `docs/operacao/deploy-checklist.md`
 > ("Política de rollback"). Este documento é o **runbook**: o que fazer,
 > na prática, quando algo dá errado em produção/piloto.
 
@@ -23,7 +23,7 @@
    por isso elas são sempre aditivas (o banco novo continua compatível
    com o front antigo).
 3. Investigar a causa antes de tentar publicar de novo (ver
-   `docs/operacao.md`, seção de erros).
+   `docs/operacao/operacao.md`, seção de erros).
 
 ## Cenário 2 — uma migration quebrou algo no banco
 
@@ -34,7 +34,7 @@
 3. Aplicar a migration de reversão (mesmo processo de
    `deploy-checklist.md`: `checar-migrations.mjs` antes e depois).
 4. Se a migration quebrada já tiver apagado/transformado dado: restaurar
-   do backup mais recente (ver `docs/backup-retencao-lgpd.md`) antes de
+   do backup mais recente (ver `docs/operacao/backup-retencao-lgpd.md`) antes de
    reaplicar a correção.
 
 ## Cenário 3 — uma Edge Function quebrou
