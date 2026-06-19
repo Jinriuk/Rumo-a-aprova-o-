@@ -46,7 +46,7 @@ export function FaixaAspirante({ nome, contexto, xp, streak, aoAbrirConquistas }
   );
 }
 
-export function MissaoAtual({ meta, trilha, m }) {
+export function MissaoAtual({ meta, trilha, m, aoAvancar }) {
   const T = useTema();
   if (!meta) {
     return (
@@ -68,21 +68,26 @@ export function MissaoAtual({ meta, trilha, m }) {
   const pendentes = consideradas - feitas;
   const pct = Math.min(100, Math.round((feitas / consideradas) * 100));
   const disciplinas = new Set((trilha.atividadesPorSemana[meta.semana_numero] ?? []).map((a) => a.disciplina_codigo)).size;
+  const atrasada = pendentes > 0 && String(meta.fim) < todayISO();
 
   // meta de XP da semana: quanto a missão vale e quanto já foi garantido
   const xpDe = (it) => xpPorPrioridade[trilha.atividadesPorId[it.atividade_modelo_id]?.prioridade] ?? 40;
   const xpMissao = itens.filter((x) => x.estado !== "ignorada").reduce((s, it) => s + xpDe(it), 0);
   const xpGanho = itens.filter((x) => x.estado === "concluida").reduce((s, it) => s + xpDe(it), 0);
 
+  const corBorda = atrasada ? T.red : T.gold;
+  const labelEstado = atrasada ? "⚠ atrasada" : pendentes === 0 ? "✓ concluída" : "⊚ alvo atual";
+  const corLabel = atrasada ? T.red : T.gold;
+
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
       {/* MISSÃO ATUAL */}
-      <div style={{ background: `linear-gradient(160deg, ${T.cardHi}, ${T.card})`, border: `1.5px solid ${T.gold}66`, borderRadius: 14, padding: 16 }}>
+      <div style={{ background: `linear-gradient(160deg, ${T.cardHi}, ${T.card})`, border: `1.5px solid ${corBorda}66`, borderRadius: 14, padding: 16 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 9, flexWrap: "wrap", marginBottom: 8 }}>
-          <span className="disp" style={{ background: T.gold, color: "#0A1622", borderRadius: 8, padding: "3px 11px", fontWeight: 800, fontSize: 14 }}>
+          <span className="disp" style={{ background: corBorda, color: "#0A1622", borderRadius: 8, padding: "3px 11px", fontWeight: 800, fontSize: 14 }}>
             {L.missao.toUpperCase()} {meta.semana_numero}
           </span>
-          <span style={{ fontSize: 11, color: T.gold, fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.4 }}>⊚ alvo atual</span>
+          <span style={{ fontSize: 11, color: corLabel, fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.4 }}>{labelEstado}</span>
           <span style={{ marginLeft: "auto", textAlign: "right" }}>
             <b className="num disp" style={{ fontSize: 18, color: T.ink }}>{feitas}/{consideradas}</b>
             <div style={{ fontSize: 9.5, color: T.sub, textTransform: "uppercase", letterSpacing: 0.4 }}>alvos abatidos</div>
@@ -95,17 +100,56 @@ export function MissaoAtual({ meta, trilha, m }) {
         {/* barra com o marcador navegando */}
         <div style={{ position: "relative", height: 24, margin: "14px 0 8px" }}>
           <div style={{ position: "absolute", top: 7, left: 0, right: 0, height: 10, background: T.bg, borderRadius: 6, overflow: "hidden" }}>
-            <div style={{ width: `${pct}%`, height: "100%", background: `linear-gradient(90deg, ${T.gold}, ${T.green})`, transition: "width .4s" }} />
+            <div style={{ width: `${pct}%`, height: "100%", background: `linear-gradient(90deg, ${corBorda}, ${pendentes === 0 ? T.green : T.green})`, transition: "width .4s" }} />
           </div>
-          <div style={{ position: "absolute", top: 0, left: `calc(${pct}% - 12px)`, width: 24, height: 24, borderRadius: "50%", background: T.bg2, border: `2px solid ${T.gold}`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, transition: "left .4s", boxShadow: "0 0 8px #0008" }}>⚓</div>
+          <div style={{ position: "absolute", top: 0, left: `calc(${pct}% - 12px)`, width: 24, height: 24, borderRadius: "50%", background: T.bg2, border: `2px solid ${corBorda}`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, transition: "left .4s", boxShadow: "0 0 8px #0008" }}>⚓</div>
         </div>
 
-        {/* frase de missão objetiva */}
-        <div style={{ fontSize: 13, color: T.ink, fontWeight: 600, marginTop: 6, lineHeight: 1.4 }}>
-          {pendentes > 0
-            ? <>🎯 Sua missão: concluir <b style={{ color: T.gold }}>{pendentes} {pendentes === 1 ? "objetivo" : "objetivos"}</b> até {fmtBR(String(meta.fim))}.</>
-            : <span style={{ color: T.green }}>✓ Missão cumprida! Todos os objetivos desta semana foram concluídos.</span>}
-        </div>
+        {/* estado da missão + CTA */}
+        {atrasada ? (
+          <>
+            <div style={{ fontSize: 13, color: T.red, fontWeight: 600, marginTop: 6, lineHeight: 1.4 }}>
+              ⚠ Missão atrasada — <b>{pendentes} {pendentes === 1 ? "pendência" : "pendências"}</b> em aberto. Conclua antes de avançar.
+            </div>
+            {aoAvancar && (
+              <button onClick={() => aoAvancar("registrar")}
+                style={{ display: "block", width: "100%", marginTop: 12, background: T.red, color: "#fff", border: `1.5px solid ${T.red}`, borderRadius: 9, padding: "10px 16px", fontWeight: 700, fontSize: 13, cursor: "pointer", textAlign: "center" }}>
+                Concluir pendências
+              </button>
+            )}
+          </>
+        ) : pendentes === 0 ? (
+          <>
+            <div style={{ fontSize: 13, color: T.green, fontWeight: 600, marginTop: 6, lineHeight: 1.4 }}>
+              ✓ Missão cumprida! Todos os objetivos desta semana foram concluídos.
+            </div>
+            {aoAvancar && (
+              <div style={{ display: "flex", gap: 8, marginTop: 12, flexWrap: "wrap" }}>
+                <button onClick={() => aoAvancar("plano")}
+                  style={{ flex: 1, minWidth: 140, background: T.gold, color: "#0A1622", border: `1.5px solid ${T.gold}`, borderRadius: 9, padding: "10px 12px", fontWeight: 700, fontSize: 13, cursor: "pointer" }}>
+                  Ver próxima missão ›
+                </button>
+                <button onClick={() => aoAvancar("registrar")}
+                  style={{ flex: 1, minWidth: 140, background: "transparent", color: T.gold, border: `1.5px solid ${T.gold}66`, borderRadius: 9, padding: "10px 12px", fontWeight: 700, fontSize: 13, cursor: "pointer" }}>
+                  ✎ Revisar missão
+                </button>
+              </div>
+            )}
+          </>
+        ) : (
+          <>
+            <div style={{ fontSize: 13, color: T.ink, fontWeight: 600, marginTop: 6, lineHeight: 1.4 }}>
+              🎯 Sua missão: concluir <b style={{ color: T.gold }}>{pendentes} {pendentes === 1 ? "objetivo" : "objetivos"}</b> até {fmtBR(String(meta.fim))}.
+            </div>
+            {aoAvancar && (
+              <button onClick={() => aoAvancar("registrar")}
+                style={{ display: "block", width: "100%", marginTop: 12, background: T.gold, color: "#0A1622", border: `1.5px solid ${T.gold}`, borderRadius: 9, padding: "10px 16px", fontWeight: 700, fontSize: 13, cursor: "pointer", textAlign: "center" }}>
+                ✎ Registrar estudo
+              </button>
+            )}
+          </>
+        )}
+
         <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, color: T.sub, marginTop: 8, flexWrap: "wrap", gap: 6 }}>
           <span>{disciplinas} disciplinas · {itens.length} objetivos{ignoradas > 0 ? ` · ${ignoradas} adiados` : ""}</span>
           <span>{fmtBR(String(meta.inicio))} – {fmtBR(String(meta.fim))}</span>
@@ -140,16 +184,20 @@ export function MissaoAtual({ meta, trilha, m }) {
       {/* PRÓXIMA MISSÃO — compacta */}
       {proxima ? (() => {
         const diasDesbloqueio = Math.max(0, daysBetween(new Date(todayISO()), new Date(String(proxima.inicio))));
+        const explicacao = pendentes === 0
+          ? diasDesbloqueio === 0 ? "A próxima missão começa hoje." : `Começa em ${diasDesbloqueio === 1 ? "1 dia" : `${diasDesbloqueio} dias`}.`
+          : "Complete os objetivos desta missão para avançar.";
         return (
           <div style={{ display: "flex", alignItems: "center", gap: 12, background: T.card, border: `1px solid ${T.line}`, borderRadius: 12, padding: "11px 14px" }}>
             <div style={{ width: 38, height: 38, borderRadius: 10, border: `1.5px solid ${T.line}`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 17, flexShrink: 0 }}>🔒</div>
             <div style={{ flex: 1, minWidth: 0 }}>
               <div style={{ fontSize: 10.5, color: T.sub, textTransform: "uppercase", letterSpacing: 0.5 }}>{L.proximaMissao}</div>
               <div className="disp" style={{ fontSize: 14.5, fontWeight: 700 }}>{L.missao} {proxima.numero}</div>
+              <div style={{ fontSize: 11.5, color: T.sub, marginTop: 2 }}>{explicacao}</div>
             </div>
             <div style={{ textAlign: "right", flexShrink: 0 }}>
               <div style={{ fontSize: 10, color: T.sub }}>desbloqueia em</div>
-              <StatusBadge tom="alerta">
+              <StatusBadge tom={pendentes === 0 ? "ok" : "alerta"}>
                 {diasDesbloqueio === 0 ? "hoje à meia-noite" : diasDesbloqueio === 1 ? "1 dia" : `${diasDesbloqueio} dias`}
               </StatusBadge>
             </div>

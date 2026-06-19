@@ -293,7 +293,10 @@ export function Simulados({ aluno, simulados, podeEditar, semanaAtiva, concurso,
               return (
                 <div key={s.id} className="row" style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 8px", borderRadius: 8, borderBottom: `1px solid ${T.line}` }}>
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontSize: 13.5, fontWeight: 600 }}>{s.nome} <span style={{ color: T.sub, fontWeight: 400 }}>· {fmtBR(String(s.data))}</span></div>
+                    <div style={{ display: "flex", gap: 4, alignItems: "baseline", overflow: "hidden" }}>
+                      <span style={{ fontSize: 13.5, fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", minWidth: 0, flex: 1 }}>{s.nome}</span>
+                      <span style={{ fontSize: 13.5, color: T.sub, fontWeight: 400, flexShrink: 0 }}>· {fmtBR(String(s.data))}</span>
+                    </div>
                     <div style={{ fontSize: 11.5, color: T.sub, marginTop: 2 }}>
                       {materias.map((m) => `${m.nome.slice(0, 3)} ${Math.min(+s.acertos[m.k] || 0, m.max)}/${m.max}`).join(" · ")}
                       {" · "}{prova.notaRotulo ?? "nota"}: <b style={{ color: nota >= 70 ? T.green : nota >= 50 ? T.gold : T.red }}>{nota}/100</b>
