@@ -241,7 +241,7 @@ muda e **exige decisão antes de qualquer migration**:
 ### ✅ Reconciliação executada NO REPOSITÓRIO + front ligado ao ledger (autorizado pelo usuário)
 
 Após sua decisão ("reconciliar histórico" + "ligar o front ao ledger"), feito em nível de repositório
-(**nada aplicado no remoto** — aguarda revisão do diff; runbook em `docs/RECONCILIACAO_MIGRATIONS_C0.md`):
+(**nada aplicado no remoto** — aguarda revisão do diff; runbook em `docs/relatorios/RECONCILIACAO_MIGRATIONS_C0.md`):
 
 - **`supabase/migrations/0024_motor_progresso.sql`** — motor C0 renumerado 0022 → **0024** (body
   idêntico ao do remoto, idempotente). Repo agora tem histórico crescente: `0001 … 0023, 0024`.
@@ -256,7 +256,7 @@ Após sua decisão ("reconciliar histórico" + "ligar o front ao ledger"), feito
 - **Pendente (remoto):** aplicar `0022_logs_coordenacao` + `0023_indices` no remoto (ausentes lá) —
   passos no runbook, **com sua autorização**. O motor já está no remoto; não reaplicar.
 
-### Investigação objeto-a-objeto (a pedido) — `docs/COMPARACAO_MIGRATIONS_REPO_REMOTO.md`
+### Investigação objeto-a-objeto (a pedido) — `docs/relatorios/COMPARACAO_MIGRATIONS_REPO_REMOTO.md`
 
 Comparei migration a migration e verifiquei a existência de cada objeto no remoto. Confirmado:
 - **Faltam no remoto:** `0022_logs_coordenacao` (tabela `logs_coordenacao` + índice + 2 policies) e

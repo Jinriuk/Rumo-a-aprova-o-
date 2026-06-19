@@ -40,7 +40,7 @@
 - **Health check**: não há endpoint dedicado — usar a própria tela de
   login como sinal mínimo (carrega = front + Supabase respondem) e
   `GET <VITE_SUPABASE_URL>/rest/v1/` para o banco. Para monitoramento
-  contínuo, ver `docs/monitoramento-backup.md` (Advisors, Reports do
+  contínuo, ver `docs/operacao/monitoramento-backup.md` (Advisors, Reports do
   Supabase).
 - **Para ativar relato externo de erro** (Sentry ou equivalente): apontar
   `VITE_ERROR_REPORT_URL` para o endpoint do serviço — `observabilidade.js`
@@ -121,7 +121,7 @@ tabela `logs_coordenacao` com a mesma forma de isolamento já usada em
 ## 7. Suporte e canal de emergência
 
 Ainda não há um canal de suporte formalizado para o piloto (item ⚠ aberto
-em `docs/checklist-go-live-piloto.md`). Definir antes do primeiro acesso
+em `docs/operacao/checklist-go-live-piloto.md`). Definir antes do primeiro acesso
 real: quem responde dúvida da escola, em qual canal, e qual é o
 procedimento de emergência (ex.: suspender acesso de uma escola — ver
-`docs/rollback.md`, Cenário 4).
+`docs/operacao/rollback.md`, Cenário 4).

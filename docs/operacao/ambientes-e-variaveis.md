@@ -10,8 +10,8 @@
 |---|---|---|---|
 | **Desenvolvimento local** | máquina do dev (`npm run dev`) | Postgres local (`tests/reset-db.sh`) ou projeto demo | trabalho do dia a dia |
 | **CI** (`build-e-unitarios`) | GitHub Actions | Postgres efêmero (container `postgres:15`) | migrations + seed 2x + testes unitários/RLS, descartado a cada run |
-| **CI** (`e2e`) | GitHub Actions | projeto Supabase de demo, ou projeto isolado se `E2E_SUPABASE_URL`/`E2E_SUPABASE_ANON_KEY` estiverem configurados (ver `docs/e2e-ambiente.md`) | suíte Playwright contra build real |
-| **Demo/produção atual** | Vercel (front) + Supabase `bdjkgrzfzoamchdpobbl` | projeto único, região us-east-1, rotulado "demo" | demonstração — **não** dado real de aluno (ver `docs/lgpd-e-infra.md`, gate de região) |
+| **CI** (`e2e`) | GitHub Actions | projeto Supabase de demo, ou projeto isolado se `E2E_SUPABASE_URL`/`E2E_SUPABASE_ANON_KEY` estiverem configurados (ver `docs/operacao/e2e-ambiente.md`) | suíte Playwright contra build real |
+| **Demo/produção atual** | Vercel (front) + Supabase `bdjkgrzfzoamchdpobbl` | projeto único, região us-east-1, rotulado "demo" | demonstração — **não** dado real de aluno (ver `docs/operacao/lgpd-e-infra.md`, gate de região) |
 
 Não há hoje um ambiente de "staging" separado do "produção/demo": é o
 mesmo projeto Supabase + o mesmo deploy Vercel. Para o piloto real, a
@@ -52,4 +52,4 @@ e a anon key **públicas** do projeto demo — seguro por design).
   criar dependência obrigatória de ferramenta externa sem fallback").
 
 Para o procedimento de deploy e a política de segredos por etapa, ver
-`docs/deploy-checklist.md` (já existente, não duplicado aqui).
+`docs/operacao/deploy-checklist.md` (já existente, não duplicado aqui).

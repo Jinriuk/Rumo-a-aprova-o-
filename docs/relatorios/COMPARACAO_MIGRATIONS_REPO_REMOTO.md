@@ -69,4 +69,4 @@ crescente `0001…0024`.
 Ambas são aditivas e idempotentes (`create table/index if not exists`), não tocam o motor já
 presente, e não há dependência entre elas. O motor **não** deve ser reaplicado. Alinhar o **nome**
 do registro do motor no remoto (`0022`→`0024`) é opcional e cosmético — recomendo não escrever na
-tabela de controle sem necessidade. Detalhe e checklist: `docs/RECONCILIACAO_MIGRATIONS_C0.md`.
+tabela de controle sem necessidade. Detalhe e checklist: `docs/relatorios/RECONCILIACAO_MIGRATIONS_C0.md`.
