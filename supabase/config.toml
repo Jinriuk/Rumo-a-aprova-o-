@@ -29,3 +29,7 @@ verify_jwt = true
 
 [functions.lgpd-titular]
 verify_jwt = true
+
+[functions.backoffice-coordenador]
+# exige JWT; o código ainda confirma super_admin ativo em internal_admins
+verify_jwt = true

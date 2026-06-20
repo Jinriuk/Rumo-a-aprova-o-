@@ -724,3 +724,44 @@ export async function backofficeLogs(limite = 30) {
   if (error) throw falha("atividade administrativa", error);
   return data;
 }
+
+/* ---------- backoffice D0: dashboard, editar, status, coordenador ---------- */
+
+// Contadores agregados (cross-tenant) — RPC com porteiro no banco.
+export async function backofficeDashboard() {
+  const { data, error } = await supabase.rpc("backoffice_dashboard");
+  if (error) throw falha("painel do backoffice", error);
+  return data;
+}
+
+// Edita dados básicos. Campos ausentes ficam null → o banco preserva
+// (coalesce). Registra antes/depois no admin_logs. Sem service_role.
+export async function backofficeEditarEscola(escolaId, campos) {
+  const { error } = await supabase.rpc("backoffice_editar_escola", {
+    p_escola: escolaId,
+    p_nome: campos.nome ?? null,
+    p_plano: campos.plano ?? null,
+    p_cor_acento: campos.corAcento ?? null,
+    p_logo_url: campos.logoUrl ?? null,
+    p_cidade: campos.cidade ?? null,
+    p_uf: campos.uf ?? null,
+    p_limite_alunos: campos.limiteAlunos ?? null,
+    p_observacao: campos.observacao ?? null,
+  });
+  if (error) throw falha("editar escola", error);
+}
+
+// Suspender / ativar / mudar status. Reversível (nunca apaga dado).
+export async function backofficeDefinirStatus(escolaId, status) {
+  const { error } = await supabase.rpc("backoffice_definir_status", { p_escola: escolaId, p_status: status });
+  if (error) throw falha("alterar status", error);
+}
+
+// Provisiona a coordenação principal pela Edge Function segura: a
+// criação da conta exige service_role, que vive SÓ na função (nunca no
+// front). A função valida o super_admin pelo token, cria/atualiza a
+// conta com senha aleatória descartável e devolve um link de definição
+// de senha (convite seguro). Registra o log.
+export async function backofficeVincularCoordenador({ escolaId, nome, email }) {
+  return invocar("backoffice-coordenador", { escola_id: escolaId, nome, email });
+}
