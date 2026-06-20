@@ -18,19 +18,46 @@ const AREAS = {
   responsavel: AreaResponsavel,
 };
 
+// Rota discreta do backoffice (D0). Não aparece em nenhum menu de
+// aluno/responsável/coordenação — chega-se por URL direta.
+const ROTA_ADMIN = "/admin-interno";
+const naRotaAdmin = () =>
+  typeof window !== "undefined" && window.location.pathname.startsWith(ROTA_ADMIN);
+
 export default function App() {
   const { carregando, sessao, perfil, superAdmin, erro } = useSessao();
 
   if (carregando) return <TelaNeutra>Carregando…</TelaNeutra>;
   if (!sessao) return <Login />;
 
-  // Backoffice interno (17.4): invisível para qualquer papel de escola;
-  // só aparece para super_admin (gate no banco, não só na tela).
+  // Backoffice interno (D0): o gate REAL é o banco (super_admin ativo
+  // em internal_admins); a URL é só o endereço discreto. O super_admin
+  // entra direto no backoffice e a URL é normalizada para /admin-interno.
   if (superAdmin) {
+    if (typeof window !== "undefined" && !naRotaAdmin()) {
+      window.history.replaceState(null, "", ROTA_ADMIN);
+    }
     return (
       <BrandingProvider escola={{ nome: "Backoffice", slug: "admin", logo_url: null, cor_acento: null }}>
         <Casca><AreaAdmin /></Casca>
       </BrandingProvider>
+    );
+  }
+
+  // Usuário comum (aluno/responsável/coordenação) que tenta abrir a
+  // URL do backoffice: acesso restrito (regra D0.5.3) — sem vazar nada.
+  if (naRotaAdmin()) {
+    return (
+      <TelaNeutra>
+        <div className="disp" style={{ fontSize: 20, fontWeight: 800, marginBottom: 8 }}>Acesso restrito</div>
+        <div style={{ fontSize: 13, opacity: 0.85, marginBottom: 18 }}>
+          Esta área é exclusiva da operação interna.
+        </div>
+        <button onClick={() => { window.location.href = "/"; }}
+          style={{ padding: "10px 18px", borderRadius: 8, border: "none", fontWeight: 700 }}>
+          Voltar ao início
+        </button>
+      </TelaNeutra>
     );
   }
 
