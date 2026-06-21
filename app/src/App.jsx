@@ -25,10 +25,30 @@ const naRotaAdmin = () =>
   typeof window !== "undefined" && window.location.pathname.startsWith(ROTA_ADMIN);
 
 export default function App() {
-  const { carregando, sessao, perfil, superAdmin, erro } = useSessao();
+  const { carregando, sessao, perfil, superAdmin, erro, suspensa } = useSessao();
 
   if (carregando) return <TelaNeutra>Carregando…</TelaNeutra>;
   if (!sessao) return <Login />;
+
+  // S1.5 — escola suspensa/cancelada: o banco já bloqueia os dados (RLS);
+  // esta tela explica o estado e oferece sair, sem expor nada da escola.
+  if (suspensa) {
+    return (
+      <TelaNeutra>
+        <div className="disp" style={{ fontSize: 22, fontWeight: 800, marginBottom: 10, color: "#E7EEF5" }}>
+          Acesso temporariamente suspenso
+        </div>
+        <div style={{ fontSize: 13.5, maxWidth: 380, lineHeight: 1.55, marginBottom: 20 }}>
+          O acesso da sua escola está suspenso no momento. Procure a
+          coordenação da sua instituição para mais informações.
+        </div>
+        <button onClick={() => db.sair().catch(console.error)}
+          style={{ padding: "11px 20px", borderRadius: 8, border: "none", fontWeight: 700, cursor: "pointer" }}>
+          Sair
+        </button>
+      </TelaNeutra>
+    );
+  }
 
   // Backoffice interno (D0): o gate REAL é o banco (super_admin ativo
   // em internal_admins); a URL é só o endereço discreto. O super_admin

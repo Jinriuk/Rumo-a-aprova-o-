@@ -6,14 +6,14 @@ import * as db from "../data/index.js";
 import { mensagemAmigavel } from "../lib/erros.js";
 
 export function useSessao() {
-  const [estado, setEstado] = useState({ carregando: true, sessao: null, perfil: null, superAdmin: false, erro: null });
+  const [estado, setEstado] = useState({ carregando: true, sessao: null, perfil: null, superAdmin: false, erro: null, suspensa: null });
 
   useEffect(() => {
     let vivo = true;
 
     async function carregarPerfil(sessao) {
       if (!sessao) {
-        if (vivo) setEstado({ carregando: false, sessao: null, perfil: null, superAdmin: false, erro: null });
+        if (vivo) setEstado({ carregando: false, sessao: null, perfil: null, superAdmin: false, erro: null, suspensa: null });
         return;
       }
       try {
@@ -28,18 +28,24 @@ export function useSessao() {
         const podeSerAdmin = !email.endsWith("@codigo.acesso.local");
         const superAdmin = podeSerAdmin ? await db.souSuperAdmin() : false;
         if (superAdmin) {
-          if (vivo) setEstado({ carregando: false, sessao, perfil: null, superAdmin: true, erro: null });
+          if (vivo) setEstado({ carregando: false, sessao, perfil: null, superAdmin: true, erro: null, suspensa: null });
           return;
         }
         const perfil = await db.meuPerfil();
-        if (vivo) setEstado({ carregando: false, sessao, perfil, superAdmin: false, erro: null });
+        if (vivo) setEstado({ carregando: false, sessao, perfil, superAdmin: false, erro: null, suspensa: null });
       } catch (e) {
-        if (vivo) setEstado({ carregando: false, sessao, perfil: null, superAdmin: false, erro: mensagemAmigavel(e, "carregar") });
+        // S1.5 — escola suspensa/cancelada: estado próprio (não é "erro
+        // de carregar"); o App mostra a tela "Acesso suspenso" com a marca.
+        if (e?.code === "ESCOLA_SUSPENSA") {
+          if (vivo) setEstado({ carregando: false, sessao, perfil: null, superAdmin: false, erro: null, suspensa: e.escola ?? {} });
+          return;
+        }
+        if (vivo) setEstado({ carregando: false, sessao, perfil: null, superAdmin: false, erro: mensagemAmigavel(e, "carregar"), suspensa: null });
       }
     }
 
     db.sessaoAtual().then(carregarPerfil).catch((e) => {
-      if (vivo) setEstado({ carregando: false, sessao: null, perfil: null, superAdmin: false, erro: mensagemAmigavel(e, "carregar") });
+      if (vivo) setEstado({ carregando: false, sessao: null, perfil: null, superAdmin: false, erro: mensagemAmigavel(e, "carregar"), suspensa: null });
     });
 
     const parar = db.aoMudarSessao((sessao) => {
