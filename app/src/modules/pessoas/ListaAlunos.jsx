@@ -113,7 +113,7 @@ export function ListaAlunos({ alunos, consentimentos, concursos = [], turmas = [
             <option value="sem-credencial" style={{ background: T.bg2 }}>Sem credencial</option>
             <option value="sem-consentimento" style={{ background: T.bg2 }}>Sem consentimento</option>
             <option value="sem-atividade" style={{ background: T.bg2 }}>Sem atividade (7d)</option>
-            <option value="meta-atrasada" style={{ background: T.bg2 }}>Meta atrasada</option>
+            <option value="meta-atrasada" style={{ background: T.bg2 }}>Pendências da semana</option>
           </select>
         </div>
       }>

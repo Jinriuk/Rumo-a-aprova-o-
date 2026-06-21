@@ -30,10 +30,21 @@ export const ROTULO_NIVEL = {
   reta_final: "Reta Final",
 };
 
+// Confiança da estimativa, gateada por VOLUME (QA1.5): com volume só
+// "moderado" o nível é uma estimativa em formação (provisório); só com
+// volume robusto a classificação é firme. Nunca vendemos diagnóstico
+// absoluto sem base — a UI mostra "estimativa inicial" no caso parcial.
+export const CONFIANCA = {
+  ALTA: "alta",       // volume robusto → classificação firme
+  PARCIAL: "parcial", // volume moderado → estimativa inicial / em formação
+};
+
 // Limiares (🟡 calibrar com turma real — doc §10). Conservadores de
-// propósito: nível alto exige acerto E volume; pouco dado vira 'validar'.
+// propósito: nível alto exige acerto E volume; pouco dado vira 'validar';
+// volume moderado vira estimativa parcial (não afirma nível absoluto).
 export const LIMIAR = {
-  VOLUME_MINIMO: 20,    // abaixo disto não há evidência suficiente
+  VOLUME_MINIMO: 20,    // abaixo disto não há evidência suficiente (→ validar)
+  VOLUME_ROBUSTO: 50,   // abaixo disto a estimativa é PARCIAL (em formação)
   VOLUME_AVANCADO: 100, // avançado exige volume consolidado
   ACERTO_BASE: 40,      // < 40% → Base
   ACERTO_AVANCADO: 70,  // ≥ 70% (com volume) → Avançado
@@ -42,17 +53,22 @@ export const LIMIAR = {
 
 const RANK = { base: 0, intermediario: 1, avancado: 2 };
 
-/* Desempenho → nível de habilidade. Volume gateia: bom acerto com
-   pouco volume fica em Intermediário (consolidar), não Avançado. */
+/* Desempenho → nível de habilidade. Volume gateia em dois pontos:
+   (1) abaixo de VOLUME_MINIMO não classifica (origem 'validar');
+   (2) entre VOLUME_MINIMO e VOLUME_ROBUSTO o nível sai com confiança
+   PARCIAL (estimativa inicial — a UI não o trata como absoluto);
+   bom acerto com pouco volume fica em Intermediário (consolidar),
+   nunca Avançado (que exige VOLUME_AVANCADO, sempre confiança ALTA). */
 export function classificarPorDesempenho({ acertoPct, questoes } = {}) {
   if (!Number.isFinite(acertoPct) || !Number.isFinite(questoes) || questoes < LIMIAR.VOLUME_MINIMO) {
     return { nivel: null, origem: ORIGEM.VALIDAR };
   }
-  if (acertoPct < LIMIAR.ACERTO_BASE) return { nivel: NIVEIS.BASE, origem: ORIGEM.CALCULADO };
+  const confianca = questoes >= LIMIAR.VOLUME_ROBUSTO ? CONFIANCA.ALTA : CONFIANCA.PARCIAL;
+  if (acertoPct < LIMIAR.ACERTO_BASE) return { nivel: NIVEIS.BASE, origem: ORIGEM.CALCULADO, confianca };
   if (acertoPct >= LIMIAR.ACERTO_AVANCADO && questoes >= LIMIAR.VOLUME_AVANCADO) {
-    return { nivel: NIVEIS.AVANCADO, origem: ORIGEM.CALCULADO };
+    return { nivel: NIVEIS.AVANCADO, origem: ORIGEM.CALCULADO, confianca: CONFIANCA.ALTA };
   }
-  return { nivel: NIVEIS.INTERMEDIARIO, origem: ORIGEM.CALCULADO };
+  return { nivel: NIVEIS.INTERMEDIARIO, origem: ORIGEM.CALCULADO, confianca };
 }
 
 // Nível de UMA matéria a partir dos números agregados dela.

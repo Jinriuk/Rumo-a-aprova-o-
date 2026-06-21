@@ -13,7 +13,7 @@ import { SectionCard, StatusBadge, EmptyState } from "../../shared/ui/componente
 import { Icone } from "../../shared/ui/Icones.jsx";
 import {
   classificarPorDesempenho, calcularNivelGeral, resumirDiagnosticoAluno,
-  ROTULO_NIVEL, NIVEIS,
+  ROTULO_NIVEL, NIVEIS, CONFIANCA,
 } from "../conteudo/niveisAluno.js";
 
 // cor/tom de cada nível (coerente com o sistema: verde=ok, dourado=meio,
@@ -29,62 +29,84 @@ export function NiveisPorMateria({ m, trilha, diasParaProva }) {
   const T = useTema();
   if (!m) return null;
 
-  // codigo → nível (regra pura da Fase 15), só matérias com volume mínimo
-  const porMateria = {};
+  // codigo → nível (regra pura da Fase 15). QA1.5: o nível GERAL e a
+  // leitura forte ("você domina" / "em risco") só usam matérias com
+  // confiança ALTA (volume robusto). As de confiança PARCIAL aparecem
+  // na lista como ESTIMATIVA INICIAL — nunca como diagnóstico absoluto.
+  const porMateriaFirme = {};
   const linhas = m.matStats.map((s) => {
     const r = classificarPorDesempenho({ acertoPct: s.acc ?? undefined, questoes: s.q });
-    if (r.nivel) porMateria[s.id] = r.nivel;
-    return { ...s, nivel: r.nivel, origem: r.origem };
+    if (r.nivel && r.confianca === CONFIANCA.ALTA) porMateriaFirme[s.id] = r.nivel;
+    return { ...s, nivel: r.nivel, origem: r.origem, confianca: r.confianca ?? null };
   });
 
-  const geral = calcularNivelGeral(porMateria, { diasParaProva });
-  const resumo = resumirDiagnosticoAluno(porMateria);
+  const geral = calcularNivelGeral(porMateriaFirme, { diasParaProva });
+  const resumo = resumirDiagnosticoAluno(porMateriaFirme);
   const nomeDe = (cod) => m.matStats.find((s) => s.id === cod)?.name ?? cod;
   const corDe = (cod) => trilha?.porCodigo?.[cod]?.cor ?? T.sub;
 
   const comDado = linhas.filter((l) => l.nivel);
+  const temFirme = linhas.some((l) => l.confianca === CONFIANCA.ALTA);
   if (!comDado.length) {
     return (
-      <SectionCard titulo="Estimativa de nível por matéria" sub="Baseada em acerto e volume de questões resolvidas">
-        <EmptyState icone="◔" titulo="Ainda sem evidência suficiente"
-          dica="Resolva ao menos 20 questões por matéria para o sistema classificar seu nível com segurança — sem chutar." />
+      <SectionCard titulo="Estimativa inicial de nível por matéria" sub="Baseada em acerto e volume de questões resolvidas">
+        <EmptyState icone="◔" titulo="Base insuficiente para estimar"
+          dica="Resolva ao menos 20 questões por matéria para uma estimativa inicial — e 50+ para o nível se firmar. O sistema não chuta." />
       </SectionCard>
     );
   }
 
   return (
-    <SectionCard titulo="Estimativa de nível por matéria"
-      sub="Classificação por acerto e volume de questões resolvidas"
+    <SectionCard titulo="Estimativa inicial de nível por matéria"
+      sub="Estimativa por acerto e volume — firma conforme o aluno acumula registros"
       acao={geral.nivel
         ? <StatusBadge tom={TOM_NIVEL[geral.nivel] ?? "neutro"}>Geral: {ROTULO_NIVEL[geral.nivel]}</StatusBadge>
-        : <StatusBadge tom="neutro">Geral: a validar</StatusBadge>}>
+        : <StatusBadge tom="neutro">Geral: a acompanhar</StatusBadge>}>
 
-      {/* leitura pedagógica: domina / em risco / foco */}
+      {/* leitura pedagógica: só com base firme afirma domina/risco */}
       <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 14 }}>
-        {resumo.pontosFortes.length > 0 && (
-          <Leitura T={T} tom="ok" icone="escudo" titulo="Você domina"
-            texto={resumo.pontosFortes.map(nomeDe).join(", ")} />
-        )}
-        {resumo.pontosAtencao.length > 0 && (
-          <Leitura T={T} tom="risco" icone="alvo" titulo="Em risco — priorize"
-            texto={resumo.pontosAtencao.map(nomeDe).join(", ")} />
-        )}
-        {resumo.pontosFortes.length === 0 && resumo.pontosAtencao.length === 0 && (
-          <Leitura T={T} tom="alerta" icone="grafico" titulo="Em consolidação"
-            texto="Suas matérias estão no nível intermediário. Mantenha o ritmo para subir para Avançado." />
+        {!temFirme ? (
+          <Leitura T={T} tom="alerta" icone="grafico" titulo="Estimativa inicial"
+            texto="Ainda há pouco volume por matéria para firmar o nível. Estes são pontos de partida — acompanhe mais registros antes de concluir." />
+        ) : (
+          <>
+            {resumo.pontosFortes.length > 0 && (
+              <Leitura T={T} tom="ok" icone="escudo" titulo="Pontos fortes (base firme)"
+                texto={resumo.pontosFortes.map(nomeDe).join(", ")} />
+            )}
+            {resumo.pontosAtencao.length > 0 && (
+              <Leitura T={T} tom="risco" icone="alvo" titulo="Atenção — priorize"
+                texto={resumo.pontosAtencao.map(nomeDe).join(", ")} />
+            )}
+            {resumo.pontosFortes.length === 0 && resumo.pontosAtencao.length === 0 && (
+              <Leitura T={T} tom="alerta" icone="grafico" titulo="Em consolidação"
+                texto="As matérias com base firme estão no nível intermediário. Mantenha o ritmo para evoluir." />
+            )}
+          </>
         )}
       </div>
 
-      {/* lista de matérias com o nível */}
+      {/* lista de matérias: PARCIAL = estimativa inicial (em formação) */}
       <div style={{ display: "flex", flexDirection: "column", gap: 1 }}>
-        {comDado.sort((a, b) => (b.acc ?? 0) - (a.acc ?? 0)).map((l) => (
-          <div key={l.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "9px 2px", borderTop: `1px solid ${T.line}` }}>
-            <span style={{ width: 9, height: 9, borderRadius: 3, background: corDe(l.id), flexShrink: 0 }} />
-            <span style={{ flex: 1, fontSize: 13, color: T.ink, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{l.name}</span>
-            <span className="num" style={{ fontSize: 11.5, color: T.sub, minWidth: 64, textAlign: "right" }}>{l.acc != null ? `${l.acc}%` : "—"} · {l.q}q</span>
-            <StatusBadge tom={TOM_NIVEL[l.nivel] ?? "neutro"}>{ROTULO_NIVEL[l.nivel]}</StatusBadge>
-          </div>
-        ))}
+        {comDado.sort((a, b) => (b.acc ?? 0) - (a.acc ?? 0)).map((l) => {
+          const parcial = l.confianca === CONFIANCA.PARCIAL;
+          return (
+            <div key={l.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "9px 2px", borderTop: `1px solid ${T.line}` }}>
+              <span style={{ width: 9, height: 9, borderRadius: 3, background: corDe(l.id), flexShrink: 0 }} />
+              <span style={{ flex: 1, fontSize: 13, color: T.ink, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{l.name}</span>
+              <span className="num" style={{ fontSize: 11.5, color: T.sub, minWidth: 64, textAlign: "right" }}>{l.acc != null ? `${l.acc}%` : "—"} · {l.q}q</span>
+              <StatusBadge tom={parcial ? "neutro" : (TOM_NIVEL[l.nivel] ?? "neutro")}>
+                {parcial ? `${ROTULO_NIVEL[l.nivel]} (estimativa)` : ROTULO_NIVEL[l.nivel]}
+              </StatusBadge>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* nota de método: deixa claro que é estimativa, não veredito */}
+      <div style={{ fontSize: 11, color: T.sub, marginTop: 12, lineHeight: 1.5 }}>
+        Estimativa inicial: até 20 questões por matéria, base insuficiente; de 20 a 50, nível provisório
+        (em formação); acima de 50, o nível se firma. Avançado exige 100+ questões com bom acerto.
       </div>
     </SectionCard>
   );

@@ -27,7 +27,8 @@ export function PainelGestao({ resumo, aoIr, aoIrFiltrado }) {
   const ativos = ag.filter((x) => !x.semAtividade).length;
   const semAtividade = ag.filter((x) => x.semAtividade).length;
   const semCredencial = ag.filter((x) => x.semCredencial).length;
-  const metaAtrasada = ag.filter((x) => x.metaIncompleta).length;
+  // semana em curso: meta incompleta é PENDÊNCIA (em aberto), não "atraso".
+  const metaPendente = ag.filter((x) => x.metaIncompleta).length;
   const comAcc = ag.filter((x) => x.acc != null);
   const mediaAcerto = comAcc.length ? Math.round(comAcc.reduce((s, x) => s + x.acc, 0) / comAcc.length) : null;
   const questoesSemana = ag.reduce((s, x) => s + x.qSem, 0);
@@ -97,7 +98,7 @@ export function PainelGestao({ resumo, aoIr, aoIrFiltrado }) {
           ir={semCredencial ? () => aoIrFiltrado ? aoIrFiltrado("alunos", "sem-credencial") : aoIr("alunos") : null}
           rotuloCta="Liberar credenciais"
           nomes={ag.filter((x) => x.semCredencial).map((x) => x.aluno.nome.split(" ")[0])} />
-        <Alerta tom="neutro" icone="🏁" titulo="Meta atrasada" sub="Missão da semana incompleta" n={metaAtrasada}
+        <Alerta tom="neutro" icone="🏁" titulo="Pendências da semana" sub="Missão desta semana ainda em aberto (semana em curso)" n={metaPendente}
           ir={metaAtrasada ? () => aoIrFiltrado ? aoIrFiltrado("alunos", "meta-atrasada") : aoIr("ranking") : null}
           rotuloCta="Ver alunos com pendências"
           nomes={ag.filter((x) => x.metaIncompleta).map((x) => x.aluno.nome.split(" ")[0])} />

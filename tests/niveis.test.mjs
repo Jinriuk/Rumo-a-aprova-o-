@@ -9,7 +9,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import {
-  NIVEIS, ORIGEM,
+  NIVEIS, ORIGEM, CONFIANCA, LIMIAR,
   classificarPorDesempenho, calcularNivelMateria, estaEmRetaFinal,
   calcularNivelGeral, sugerirNivelInicial, resumirDiagnosticoAluno,
 } from "../app/src/modules/conteudo/niveisAluno.js";
@@ -66,6 +66,29 @@ test("geral com matéria sem dado → agregado parcial marcado 'validar'", () =>
   };
   const geral = calcularNivelGeral(porMateria, {});
   assert.equal(geral.origem, ORIGEM.VALIDAR);
+});
+
+test("QA1.5: volume moderado (20–50q) → estimativa PARCIAL; robusto (50+) → ALTA", () => {
+  // 30 questões: classifica, mas como estimativa em formação (parcial)
+  const moderado = classificarPorDesempenho({ acertoPct: 76, questoes: 30 });
+  assert.equal(moderado.nivel, NIVEIS.INTERMEDIARIO);
+  assert.equal(moderado.confianca, CONFIANCA.PARCIAL, "pouco volume não vira diagnóstico absoluto");
+  // 60 questões: base firme
+  const robusto = classificarPorDesempenho({ acertoPct: 54, questoes: 60 });
+  assert.equal(robusto.nivel, NIVEIS.INTERMEDIARIO);
+  assert.equal(robusto.confianca, CONFIANCA.ALTA);
+  // Avançado (100+) é sempre confiança ALTA
+  const avancado = classificarPorDesempenho({ acertoPct: 75, questoes: 140 });
+  assert.equal(avancado.nivel, NIVEIS.AVANCADO);
+  assert.equal(avancado.confianca, CONFIANCA.ALTA);
+  // o limiar de robustez é coerente
+  assert.equal(LIMIAR.VOLUME_ROBUSTO, 50);
+});
+
+test("QA1.5: abaixo do volume mínimo segue 'validar' SEM campo de confiança", () => {
+  // contrato preservado: o caso sem evidência continua {nivel:null, origem}
+  assert.deepEqual(classificarPorDesempenho({ acertoPct: 90, questoes: 10 }),
+    { nivel: null, origem: ORIGEM.VALIDAR });
 });
 
 test("resumo lista pontos fortes (Avançado) e de atenção (Base)", () => {
