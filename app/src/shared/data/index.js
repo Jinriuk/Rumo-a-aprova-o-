@@ -69,8 +69,18 @@ export async function meuPerfil() {
   if (error) throw falha("perfil", error);
   if (!u) throw new Error("perfil: usuário sem cadastro nesta escola");
   const { data: e, error: e2 } = await supabase
-    .from("escolas").select("id, nome, slug, logo_url, cor_acento").eq("id", u.escola_id).single();
+    .from("escolas").select("id, nome, slug, logo_url, cor_acento, status").eq("id", u.escola_id).single();
   if (e2) throw falha("escola", e2);
+  // S1.5 — escola suspensa/cancelada: a RLS já bloqueia os dados no banco
+  // (nenhuma linha de aluno/registro/painel sai); aqui o front reconhece o
+  // estado para mostrar a tela "Acesso suspenso" com a marca certa, em vez
+  // de uma tela vazia confusa. A reativação é do superoperador (backoffice).
+  if (e.status === "suspensa" || e.status === "cancelada") {
+    const err = new Error(`escola ${e.status}`);
+    err.code = "ESCOLA_SUSPENSA";
+    err.escola = e;
+    throw err;
+  }
   return { usuario: u, escola: e };
 }
 
