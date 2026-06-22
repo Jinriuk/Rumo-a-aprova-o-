@@ -709,10 +709,18 @@ export async function registrarAcaoAdmin(acao, escolaId = null, detalhe = {}) {
 }
 
 // Criar escola pelo backoffice (RPC com porteiro no banco). Devolve o id.
-export async function backofficeCriarEscola({ nome, slug, cidade, uf, plano, limiteAlunos }) {
+export async function backofficeCriarEscola({
+  nome, slug, cidade, uf, plano, limiteAlunos, statusInicial,
+  emailInstitucional, telefoneContato, contatoNome, contatoObservacao,
+}) {
   const { data, error } = await supabase.rpc("backoffice_criar_escola", {
     p_nome: nome, p_slug: slug, p_cidade: cidade ?? null, p_uf: uf ?? null,
     p_plano: plano ?? null, p_limite_alunos: limiteAlunos ?? null,
+    p_status_inicial: statusInicial ?? null,
+    p_email_institucional: emailInstitucional ?? null,
+    p_telefone_contato: telefoneContato ?? null,
+    p_contato_nome: contatoNome ?? null,
+    p_contato_observacao: contatoObservacao ?? null,
   });
   if (error) throw falha("criar escola", error);
   return data;
@@ -757,8 +765,71 @@ export async function backofficeEditarEscola(escolaId, campos) {
     p_uf: campos.uf ?? null,
     p_limite_alunos: campos.limiteAlunos ?? null,
     p_observacao: campos.observacao ?? null,
+    p_email_institucional: campos.emailInstitucional ?? null,
+    p_telefone_contato: campos.telefoneContato ?? null,
+    p_contato_nome: campos.contatoNome ?? null,
+    p_contato_observacao: campos.contatoObservacao ?? null,
   });
   if (error) throw falha("editar escola", error);
+}
+
+// Provisionar coordenador pelo backoffice (Edge Function com service_role
+// no servidor; nunca chama a admin API do Supabase direto do navegador).
+export async function backofficeProvisionarCoordenador({ escolaId, nome, email }) {
+  const { data, error } = await supabase.functions.invoke("backoffice-coordenador", {
+    body: { acao: "criar", escola_id: escolaId, nome, email },
+  });
+  if (error) {
+    let detalhe = error.message;
+    try { const ctx = await error.context?.json?.(); if (ctx?.error) detalhe = ctx.error; } catch { /* */ }
+    throw falha("provisionar coordenador", new Error(detalhe));
+  }
+  if (data?.error) throw falha("provisionar coordenador", new Error(data.error));
+  return data;
+}
+
+// Reenviar acesso (link de reset password) para coordenador existente.
+// Registra admin_logs via RPC antes de chamar a Edge Function.
+export async function backofficeReenviarAcesso({ escolaId, usuarioId, email }) {
+  // 1. log de auditoria (best-effort — não derruba o reenvio se falhar)
+  const { error: logErr } = await supabase.rpc("backoffice_registrar_reenvio", {
+    p_escola: escolaId, p_usuario_id: usuarioId,
+  });
+  if (logErr) console.error("log de reenvio não registrado:", logErr.message);
+  // 2. envio real via Edge Function
+  const { data, error } = await supabase.functions.invoke("backoffice-coordenador", {
+    body: { acao: "reenviar", email },
+  });
+  if (error) {
+    let detalhe = error.message;
+    try { const ctx = await error.context?.json?.(); if (ctx?.error) detalhe = ctx.error; } catch { /* */ }
+    throw falha("reenviar acesso", new Error(detalhe));
+  }
+  if (data?.error) throw falha("reenviar acesso", new Error(data.error));
+  return data;
+}
+
+// Recuperação de senha — coordenação/superadmin (fluxo Auth padrão).
+// Mensagem sempre genérica para não vazar se o e-mail existe ou não.
+export async function solicitarRecuperacaoSenha(email) {
+  const { error } = await supabase.auth.resetPasswordForEmail(email.trim().toLowerCase(), {
+    redirectTo: `${window.location.origin}/redefinir-senha`,
+  });
+  if (error) throw falha("solicitar recuperação de senha", error);
+}
+
+// Recuperação de código do aluno/responsável — coleta o e-mail e
+// registra a solicitação. O coordenador recebe notificação manual.
+// (Infraestrutura de e-mail para aluno é decisão de produto pendente.)
+export async function solicitarRecuperacaoCodigo(email) {
+  const emailLimpo = email.trim().toLowerCase();
+  const { error } = await supabase.from("solicitacoes_acesso").insert({
+    email: emailLimpo, tipo: "recuperacao_codigo", em: new Date().toISOString(),
+  }).select("id").maybeSingle();
+  // Tabela pode ainda não existir (D1C). Silenciosa para o usuário;
+  // a mensagem genérica é sempre exibida independentemente do resultado.
+  if (error) console.warn("solicitação de recuperação de código não gravada:", error.message);
+  return { ok: true };
 }
 
 // Suspender / ativar / mudar status (ação reversível; nunca apaga

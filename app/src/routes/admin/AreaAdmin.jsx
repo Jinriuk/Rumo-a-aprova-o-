@@ -1,13 +1,13 @@
-/* Backoffice interno (Fases 17.4/17.5 + D0/D1A) — área do OPERADOR
-   (super_admin). Invisível para escolas: o App só monta isto quando
-   sou_super_admin() é true NO BANCO. Dashboard, lista de escolas com
-   busca/filtro, detalhe com edição e ações de status (suspender/
-   reativar/cancelar) — tudo via RPC com PORTEIRO eh_super_admin no
-   banco. Nada de service_role aqui. A conta do coordenador (Auth) é
-   provisionada pela camada de operador (scripts/criar-coordenacao.mjs). */
+/* Backoffice interno (D0/D1A/D1B) — área do OPERADOR (super_admin).
+   Invisível para escolas: o App só monta isto quando sou_super_admin()
+   é true NO BANCO. Dashboard, lista de escolas com busca/filtro, detalhe
+   com edição, ações de status e provisionamento de coordenador — tudo
+   via RPC/Edge Function com porteiro. Nada de service_role aqui.
+   D1B: backoffice substitui os scripts manuais de provisionamento. */
 import React, { useMemo, useState } from "react";
 import {
-  SectionCard, Empty, Erro, EmptyState, StatCard, StatusBadge, Botao, BotaoMini, useInputStyle,
+  SectionCard, Empty, Erro, EmptyState, StatCard, StatusBadge,
+  Botao, BotaoMini, useInputStyle,
 } from "../../shared/ui/componentes.jsx";
 import { useTema } from "../../shared/branding/BrandingContext.jsx";
 import { useRecurso } from "../../shared/hooks/useRecurso.js";
@@ -17,7 +17,6 @@ import * as db from "../../shared/data/index.js";
 
 const fmtData = (iso) => (iso ? new Date(iso).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit", year: "2-digit" }) : "—");
 
-// Catálogo único de status — usado no selo, nos filtros e nas ações.
 const STATUS = {
   implantacao: { rotulo: "Em implantação", tom: "alerta", operacional: true },
   demo:        { rotulo: "Demonstração",   tom: "alerta", operacional: true },
@@ -34,7 +33,7 @@ export default function AreaAdmin() {
   const { dados: escolas, carregando, erro, recarregar } = useRecurso(() => db.backofficeEscolas(), []);
   const { dados: dash, recarregar: recDash } = useRecurso(() => db.backofficeDashboard(), []);
   const { dados: logs, recarregar: recLogs } = useRecurso(() => db.backofficeLogs(25), []);
-  const [aberta, setAberta] = useState(null); // escola_id em detalhe
+  const [aberta, setAberta] = useState(null);
 
   const recarregarTudo = () => { recarregar(); recDash(); recLogs(); };
   const lista = escolas ?? [];
@@ -79,7 +78,7 @@ export default function AreaAdmin() {
   );
 }
 
-/* ---------- 9.2 Dashboard ---------- */
+/* ---------- Dashboard ---------- */
 function Dashboard({ dash }) {
   const T = useTema();
   if (!dash) return null;
@@ -95,7 +94,7 @@ function Dashboard({ dash }) {
       </div>
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(150px,1fr))", gap: 10 }}>
         <StatCard rotulo="Alunos (total)" valor={Number(dash.alunos_total || 0)} icone="👥" />
-        <StatCard rotulo="Alunos ativos (7d)" valor={Number(dash.alunos_ativos_7d || 0)} icone="⚡" sub="com acesso nos últimos 7 dias" />
+        <StatCard rotulo="Alunos ativos (7d)" valor={Number(dash.alunos_ativos_7d || 0)} icone="⚡" sub="acesso nos últimos 7 dias" />
         <StatCard rotulo="Coordenadores" valor={Number(dash.coordenadores_total || 0)} icone="🎓" />
         <StatCard rotulo="Sem coordenador" valor={semCoord} icone="⚠" tom={semCoord ? "risco" : "ok"} sub={semCoord ? "precisam de provisão" : "tudo coberto"} />
       </div>
@@ -103,7 +102,7 @@ function Dashboard({ dash }) {
   );
 }
 
-/* ---------- 9.3 Lista de escolas (busca + filtros + ordenação) ---------- */
+/* ---------- Lista de escolas ---------- */
 function ListaEscolas({ lista, aoAbrir }) {
   const T = useTema();
   const { input: inputS, label: lbl } = useInputStyle();
@@ -194,39 +193,73 @@ function ListaEscolas({ lista, aoAbrir }) {
   );
 }
 
-/* ---------- 9.5 Criar escola ---------- */
+/* ---------- Criar escola (blocos A + B + C) ---------- */
 function NovaEscola({ aoCriar }) {
   const { input: inputS, label: lbl } = useInputStyle();
   const T = useTema();
   const [aberto, setAberto] = useState(false);
-  const [f, setF] = useState({ nome: "", slug: "", cidade: "", uf: "", plano: "", limite: "" });
+  const [f, setF] = useState({
+    // Bloco A — dados da escola
+    nome: "", slug: "", cidade: "", uf: "", plano: "", limite: "", statusInicial: "implantacao",
+    corAcento: "", logoUrl: "", observacao: "",
+    // Bloco B — contato administrativo
+    emailInstitucional: "", telefoneContato: "", contatoNome: "", contatoObservacao: "",
+    // Bloco C — acesso da coordenação
+    opcaoCoord: "depois", coordNome: "", coordEmail: "",
+  });
   const [erro, setErro] = useState(null);
+  const [ok, setOk] = useState(null);
   const [ocupado, setOcupado] = useState(false);
   const set = (k, v) => setF((a) => ({ ...a, [k]: v }));
 
   const slugValido = /^[a-z0-9-]{2,40}$/.test(f.slug);
   const ufValido = f.uf === "" || /^[A-Za-z]{2}$/.test(f.uf);
-  const pronto = nomeValido(f.nome) && slugValido && ufValido && !ocupado;
+  const corValida = f.corAcento === "" || /^#[0-9a-fA-F]{6}$/.test(f.corAcento);
+  const emailInstValido = f.emailInstitucional === "" || /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(f.emailInstitucional);
+  const emailCoordValido = f.coordEmail === "" || /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(f.coordEmail);
+  const coordCompleto = f.opcaoCoord !== "criar" || (f.coordNome.trim().length >= 2 && emailCoordValido && f.coordEmail.trim().length > 0);
+  const pronto = nomeValido(f.nome) && slugValido && ufValido && corValida && emailInstValido && coordCompleto && !ocupado;
 
   async function criar() {
     if (!pronto) return;
-    setOcupado(true); setErro(null);
+    setOcupado(true); setErro(null); setOk(null);
     try {
-      await db.backofficeCriarEscola({
+      const escolaId = await db.backofficeCriarEscola({
         nome: limparNome(f.nome), slug: f.slug.trim().toLowerCase(),
         cidade: f.cidade.trim() || null, uf: f.uf.trim().toUpperCase() || null,
         plano: f.plano.trim() || null, limiteAlunos: f.limite ? +f.limite : null,
+        statusInicial: f.statusInicial || null,
+        emailInstitucional: f.emailInstitucional.trim() || null,
+        telefoneContato: f.telefoneContato.trim() || null,
+        contatoNome: f.contatoNome.trim() || null,
+        contatoObservacao: f.contatoObservacao.trim() || null,
       });
-      setF({ nome: "", slug: "", cidade: "", uf: "", plano: "", limite: "" });
-      setAberto(false);
-      aoCriar?.();
+
+      let msgCoord = "";
+      if (f.opcaoCoord === "criar" && f.coordEmail.trim()) {
+        const r = await db.backofficeProvisionarCoordenador({
+          escolaId, nome: f.coordNome.trim(), email: f.coordEmail.trim().toLowerCase(),
+        });
+        msgCoord = r.link
+          ? " Coordenador criado e link de acesso gerado."
+          : " Coordenador criado. Configure o SMTP no Supabase para envio automático.";
+      }
+
+      setOk(`Escola "${limparNome(f.nome)}" criada com sucesso.${msgCoord}`);
+      setF({ nome: "", slug: "", cidade: "", uf: "", plano: "", limite: "", statusInicial: "implantacao",
+             corAcento: "", logoUrl: "", observacao: "",
+             emailInstitucional: "", telefoneContato: "", contatoNome: "", contatoObservacao: "",
+             opcaoCoord: "depois", coordNome: "", coordEmail: "" });
+      setTimeout(() => { setAberto(false); setOk(null); aoCriar?.(); }, 2000);
     } catch (e) { setErro(mensagemAmigavel(e, "salvar")); }
     setOcupado(false);
   }
 
+  const selS = { ...inputS, minHeight: 42, fontSize: 13.5, padding: "9px 10px" };
+
   if (!aberto) {
     return (
-      <SectionCard titulo="Criar escola" sub="Cadastra a escola em estado de implantação. O coordenador é provisionado depois (operador)."
+      <SectionCard titulo="Criar escola" sub="Cadastra escola, contato administrativo e provisionamento de coordenador."
         acao={<BotaoMini destaque onClick={() => setAberto(true)}>+ Nova escola</BotaoMini>}>
         <div style={{ fontSize: 12.5, color: T.sub }}>Abra o formulário para cadastrar uma nova escola.</div>
       </SectionCard>
@@ -234,35 +267,136 @@ function NovaEscola({ aoCriar }) {
   }
 
   return (
-    <SectionCard titulo="Criar escola" sub="A escola nasce em implantação. Ative-a no detalhe quando estiver pronta."
+    <SectionCard titulo="Criar escola" sub="Preencha os blocos abaixo. A escola nasce em implantação por padrão."
       acao={<BotaoMini onClick={() => setAberto(false)}>Cancelar</BotaoMini>}>
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(150px,1fr))", gap: 12 }}>
+
+      {/* ── Bloco A — Dados da escola ── */}
+      <BlocoLabel titulo="Bloco A — Dados da escola" />
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(150px,1fr))", gap: 12, marginBottom: 18 }}>
         <div style={{ gridColumn: "1 / -1" }}>
-          <label style={lbl}>Nome de exibição</label>
+          <label style={lbl}>Nome de exibição *</label>
           <input value={f.nome} onChange={(e) => set("nome", e.target.value)} placeholder="ex: Colégio Vitrine Naval" style={inputS} />
         </div>
         <div>
-          <label style={lbl}>Slug (URL) <span style={{ color: T.gold }}>*</span></label>
+          <label style={lbl}>Slug (URL) *</label>
           <input value={f.slug} onChange={(e) => set("slug", e.target.value.toLowerCase())} placeholder="vitrine"
             style={{ ...inputS, borderColor: f.slug && !slugValido ? T.red : T.line, fontFamily: "monospace" }} />
+          {f.slug && !slugValido && <div style={{ fontSize: 11, color: T.red, marginTop: 3 }}>2–40 chars, minúsculas, números e hífen.</div>}
         </div>
-        <div><label style={lbl}>Cidade</label><input value={f.cidade} onChange={(e) => set("cidade", e.target.value)} style={inputS} /></div>
+        <div>
+          <label style={lbl}>Status inicial</label>
+          <select value={f.statusInicial} onChange={(e) => set("statusInicial", e.target.value)} style={selS}>
+            {Object.entries(STATUS).map(([k, v]) => <option key={k} value={k}>{v.rotulo}</option>)}
+          </select>
+        </div>
+        <div>
+          <label style={lbl}>Plano</label>
+          <input value={f.plano} onChange={(e) => set("plano", e.target.value)} placeholder="ex: padrão" style={inputS} />
+        </div>
+        <div>
+          <label style={lbl}>Limite de alunos</label>
+          <input type="number" min="0" inputMode="numeric" value={f.limite} onChange={(e) => set("limite", e.target.value)} placeholder="opcional" style={inputS} />
+        </div>
+        <div>
+          <label style={lbl}>Cidade</label>
+          <input value={f.cidade} onChange={(e) => set("cidade", e.target.value)} style={inputS} />
+        </div>
         <div>
           <label style={lbl}>UF</label>
           <input value={f.uf} onChange={(e) => set("uf", e.target.value.toUpperCase().slice(0, 2))} placeholder="RJ"
             style={{ ...inputS, borderColor: !ufValido ? T.red : T.line }} />
         </div>
-        <div><label style={lbl}>Plano</label><input value={f.plano} onChange={(e) => set("plano", e.target.value)} placeholder="ex: padrão" style={inputS} /></div>
-        <div><label style={lbl}>Limite de alunos</label><input type="number" min="0" inputMode="numeric" value={f.limite} onChange={(e) => set("limite", e.target.value)} placeholder="opcional" style={inputS} /></div>
+        <div>
+          <label style={lbl}>Cor de acento</label>
+          <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+            <input value={f.corAcento} onChange={(e) => set("corAcento", e.target.value)} placeholder="#CDA349"
+              style={{ ...inputS, borderColor: corValida ? T.line : T.red, fontFamily: "monospace" }} />
+            <span style={{ width: 38, height: 38, flexShrink: 0, borderRadius: 8, border: `1px solid ${T.line}`, background: corValida && f.corAcento ? f.corAcento : T.bg }} />
+          </div>
+        </div>
+        <div style={{ gridColumn: "1 / -1" }}>
+          <label style={lbl}>Logo (URL)</label>
+          <input value={f.logoUrl} onChange={(e) => set("logoUrl", e.target.value)} placeholder="https://…" style={inputS} />
+        </div>
+        <div style={{ gridColumn: "1 / -1" }}>
+          <label style={lbl}>Observação interna (não aparece para a escola)</label>
+          <textarea value={f.observacao} onChange={(e) => set("observacao", e.target.value)} rows={2} style={{ ...inputS, minHeight: 56, resize: "vertical" }} />
+        </div>
       </div>
-      {f.slug && !slugValido && <div style={{ fontSize: 12, color: T.red, marginTop: 8 }}>Slug: 2–40 caracteres, só minúsculas, números e hífen.</div>}
-      <Botao onClick={criar} disabled={!pronto} style={{ marginTop: 14 }}>{ocupado ? "Criando…" : "+ Criar escola"}</Botao>
+
+      {/* ── Bloco B — Contato administrativo ── */}
+      <BlocoLabel titulo="Bloco B — Contato administrativo" />
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(150px,1fr))", gap: 12, marginBottom: 18 }}>
+        <div style={{ gridColumn: "1 / -1" }}>
+          <label style={lbl}>Nome do responsável administrativo</label>
+          <input value={f.contatoNome} onChange={(e) => set("contatoNome", e.target.value)} placeholder="ex: João Diretor" style={inputS} />
+        </div>
+        <div style={{ gridColumn: "1 / -1" }}>
+          <label style={lbl}>E-mail institucional da escola</label>
+          <input type="email" value={f.emailInstitucional} onChange={(e) => set("emailInstitucional", e.target.value)} placeholder="escola@dominio.com.br"
+            style={{ ...inputS, borderColor: f.emailInstitucional && !emailInstValido ? T.red : T.line }} />
+        </div>
+        <div style={{ gridColumn: "1 / -1" }}>
+          <label style={lbl}>Telefone / WhatsApp</label>
+          <input value={f.telefoneContato} onChange={(e) => set("telefoneContato", e.target.value)} placeholder="(21) 9xxxx-xxxx" style={inputS} />
+        </div>
+        <div style={{ gridColumn: "1 / -1" }}>
+          <label style={lbl}>Observação de contato</label>
+          <textarea value={f.contatoObservacao} onChange={(e) => set("contatoObservacao", e.target.value)} rows={2} style={{ ...inputS, minHeight: 52, resize: "vertical" }} />
+        </div>
+      </div>
+
+      {/* ── Bloco C — Acesso da coordenação ── */}
+      <BlocoLabel titulo="Bloco C — Acesso da coordenação" />
+      <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 18 }}>
+        {[
+          ["depois", "Deixar para depois", "Escola criada sem coordenador (checklist fica pendente)"],
+          ["criar",  "Criar coordenador agora", "Cria conta e envia link de definição de senha"],
+        ].map(([v, titulo, desc]) => {
+          const on = f.opcaoCoord === v;
+          return (
+            <button key={v} type="button" onClick={() => set("opcaoCoord", v)}
+              style={{ textAlign: "left", border: `1px solid ${on ? T.gold : T.line}`, background: on ? `${T.gold}12` : T.bg, color: T.ink, borderRadius: 10, padding: "12px 14px" }}>
+              <div style={{ fontWeight: 700, fontSize: 13.5 }}>{titulo}</div>
+              <div style={{ fontSize: 12, color: T.sub, marginTop: 2 }}>{desc}</div>
+            </button>
+          );
+        })}
+        {f.opcaoCoord === "criar" && (
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(150px,1fr))", gap: 12, padding: "12px", background: T.bg, border: `1px solid ${T.line}`, borderRadius: 10 }}>
+            <div style={{ gridColumn: "1 / -1" }}>
+              <label style={lbl}>Nome do coordenador *</label>
+              <input value={f.coordNome} onChange={(e) => set("coordNome", e.target.value)} placeholder="ex: Maria Coordenadora" style={inputS} />
+            </div>
+            <div style={{ gridColumn: "1 / -1" }}>
+              <label style={lbl}>E-mail do coordenador *</label>
+              <input type="email" value={f.coordEmail} onChange={(e) => set("coordEmail", e.target.value)} placeholder="coord@escola.com.br"
+                style={{ ...inputS, borderColor: f.coordEmail && !emailCoordValido ? T.red : T.line }} />
+              <div style={{ fontSize: 11, color: T.sub, marginTop: 4 }}>
+                Um link para definir a senha será enviado para este e-mail. Senha nunca é exposta.
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {ok && <div style={{ fontSize: 13, color: T.green, background: `${T.green}14`, border: `1px solid ${T.green}44`, borderRadius: 8, padding: "10px 12px", marginBottom: 10 }}>{ok}</div>}
+      <Botao onClick={criar} disabled={!pronto} style={{ marginTop: 4 }}>{ocupado ? "Criando…" : "+ Criar escola"}</Botao>
       <Erro>{erro}</Erro>
     </SectionCard>
   );
 }
 
-/* ---------- 9.7 Atividade administrativa (logs globais) ---------- */
+function BlocoLabel({ titulo }) {
+  const T = useTema();
+  return (
+    <div style={{ fontSize: 11, fontWeight: 800, color: T.gold, textTransform: "uppercase", letterSpacing: 0.8, borderBottom: `1px solid ${T.line}`, paddingBottom: 6, marginBottom: 10 }}>
+      {titulo}
+    </div>
+  );
+}
+
+/* ---------- Atividade administrativa (logs globais) ---------- */
 function AtividadeAdmin({ logs, nomePorEscola }) {
   const T = useTema();
   const lista = logs ?? [];
@@ -292,10 +426,11 @@ const ACOES = {
   "criar-escola": "Escola criada", "editar-escola": "Escola editada",
   "suspender-escola": "Escola suspensa", "ativar-escola": "Escola ativada",
   "alterar-status-escola": "Status alterado",
+  "vincular-coordenador": "Coordenador vinculado",
+  "reenviar-acesso": "Acesso reenviado",
 };
 const rotuloAcao = (a) => ACOES[a] ?? a;
 
-// Antes/depois legível, sem despejar jsonb cru nem dado sensível.
 function ResumoDetalhe({ acao, detalhe }) {
   const T = useTema();
   if (!detalhe) return null;
@@ -303,14 +438,18 @@ function ResumoDetalhe({ acao, detalhe }) {
     if (detalhe.de && detalhe.para) return <span style={{ color: T.sub }}> · {rotuloStatus(detalhe.de)} → {rotuloStatus(detalhe.para)}</span>;
   }
   if (acao === "editar-escola" && detalhe.antes && detalhe.depois) {
-    const campos = ["nome", "plano", "cidade", "uf", "limite_alunos", "cor_acento", "logo_url", "observacao"];
+    const campos = ["nome", "plano", "cidade", "uf", "limite_alunos", "cor_acento", "logo_url",
+                    "observacao", "email_institucional", "telefone_contato", "contato_nome"];
     const mudou = campos.filter((c) => detalhe.antes[c] !== detalhe.depois[c]);
     if (mudou.length) return <span style={{ color: T.sub }}> · alterou {mudou.join(", ")}</span>;
+  }
+  if ((acao === "vincular-coordenador" || acao === "reenviar-acesso") && detalhe.email) {
+    return <span style={{ color: T.sub }}> · {detalhe.nome ?? ""} ({detalhe.email})</span>;
   }
   return null;
 }
 
-/* ---------- 9.4 Detalhe da escola + ações ---------- */
+/* ---------- Detalhe da escola + ações ---------- */
 function DetalheEscola({ escolaId, aoVoltar, aoMudar }) {
   const T = useTema();
   const { dados: d, carregando, erro, recarregar } = useRecurso(() => db.backofficeDetalheEscola(escolaId), [escolaId]);
@@ -337,13 +476,15 @@ function DetalheEscola({ escolaId, aoVoltar, aoMudar }) {
           <StatCard rotulo="Alunos" valor={Number(d.alunos)} sub={e.limite_alunos ? `limite ${e.limite_alunos}` : null} icone="👥" />
           <StatCard rotulo="Turmas" valor={d.turmas?.length ?? 0} icone="🏷️" />
         </div>
-        <div style={{ marginTop: 12, display: "flex", gap: 16, flexWrap: "wrap", fontSize: 12.5, color: T.sub }}>
-          <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
-            Cor: {e.cor_acento ? <><span style={{ width: 14, height: 14, borderRadius: 4, background: e.cor_acento, border: `1px solid ${T.line}`, display: "inline-block" }} /> <code>{e.cor_acento}</code></> : "—"}
-          </span>
-          <span>Logo: {e.logo_url ? <a href={e.logo_url} target="_blank" rel="noreferrer" style={{ color: T.gold }}>ver imagem ↗</a> : "—"}</span>
+        <div style={{ marginTop: 12, display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(200px,1fr))", gap: 8, fontSize: 12.5, color: T.sub }}>
+          {e.contato_nome && <InfoLinha rotulo="Responsável administrativo" valor={e.contato_nome} />}
+          {e.email_institucional && <InfoLinha rotulo="E-mail institucional" valor={e.email_institucional} href={`mailto:${e.email_institucional}`} />}
+          {e.telefone_contato && <InfoLinha rotulo="Telefone/WhatsApp" valor={e.telefone_contato} />}
+          <InfoLinha rotulo="Cor de acento" valor={e.cor_acento ?? "—"} swatch={e.cor_acento} />
+          {e.logo_url && <InfoLinha rotulo="Logo" valor="ver imagem ↗" href={e.logo_url} />}
         </div>
-        {e.observacao && <div style={{ marginTop: 10, fontSize: 12.5, color: T.sub, background: T.bg, border: `1px solid ${T.line}`, borderRadius: 8, padding: "8px 10px" }}><b style={{ color: T.ink }}>Obs. interna:</b> {e.observacao}</div>}
+        {e.observacao && <div style={{ marginTop: 10, fontSize: 12.5, color: T.sub, background: T.bg, border: `1px solid ${T.line}`, borderRadius: 8, padding: "8px 10px", lineHeight: 1.5 }}><b style={{ color: T.ink }}>Obs. interna:</b> {e.observacao}</div>}
+        {e.contato_observacao && <div style={{ marginTop: 8, fontSize: 12.5, color: T.sub, background: T.bg, border: `1px solid ${T.line}`, borderRadius: 8, padding: "8px 10px", lineHeight: 1.5 }}><b style={{ color: T.ink }}>Obs. de contato:</b> {e.contato_observacao}</div>}
       </SectionCard>
 
       {editando && <EditarEscola escola={e} aoSalvar={() => { setEditando(false); recarregarLocal(); }} />}
@@ -352,7 +493,7 @@ function DetalheEscola({ escolaId, aoVoltar, aoMudar }) {
 
       <ChecklistImplantacao d={d} />
 
-      <Coordenadores d={d} />
+      <Coordenadores d={d} escolaId={escolaId} aoMudar={recarregarLocal} />
 
       <SectionCard titulo="Atividade desta escola" sub="Últimas ações administrativas sobre esta escola." semPadding>
         {logsEscola.length === 0 ? (
@@ -372,13 +513,31 @@ function DetalheEscola({ escolaId, aoVoltar, aoMudar }) {
   );
 }
 
-/* ---------- 9.5 Editar escola ---------- */
+function InfoLinha({ rotulo, valor, href, swatch }) {
+  const T = useTema();
+  return (
+    <div>
+      <span style={{ color: T.sub }}>{rotulo}: </span>
+      {href
+        ? <a href={href} target="_blank" rel="noreferrer" style={{ color: T.gold }}>{valor}</a>
+        : <span style={{ color: T.ink, display: "inline-flex", alignItems: "center", gap: 6 }}>
+            {swatch && <span style={{ width: 13, height: 13, borderRadius: 3, background: swatch, border: `1px solid ${T.line}`, display: "inline-block" }} />}
+            {valor}
+          </span>}
+    </div>
+  );
+}
+
+/* ---------- Editar escola (com campos de contato) ---------- */
 function EditarEscola({ escola, aoSalvar }) {
   const { input: inputS, label: lbl } = useInputStyle();
   const T = useTema();
   const [f, setF] = useState({
     nome: escola.nome ?? "", plano: escola.plano ?? "", cidade: escola.cidade ?? "", uf: escola.uf ?? "",
-    corAcento: escola.cor_acento ?? "", logoUrl: escola.logo_url ?? "", limite: escola.limite_alunos ?? "", observacao: escola.observacao ?? "",
+    corAcento: escola.cor_acento ?? "", logoUrl: escola.logo_url ?? "", limite: escola.limite_alunos ?? "",
+    observacao: escola.observacao ?? "",
+    emailInstitucional: escola.email_institucional ?? "", telefoneContato: escola.telefone_contato ?? "",
+    contatoNome: escola.contato_nome ?? "", contatoObservacao: escola.contato_observacao ?? "",
   });
   const [erro, setErro] = useState(null);
   const [ocupado, setOcupado] = useState(false);
@@ -386,7 +545,8 @@ function EditarEscola({ escola, aoSalvar }) {
 
   const corValida = f.corAcento === "" || /^#[0-9a-fA-F]{6}$/.test(f.corAcento);
   const ufValido = f.uf === "" || /^[A-Za-z]{2}$/.test(f.uf);
-  const pronto = nomeValido(f.nome) && corValida && ufValido && !ocupado;
+  const emailInstValido = f.emailInstitucional === "" || /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(f.emailInstitucional);
+  const pronto = nomeValido(f.nome) && corValida && ufValido && emailInstValido && !ocupado;
 
   async function salvar() {
     if (!pronto) return;
@@ -398,6 +558,10 @@ function EditarEscola({ escola, aoSalvar }) {
         corAcento: f.corAcento.trim() || null, logoUrl: f.logoUrl.trim() || null,
         limiteAlunos: f.limite === "" ? null : +f.limite,
         observacao: f.observacao.trim() || null,
+        emailInstitucional: f.emailInstitucional.trim() || null,
+        telefoneContato: f.telefoneContato.trim() || null,
+        contatoNome: f.contatoNome.trim() || null,
+        contatoObservacao: f.contatoObservacao.trim() || null,
       });
       aoSalvar?.();
     } catch (ex) { setErro(mensagemAmigavel(ex, "salvar")); }
@@ -406,7 +570,8 @@ function EditarEscola({ escola, aoSalvar }) {
 
   return (
     <SectionCard titulo="Editar dados da escola" sub="Em branco = mantém o valor atual. Toda alteração fica registrada na auditoria.">
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(150px,1fr))", gap: 12 }}>
+      <BlocoLabel titulo="Dados da escola" />
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(150px,1fr))", gap: 12, marginBottom: 16 }}>
         <div style={{ gridColumn: "1 / -1" }}><label style={lbl}>Nome de exibição</label><input value={f.nome} onChange={(e) => set("nome", e.target.value)} style={inputS} /></div>
         <div><label style={lbl}>Plano</label><input value={f.plano} onChange={(e) => set("plano", e.target.value)} placeholder="ex: padrão" style={inputS} /></div>
         <div><label style={lbl}>Limite de alunos</label><input type="number" min="0" inputMode="numeric" value={f.limite} onChange={(e) => set("limite", e.target.value)} style={inputS} /></div>
@@ -421,14 +586,29 @@ function EditarEscola({ escola, aoSalvar }) {
         </div>
         <div style={{ gridColumn: "1 / -1" }}>
           <label style={lbl}>Logo (URL)</label>
-          <input value={f.logoUrl} onChange={(e) => set("logoUrl", e.target.value)} placeholder="https://… (link público de imagem)" style={inputS} />
-          <div style={{ fontSize: 11, color: T.sub, marginTop: 4 }}>Cole o link público de uma imagem (PNG/SVG). Upload de arquivo ainda não está disponível aqui.</div>
+          <input value={f.logoUrl} onChange={(e) => set("logoUrl", e.target.value)} placeholder="https://…" style={inputS} />
         </div>
         <div style={{ gridColumn: "1 / -1" }}>
-          <label style={lbl}>Observação interna (não aparece para a escola)</label>
+          <label style={lbl}>Observação interna</label>
           <textarea value={f.observacao} onChange={(e) => set("observacao", e.target.value)} rows={2} style={{ ...inputS, minHeight: 56, resize: "vertical" }} />
         </div>
       </div>
+
+      <BlocoLabel titulo="Contato administrativo" />
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(150px,1fr))", gap: 12, marginBottom: 8 }}>
+        <div style={{ gridColumn: "1 / -1" }}><label style={lbl}>Nome do responsável administrativo</label><input value={f.contatoNome} onChange={(e) => set("contatoNome", e.target.value)} style={inputS} /></div>
+        <div style={{ gridColumn: "1 / -1" }}>
+          <label style={lbl}>E-mail institucional</label>
+          <input type="email" value={f.emailInstitucional} onChange={(e) => set("emailInstitucional", e.target.value)}
+            style={{ ...inputS, borderColor: f.emailInstitucional && !emailInstValido ? T.red : T.line }} />
+        </div>
+        <div style={{ gridColumn: "1 / -1" }}><label style={lbl}>Telefone / WhatsApp</label><input value={f.telefoneContato} onChange={(e) => set("telefoneContato", e.target.value)} style={inputS} /></div>
+        <div style={{ gridColumn: "1 / -1" }}>
+          <label style={lbl}>Observação de contato</label>
+          <textarea value={f.contatoObservacao} onChange={(e) => set("contatoObservacao", e.target.value)} rows={2} style={{ ...inputS, minHeight: 52, resize: "vertical" }} />
+        </div>
+      </div>
+
       {!corValida && <div style={{ fontSize: 12, color: T.red, marginTop: 8 }}>Cor: use hexadecimal #RRGGBB (ex.: #CDA349).</div>}
       <Botao onClick={salvar} disabled={!pronto} style={{ marginTop: 14 }}>{ocupado ? "Salvando…" : "Salvar alterações"}</Botao>
       <Erro>{erro}</Erro>
@@ -436,10 +616,10 @@ function EditarEscola({ escola, aoSalvar }) {
   );
 }
 
-/* ---------- 9.4/9.8 Ações de status com confirmação ---------- */
+/* ---------- Ações de status ---------- */
 function AcoesStatus({ escola, aoMudar }) {
   const T = useTema();
-  const [confirma, setConfirma] = useState(null); // { status, titulo, corpo, perigo }
+  const [confirma, setConfirma] = useState(null);
   const [ocupado, setOcupado] = useState(false);
   const [erro, setErro] = useState(null);
 
@@ -482,7 +662,7 @@ function AcoesStatus({ escola, aoMudar }) {
   );
 }
 
-/* ---------- 9.8 Modal de confirmação (guardrail de ação sensível) ---------- */
+/* ---------- Modal de confirmação ---------- */
 function ConfirmacaoModal({ titulo, corpo, perigo, ocupado, rotuloConfirmar = "Confirmar", aoConfirmar, aoCancelar }) {
   const T = useTema();
   return (
@@ -510,20 +690,31 @@ function ConfirmacaoModal({ titulo, corpo, perigo, ocupado, rotuloConfirmar = "C
   );
 }
 
-/* ---------- Checklist de implantação (semântica consistente com a RLS) ---------- */
+/* ---------- Checklist de implantação (dados reais) ---------- */
 function ChecklistImplantacao({ d }) {
   const T = useTema();
   const e = d.escola ?? {};
   const marca = !!(e.cor_acento || e.logo_url);
+  const dadosBasicos = !!(e.nome && e.slug);
   const op = operacional(e.status);
+  const coords = d.coordenadores ?? [];
+  const turmas = d.turmas ?? [];
+  const temContato = !!(e.email_institucional || e.contato_nome || e.telefone_contato);
+
   const checklist = [
     { ok: true, label: "Escola criada" },
-    { ok: (d.coordenadores?.length ?? 0) > 0, label: "Coordenador provisionado", dica: "via scripts/criar-coordenacao.mjs" },
-    { ok: marca, label: "Marca configurada (cor/logo)" },
-    { ok: (d.turmas?.length ?? 0) > 0, label: "Turmas criadas" },
-    { ok: Number(d.alunos) > 0, label: "Alunos importados" },
-    { ok: Number(d.alunos_com_credencial) > 0, label: "Credenciais geradas" },
-    { ok: Number(d.responsaveis) > 0, label: "Responsáveis vinculados (se houver)" },
+    { ok: dadosBasicos, label: "Dados básicos preenchidos (nome e slug)" },
+    { ok: temContato, label: "Contato administrativo informado" },
+    {
+      ok: coords.length > 0,
+      label: "Coordenador provisionado",
+      dica: coords.length === 0 ? "Use o botão 'Criar coordenador' abaixo para provisionar pelo backoffice." : null,
+    },
+    { ok: marca, label: "Marca configurada (cor ou logo)" },
+    { ok: turmas.length > 0, label: "Turmas criadas" },
+    { ok: Number(d.alunos) > 0, label: "Alunos cadastrados" },
+    { ok: Number(d.alunos_com_credencial) > 0, label: "Credenciais/códigos gerados" },
+    { ok: Number(d.responsaveis) > 0, label: "Responsáveis vinculados" },
     {
       ok: op,
       label: e.status === "ativa" ? "Escola ativada (status ativa)" : `Acesso operacional (${rotuloStatus(e.status)})`,
@@ -551,29 +742,110 @@ function ChecklistImplantacao({ d }) {
   );
 }
 
-/* ---------- 9.6 Coordenador principal ---------- */
-function Coordenadores({ d }) {
+/* ---------- Coordenadores — provisionamento completo pelo backoffice ---------- */
+function Coordenadores({ d, escolaId, aoMudar }) {
   const T = useTema();
+  const { input: inputS, label: lbl } = useInputStyle();
   const coords = d.coordenadores ?? [];
+  const [criando, setCriando] = useState(false);
+  const [f, setF] = useState({ nome: "", email: "" });
+  const [ocupado, setOcupado] = useState(false);
+  const [ok, setOk] = useState(null);
+  const [erro, setErro] = useState(null);
+  const set = (k, v) => setF((a) => ({ ...a, [k]: v }));
+
+  const emailValido = f.email === "" || /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(f.email);
+  const pronto = f.nome.trim().length >= 2 && emailValido && f.email.trim().length > 0 && !ocupado;
+
+  async function provisionar() {
+    if (!pronto) return;
+    setOcupado(true); setErro(null); setOk(null);
+    try {
+      const r = await db.backofficeProvisionarCoordenador({
+        escolaId, nome: f.nome.trim(), email: f.email.trim().toLowerCase(),
+      });
+      const msg = r.link
+        ? "Coordenador criado. Um link de acesso/redefinição de senha foi enviado para o e-mail cadastrado."
+        : "Coordenador criado. Configure o envio de e-mail no Supabase Auth para envio automático.";
+      setOk(msg);
+      setF({ nome: "", email: "" });
+      setCriando(false);
+      aoMudar?.();
+    } catch (ex) { setErro(mensagemAmigavel(ex, "provisionar")); }
+    setOcupado(false);
+  }
+
+  async function reenviar(coord) {
+    setOcupado(true); setErro(null); setOk(null);
+    try {
+      await db.backofficeReenviarAcesso({ escolaId, usuarioId: coord.id, email: coord.email });
+      setOk("Link de redefinição de senha enviado (ou agendado). Verifique o SMTP no Supabase Auth.");
+    } catch (ex) { setErro(mensagemAmigavel(ex, "reenviar")); }
+    setOcupado(false);
+  }
+
   return (
-    <SectionCard titulo="Coordenação" sub="A conta do coordenador (Auth) é provisionada pela camada de operador — nunca pelo front.">
-      {coords.length > 0 ? (
-        <div style={{ fontSize: 13.5, color: T.ink, lineHeight: 1.8 }}>
-          {coords.map((nome, i) => (
-            <div key={i} style={{ display: "flex", alignItems: "center", gap: 8 }}>
-              <span style={{ color: T.green }}>●</span> {nome}
+    <SectionCard titulo="Coordenação"
+      sub="Crie ou vincule o coordenador diretamente pelo backoffice — sem script manual."
+      acao={!criando && <BotaoMini destaque onClick={() => { setCriando(true); setOk(null); setErro(null); }}>+ Criar coordenador</BotaoMini>}>
+
+      {ok && <div style={{ fontSize: 13, color: T.green, background: `${T.green}14`, border: `1px solid ${T.green}44`, borderRadius: 8, padding: "10px 12px", marginBottom: 12 }}>{ok}</div>}
+
+      {coords.length > 0 && (
+        <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: criando ? 16 : 0 }}>
+          {coords.map((c) => (
+            <div key={c.id} style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 14px", background: T.bg, border: `1px solid ${T.line}`, borderRadius: 10, flexWrap: "wrap" }}>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: 14, fontWeight: 700, color: T.ink, display: "flex", alignItems: "center", gap: 6 }}>
+                  <span style={{ color: T.green, fontSize: 10 }}>●</span> {c.nome}
+                </div>
+                {c.email && <div style={{ fontSize: 12, color: T.sub, marginTop: 2 }}>{c.email}</div>}
+                {!c.email && <div style={{ fontSize: 12, color: T.sub, marginTop: 2 }}>E-mail não registrado (re-provisione para atualizar)</div>}
+              </div>
+              {c.email && (
+                <button onClick={() => reenviar(c)} disabled={ocupado}
+                  style={{ border: `1px solid ${T.line}`, background: T.card, color: T.gold, borderRadius: 8, fontSize: 12.5, fontWeight: 700, padding: "8px 14px", minHeight: 38, opacity: ocupado ? 0.5 : 1 }}>
+                  {ocupado ? "Enviando…" : "↻ Reenviar acesso"}
+                </button>
+              )}
             </div>
           ))}
         </div>
-      ) : (
-        <EmptyState icone="🎓" titulo="Nenhum coordenador ainda"
-          dica="Rode scripts/criar-coordenacao.mjs (operador) com ESCOLA_SLUG, COORD_EMAIL e COORD_SENHA. Senha nunca é exibida nem fica no repositório; o coordenador entra com e-mail e senha." />
       )}
-      {coords.length > 0 && (
-        <div style={{ marginTop: 12, fontSize: 11.5, color: T.sub, background: T.bg, border: `1px solid ${T.line}`, borderRadius: 8, padding: "9px 11px", lineHeight: 1.5 }}>
-          Para adicionar/reativar coordenador ou redefinir senha, use a camada de operador (script). O backoffice não cria conta Auth (precisaria de service_role, que não entra no front).
+
+      {coords.length === 0 && !criando && (
+        <EmptyState icone="🎓" titulo="Nenhum coordenador ainda"
+          dica="Clique em '+ Criar coordenador' para provisionar o acesso pelo backoffice. Um link de definição de senha será enviado por e-mail." />
+      )}
+
+      {criando && (
+        <div style={{ padding: 14, background: T.bg, border: `1px solid ${T.line}`, borderRadius: 10 }}>
+          <div style={{ fontSize: 13, fontWeight: 700, color: T.ink, marginBottom: 12 }}>Novo coordenador</div>
+          <div style={{ display: "grid", gap: 12 }}>
+            <div>
+              <label style={lbl}>Nome *</label>
+              <input value={f.nome} onChange={(e) => set("nome", e.target.value)} placeholder="ex: Maria Coordenadora" style={inputS} />
+            </div>
+            <div>
+              <label style={lbl}>E-mail *</label>
+              <input type="email" value={f.email} onChange={(e) => set("email", e.target.value)} placeholder="coord@escola.com.br"
+                style={{ ...inputS, borderColor: f.email && !emailValido ? T.red : T.line }} />
+              <div style={{ fontSize: 11, color: T.sub, marginTop: 4 }}>
+                Um link de definição de senha será enviado. Senha nunca é exibida nem registrada.
+              </div>
+            </div>
+          </div>
+          <div style={{ display: "flex", gap: 10, marginTop: 14 }}>
+            <Botao onClick={provisionar} disabled={!pronto}>{ocupado ? "Criando…" : "Criar acesso"}</Botao>
+            <button onClick={() => { setCriando(false); setErro(null); setF({ nome: "", email: "" }); }}
+              style={{ border: `1px solid ${T.line}`, background: T.card, color: T.sub, borderRadius: 8, padding: "10px 18px", fontWeight: 600, fontSize: 13 }}>
+              Cancelar
+            </button>
+          </div>
         </div>
       )}
+
+      <Erro>{erro}</Erro>
     </SectionCard>
   );
 }
