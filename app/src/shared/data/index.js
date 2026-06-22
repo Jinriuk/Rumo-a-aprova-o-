@@ -68,21 +68,20 @@ export async function meuPerfil() {
     .from("usuarios").select("id, escola_id, papel, nome").eq("id", uid).maybeSingle();
   if (error) throw falha("perfil", error);
   if (!u) throw new Error("perfil: usuário sem cadastro nesta escola");
+  // `status` entra aqui de propósito (D1A.1): a S1 bloqueia a escola
+  // suspensa/cancelada na RLS, mas o SELECT de `escolas` continua
+  // visível para o dono — então o front LÊ o status para explicar
+  // "acesso suspenso" em vez de mostrar um painel vazio sem motivo.
   const { data: e, error: e2 } = await supabase
     .from("escolas").select("id, nome, slug, logo_url, cor_acento, status").eq("id", u.escola_id).single();
   if (e2) throw falha("escola", e2);
-  // S1.5 — escola suspensa/cancelada: a RLS já bloqueia os dados no banco
-  // (nenhuma linha de aluno/registro/painel sai); aqui o front reconhece o
-  // estado para mostrar a tela "Acesso suspenso" com a marca certa, em vez
-  // de uma tela vazia confusa. A reativação é do superoperador (backoffice).
-  if (e.status === "suspensa" || e.status === "cancelada") {
-    const err = new Error(`escola ${e.status}`);
-    err.code = "ESCOLA_SUSPENSA";
-    err.escola = e;
-    throw err;
-  }
   return { usuario: u, escola: e };
 }
+
+// Espelho do gate de suspensão do banco — módulo PURO (testável sem
+// cliente). Reexportado aqui para o front continuar pedindo tudo a
+// `db.*` num lugar só.
+export { escolaOperacional } from "./operacional.js";
 
 /* ---------- conteúdo (trilha — global, só leitura) ---------- */
 
@@ -735,17 +734,18 @@ export async function backofficeLogs(limite = 30) {
   return data;
 }
 
-/* ---------- backoffice D0: dashboard, editar, status, coordenador ---------- */
+/* ---------- backoffice D0 (super_admin) — operar sem entrar no banco ---------- */
 
-// Contadores agregados (cross-tenant) — RPC com porteiro no banco.
+// Contadores agregados para o dashboard do operador (RPC com porteiro
+// eh_super_admin no banco — migration 0025). Devolve um objeto jsonb.
 export async function backofficeDashboard() {
   const { data, error } = await supabase.rpc("backoffice_dashboard");
-  if (error) throw falha("painel do backoffice", error);
+  if (error) throw falha("dashboard (backoffice)", error);
   return data;
 }
 
-// Edita dados básicos. Campos ausentes ficam null → o banco preserva
-// (coalesce). Registra antes/depois no admin_logs. Sem service_role.
+// Editar dados básicos da escola. Manda só o que mudou (NULL = não
+// mexer, COALESCE no banco). Registra antes/depois no admin_logs.
 export async function backofficeEditarEscola(escolaId, campos) {
   const { error } = await supabase.rpc("backoffice_editar_escola", {
     p_escola: escolaId,
@@ -761,17 +761,9 @@ export async function backofficeEditarEscola(escolaId, campos) {
   if (error) throw falha("editar escola", error);
 }
 
-// Suspender / ativar / mudar status. Reversível (nunca apaga dado).
+// Suspender / ativar / mudar status (ação reversível; nunca apaga
+// dado). O banco valida o status e registra ação específica no log.
 export async function backofficeDefinirStatus(escolaId, status) {
   const { error } = await supabase.rpc("backoffice_definir_status", { p_escola: escolaId, p_status: status });
-  if (error) throw falha("alterar status", error);
-}
-
-// Provisiona a coordenação principal pela Edge Function segura: a
-// criação da conta exige service_role, que vive SÓ na função (nunca no
-// front). A função valida o super_admin pelo token, cria/atualiza a
-// conta com senha aleatória descartável e devolve um link de definição
-// de senha (convite seguro). Registra o log.
-export async function backofficeVincularCoordenador({ escolaId, nome, email }) {
-  return invocar("backoffice-coordenador", { escola_id: escolaId, nome, email });
+  if (error) throw falha("alterar status da escola", error);
 }

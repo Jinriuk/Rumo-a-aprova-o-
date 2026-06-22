@@ -18,66 +18,19 @@ const AREAS = {
   responsavel: AreaResponsavel,
 };
 
-// Rota discreta do backoffice (D0). Não aparece em nenhum menu de
-// aluno/responsável/coordenação — chega-se por URL direta.
-const ROTA_ADMIN = "/admin-interno";
-const naRotaAdmin = () =>
-  typeof window !== "undefined" && window.location.pathname.startsWith(ROTA_ADMIN);
-
 export default function App() {
-  const { carregando, sessao, perfil, superAdmin, erro, suspensa } = useSessao();
+  const { carregando, sessao, perfil, superAdmin, erro } = useSessao();
 
   if (carregando) return <TelaNeutra>Carregando…</TelaNeutra>;
   if (!sessao) return <Login />;
 
-  // S1.5 — escola suspensa/cancelada: o banco já bloqueia os dados (RLS);
-  // esta tela explica o estado e oferece sair, sem expor nada da escola.
-  if (suspensa) {
-    return (
-      <TelaNeutra>
-        <div className="disp" style={{ fontSize: 22, fontWeight: 800, marginBottom: 10, color: "#E7EEF5" }}>
-          Acesso temporariamente suspenso
-        </div>
-        <div style={{ fontSize: 13.5, maxWidth: 380, lineHeight: 1.55, marginBottom: 20 }}>
-          O acesso da sua escola está suspenso no momento. Procure a
-          coordenação da sua instituição para mais informações.
-        </div>
-        <button onClick={() => db.sair().catch(console.error)}
-          style={{ padding: "11px 20px", borderRadius: 8, border: "none", fontWeight: 700, cursor: "pointer" }}>
-          Sair
-        </button>
-      </TelaNeutra>
-    );
-  }
-
-  // Backoffice interno (D0): o gate REAL é o banco (super_admin ativo
-  // em internal_admins); a URL é só o endereço discreto. O super_admin
-  // entra direto no backoffice e a URL é normalizada para /admin-interno.
+  // Backoffice interno (17.4): invisível para qualquer papel de escola;
+  // só aparece para super_admin (gate no banco, não só na tela).
   if (superAdmin) {
-    if (typeof window !== "undefined" && !naRotaAdmin()) {
-      window.history.replaceState(null, "", ROTA_ADMIN);
-    }
     return (
       <BrandingProvider escola={{ nome: "Backoffice", slug: "admin", logo_url: null, cor_acento: null }}>
         <Casca><AreaAdmin /></Casca>
       </BrandingProvider>
-    );
-  }
-
-  // Usuário comum (aluno/responsável/coordenação) que tenta abrir a
-  // URL do backoffice: acesso restrito (regra D0.5.3) — sem vazar nada.
-  if (naRotaAdmin()) {
-    return (
-      <TelaNeutra>
-        <div className="disp" style={{ fontSize: 20, fontWeight: 800, marginBottom: 8 }}>Acesso restrito</div>
-        <div style={{ fontSize: 13, opacity: 0.85, marginBottom: 18 }}>
-          Esta área é exclusiva da operação interna.
-        </div>
-        <button onClick={() => { window.location.href = "/"; }}
-          style={{ padding: "10px 18px", borderRadius: 8, border: "none", fontWeight: 700 }}>
-          Voltar ao início
-        </button>
-      </TelaNeutra>
     );
   }
 
@@ -93,6 +46,15 @@ export default function App() {
     );
   }
 
+  // Escola suspensa/cancelada (S1, migration 0027): a RLS já esconde
+  // todo o dado da escola — sem este gate o usuário entraria num painel
+  // VAZIO sem explicação (era o sintoma do bug D1A). Aqui mostramos o
+  // motivo de forma clara. O bloqueio continua sendo do banco; o front
+  // só o torna legível (não o aplica e não o afrouxa).
+  if (!db.escolaOperacional(perfil.escola)) {
+    return <TelaAcessoSuspenso escola={perfil.escola} />;
+  }
+
   const Area = AREAS[perfil.usuario.papel];
   if (!Area) return <TelaNeutra>Papel desconhecido: {perfil.usuario.papel}</TelaNeutra>;
 
@@ -102,6 +64,28 @@ export default function App() {
         <Area perfil={perfil} />
       </Casca>
     </BrandingProvider>
+  );
+}
+
+function TelaAcessoSuspenso({ escola }) {
+  const cancelada = escola?.status === "cancelada";
+  return (
+    <TelaNeutra>
+      <div style={{ fontSize: 40, marginBottom: 14 }}>{cancelada ? "🚫" : "⏸️"}</div>
+      <div style={{ color: "#E8D8A8", fontWeight: 800, fontSize: 18, marginBottom: 10 }}>
+        {cancelada ? "Acesso encerrado" : "Acesso temporariamente suspenso"}
+      </div>
+      <div style={{ fontSize: 14, maxWidth: 380, lineHeight: 1.6, marginBottom: 22 }}>
+        O acesso de <b style={{ color: "#C8D8E8" }}>{escola?.nome ?? "sua escola"}</b>{" "}
+        {cancelada
+          ? "foi encerrado. Fale com o responsável pela conta para mais informações."
+          : "está suspenso no momento. Assim que for reativado pela administração, seu painel volta automaticamente."}
+      </div>
+      <button onClick={() => db.sair().catch(console.error)}
+        style={{ padding: "11px 20px", borderRadius: 9, border: "1px solid #1E3A52", background: "#102236", color: "#8AA4BC", fontWeight: 700, fontSize: 14 }}>
+        Sair
+      </button>
+    </TelaNeutra>
   );
 }
 
