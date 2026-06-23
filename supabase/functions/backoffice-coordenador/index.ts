@@ -109,7 +109,7 @@ Deno.serve(async (req) => {
         super_admin_id: quem.id,
         acao: "reenviar-acesso-coordenador",
         detalhe: { email: emailLower, status: statusReenvio },
-      }).catch(() => {});
+      });
 
       return json({ ok: true, status: statusReenvio, email: emailLower, link }, 200, corsHeaders);
     }
@@ -176,7 +176,7 @@ Deno.serve(async (req) => {
       acao: "vincular-coordenador",
       escola_id,
       detalhe: { nome: nomeLimpo, email: emailLower, conta_nova: criada, status: statusFinal },
-    }).catch(() => {});
+    });
 
     if (erroLink) {
       return json({
