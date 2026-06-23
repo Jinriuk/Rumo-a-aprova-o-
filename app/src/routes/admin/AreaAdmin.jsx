@@ -2,7 +2,7 @@
    Invisível para escolas: o App só monta isto quando sou_super_admin()
    é true NO BANCO. Dashboard, lista de escolas com busca/filtro, detalhe
    com edição, ações de status e provisionamento de coordenador — tudo
-   via RPC/Edge Function com porteiro. Nada de service_role aqui.
+   via RPC/Edge Function com porteiro. Credencial de admin nunca no navegador.
    D1B: backoffice substitui os scripts manuais de provisionamento. */
 import React, { useMemo, useState } from "react";
 import {

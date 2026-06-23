@@ -790,8 +790,8 @@ export async function backofficeEditarEscola(escolaId, campos) {
   if (error) throw falha("editar escola", error);
 }
 
-// Provisionar coordenador pelo backoffice (Edge Function com service_role
-// no servidor; nunca chama a admin API do Supabase direto do navegador).
+// Provisionar coordenador pelo backoffice (Edge Function no servidor;
+// nunca chama a admin API do Supabase direto do navegador).
 export async function backofficeProvisionarCoordenador({ escolaId, nome, email }) {
   const { data, error } = await supabase.functions.invoke("backoffice-coordenador", {
     body: { acao: "criar", escola_id: escolaId, nome, email },
