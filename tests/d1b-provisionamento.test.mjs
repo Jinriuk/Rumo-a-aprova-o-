@@ -22,7 +22,7 @@ test.after(async () => { await pool.end(); });
 const ADMIN = "cccccccc-0000-4000-8000-000000000001";
 const claimsSA = (sub) => JSON.stringify({ sub, role: "authenticated", app_metadata: {} });
 
-async function comoSuperAdmin(fn) {
+async function comoSuperAdmin(fn, beforeAuth = null) {
   const c = await pool.connect();
   try {
     await c.query("begin");
@@ -31,6 +31,7 @@ async function comoSuperAdmin(fn) {
       [ADMIN],
     );
     await c.query("select set_config('request.jwt.claims', $1, true)", [claimsSA(ADMIN)]);
+    if (beforeAuth) await beforeAuth(c); // corre como postgres antes do set role
     await c.query("set local role authenticated");
     return await fn(c);
   } finally {
@@ -85,40 +86,24 @@ test("D1B-2: backoffice_detalhe_escola retorna coordenadores com email", async (
 
 // ── 3. backoffice_registrar_reenvio com coordenador existente ──
 test("D1B-3: backoffice_registrar_reenvio registra log para coordenador existente", async () => {
-  await comoSuperAdmin(async (c) => {
-    // Primeiro pega um coordenador da escola A
-    const ur = await c.query(
-      "select id, email from usuarios where escola_id=$1 and papel='coordenacao' limit 1",
-      [ESCOLA_A]
-    );
-    if (ur.rows.length === 0) {
-      // sem coordenador na escola de teste: insere temporário
-      await c.query(
-        "insert into usuarios (id,escola_id,papel,nome,email) values (gen_random_uuid(),$1,'coordenacao','Coord Temp','ct@temp.local')",
-        [ESCOLA_A]
+  const uid = "ee000000-0000-4000-8000-00000000d1b3";
+  await comoSuperAdmin(
+    async (c) => {
+      await c.query("select public.backoffice_registrar_reenvio($1,$2)", [ESCOLA_A, uid]);
+      const logs = await c.query(
+        "select acao from admin_logs where super_admin_id=$1 and acao='reenviar-acesso' limit 1",
+        [ADMIN]
       );
-      const ur2 = await c.query(
-        "select id, email from usuarios where escola_id=$1 and papel='coordenacao' and email='ct@temp.local'",
-        [ESCOLA_A]
-      );
-      const uid = ur2.rows[0].id;
-      // registrar reenvio deve funcionar sem erro
+      assert.equal(logs.rows.length, 1, "deve ter registrado log de reenvio");
+    },
+    async (c) => {
+      // insere coordenador com e-mail como postgres (antes do set role) para contornar RLS
       await c.query(
-        "select public.backoffice_registrar_reenvio($1,$2)", [ESCOLA_A, uid]
-      );
-    } else {
-      const uid = ur.rows[0].id;
-      await c.query(
-        "select public.backoffice_registrar_reenvio($1,$2)", [ESCOLA_A, uid]
+        "insert into usuarios (id,escola_id,papel,nome,email) values ($1,$2,'coordenacao','Coord D1B3','d1b3@test.local') on conflict (id) do nothing",
+        [uid, ESCOLA_A]
       );
     }
-    // log deve ter sido inserido (dentro da transação de rollback)
-    const logs = await c.query(
-      "select acao from admin_logs where super_admin_id=$1 and acao='reenviar-acesso' limit 1",
-      [ADMIN]
-    );
-    assert.equal(logs.rows.length, 1, "deve ter registrado log de reenvio");
-  });
+  );
 });
 
 // ── 4. coordenação NÃO cria escola ──
@@ -157,25 +142,30 @@ test("D1B-6: escola sem coordenador retorna coordenadores=[]", async () => {
 
 // ── 7. checklist: escola com coordenador retorna objeto correto ──
 test("D1B-7: escola com coordenador retorna objeto {id,nome,email}", async () => {
-  await comoSuperAdmin(async (c) => {
-    const r = await c.query(
-      "select public.backoffice_criar_escola('Com Coord D1B','com-coord-d1b') as id"
-    );
-    const id = r.rows[0].id;
-    // insere coordenador diretamente (simulando o que a Edge Function faz)
-    const uid = "ee000000-0000-4000-8000-000000000099";
-    await c.query(
-      "insert into usuarios (id,escola_id,papel,nome,email) values ($1,$2,'coordenacao','Coord D1B','coord.d1b@escola.local')",
-      [uid, id]
-    );
-    const detalhe = await c.query("select public.backoffice_detalhe_escola($1) as d", [id]);
-    const d = detalhe.rows[0].d;
-    assert.equal(d.coordenadores.length, 1);
-    const coord = d.coordenadores[0];
-    assert.equal(coord.nome, "Coord D1B");
-    assert.equal(coord.email, "coord.d1b@escola.local");
-    assert.ok(coord.id, "deve ter id");
-  });
+  let escolaId;
+  const uid = "ee000000-0000-4000-8000-00000000d1b7";
+  await comoSuperAdmin(
+    async (c) => {
+      const detalhe = await c.query("select public.backoffice_detalhe_escola($1) as d", [escolaId]);
+      const d = detalhe.rows[0].d;
+      assert.equal(d.coordenadores.length, 1);
+      const coord = d.coordenadores[0];
+      assert.equal(coord.nome, "Coord D1B");
+      assert.equal(coord.email, "coord.d1b@escola.local");
+      assert.ok(coord.id, "deve ter id");
+    },
+    async (c) => {
+      // cria escola e coordenador como postgres (antes do set role) para contornar RLS
+      const r = await c.query(
+        "insert into escolas (nome, slug, status) values ('Com Coord D1B','com-coord-d1b-d1b7','implantacao') returning id"
+      );
+      escolaId = r.rows[0].id;
+      await c.query(
+        "insert into usuarios (id,escola_id,papel,nome,email) values ($1,$2,'coordenacao','Coord D1B','coord.d1b@escola.local')",
+        [uid, escolaId]
+      );
+    }
+  );
 });
 
 // ── 8. backoffice_editar_escola aceita novos campos de contato ──
@@ -226,11 +216,8 @@ test("D1B-10: escola suspensa bloqueia coordenação (RLS intacta)", async () =>
   await comoSuperAdmin(async (c) => {
     // suspende escola A
     await c.query("select public.backoffice_definir_status($1,'suspensa')", [ESCOLA_A]);
-    // tenta verificar operacional pelo banco
-    const r = await c.query("select app.tenant_operacional() as ok");
-    // A função retorna null/false quando o JWT não tem escola_id (super_admin não tem)
-    // Apenas garantimos que suspensa está salvo
-    const e = await c.query("select status from escolas where id=$1", [ESCOLA_A]);
-    assert.equal(e.rows[0].status, "suspensa");
+    // verifica via backoffice_detalhe_escola (SECURITY DEFINER, bypassa RLS de tenant)
+    const detalhe = await c.query("select public.backoffice_detalhe_escola($1) as d", [ESCOLA_A]);
+    assert.equal(detalhe.rows[0].d.escola.status, "suspensa");
   });
 });
