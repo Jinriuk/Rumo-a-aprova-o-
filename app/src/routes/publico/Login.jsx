@@ -36,7 +36,7 @@ export default function Login() {
     if (!emailRecup.trim()) { setErr("Informe o e-mail."); return; }
     setBusy(true); setErr("");
     try {
-      await db.solicitarRecuperacaoSenha(emailRecup.trim());
+      await db.recuperarSenha(emailRecup.trim());
     } catch { /* mensagem genérica independentemente do resultado */ }
     setBusy(false);
     setMsgConfirmacao("Se este e-mail estiver cadastrado, enviaremos instruções de recuperação.");

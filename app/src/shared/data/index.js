@@ -536,6 +536,23 @@ export const provisionarResponsavel = (alunoId, nome) =>
 export const gerarMeta = (alunoId) => invocar("gerar-meta", { aluno_id: alunoId });
 export const lgpdTitular = (acao, alunoId) => invocar("lgpd-titular", { acao, aluno_id: alunoId });
 
+// Envia e-mail de recuperação de senha para coordenação.
+// Mensagem genérica ao chamador — não revela se o e-mail existe.
+export async function recuperarSenha(email) {
+  const redirectTo = `${typeof window !== "undefined" ? window.location.origin : "https://rumo-a-aprova-o.vercel.app"}/redefinir-senha`;
+  const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo });
+  if (error) throw falha("recuperar senha", error);
+}
+
+// Redefine a senha do usuário com sessão de recuperação ativa.
+// Chamado apenas a partir da rota /redefinir-senha após o Supabase
+// processar o hash de recuperação e criar a sessão.
+export async function redefinirSenha(novaSenha) {
+  const { data, error } = await supabase.auth.updateUser({ password: novaSenha });
+  if (error) throw falha("redefinir senha", error);
+  return data;
+}
+
 /* ---------- motor (meta + registro) ---------- */
 
 export async function listarMetas(alunoId) {
@@ -773,8 +790,8 @@ export async function backofficeEditarEscola(escolaId, campos) {
   if (error) throw falha("editar escola", error);
 }
 
-// Provisionar coordenador pelo backoffice (Edge Function com service_role
-// no servidor; nunca chama a admin API do Supabase direto do navegador).
+// Provisionar coordenador pelo backoffice (Edge Function no servidor;
+// nunca chama a admin API do Supabase direto do navegador).
 export async function backofficeProvisionarCoordenador({ escolaId, nome, email }) {
   const { data, error } = await supabase.functions.invoke("backoffice-coordenador", {
     body: { acao: "criar", escola_id: escolaId, nome, email },
