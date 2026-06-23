@@ -6,8 +6,8 @@
 //   "reenviar"          — só reenvia reset password para e-mail existente
 //
 // Regras de segurança:
-//   - quem chama é validado pelo TOKEN real (não por campo de form);
-//   - só super_admin ATIVO (internal_admins) passa;
+//   - OPTIONS responde sem auth (preflight CORS);
+//   - POST exige token JWT válido + super_admin ativo em internal_admins;
 //   - senha é ALEATÓRIA e descartável — nunca fixa, nunca devolvida;
 //     a coordenação define a própria senha pelo LINK de recuperação;
 //   - registra admin_logs (ação sensível);
@@ -15,7 +15,8 @@
 //
 // Idempotente: e-mail já existente é revinculado à escola (criar).
 // ============================================================
-import { admin, cors, json } from "../_shared/contexto.ts";
+import { admin } from "../_shared/contexto.ts";
+import { buildCorsHeaders } from "../_shared/cors.ts";
 
 async function superAdmin(req: Request): Promise<{ id: string; email: string } | null> {
   const auth = req.headers.get("authorization") ?? "";
@@ -41,12 +42,28 @@ function senhaAleatoria(): string {
 const emailValido = (e: string) => /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(e);
 
 Deno.serve(async (req) => {
-  if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
-  if (req.method !== "POST") return json({ error: "método não suportado" }, 405);
+  const corsHeaders = buildCorsHeaders(req);
+
+  // Preflight CORS — deve responder antes de qualquer validação de auth
+  if (req.method === "OPTIONS") {
+    return new Response("ok", { status: 200, headers: corsHeaders });
+  }
+
+  if (req.method !== "POST") {
+    return new Response(JSON.stringify({ error: "método não suportado" }), {
+      status: 405,
+      headers: { ...corsHeaders, "content-type": "application/json" },
+    });
+  }
 
   try {
     const quem = await superAdmin(req);
-    if (!quem) return json({ error: "acesso restrito ao super_admin" }, 403);
+    if (!quem) {
+      return new Response(JSON.stringify({ error: "acesso restrito ao super_admin" }), {
+        status: 403,
+        headers: { ...corsHeaders, "content-type": "application/json" },
+      });
+    }
 
     const body = await req.json().catch(() => ({}));
     const acao: string = (body.acao ?? "criar").toLowerCase();
@@ -54,8 +71,18 @@ Deno.serve(async (req) => {
     // ── Modo REENVIAR: só reenvia reset password para coordenador existente ──
     if (acao === "reenviar") {
       const { email } = body;
-      if (!email) return json({ error: "informe o email do coordenador" }, 400);
-      if (!emailValido(String(email))) return json({ error: "e-mail inválido" }, 400);
+      if (!email) {
+        return new Response(JSON.stringify({ error: "informe o email do coordenador" }), {
+          status: 400,
+          headers: { ...corsHeaders, "content-type": "application/json" },
+        });
+      }
+      if (!emailValido(String(email))) {
+        return new Response(JSON.stringify({ error: "e-mail inválido" }), {
+          status: 400,
+          headers: { ...corsHeaders, "content-type": "application/json" },
+        });
+      }
       const emailLower = String(email).trim().toLowerCase();
 
       let link: string | null = null;
@@ -67,22 +94,38 @@ Deno.serve(async (req) => {
         link = gl?.properties?.action_link ?? null;
       } catch (_e) { /* sem SMTP configurado */ }
 
-      return json({ ok: true, email: emailLower, link });
+      return new Response(JSON.stringify({ ok: true, email: emailLower, link }), {
+        status: 200,
+        headers: { ...corsHeaders, "content-type": "application/json" },
+      });
     }
 
     // ── Modo CRIAR (default): cria ou revincula coordenador ──
     const { escola_id, nome, email } = body;
     if (!escola_id || !nome || !email) {
-      return json({ error: "informe escola_id, nome e email" }, 400);
+      return new Response(JSON.stringify({ error: "informe escola_id, nome e email" }), {
+        status: 400,
+        headers: { ...corsHeaders, "content-type": "application/json" },
+      });
     }
-    if (!emailValido(String(email))) return json({ error: "e-mail inválido" }, 400);
+    if (!emailValido(String(email))) {
+      return new Response(JSON.stringify({ error: "e-mail inválido" }), {
+        status: 400,
+        headers: { ...corsHeaders, "content-type": "application/json" },
+      });
+    }
     const emailLower = String(email).trim().toLowerCase();
     const nomeLimpo = String(nome).trim();
 
     const { data: escola, error: errEsc } = await admin
       .from("escolas").select("id, nome").eq("id", escola_id).maybeSingle();
     if (errEsc) throw errEsc;
-    if (!escola) return json({ error: "escola não encontrada" }, 404);
+    if (!escola) {
+      return new Response(JSON.stringify({ error: "escola não encontrada" }), {
+        status: 404,
+        headers: { ...corsHeaders, "content-type": "application/json" },
+      });
+    }
 
     const meta = { escola_id, papel: "coordenacao" };
 
@@ -122,12 +165,14 @@ Deno.serve(async (req) => {
     }
 
     let link: string | null = null;
+    let emailEnviado = false;
     try {
       const { data: gl } = await admin.auth.admin.generateLink({
         type: "recovery",
         email: emailLower,
       });
       link = gl?.properties?.action_link ?? null;
+      emailEnviado = link !== null;
     } catch (_e) { /* sem SMTP */ }
 
     await admin.from("admin_logs").insert({
@@ -137,9 +182,15 @@ Deno.serve(async (req) => {
       detalhe: { nome: nomeLimpo, email: emailLower, conta_nova: criada },
     });
 
-    return json({ ok: true, email: emailLower, nome: nomeLimpo, conta_nova: criada, link });
+    return new Response(
+      JSON.stringify({ ok: true, email: emailLower, nome: nomeLimpo, conta_nova: criada, link, email_enviado: emailEnviado }),
+      { status: 200, headers: { ...corsHeaders, "content-type": "application/json" } },
+    );
   } catch (e) {
     console.error("backoffice-coordenador:", e);
-    return json({ error: "falha ao provisionar coordenação" }, 500);
+    return new Response(JSON.stringify({ error: "falha ao provisionar coordenação" }), {
+      status: 500,
+      headers: { ...corsHeaders, "content-type": "application/json" },
+    });
   }
 });

@@ -22,7 +22,10 @@ test.after(async () => { await pool.end(); });
 const ADMIN = "cccccccc-0000-4000-8000-000000000001";
 const claimsSA = (sub) => JSON.stringify({ sub, role: "authenticated", app_metadata: {} });
 
-async function comoSuperAdmin(fn) {
+// Abre transação como super_admin (authenticated com JWT de admin).
+// beforeAuth (opcional): callback que roda ANTES do set local role authenticated,
+// ainda como postgres — pode fazer inserts diretos que bypassing RLS.
+async function comoSuperAdmin(fn, beforeAuth = null) {
   const c = await pool.connect();
   try {
     await c.query("begin");
@@ -30,7 +33,10 @@ async function comoSuperAdmin(fn) {
       "insert into internal_admins (auth_user_id, email, nome, ativo) values ($1, 'op@interno.local', 'Op D1B', true)",
       [ADMIN],
     );
+    // JWT é setado aqui (antes do role switch) para que funções SECURITY
+    // DEFINER chamadas em beforeAuth também enxerguem o super_admin.
     await c.query("select set_config('request.jwt.claims', $1, true)", [claimsSA(ADMIN)]);
+    if (beforeAuth) await beforeAuth(c);
     await c.query("set local role authenticated");
     return await fn(c);
   } finally {
@@ -84,41 +90,35 @@ test("D1B-2: backoffice_detalhe_escola retorna coordenadores com email", async (
 });
 
 // ── 3. backoffice_registrar_reenvio com coordenador existente ──
+// Setup: cria escola + coordenador como postgres (antes do role switch) para
+// evitar bloqueio de RLS — a tabela usuarios não tem política INSERT para
+// authenticated; em produção o insert é feito pela Edge Function via service_role.
 test("D1B-3: backoffice_registrar_reenvio registra log para coordenador existente", async () => {
-  await comoSuperAdmin(async (c) => {
-    // Primeiro pega um coordenador da escola A
-    const ur = await c.query(
-      "select id, email from usuarios where escola_id=$1 and papel='coordenacao' limit 1",
-      [ESCOLA_A]
-    );
-    if (ur.rows.length === 0) {
-      // sem coordenador na escola de teste: insere temporário
+  const COORD_UID = "cc100000-0000-4000-8000-000000000001";
+  let escolaId;
+  await comoSuperAdmin(
+    async (c) => {
       await c.query(
-        "insert into usuarios (id,escola_id,papel,nome,email) values (gen_random_uuid(),$1,'coordenacao','Coord Temp','ct@temp.local')",
-        [ESCOLA_A]
+        "select public.backoffice_registrar_reenvio($1,$2)", [escolaId, COORD_UID]
       );
-      const ur2 = await c.query(
-        "select id, email from usuarios where escola_id=$1 and papel='coordenacao' and email='ct@temp.local'",
-        [ESCOLA_A]
+      const logs = await c.query(
+        "select acao from admin_logs where super_admin_id=$1 and acao='reenviar-acesso' limit 1",
+        [ADMIN]
       );
-      const uid = ur2.rows[0].id;
-      // registrar reenvio deve funcionar sem erro
+      assert.equal(logs.rows.length, 1, "deve ter registrado log de reenvio");
+    },
+    async (c) => {
+      // Cria escola e coordenador como postgres (bypassa RLS)
+      const r = await c.query(
+        "insert into escolas (nome, slug) values ('Reenvio Teste D1B','reenvio-teste-d1b') returning id"
+      );
+      escolaId = r.rows[0].id;
       await c.query(
-        "select public.backoffice_registrar_reenvio($1,$2)", [ESCOLA_A, uid]
-      );
-    } else {
-      const uid = ur.rows[0].id;
-      await c.query(
-        "select public.backoffice_registrar_reenvio($1,$2)", [ESCOLA_A, uid]
+        "insert into usuarios (id,escola_id,papel,nome,email) values ($1,$2,'coordenacao','Coord Reenvio','cr@reenvio.local')",
+        [COORD_UID, escolaId]
       );
     }
-    // log deve ter sido inserido (dentro da transação de rollback)
-    const logs = await c.query(
-      "select acao from admin_logs where super_admin_id=$1 and acao='reenviar-acesso' limit 1",
-      [ADMIN]
-    );
-    assert.equal(logs.rows.length, 1, "deve ter registrado log de reenvio");
-  });
+  );
 });
 
 // ── 4. coordenação NÃO cria escola ──
@@ -156,26 +156,33 @@ test("D1B-6: escola sem coordenador retorna coordenadores=[]", async () => {
 });
 
 // ── 7. checklist: escola com coordenador retorna objeto correto ──
+// Setup: cria escola e coordenador como postgres (antes do role switch) porque
+// usuarios não tem política INSERT para authenticated (insert é do service_role).
 test("D1B-7: escola com coordenador retorna objeto {id,nome,email}", async () => {
-  await comoSuperAdmin(async (c) => {
-    const r = await c.query(
-      "select public.backoffice_criar_escola('Com Coord D1B','com-coord-d1b') as id"
-    );
-    const id = r.rows[0].id;
-    // insere coordenador diretamente (simulando o que a Edge Function faz)
-    const uid = "ee000000-0000-4000-8000-000000000099";
-    await c.query(
-      "insert into usuarios (id,escola_id,papel,nome,email) values ($1,$2,'coordenacao','Coord D1B','coord.d1b@escola.local')",
-      [uid, id]
-    );
-    const detalhe = await c.query("select public.backoffice_detalhe_escola($1) as d", [id]);
-    const d = detalhe.rows[0].d;
-    assert.equal(d.coordenadores.length, 1);
-    const coord = d.coordenadores[0];
-    assert.equal(coord.nome, "Coord D1B");
-    assert.equal(coord.email, "coord.d1b@escola.local");
-    assert.ok(coord.id, "deve ter id");
-  });
+  const COORD_UID = "ee000000-0000-4000-8000-000000000099";
+  let escolaId;
+  await comoSuperAdmin(
+    async (c) => {
+      const detalhe = await c.query("select public.backoffice_detalhe_escola($1) as d", [escolaId]);
+      const d = detalhe.rows[0].d;
+      assert.equal(d.coordenadores.length, 1);
+      const coord = d.coordenadores[0];
+      assert.equal(coord.nome, "Coord D1B");
+      assert.equal(coord.email, "coord.d1b@escola.local");
+      assert.ok(coord.id, "deve ter id");
+    },
+    async (c) => {
+      // Cria escola e coordenador como postgres (bypassa RLS)
+      const r = await c.query(
+        "insert into escolas (nome, slug) values ('Com Coord D1B','com-coord-d1b') returning id"
+      );
+      escolaId = r.rows[0].id;
+      await c.query(
+        "insert into usuarios (id,escola_id,papel,nome,email) values ($1,$2,'coordenacao','Coord D1B','coord.d1b@escola.local')",
+        [COORD_UID, escolaId]
+      );
+    }
+  );
 });
 
 // ── 8. backoffice_editar_escola aceita novos campos de contato ──
@@ -222,15 +229,12 @@ test("D1B-9: admin_logs registra acao vincular-coordenador", async () => {
 });
 
 // ── 10. escola suspensa continua bloqueando ──
+// Usa backoffice_detalhe_escola (SECURITY DEFINER) para ler o status porque
+// a RLS de escolas usa tenant_id(); o JWT do super_admin não tem escola_id.
 test("D1B-10: escola suspensa bloqueia coordenação (RLS intacta)", async () => {
   await comoSuperAdmin(async (c) => {
-    // suspende escola A
     await c.query("select public.backoffice_definir_status($1,'suspensa')", [ESCOLA_A]);
-    // tenta verificar operacional pelo banco
-    const r = await c.query("select app.tenant_operacional() as ok");
-    // A função retorna null/false quando o JWT não tem escola_id (super_admin não tem)
-    // Apenas garantimos que suspensa está salvo
-    const e = await c.query("select status from escolas where id=$1", [ESCOLA_A]);
-    assert.equal(e.rows[0].status, "suspensa");
+    const detalhe = await c.query("select public.backoffice_detalhe_escola($1) as d", [ESCOLA_A]);
+    assert.equal(detalhe.rows[0].d.escola.status, "suspensa");
   });
 });

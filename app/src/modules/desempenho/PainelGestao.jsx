@@ -99,7 +99,7 @@ export function PainelGestao({ resumo, aoIr, aoIrFiltrado }) {
           rotuloCta="Liberar credenciais"
           nomes={ag.filter((x) => x.semCredencial).map((x) => x.aluno.nome.split(" ")[0])} />
         <Alerta tom="neutro" icone="🏁" titulo="Pendências da semana" sub="Missão desta semana ainda em aberto (semana em curso)" n={metaPendente}
-          ir={metaAtrasada ? () => aoIrFiltrado ? aoIrFiltrado("alunos", "meta-atrasada") : aoIr("ranking") : null}
+          ir={metaPendente ? () => aoIrFiltrado ? aoIrFiltrado("alunos", "meta-atrasada") : aoIr("ranking") : null}
           rotuloCta="Ver alunos com pendências"
           nomes={ag.filter((x) => x.metaIncompleta).map((x) => x.aluno.nome.split(" ")[0])} />
       </div>
