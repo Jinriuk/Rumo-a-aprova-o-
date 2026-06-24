@@ -18,11 +18,11 @@ import { pool, como, esperaErro, IDS, ESCOLA_A, ESCOLA_B } from "./identidades.m
 
 test.after(async () => { await pool.end(); });
 
-// IDs fixos para os cenários HF2
-const RESP_HF2      = "hf200000-0000-4000-8000-000000000010";
-const ALUNO_HF2     = "hf200000-0000-4000-8000-000000000011";
-const VINCULO_HF2   = "hf200000-0000-4000-8000-000000000012";
-const RESP_ESCOLA_B = "hf200000-0000-4000-8000-000000000020";
+// IDs fixos para os cenários HF2 — todos hex válidos (a-f, 0-9)
+const RESP_HF2      = "af200000-0000-4000-8000-000000000010";
+const ALUNO_HF2     = "af200000-0000-4000-8000-000000000011";
+const VINCULO_HF2   = "af200000-0000-4000-8000-000000000012";
+const RESP_ESCOLA_B = "af200000-0000-4000-8000-000000000020";
 
 // ── Setup reutilizável: cria escola A com aluno + responsável sem vínculo ──
 // Simula o estado pós-revogação: responsável existe, aluno existe, vínculo não.
@@ -136,26 +136,31 @@ test("HF2-5: inserir vínculo duplicado é recusado pelo banco", async () => {
 
 // ── 6. coordenação da escola A enxerga responsável da escola A ──
 test("HF2-6: coordenação enxerga responsáveis da própria escola (RLS)", async () => {
-  await como(IDS.coordA, async (c) => {
-    // prepara responsável como postgres antes do role switch
-    await c.query("set local role postgres");
+  const c = await pool.connect();
+  try {
+    await c.query("begin");
+    // insere como postgres antes de mudar o role
     await c.query(
       "insert into usuarios (id, escola_id, papel, nome) values ($1, $2, 'responsavel', 'Resp RLS HF2') on conflict do nothing",
       [RESP_HF2, ESCOLA_A],
     );
-    await c.query("set local role authenticated");
+    // switch para coordenação da escola A
     const claims = JSON.stringify({
       sub: IDS.coordA.sub,
       role: "authenticated",
       app_metadata: { escola_id: ESCOLA_A, papel: "coordenacao" },
     });
     await c.query("select set_config('request.jwt.claims', $1, true)", [claims]);
+    await c.query("set local role authenticated");
     const r = await c.query(
       "select id from usuarios where id = $1 and papel = 'responsavel'",
       [RESP_HF2],
     );
     assert.equal(r.rows.length, 1, "coordenação deve ver responsável da própria escola");
-  });
+  } finally {
+    await c.query("rollback").catch(() => {});
+    c.release();
+  }
 });
 
 // ── 7. coordenação da escola A não vincula responsável da escola B ──
