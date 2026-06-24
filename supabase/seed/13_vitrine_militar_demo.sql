@@ -63,6 +63,13 @@ update alunos
 -- SEÇÃO 0 (auxiliar) — ROSTER dos 38 alunos NOVOS (temp, esta sessão)
 -- num: sufixo do UUID do aluno (a0000000-…-0000000000NN)
 -- ------------------------------------------------------------
+-- ATENÇÃO: sem `on commit drop`. O seed é aplicado por `psql -f`, que
+-- roda em AUTOCOMMIT (cada statement é sua própria transação). Com
+-- `on commit drop` a temp table seria descartada logo após o CREATE,
+-- e o INSERT abaixo falharia ("relation _vit_novos does not exist") —
+-- era o que quebrava o passo de seed do CI. A temp table é de sessão
+-- (psql -f = uma sessão) e some sozinha ao fim do script.
+drop table if exists _vit_novos;
 create temp table _vit_novos (
   num        int  primary key,
   nome       text not null,
@@ -70,7 +77,7 @@ create temp table _vit_novos (
   concurso_id uuid not null,
   turma_id   uuid not null,
   perfil     text not null   -- FORTE | MEDIANO | RISCO | SEM
-) on commit drop;
+);
 
 insert into _vit_novos (num, nome, examtag, concurso_id, turma_id, perfil) values
   -- CN/EPCAR — Manhã (turma aa…001)

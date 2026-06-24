@@ -120,3 +120,113 @@ test("sem login (anon) não chama as RPCs do backoffice", async () => {
     await esperaErro(c, /permission denied/i, "select * from public.backoffice_escolas()");
   });
 });
+
+// ------------------------------------------------------------
+// D0 (migration 0025): dashboard, editar, suspender/ativar
+// ------------------------------------------------------------
+
+test("D0 dashboard: super_admin recebe os contadores agregados", async () => {
+  await comoSuperAdmin(true, async (c) => {
+    const r = await c.query("select public.backoffice_dashboard() as j");
+    const j = r.rows[0].j;
+    // as escolas A e B do seed existem
+    assert.ok(j.escolas_total >= 2, "deveria contar as escolas do seed");
+    assert.ok(j.alunos_total >= 1);
+    assert.ok(j.coordenadores_total >= 1);
+    // todas as chaves esperadas pelo front estão presentes
+    for (const k of [
+      "escolas_ativas", "escolas_suspensas", "escolas_demo_piloto", "escolas_canceladas",
+      "escolas_sem_coordenador", "alunos_ativos_7d",
+    ]) {
+      assert.ok(k in j, `dashboard deve ter a chave ${k}`);
+    }
+  });
+});
+
+test("D0 dashboard: não-admin e anon são recusados", async () => {
+  await como(IDS.coordA, async (c) => {
+    await esperaErro(c, /acesso negado/i, "select public.backoffice_dashboard()");
+  });
+  await como(null, async (c) => {
+    await esperaErro(c, /permission denied/i, "select public.backoffice_dashboard()");
+  });
+});
+
+test("D0 editar: super_admin altera dados básicos e o log guarda antes/depois", async () => {
+  await comoSuperAdmin(true, async (c) => {
+    const r = await c.query("select public.backoffice_criar_escola('Antes Ltda', 'antes-ltda-x') as id");
+    const id = r.rows[0].id;
+
+    await c.query(
+      "select public.backoffice_editar_escola($1, 'Depois Ltda', 'gestao', '#1A2B3C', null, 'Niteroi', 'RJ', 120, 'nota interna')",
+      [id],
+    );
+    const d = await c.query("select public.backoffice_detalhe_escola($1) as j", [id]);
+    const e = d.rows[0].j.escola;
+    assert.equal(e.nome, "Depois Ltda");
+    assert.equal(e.plano, "gestao");
+    assert.equal(e.cor_acento, "#1A2B3C");
+    assert.equal(e.limite_alunos, 120);
+    assert.equal(e.observacao, "nota interna");
+    assert.ok(e.atualizada_em, "atualizada_em deve ser carimbada");
+
+    const log = await c.query(
+      "select detalhe from admin_logs where acao = 'editar-escola' and escola_id = $1", [id]);
+    assert.equal(log.rowCount, 1);
+    assert.equal(log.rows[0].detalhe.antes.nome, "Antes Ltda");
+    assert.equal(log.rows[0].detalhe.depois.nome, "Depois Ltda");
+  });
+});
+
+test("D0 editar: NULL não apaga campo (coalesce) e não afeta OUTRA escola", async () => {
+  await comoSuperAdmin(true, async (c) => {
+    const a = (await c.query("select public.backoffice_criar_escola('Alfa', 'alfa-x', 'Rio', 'RJ', 'demo', 10) as id")).rows[0].id;
+    const b = (await c.query("select public.backoffice_criar_escola('Beta', 'beta-x', 'Sao Paulo', 'SP', 'demo', 20) as id")).rows[0].id;
+
+    // edita só o nome da Alfa; cidade/uf/plano permanecem (null = não mexer)
+    await c.query("select public.backoffice_editar_escola($1, 'Alfa II')", [a]);
+    const ja = (await c.query("select public.backoffice_detalhe_escola($1) as j", [a])).rows[0].j.escola;
+    assert.equal(ja.nome, "Alfa II");
+    assert.equal(ja.cidade, "Rio", "cidade não pode sumir com edição parcial");
+    assert.equal(ja.plano, "demo");
+
+    // a Beta ficou intacta
+    const jb = (await c.query("select public.backoffice_detalhe_escola($1) as j", [b])).rows[0].j.escola;
+    assert.equal(jb.nome, "Beta");
+    assert.equal(jb.cidade, "Sao Paulo");
+  });
+});
+
+test("D0 status: suspender e ativar geram log com a ação certa", async () => {
+  await comoSuperAdmin(true, async (c) => {
+    const id = (await c.query("select public.backoffice_criar_escola('Statusland', 'statusland-x') as id")).rows[0].id;
+
+    await c.query("select public.backoffice_definir_status($1, 'ativa')", [id]);
+    await c.query("select public.backoffice_definir_status($1, 'suspensa')", [id]);
+
+    const e = (await c.query("select public.backoffice_detalhe_escola($1) as j", [id])).rows[0].j.escola;
+    assert.equal(e.status, "suspensa", "status final é suspensa (reversível, sem delete)");
+
+    const acoes = (await c.query(
+      "select acao from admin_logs where escola_id = $1 and acao like '%-escola' order by id", [id]
+    )).rows.map((r) => r.acao);
+    assert.ok(acoes.includes("ativar-escola"));
+    assert.ok(acoes.includes("suspender-escola"));
+  });
+});
+
+test("D0 status: valor inválido é recusado", async () => {
+  await comoSuperAdmin(true, async (c) => {
+    const id = (await c.query("select public.backoffice_criar_escola('Xis', 'xis-x') as id")).rows[0].id;
+    await esperaErro(c, /status inválido/i, "select public.backoffice_definir_status($1, 'inventado')", [id]);
+  });
+});
+
+test("D0 editar/status: coordenação (não-admin) é recusada", async () => {
+  await como(IDS.coordA, async (c) => {
+    await esperaErro(c, /acesso negado/i,
+      "select public.backoffice_editar_escola('11111111-1111-4111-8111-111111111111', 'Hack')");
+    await esperaErro(c, /acesso negado/i,
+      "select public.backoffice_definir_status('11111111-1111-4111-8111-111111111111', 'suspensa')");
+  });
+});

@@ -155,13 +155,26 @@ export function Progresso({ registros, trilha }) {
 /* ---------- Simulados (estrutura POR CONCURSO + validação + objetivo) ---------- */
 import { provaDoConcurso, materiasDaProva, totalQuestoes, totalAcertos, notaPct, objetivoSugerido } from "../conteudo/provas.js";
 
+// #28 — sugere "Simulado N" sem duplicar: pega o maior N já existente + 1.
+// Não impede nome customizado; só evita o default repetido.
+function proximoNomeSimulado(simulados) {
+  let max = 0;
+  for (const s of simulados ?? []) {
+    const mt = String(s?.nome ?? "").match(/^Simulado\s+(\d+)$/i);
+    if (mt) max = Math.max(max, +mt[1]);
+  }
+  return `Simulado ${max + 1}`;
+}
+
 export function Simulados({ aluno, simulados, podeEditar, semanaAtiva, concurso, aoMudar }) {
   const T = useTema();
   const prova = provaDoConcurso(concurso?.codigo);
   const materias = materiasDaProva(prova);
   const totalMax = totalQuestoes(prova);
 
-  const blank = { nome: semanaAtiva?.simulado || `Simulado ${prova.rotulo}`, data: todayISO(), ...Object.fromEntries(materias.map((m) => [m.k, ""])) };
+  // nome default: o simulado planejado da semana tem prioridade; senão,
+  // próximo número livre (Simulado 1, 2, 3…) com base no histórico.
+  const blank = { nome: semanaAtiva?.simulado || proximoNomeSimulado(simulados), data: todayISO(), ...Object.fromEntries(materias.map((m) => [m.k, ""])) };
   const [f, setF] = useState(blank);
   const [erro, setErro] = useState(null);
   const set = (k, v) => setF({ ...f, [k]: v });
@@ -180,7 +193,8 @@ export function Simulados({ aluno, simulados, podeEditar, semanaAtiva, concurso,
         escola_id: aluno.escola_id, aluno_id: aluno.id, nome: f.nome, data: f.data,
         acertos: Object.fromEntries(materias.map((m) => [m.k, Math.min(+f[m.k] || 0, m.max)])),
       });
-      setF(blank);
+      // reseta com o próximo número livre, já contando o que acabou de entrar
+      setF({ ...blank, nome: semanaAtiva?.simulado || proximoNomeSimulado([...simulados, { nome: f.nome }]) });
       aoMudar?.();
     } catch (e) { setErro(mensagemAmigavel(e, "salvar")); }
   }
@@ -193,11 +207,13 @@ export function Simulados({ aluno, simulados, podeEditar, semanaAtiva, concurso,
     } catch (e) { setErro(mensagemAmigavel(e, "acao")); }
   }
 
-  const chart = simulados.map((s) => ({
-    label: fmtBR(String(s.data)),
-    nota: notaPct(prova, s.acertos),
-    tot: totalAcertos(prova, s.acertos),
-  }));
+  const chart = [...simulados]
+    .sort((a, b) => String(a.data).localeCompare(String(b.data)))
+    .map((s) => ({
+      label: fmtBR(String(s.data)),
+      nota: notaPct(prova, s.acertos),
+      tot: totalAcertos(prova, s.acertos),
+    }));
 
   const ultimo = simulados.length ? [...simulados].sort((a, b) => String(a.data).localeCompare(String(b.data)))[simulados.length - 1] : null;
   const evolucao = chart.length >= 2 ? chart[chart.length - 1].nota - chart[chart.length - 2].nota : null;
@@ -291,7 +307,10 @@ export function Simulados({ aluno, simulados, podeEditar, semanaAtiva, concurso,
               return (
                 <div key={s.id} className="row" style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 8px", borderRadius: 8, borderBottom: `1px solid ${T.line}` }}>
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontSize: 13.5, fontWeight: 600 }}>{s.nome} <span style={{ color: T.sub, fontWeight: 400 }}>· {fmtBR(String(s.data))}</span></div>
+                    <div style={{ display: "flex", gap: 4, alignItems: "baseline", overflow: "hidden" }}>
+                      <span style={{ fontSize: 13.5, fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", minWidth: 0, flex: 1 }}>{s.nome}</span>
+                      <span style={{ fontSize: 13.5, color: T.sub, fontWeight: 400, flexShrink: 0 }}>· {fmtBR(String(s.data))}</span>
+                    </div>
                     <div style={{ fontSize: 11.5, color: T.sub, marginTop: 2 }}>
                       {materias.map((m) => `${m.nome.slice(0, 3)} ${Math.min(+s.acertos[m.k] || 0, m.max)}/${m.max}`).join(" · ")}
                       {" · "}{prova.notaRotulo ?? "nota"}: <b style={{ color: nota >= 70 ? T.green : nota >= 50 ? T.gold : T.red }}>{nota}/100</b>

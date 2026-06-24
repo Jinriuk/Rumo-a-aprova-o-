@@ -72,8 +72,8 @@ export function TrilhaConcurso({ examTag, concursoNome, nivel = null, compacto =
       >
         {planos.length === 0 ? (
           <div style={{ padding: 8 }}>
-            <EmptyState icone="🗺️" titulo="Trilha ainda não cadastrada para este concurso"
-              dica="Os horizontes (anual, reta final…) aparecem aqui assim que houver conteúdo." />
+            <EmptyState icone="🗺️" titulo="Trilha deste concurso em configuração"
+              dica="Os horizontes (anual, reta final…) deste edital aparecem aqui assim que a escola publicar o conteúdo." />
           </div>
         ) : (
           <div style={{ display: "flex", flexWrap: "wrap", gap: 10, padding: "12px 14px" }}>
@@ -99,8 +99,8 @@ export function TrilhaConcurso({ examTag, concursoNome, nivel = null, compacto =
       >
         {missoesAluno.length === 0 ? (
           <div style={{ padding: 8 }}>
-            <EmptyState icone="✦" titulo="Nenhuma missão cadastrada para este concurso"
-              dica="Assim que a escola publicar missões deste edital, elas aparecem aqui." />
+            <EmptyState icone="✦" titulo="Missões deste concurso em configuração"
+              dica="Assim que a escola publicar as missões deste edital, elas aparecem aqui — nunca conteúdo de outro concurso." />
           </div>
         ) : (
           <div>

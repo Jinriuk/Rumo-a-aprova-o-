@@ -20,20 +20,29 @@ export function ResumoResponsavel({ aluno, m, meta, trilha, simulados, semanaAti
   const pendentes = consideradas - feitas;
   const metaConcluida = consideradas > 0 && pendentes === 0;
 
-  // frase interpretativa
+  // frase interpretativa. QA1.7: quando a meta foi concluída MAS em
+  // poucos dias, o tom reconhece o mérito e orienta sem alarmar — em vez
+  // de "🎉" cru ao lado de um alerta de "poucos dias" (dissonância).
   const primeiroNome = aluno.nome.split(" ")[0];
+  const poucosDias = m.diasSemana > 0 && m.diasSemana < 3;
+  const fechoMeta = metaConcluida
+    ? (poucosDias
+        ? "A meta da semana foi concluída — parabéns. Como o estudo se concentrou em poucos dias, vale incentivar uma rotina mais distribuída ao longo da próxima semana. 👏"
+        : "A meta da semana foi concluída. 🎉")
+    : consideradas > 0 ? `Faltam ${pendentes} ${pendentes === 1 ? "atividade" : "atividades"} para concluir a meta.`
+    : "";
   const frase = m.diasSemana === 0
     ? `${primeiroNome} ainda não registrou estudos nesta semana.`
     : `${primeiroNome} estudou em ${m.diasSemana} ${m.diasSemana === 1 ? "dia" : "dias"} nesta semana, ` +
       `resolveu ${m.qSem} ${m.qSem === 1 ? "questão" : "questões"}` +
       (m.acerto > 0 ? ` e está com ${m.acerto}% de acerto geral` : "") + ". " +
-      (metaConcluida ? "A meta da semana foi concluída. 🎉"
-        : consideradas > 0 ? `Faltam ${pendentes} ${pendentes === 1 ? "atividade" : "atividades"} para concluir a meta.`
-        : "");
+      fechoMeta;
 
-  // alertas simples
+  // alertas simples. Quando a meta foi concluída, o "poucos dias" já é
+  // tratado com tom positivo na frase acima — não repetimos como alerta
+  // (evita assustar o responsável diante de uma semana, no fim, cumprida).
   const alertas = [];
-  if (m.totalDias > 0 && m.diasSemana < 3) alertas.push("Poucos dias de estudo nesta semana.");
+  if (m.totalDias > 0 && poucosDias && !metaConcluida) alertas.push("Poucos dias de estudo nesta semana — vale distribuir melhor a rotina.");
   if (m.accTrend && m.accTrend.delta <= -5) alertas.push(`O acerto caiu de ${m.accTrend.de}% para ${m.accTrend.para}% nas últimas semanas.`);
   const fracas = m.matStats.filter((s) => s.comAcc && s.acc < 60).map((s) => s.name);
   if (fracas.length) alertas.push(`Matérias para reforçar: ${fracas.join(", ")}.`);

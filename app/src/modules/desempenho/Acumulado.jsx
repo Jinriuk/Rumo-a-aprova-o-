@@ -166,19 +166,27 @@ export function Acumulado({ registros, trilha }) {
   );
 }
 
-function CelulaTreemap({ x, y, width, height, name, size, total, tema, cor, root, index }) {
+function CelulaTreemap({ x, y, width, height, name, nomeCompleto, size, total, tema, cor, root, index }) {
   if (width < 4 || height < 4 || size == null) return null;
   const corCel = cor ?? root?.children?.[index]?.cor ?? tema.gold;
   const pct = total ? Math.round((size / total) * 1000) / 10 : 0;
+  const completo = nomeCompleto || name;
+  // #16/#27 — toda célula é identificável no hover, mesmo as pequenas
+  // (ex.: Português numa fatia estreita). O title nativo do SVG vira tooltip.
+  const grande = width > 52 && height > 34;
+  const media = width > 30 && height > 18;
   return (
     <g>
+      <title>{completo} — {pct}%</title>
       <rect x={x} y={y} width={width} height={height} rx={4} fill={corCel} fillOpacity={0.85} stroke={tema.bg} strokeWidth={2} />
-      {width > 52 && height > 34 && (
+      {grande ? (
         <>
           <text x={x + width / 2} y={y + height / 2 - 4} textAnchor="middle" fill="#0A1622" fontWeight={800} fontSize={12}>{name}</text>
           <text x={x + width / 2} y={y + height / 2 + 12} textAnchor="middle" fill="#0A1622" fontWeight={600} fontSize={11}>{pct}%</text>
         </>
-      )}
+      ) : media ? (
+        <text x={x + width / 2} y={y + height / 2 + 4} textAnchor="middle" fill="#0A1622" fontWeight={800} fontSize={11}>{name}</text>
+      ) : null}
     </g>
   );
 }

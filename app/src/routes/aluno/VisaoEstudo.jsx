@@ -117,7 +117,7 @@ export function VisaoEstudo({ aluno, podeEditar, concurso = null, contexto = "Pl
           <div style={{ display: "flex", flexDirection: "column", gap: 16, paddingTop: 4 }}>
             <FaixaAspirante nome={aluno.nome.split(" ")[0]} contexto={contexto} xp={xp} streak={m?.streak ?? 0}
               aoAbrirConquistas={() => irAba("conquistas")} />
-            <MissaoAtual meta={meta} trilha={trilha} m={m} aoAbrirPlano={() => irAba("plano")} />
+            <MissaoAtual meta={meta} trilha={trilha} m={m} aoAvancar={podeEditar ? irAba : undefined} />
             <MetaSemana meta={meta} trilha={trilha} podeEditar={podeEditar} aoMudar={recarregar}
               aoAbrirDesempenho={() => irAba("desempenho")} />
             {m && <ConquistasRecentes m={m} metas={dados.metas} simulados={dados.simulados} aoAbrir={() => irAba("conquistas")} />}

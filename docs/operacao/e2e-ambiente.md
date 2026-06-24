@@ -24,10 +24,23 @@ projeto isolado **quando os secrets existirem**:
 - `secrets.E2E_SUPABASE_URL`
 - `secrets.E2E_SUPABASE_ANON_KEY`
 
-Se os secrets estiverem definidos, o build escreve `app/.env.production.local`
-(ignorado pelo git, prioridade sobre `.env.production`) e o E2E usa o
-projeto de teste. Se **não** estiverem, o CI emite um `::warning::` e roda
-contra o ambiente padrão (comportamento atual) — nada quebra.
+**Atualização S1.1/S1.2 — comportamento honesto:** um job `e2e-guard`
+traduz a presença do secret num booleano e o job `e2e` só roda
+`if: needs.e2e-guard.outputs.isolado == 'true'`. Ou seja:
+
+- **Com** os secrets: o E2E roda contra o projeto isolado (escreve
+  `app/.env.production.local`, ignorado pelo git, com prioridade sobre
+  `.env.production`).
+- **Sem** os secrets: o E2E é **PULADO de forma explícita** (estado
+  "skipped" no GitHub, com `::warning::`) — **nunca mais roda contra o
+  banco de demo**. Antes, o comportamento era rodar contra o demo com um
+  aviso; isso foi removido porque (a) poluía a vitrine e (b) um job
+  cancelado/timeout contra o demo compartilhado podia parecer "verde".
+
+O **gate autoritativo do PR** passa a ser só `build-e-unitarios`
+(determinístico, sem rede externa, com guarda anti-"verde vazio" que
+falha se a suíte rodar < 200 testes). O E2E é um sinal complementar,
+opcional e isolado — não um portão que finge passar.
 
 ## Passos manuais (uma vez) — só você consegue fazer
 

@@ -4,7 +4,7 @@
    progresso ("o que falta"). Tudo DERIVADO de dado real (registros,
    metas, simulados) — nada persiste, nada se falsifica: apagou o
    progresso, a conquista recua junto. */
-import React from "react";
+import React, { useState } from "react";
 import { useTema } from "../../shared/branding/BrandingContext.jsx";
 import { Icone } from "../../shared/ui/Icones.jsx";
 import { Insignia } from "../../shared/ui/Insignia.jsx";
@@ -63,6 +63,13 @@ export function Conquistas({ nome, xp, m, metas, simulados }) {
   const desbloqueadas = conquistas.filter((c) => c.atual >= c.alvo).length;
   const grupos = [...new Set(conquistas.map((c) => c.grupo))];
   const gIconeDe = (g) => conquistas.find((c) => c.grupo === g)?.gIcone ?? "estrela";
+  const [verCarreira, setVerCarreira] = useState(false);
+  const [gruposExpandidos, setGruposExpandidos] = useState(new Set());
+
+  // Patentes visíveis por padrão: anterior, atual e próxima (janela de 3)
+  const inicioJanela = Math.max(0, p.nivel - 2);
+  const fimJanela = Math.min(PATENTES.length, p.nivel + 1);
+  const patentesVisiveis = verCarreira ? PATENTES : PATENTES.slice(inicioJanela, fimJanela);
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
@@ -76,7 +83,7 @@ export function Conquistas({ nome, xp, m, metas, simulados }) {
         <div style={{ fontSize: 13, color: T.sub, marginTop: 4 }}>
           nível {p.nivel} de {PATENTES.length} · {p.faixa === "oficial" ? "Oficialato" : "Praças"}
         </div>
-        {p.lema && <div style={{ fontSize: 12.5, color: T.gold, marginTop: 6, fontStyle: "italic", maxWidth: 360, marginInline: "auto" }}>“{p.lema}”</div>}
+        {p.lema && <div style={{ fontSize: 12.5, color: T.gold, marginTop: 6, fontStyle: "italic", maxWidth: 360, marginInline: "auto" }}>"{p.lema}"</div>}
 
         {p.proxXp != null && (
           <div style={{ maxWidth: 420, margin: "14px auto 0" }}>
@@ -108,7 +115,8 @@ export function Conquistas({ nome, xp, m, metas, simulados }) {
           <div style={{ fontSize: 12.5, color: T.sub, marginTop: 3 }}>Praças sobem por chevrons; oficiais, por estrelas. Cada patente vem de XP — e XP só vem de estudo real.</div>
         </div>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(260px,1fr))" }}>
-          {PATENTES.map((pt, i) => {
+          {patentesVisiveis.map((pt, idx) => {
+            const i = verCarreira ? idx : inicioJanela + idx;
             const ok = xp >= pt.xp;
             const atual = p.nivel === i + 1;
             return (
@@ -127,12 +135,26 @@ export function Conquistas({ nome, xp, m, metas, simulados }) {
             );
           })}
         </div>
+        <div style={{ padding: "11px 18px", borderTop: `1px solid ${T.line}` }}>
+          <button onClick={() => setVerCarreira((v) => !v)}
+            style={{ border: "none", background: "transparent", color: T.gold, fontSize: 13, fontWeight: 700, padding: 0, cursor: "pointer" }}>
+            {verCarreira ? `▴ Mostrar só minha posição` : `▾ Ver carreira completa (${PATENTES.length} patentes)`}
+          </button>
+        </div>
       </div>
 
       {/* ===== CONQUISTAS por grupo ===== */}
       {grupos.map((g) => {
         const doGrupo = conquistas.filter((c) => c.grupo === g);
         const okGrupo = doGrupo.filter((c) => c.atual >= c.alvo).length;
+        const expandido = gruposExpandidos.has(g);
+
+        // por padrão: todas desbloqueadas + primeira bloqueada
+        const desbloq = doGrupo.filter((c) => c.atual >= c.alvo);
+        const bloq = doGrupo.filter((c) => c.atual < c.alvo);
+        const visiveis = expandido ? doGrupo : [...desbloq, ...(bloq.length > 0 ? [bloq[0]] : [])];
+        const restantes = bloq.length - (expandido ? 0 : Math.min(1, bloq.length));
+
         return (
           <div key={g} style={{ background: T.card, border: `1px solid ${T.line}`, borderRadius: 16, overflow: "hidden" }}>
             <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "14px 18px", borderBottom: `1px solid ${T.line}` }}>
@@ -143,7 +165,7 @@ export function Conquistas({ nome, xp, m, metas, simulados }) {
               </span>
             </div>
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(260px,1fr))", gap: 0 }}>
-              {doGrupo.map((c) => {
+              {visiveis.map((c) => {
                 const ok = c.atual >= c.alvo;
                 const pct = Math.min(100, Math.round((c.atual / c.alvo) * 100));
                 return (
@@ -170,6 +192,19 @@ export function Conquistas({ nome, xp, m, metas, simulados }) {
                 );
               })}
             </div>
+            {(restantes > 0 || expandido) && (
+              <div style={{ padding: "11px 18px", borderTop: `1px solid ${T.line}` }}>
+                <button
+                  onClick={() => setGruposExpandidos((prev) => {
+                    const next = new Set(prev);
+                    if (next.has(g)) next.delete(g); else next.add(g);
+                    return next;
+                  })}
+                  style={{ border: "none", background: "transparent", color: T.gold, fontSize: 13, fontWeight: 700, padding: 0, cursor: "pointer" }}>
+                  {expandido ? "▴ Ver menos" : `▾ Ver mais (${restantes} ${restantes === 1 ? "conquista" : "conquistas"})`}
+                </button>
+              </div>
+            )}
           </div>
         );
       })}

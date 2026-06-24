@@ -68,11 +68,20 @@ export async function meuPerfil() {
     .from("usuarios").select("id, escola_id, papel, nome").eq("id", uid).maybeSingle();
   if (error) throw falha("perfil", error);
   if (!u) throw new Error("perfil: usuário sem cadastro nesta escola");
+  // `status` entra aqui de propósito (D1A.1): a S1 bloqueia a escola
+  // suspensa/cancelada na RLS, mas o SELECT de `escolas` continua
+  // visível para o dono — então o front LÊ o status para explicar
+  // "acesso suspenso" em vez de mostrar um painel vazio sem motivo.
   const { data: e, error: e2 } = await supabase
-    .from("escolas").select("id, nome, slug, logo_url, cor_acento").eq("id", u.escola_id).single();
+    .from("escolas").select("id, nome, slug, logo_url, cor_acento, status").eq("id", u.escola_id).single();
   if (e2) throw falha("escola", e2);
   return { usuario: u, escola: e };
 }
+
+// Espelho do gate de suspensão do banco — módulo PURO (testável sem
+// cliente). Reexportado aqui para o front continuar pedindo tudo a
+// `db.*` num lugar só.
+export { escolaOperacional } from "./operacional.js";
 
 /* ---------- conteúdo (trilha — global, só leitura) ---------- */
 
@@ -457,6 +466,23 @@ export async function listarAlunos() {
   return data;
 }
 
+export async function listarTrilhas() {
+  const { data, error } = await supabase
+    .from("trilhas").select("id, nome, versao").order("versao", { ascending: false });
+  if (error) throw falha("trilhas", error);
+  return data;
+}
+
+export async function listarVinculos(alunoId) {
+  const { data, error } = await supabase
+    .from("vinculos_responsaveis")
+    .select("id, responsavel_id, criado_em, usuarios(nome, papel)")
+    .eq("aluno_id", alunoId)
+    .order("criado_em");
+  if (error) throw falha("responsáveis", error);
+  return data ?? [];
+}
+
 // cadastro um a um ou em lote: `nomes` é um array (1..N)
 export async function cadastrarAlunos(nomes, turmaId, trilhaId, concursoId) {
   const { escola } = await meuPerfil();
@@ -533,6 +559,24 @@ export const provisionarResponsavel = (alunoId, nome) =>
   invocar("provisionar-aluno", { tipo: "responsavel", aluno_id: alunoId, nome });
 export const gerarMeta = (alunoId) => invocar("gerar-meta", { aluno_id: alunoId });
 export const lgpdTitular = (acao, alunoId) => invocar("lgpd-titular", { acao, aluno_id: alunoId });
+export const revogarResponsavel = (vinculoId) => invocar("revogar-responsavel", { vinculo_id: vinculoId });
+
+// Envia e-mail de recuperação de senha para coordenação.
+// Mensagem genérica ao chamador — não revela se o e-mail existe.
+export async function recuperarSenha(email) {
+  const redirectTo = `${typeof window !== "undefined" ? window.location.origin : "https://rumo-a-aprova-o.vercel.app"}/redefinir-senha`;
+  const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo });
+  if (error) throw falha("recuperar senha", error);
+}
+
+// Redefine a senha do usuário com sessão de recuperação ativa.
+// Chamado apenas a partir da rota /redefinir-senha após o Supabase
+// processar o hash de recuperação e criar a sessão.
+export async function redefinirSenha(novaSenha) {
+  const { data, error } = await supabase.auth.updateUser({ password: novaSenha });
+  if (error) throw falha("redefinir senha", error);
+  return data;
+}
 
 /* ---------- motor (meta + registro) ---------- */
 
@@ -707,10 +751,18 @@ export async function registrarAcaoAdmin(acao, escolaId = null, detalhe = {}) {
 }
 
 // Criar escola pelo backoffice (RPC com porteiro no banco). Devolve o id.
-export async function backofficeCriarEscola({ nome, slug, cidade, uf, plano, limiteAlunos }) {
+export async function backofficeCriarEscola({
+  nome, slug, cidade, uf, plano, limiteAlunos, statusInicial,
+  emailInstitucional, telefoneContato, contatoNome, contatoObservacao,
+}) {
   const { data, error } = await supabase.rpc("backoffice_criar_escola", {
     p_nome: nome, p_slug: slug, p_cidade: cidade ?? null, p_uf: uf ?? null,
     p_plano: plano ?? null, p_limite_alunos: limiteAlunos ?? null,
+    p_status_inicial: statusInicial ?? null,
+    p_email_institucional: emailInstitucional ?? null,
+    p_telefone_contato: telefoneContato ?? null,
+    p_contato_nome: contatoNome ?? null,
+    p_contato_observacao: contatoObservacao ?? null,
   });
   if (error) throw falha("criar escola", error);
   return data;
@@ -730,4 +782,101 @@ export async function backofficeLogs(limite = 30) {
     .from("admin_logs").select("acao, escola_id, detalhe, em").order("em", { ascending: false }).limit(limite);
   if (error) throw falha("atividade administrativa", error);
   return data;
+}
+
+/* ---------- backoffice D0 (super_admin) — operar sem entrar no banco ---------- */
+
+// Contadores agregados para o dashboard do operador (RPC com porteiro
+// eh_super_admin no banco — migration 0025). Devolve um objeto jsonb.
+export async function backofficeDashboard() {
+  const { data, error } = await supabase.rpc("backoffice_dashboard");
+  if (error) throw falha("dashboard (backoffice)", error);
+  return data;
+}
+
+// Editar dados básicos da escola. Manda só o que mudou (NULL = não
+// mexer, COALESCE no banco). Registra antes/depois no admin_logs.
+export async function backofficeEditarEscola(escolaId, campos) {
+  const { error } = await supabase.rpc("backoffice_editar_escola", {
+    p_escola: escolaId,
+    p_nome: campos.nome ?? null,
+    p_plano: campos.plano ?? null,
+    p_cor_acento: campos.corAcento ?? null,
+    p_logo_url: campos.logoUrl ?? null,
+    p_cidade: campos.cidade ?? null,
+    p_uf: campos.uf ?? null,
+    p_limite_alunos: campos.limiteAlunos ?? null,
+    p_observacao: campos.observacao ?? null,
+    p_email_institucional: campos.emailInstitucional ?? null,
+    p_telefone_contato: campos.telefoneContato ?? null,
+    p_contato_nome: campos.contatoNome ?? null,
+    p_contato_observacao: campos.contatoObservacao ?? null,
+  });
+  if (error) throw falha("editar escola", error);
+}
+
+// Provisionar coordenador pelo backoffice (Edge Function no servidor;
+// nunca chama a admin API do Supabase direto do navegador).
+export async function backofficeProvisionarCoordenador({ escolaId, nome, email }) {
+  const { data, error } = await supabase.functions.invoke("backoffice-coordenador", {
+    body: { acao: "criar", escola_id: escolaId, nome, email },
+  });
+  if (error) {
+    let detalhe = error.message;
+    try { const ctx = await error.context?.json?.(); if (ctx?.error) detalhe = ctx.error; } catch { /* */ }
+    throw falha("provisionar coordenador", new Error(detalhe));
+  }
+  if (data?.error) throw falha("provisionar coordenador", new Error(data.error));
+  return data;
+}
+
+// Reenviar acesso (link de reset password) para coordenador existente.
+// Registra admin_logs via RPC antes de chamar a Edge Function.
+export async function backofficeReenviarAcesso({ escolaId, usuarioId, email }) {
+  // 1. log de auditoria (best-effort — não derruba o reenvio se falhar)
+  const { error: logErr } = await supabase.rpc("backoffice_registrar_reenvio", {
+    p_escola: escolaId, p_usuario_id: usuarioId,
+  });
+  if (logErr) console.error("log de reenvio não registrado:", logErr.message);
+  // 2. envio real via Edge Function
+  const { data, error } = await supabase.functions.invoke("backoffice-coordenador", {
+    body: { acao: "reenviar", email },
+  });
+  if (error) {
+    let detalhe = error.message;
+    try { const ctx = await error.context?.json?.(); if (ctx?.error) detalhe = ctx.error; } catch { /* */ }
+    throw falha("reenviar acesso", new Error(detalhe));
+  }
+  if (data?.error) throw falha("reenviar acesso", new Error(data.error));
+  return data;
+}
+
+// Recuperação de senha — coordenação/superadmin (fluxo Auth padrão).
+// Mensagem sempre genérica para não vazar se o e-mail existe ou não.
+export async function solicitarRecuperacaoSenha(email) {
+  const { error } = await supabase.auth.resetPasswordForEmail(email.trim().toLowerCase(), {
+    redirectTo: `${window.location.origin}/redefinir-senha`,
+  });
+  if (error) throw falha("solicitar recuperação de senha", error);
+}
+
+// Recuperação de código do aluno/responsável — coleta o e-mail e
+// registra a solicitação. O coordenador recebe notificação manual.
+// (Infraestrutura de e-mail para aluno é decisão de produto pendente.)
+export async function solicitarRecuperacaoCodigo(email) {
+  const emailLimpo = email.trim().toLowerCase();
+  const { error } = await supabase.from("solicitacoes_acesso").insert({
+    email: emailLimpo, tipo: "recuperacao_codigo", em: new Date().toISOString(),
+  }).select("id").maybeSingle();
+  // Tabela pode ainda não existir (D1C). Silenciosa para o usuário;
+  // a mensagem genérica é sempre exibida independentemente do resultado.
+  if (error) console.warn("solicitação de recuperação de código não gravada:", error.message);
+  return { ok: true };
+}
+
+// Suspender / ativar / mudar status (ação reversível; nunca apaga
+// dado). O banco valida o status e registra ação específica no log.
+export async function backofficeDefinirStatus(escolaId, status) {
+  const { error } = await supabase.rpc("backoffice_definir_status", { p_escola: escolaId, p_status: status });
+  if (error) throw falha("alterar status da escola", error);
 }

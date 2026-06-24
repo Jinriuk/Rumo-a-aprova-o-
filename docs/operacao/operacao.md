@@ -94,7 +94,7 @@ residual P3 no relatório final em vez de forçar uma refatoração do padrão
 |---|---|---|---|
 | `logs_acesso` | leitura de dado de aluno específico (LGPD) + provisão de credencial (`provisionou-aluno`/`provisionou-responsavel`) | front (leitura) e Edge Function `provisionar-aluno` | coordenação da própria escola |
 | `logs_coordenacao` (novo) | turma criada/renomeada/excluída, alunos importados em lote, marca alterada | `data/index.js` (`registrarLogCoordenacao`, best-effort) | coordenação da própria escola |
-| `admin_logs` | ações do operador no backoffice (criar escola) | RPC `backoffice_criar_escola` (servidor) | super_admin |
+| `admin_logs` | ações do operador no backoffice: `criar-escola`, `editar-escola` (antes/depois), `suspender-escola`/`ativar-escola`/`alterar-status-escola`, `vincular-coordenador` | RPCs `backoffice_*` (servidor) e Edge Function `backoffice-coordenador` | super_admin |
 
 Todo log é **best-effort**: uma falha ao gravar o log nunca impede a ação
 principal (mesmo padrão já usado em `registrarAcesso`) — só fica um
