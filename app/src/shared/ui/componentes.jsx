@@ -207,8 +207,10 @@ export function EmptyState({ icone = "✦", titulo, dica }) {
 export function StatusBadge({ tom = "neutro", children }) {
   const T = useTema();
   const cor = tom === "ok" ? T.green : tom === "alerta" ? T.gold : tom === "risco" ? T.red : T.sub;
+  // neutro usa T.ink para texto (melhor contraste em fundo escuro)
+  const corTexto = tom === "neutro" ? T.ink : cor;
   return (
-    <span style={{ display: "inline-flex", alignItems: "center", gap: 4, fontSize: 10.5, fontWeight: 700, color: cor, border: `1px solid ${cor}55`, background: `${cor}14`, borderRadius: 6, padding: "2px 7px", whiteSpace: "nowrap" }}>
+    <span style={{ display: "inline-flex", alignItems: "center", gap: 4, fontSize: 10.5, fontWeight: 700, color: corTexto, border: `1px solid ${cor}55`, background: `${cor}14`, borderRadius: 6, padding: "2px 7px", whiteSpace: "nowrap" }}>
       <span style={{ width: 6, height: 6, borderRadius: "50%", background: cor }} />{children}
     </span>
   );

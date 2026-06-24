@@ -8,7 +8,7 @@ export function useTrilha(trilhaId) {
   const [estado, setEstado] = useState({ carregando: true, erro: null, trilha: null });
 
   useEffect(() => {
-    if (!trilhaId) { setEstado({ carregando: false, erro: "aluno sem trilha", trilha: null }); return; }
+    if (!trilhaId) { setEstado({ carregando: false, erro: null, trilha: null }); return; }
     let vivo = true;
     db.carregarTrilha(trilhaId)
       .then((dados) => {
