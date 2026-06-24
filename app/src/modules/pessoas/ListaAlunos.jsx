@@ -8,11 +8,12 @@ import { useTema } from "../../shared/branding/BrandingContext.jsx";
 import { limparNome, nomeValido } from "../../shared/validacao.js";
 import { mensagemAmigavel } from "../../shared/lib/erros.js";
 import { paginar } from "../../shared/lib/paginacao.js";
+import { VinculosResponsavel } from "./VinculosResponsavel.jsx";
 import * as db from "../../shared/data/index.js";
 
 const POR_PAGINA = 50; // Fase B-min, B.2 — escola com 300–500 alunos não renderiza tudo de uma vez
 
-export function ListaAlunos({ alunos, consentimentos, concursos = [], turmas = [], resumoPorAluno = {}, aoMudar, aoGerarCredencial, aoVerAluno, filtroStatusInicial = "" }) {
+export function ListaAlunos({ alunos, consentimentos, concursos = [], turmas = [], trilhas = [], resumoPorAluno = {}, aoMudar, aoGerarCredencial, aoVerAluno, filtroStatusInicial = "" }) {
   const T = useTema();
   const [erro, setErro] = useState(null);
   const [ocupado, setOcupado] = useState(null);
@@ -20,6 +21,7 @@ export function ListaAlunos({ alunos, consentimentos, concursos = [], turmas = [
   const [fTurma, setFTurma] = useState("");
   const [fStatus, setFStatus] = useState(filtroStatusInicial);
   const [pagina, setPagina] = useState(1);
+  const [alunoVinculos, setAlunoVinculos] = useState(null);
   const comConsentimento = useMemo(() => new Set(consentimentos.map((c) => c.aluno_id)), [consentimentos]);
 
   async function comAcao(aluno, fn) {
@@ -47,6 +49,7 @@ export function ListaAlunos({ alunos, consentimentos, concursos = [], turmas = [
   };
   const trocarConcurso = (a, concursoId) => comAcao(a, () => db.atualizarAluno(a.id, { concurso_id: concursoId || null }));
   const trocarTurma = (a, turmaId) => comAcao(a, () => db.definirTurma(a.id, turmaId || null));
+  const trocarTrilha = (a, trilhaId) => comAcao(a, () => db.atualizarAluno(a.id, { trilha_id: trilhaId || null }));
   const renomear = (a) => {
     const nome = pedirNome("Novo nome do aluno:", a.nome);
     if (!nome || nome === a.nome) return;
@@ -161,6 +164,12 @@ export function ListaAlunos({ alunos, consentimentos, concursos = [], turmas = [
                           {concursos.map((c) => <option key={c.id} value={c.id} style={{ background: T.bg2 }}>{c.nome}</option>)}
                         </select>
                       )}
+                      {trilhas.length > 1 && (
+                        <select value={a.trilha_id ?? ""} disabled={trabalhando} onChange={(e) => trocarTrilha(a, e.target.value)} title="Trilha de estudo" style={selMini}>
+                          <option value="" style={{ background: T.bg2 }}>— sem trilha —</option>
+                          {trilhas.map((t) => <option key={t.id} value={t.id} style={{ background: T.bg2 }}>{t.nome}</option>)}
+                        </select>
+                      )}
                     </div>
                   </div>
                   <div style={{ display: "flex", gap: 7, alignItems: "center", flexWrap: "wrap", justifyContent: "flex-end" }}>
@@ -169,6 +178,7 @@ export function ListaAlunos({ alunos, consentimentos, concursos = [], turmas = [
                     <MaisAcoes acoes={[
                       { rotulo: "✎ Renomear aluno", aoClicar: () => renomear(a) },
                       { rotulo: "+ Adicionar responsável", aoClicar: () => credencialResp(a) },
+                      { rotulo: "👨‍👧 Gerenciar responsáveis", aoClicar: () => setAlunoVinculos(a) },
                       ...(!temCons ? [{ rotulo: "Registrar consentimento", aoClicar: () => consentir(a) }] : []),
                       ...(temCred ? [{ rotulo: "Regerar credencial do aluno", aoClicar: () => credencialAluno(a) }] : []),
                       { rotulo: "Exportar dados (LGPD)", aoClicar: () => exportar(a) },
@@ -193,6 +203,13 @@ export function ListaAlunos({ alunos, consentimentos, concursos = [], turmas = [
             Próxima ›
           </button>
         </div>
+      )}
+      {alunoVinculos && (
+        <VinculosResponsavel
+          aluno={alunoVinculos}
+          aoMudar={aoMudar}
+          aoFechar={() => setAlunoVinculos(null)}
+        />
       )}
     </SectionCard>
   );

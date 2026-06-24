@@ -459,6 +459,23 @@ export async function listarAlunos() {
   return data;
 }
 
+export async function listarTrilhas() {
+  const { data, error } = await supabase
+    .from("trilhas").select("id, nome, versao").order("versao", { ascending: false });
+  if (error) throw falha("trilhas", error);
+  return data;
+}
+
+export async function listarVinculos(alunoId) {
+  const { data, error } = await supabase
+    .from("vinculos_responsaveis")
+    .select("id, responsavel_id, criado_em, usuarios(nome, papel)")
+    .eq("aluno_id", alunoId)
+    .order("criado_em");
+  if (error) throw falha("responsáveis", error);
+  return data ?? [];
+}
+
 // cadastro um a um ou em lote: `nomes` é um array (1..N)
 export async function cadastrarAlunos(nomes, turmaId, trilhaId, concursoId) {
   const { escola } = await meuPerfil();
@@ -535,6 +552,7 @@ export const provisionarResponsavel = (alunoId, nome) =>
   invocar("provisionar-aluno", { tipo: "responsavel", aluno_id: alunoId, nome });
 export const gerarMeta = (alunoId) => invocar("gerar-meta", { aluno_id: alunoId });
 export const lgpdTitular = (acao, alunoId) => invocar("lgpd-titular", { acao, aluno_id: alunoId });
+export const revogarResponsavel = (vinculoId) => invocar("revogar-responsavel", { vinculo_id: vinculoId });
 
 // Envia e-mail de recuperação de senha para coordenação.
 // Mensagem genérica ao chamador — não revela se o e-mail existe.
