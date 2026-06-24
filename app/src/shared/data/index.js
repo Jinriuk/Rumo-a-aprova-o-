@@ -285,11 +285,18 @@ export async function carregarPlanoConcurso(examTag) {
 }
 
 // Ajustes de missão da escola do usuário (isolado por RLS).
+// Degrada graciosamente se a tabela não existir ou o join falhar —
+// o aluno ainda vê as missões oficiais, só sem os ajustes da escola.
 export async function carregarMissoesEscola(examTag) {
-  // junta o exam_tag via missões (a tabela de ajuste não tem exam_tag)
   const { data, error } = await supabase
     .from("missoes_escola").select("*, missoes!inner(exam_tag)").eq("missoes.exam_tag", examTag);
-  if (error) throw falha("ajustes de missão da escola", error);
+  if (error) {
+    if (tabelaInexistente(error) || /relationship|foreign/i.test(error?.message ?? "")) {
+      console.warn("missoes_escola: tabela ou join indisponível, usando missões oficiais sem ajuste");
+      return [];
+    }
+    throw falha("ajustes de missão da escola", error);
+  }
   return data;
 }
 

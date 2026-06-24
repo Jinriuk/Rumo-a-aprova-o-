@@ -42,7 +42,20 @@ export function TrilhaConcurso({ examTag, concursoNome, nivel = null, compacto =
     );
   }
   if (carregando) return <Empty txt="Carregando a trilha do concurso…" />;
-  if (erro) return <Erro>{erro}</Erro>;
+  if (erro) {
+    const ehProblemaDeRede = /instável|connexão|offline/i.test(erro);
+    return (
+      <SectionCard titulo="Trilha do concurso">
+        <EmptyState
+          icone={ehProblemaDeRede ? "📡" : "⚠️"}
+          titulo={ehProblemaDeRede ? "Falha de conexão" : "Trilha temporariamente indisponível"}
+          dica={ehProblemaDeRede
+            ? "Verifique sua conexão e tente novamente."
+            : "Não foi possível carregar a trilha agora. Recarregue a página ou tente em instantes."}
+        />
+      </SectionCard>
+    );
+  }
 
   const { planos = [], missoes = [], ajustesEscola = [] } = dados ?? {};
   // anti-furo (exam_tag) + ajustes da escola + ordenação — lógica pura.
