@@ -5,7 +5,7 @@ import { Cabecalho } from "../../shared/ui/Cabecalho.jsx";
 import { SectionCard, Empty, Erro, EmptyState } from "../../shared/ui/componentes.jsx";
 import { MenuPrincipal } from "../../shared/ui/MenuPrincipal.jsx";
 import { useTema } from "../../shared/branding/BrandingContext.jsx";
-import { NovaTurma, NovosAlunos, CredencialGerada } from "../../modules/pessoas/CadastroAlunos.jsx";
+import { NovaTurma, PainelCadastroAlunos, CredencialGerada } from "../../modules/pessoas/CadastroAlunos.jsx";
 import { ListaAlunos } from "../../modules/pessoas/ListaAlunos.jsx";
 import { Marca } from "../../modules/escola/Marca.jsx";
 import { PainelConformidade } from "../../modules/consentimento/PainelConformidade.jsx";
@@ -17,7 +17,7 @@ import { adaptarResumoEscola } from "../../shared/metricas/agregados.js";
 import { mensagemAmigavel } from "../../shared/lib/erros.js";
 import * as db from "../../shared/data/index.js";
 
-const VAZIO = { turmas: [], alunos: [], consentimentos: [], logs: [], trilha: null, concursos: [], resumo: [], simuladosEscola: [] };
+const VAZIO = { turmas: [], alunos: [], consentimentos: [], logs: [], trilha: null, concursos: [], resumo: [], simuladosEscola: [], trilhas: [] };
 
 export default function AreaEscola({ perfil }) {
   const T = useTema();
@@ -27,8 +27,9 @@ export default function AreaEscola({ perfil }) {
     () => Promise.all([
       db.listarTurmas(), db.listarAlunos(), db.listarConsentimentos(), db.listarLogsAcesso(),
       db.trilhaPadrao(), db.listarConcursos(), db.resumoEscola(), db.listarSimuladosEscola(),
-    ]).then(([turmas, alunos, consentimentos, logs, trilha, concursos, resumo, simuladosEscola]) =>
-      ({ turmas, alunos, consentimentos, logs, trilha, concursos, resumo, simuladosEscola })),
+      db.listarTrilhas(),
+    ]).then(([turmas, alunos, consentimentos, logs, trilha, concursos, resumo, simuladosEscola, trilhas]) =>
+      ({ turmas, alunos, consentimentos, logs, trilha, concursos, resumo, simuladosEscola, trilhas })),
     [],
   );
   const dados = carregado ?? VAZIO;
@@ -86,9 +87,9 @@ export default function AreaEscola({ perfil }) {
 
           {!carregando && !alunoAberto && tab === "alunos" && (
             <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-              <NovosAlunos turmas={dados.turmas} trilhaPadrao={dados.trilha} concursos={dados.concursos} aoMudar={recarregar} />
+              <PainelCadastroAlunos turmas={dados.turmas} trilhaPadrao={dados.trilha} concursos={dados.concursos} aoMudar={recarregar} />
               <ListaAlunos alunos={dados.alunos} consentimentos={dados.consentimentos} concursos={dados.concursos}
-                turmas={dados.turmas} resumoPorAluno={resumoPorAluno}
+                turmas={dados.turmas} trilhas={dados.trilhas} resumoPorAluno={resumoPorAluno}
                 aoMudar={recarregar} aoGerarCredencial={setCredencial} aoVerAluno={verAluno}
                 filtroStatusInicial={filtroAlunosStatus} />
             </div>
