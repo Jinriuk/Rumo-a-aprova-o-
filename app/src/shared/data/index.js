@@ -557,9 +557,23 @@ async function invocar(fn, body) {
 export const provisionarAluno = (alunoId) => invocar("provisionar-aluno", { tipo: "aluno", aluno_id: alunoId });
 export const provisionarResponsavel = (alunoId, nome) =>
   invocar("provisionar-aluno", { tipo: "responsavel", aluno_id: alunoId, nome });
+export const vincularResponsavelExistente = (alunoId, responsavelId) =>
+  invocar("provisionar-aluno", { tipo: "vincular-responsavel", aluno_id: alunoId, responsavel_id: responsavelId });
 export const gerarMeta = (alunoId) => invocar("gerar-meta", { aluno_id: alunoId });
 export const lgpdTitular = (acao, alunoId) => invocar("lgpd-titular", { acao, aluno_id: alunoId });
 export const revogarResponsavel = (vinculoId) => invocar("revogar-responsavel", { vinculo_id: vinculoId });
+
+// Lista todos os responsáveis da escola (RLS restringe ao tenant do usuário logado).
+// Usado para mostrar responsáveis disponíveis para re-vinculação.
+export async function listarResponsaveisEscola() {
+  const { data, error } = await supabase
+    .from("usuarios")
+    .select("id, nome")
+    .eq("papel", "responsavel")
+    .order("nome");
+  if (error) throw falha("responsáveis da escola", error);
+  return data ?? [];
+}
 
 // Envia e-mail de recuperação de senha para coordenação.
 // Mensagem genérica ao chamador — não revela se o e-mail existe.

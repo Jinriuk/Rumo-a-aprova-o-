@@ -1,4 +1,4 @@
-/* Gerenciamento de responsáveis de um aluno: lista + revogação.
+/* Gerenciamento de responsáveis de um aluno: lista + revogação + re-vinculação.
    Usar como modal ou painel inline — recebe aluno e onClose. */
 import React, { useEffect, useState } from "react";
 import { SectionCard, BotaoMini, Erro, EmptyState } from "../../shared/ui/componentes.jsx";
@@ -13,6 +13,13 @@ export function VinculosResponsavel({ aluno, aoMudar, aoFechar }) {
   const [erro, setErro] = useState(null);
   const [revogando, setRevogando] = useState(null);
   const [confirmando, setConfirmando] = useState(null);
+
+  // Estado para re-vinculação
+  const [mostraRevincular, setMostraRevincular] = useState(false);
+  const [responsaveisDisponiveis, setResponsaveisDisponiveis] = useState([]);
+  const [carregandoDisp, setCarregandoDisp] = useState(false);
+  const [vinculando, setVinculando] = useState(null);
+  const [feedbackRevincular, setFeedbackRevincular] = useState(null);
 
   useEffect(() => {
     if (!aluno?.id) return;
@@ -30,11 +37,48 @@ export function VinculosResponsavel({ aluno, aoMudar, aoFechar }) {
       await db.revogarResponsavel(vinculo.id);
       setVinculos((v) => v.filter((x) => x.id !== vinculo.id));
       setConfirmando(null);
+      setFeedbackRevincular(null);
       aoMudar?.();
     } catch (e) {
       setErro(mensagemAmigavel(e, "revogar"));
     }
     setRevogando(null);
+  }
+
+  async function abrirRevincular() {
+    setMostraRevincular(true);
+    setFeedbackRevincular(null);
+    setCarregandoDisp(true);
+    try {
+      const todos = await db.listarResponsaveisEscola();
+      const jaVinculados = new Set(vinculos.map((v) => v.responsavel_id));
+      setResponsaveisDisponiveis(todos.filter((r) => !jaVinculados.has(r.id)));
+    } catch (e) {
+      setErro(mensagemAmigavel(e, "carregar responsáveis"));
+    }
+    setCarregandoDisp(false);
+  }
+
+  async function vincularExistente(responsavelId) {
+    setVinculando(responsavelId);
+    setErro(null);
+    setFeedbackRevincular(null);
+    try {
+      const resultado = await db.vincularResponsavelExistente(aluno.id, responsavelId);
+      if (resultado?.estado === "vinculo_ja_existente") {
+        setFeedbackRevincular(`Este responsável já estava vinculado a ${aluno.nome}.`);
+      } else {
+        setFeedbackRevincular(`Responsável vinculado novamente a ${aluno.nome}.`);
+      }
+      // Recarrega lista de vínculos
+      const novosVinculos = await db.listarVinculos(aluno.id);
+      setVinculos(novosVinculos);
+      setMostraRevincular(false);
+      aoMudar?.();
+    } catch (e) {
+      setErro(mensagemAmigavel(e, "vincular responsável"));
+    }
+    setVinculando(null);
   }
 
   function fmtData(iso) {
@@ -48,7 +92,7 @@ export function VinculosResponsavel({ aluno, aoMudar, aoFechar }) {
     }}>
       <div style={{
         background: T.card, border: `1px solid ${T.line}`, borderTop: `3px solid ${T.gold}`,
-        borderRadius: 14, padding: 20, width: "100%", maxWidth: 420, maxHeight: "90vh",
+        borderRadius: 14, padding: 20, width: "100%", maxWidth: 440, maxHeight: "90vh",
         overflowY: "auto",
       }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
@@ -62,11 +106,18 @@ export function VinculosResponsavel({ aluno, aoMudar, aoFechar }) {
         </div>
 
         {erro && <Erro>{erro}</Erro>}
+        {feedbackRevincular && (
+          <div style={{ color: T.green, fontSize: 13, marginBottom: 10, padding: "8px 10px", background: `${T.green}18`, borderRadius: 8 }}>
+            {feedbackRevincular}
+          </div>
+        )}
 
+        {/* ── Lista de vínculos ativos ── */}
         {carregando ? (
           <div style={{ color: T.sub, fontSize: 13, textAlign: "center", padding: 16 }}>Carregando…</div>
         ) : vinculos.length === 0 ? (
-          <EmptyState icone="👨‍👧" titulo="Nenhum responsável" dica="Use 'Adicionar responsável' na lista de alunos para vincular um responsável." />
+          <EmptyState icone="👨‍👧" titulo="Nenhum responsável vinculado"
+            dica="Use 'Adicionar responsável' para criar uma credencial nova, ou 'Vincular responsável existente' para reativar um vínculo anterior." />
         ) : (
           <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
             {vinculos.map((v) => {
@@ -98,6 +149,47 @@ export function VinculosResponsavel({ aluno, aoMudar, aoFechar }) {
                 </div>
               );
             })}
+          </div>
+        )}
+
+        {/* ── Vincular responsável existente ── */}
+        {!mostraRevincular ? (
+          <div style={{ marginTop: 14 }}>
+            <BotaoMini onClick={abrirRevincular} style={{ width: "100%" }}>
+              + Vincular responsável existente
+            </BotaoMini>
+            <div style={{ fontSize: 11, color: T.sub, marginTop: 5, textAlign: "center" }}>
+              Reativa vínculo de responsável já cadastrado na escola.
+            </div>
+          </div>
+        ) : (
+          <div style={{ marginTop: 16, border: `1px solid ${T.line}`, borderRadius: 9, padding: 12 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
+              <div style={{ fontSize: 13, fontWeight: 600 }}>Vincular responsável existente</div>
+              <BotaoMini onClick={() => setMostraRevincular(false)}>Cancelar</BotaoMini>
+            </div>
+            {carregandoDisp ? (
+              <div style={{ color: T.sub, fontSize: 13 }}>Carregando…</div>
+            ) : responsaveisDisponiveis.length === 0 ? (
+              <div style={{ color: T.sub, fontSize: 13 }}>
+                Nenhum responsável disponível para vincular. Todos já estão vinculados a este aluno.
+              </div>
+            ) : (
+              <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                {responsaveisDisponiveis.map((r) => (
+                  <div key={r.id} style={{
+                    display: "flex", alignItems: "center", justifyContent: "space-between",
+                    padding: "8px 10px", border: `1px solid ${T.line}`, borderRadius: 8,
+                  }}>
+                    <div style={{ fontSize: 13 }}>{r.nome}</div>
+                    <BotaoMini destaque disabled={vinculando === r.id}
+                      onClick={() => vincularExistente(r.id)}>
+                      {vinculando === r.id ? "Vinculando…" : "Vincular"}
+                    </BotaoMini>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         )}
 
