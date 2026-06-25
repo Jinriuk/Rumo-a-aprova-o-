@@ -21,15 +21,26 @@
 //   coordenador_existente_reenvio_pendente
 //   erro_auth | erro_smtp | erro_redirect
 // ============================================================
-import { admin } from "../_shared/contexto.ts";
-import { buildCorsHeaders } from "../_shared/cors.ts";
+import { createClient } from "jsr:@supabase/supabase-js@2";
+
+const admin = createClient(
+  Deno.env.get("SUPABASE_URL")!,
+  Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
+  { auth: { persistSession: false } },
+);
+
+const cors = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers": "authorization, apikey, content-type, x-client-info",
+  "Access-Control-Allow-Methods": "POST, OPTIONS",
+};
 
 const REDIRECT_URL = "https://rumo-a-aprova-o.vercel.app/redefinir-senha";
 
-const json = (body: unknown, status = 200, corsHeaders: Record<string, string>) =>
+const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), {
     status,
-    headers: { ...corsHeaders, "content-type": "application/json" },
+    headers: { ...cors, "content-type": "application/json" },
   });
 
 async function superAdmin(req: Request): Promise<{ id: string; email: string } | null> {
@@ -78,14 +89,12 @@ async function gerarLinkRecuperacao(email: string): Promise<{ link: string | nul
 }
 
 Deno.serve(async (req) => {
-  const corsHeaders = buildCorsHeaders(req);
-
-  if (req.method === "OPTIONS") return new Response("ok", { status: 200, headers: corsHeaders });
-  if (req.method !== "POST") return json({ status: "erro_auth", error: "método não suportado" }, 405, corsHeaders);
+  if (req.method === "OPTIONS") return new Response("ok", { status: 200, headers: cors });
+  if (req.method !== "POST") return json({ status: "erro_auth", error: "método não suportado" }, 405);
 
   try {
     const quem = await superAdmin(req);
-    if (!quem) return json({ status: "erro_auth", error: "acesso restrito ao super_admin" }, 403, corsHeaders);
+    if (!quem) return json({ status: "erro_auth", error: "acesso restrito ao super_admin" }, 403);
 
     const body = await req.json().catch(() => ({}));
     const acao: string = (body.acao ?? "criar").toLowerCase();
@@ -93,13 +102,13 @@ Deno.serve(async (req) => {
     // ── Modo REENVIAR ──
     if (acao === "reenviar") {
       const { email } = body;
-      if (!email) return json({ status: "erro_auth", error: "informe o email do coordenador" }, 400, corsHeaders);
-      if (!emailValido(String(email))) return json({ status: "erro_auth", error: "e-mail inválido" }, 400, corsHeaders);
+      if (!email) return json({ status: "erro_auth", error: "informe o email do coordenador" }, 400);
+      if (!emailValido(String(email))) return json({ status: "erro_auth", error: "e-mail inválido" }, 400);
       const emailLower = String(email).trim().toLowerCase();
 
       const { link, erro } = await gerarLinkRecuperacao(emailLower);
 
-      if (erro) return json({ status: erro, error: "falha ao gerar link de recuperação" }, 500, corsHeaders);
+      if (erro) return json({ status: erro, error: "falha ao gerar link de recuperação" }, 500);
 
       const statusReenvio = link
         ? "coordenador_existente_reenvio_enviado"
@@ -111,27 +120,27 @@ Deno.serve(async (req) => {
         detalhe: { email: emailLower, status: statusReenvio },
       });
 
-      return json({ ok: true, status: statusReenvio, email: emailLower, link }, 200, corsHeaders);
+      return json({ ok: true, status: statusReenvio, email: emailLower, link });
     }
 
     // ── Modo CRIAR (default) ──
     const { escola_id, nome, email } = body;
     if (!escola_id || !nome || !email) {
-      return json({ status: "erro_auth", error: "informe escola_id, nome e email" }, 400, corsHeaders);
+      return json({ status: "erro_auth", error: "informe escola_id, nome e email" }, 400);
     }
-    if (!emailValido(String(email))) return json({ status: "erro_auth", error: "e-mail inválido" }, 400, corsHeaders);
+    if (!emailValido(String(email))) return json({ status: "erro_auth", error: "e-mail inválido" }, 400);
     const emailLower = String(email).trim().toLowerCase();
     const nomeLimpo = String(nome).trim();
 
     const { data: escola, error: errEsc } = await admin
       .from("escolas").select("id, nome").eq("id", escola_id).maybeSingle();
-    if (errEsc) return json({ status: "erro_auth", error: "erro ao consultar escola" }, 500, corsHeaders);
-    if (!escola) return json({ status: "erro_auth", error: "escola não encontrada" }, 404, corsHeaders);
+    if (errEsc) return json({ status: "erro_auth", error: "erro ao consultar escola" }, 500);
+    if (!escola) return json({ status: "erro_auth", error: "escola não encontrada" }, 404);
 
     const meta = { escola_id, papel: "coordenacao" };
 
     const { data: lista, error: errLista } = await admin.auth.admin.listUsers({ perPage: 1000 });
-    if (errLista) return json({ status: "erro_auth", error: "falha ao verificar usuários" }, 500, corsHeaders);
+    if (errLista) return json({ status: "erro_auth", error: "falha ao verificar usuários" }, 500);
     const existente = lista.users.find((u) => (u.email ?? "").toLowerCase() === emailLower);
 
     let uid: string;
@@ -141,7 +150,7 @@ Deno.serve(async (req) => {
         app_metadata: meta,
         user_metadata: { nome: nomeLimpo },
       });
-      if (error) return json({ status: "erro_auth", error: "falha ao atualizar usuário" }, 500, corsHeaders);
+      if (error) return json({ status: "erro_auth", error: "falha ao atualizar usuário" }, 500);
       uid = existente.id;
     } else {
       const { data, error } = await admin.auth.admin.createUser({
@@ -151,7 +160,7 @@ Deno.serve(async (req) => {
         app_metadata: meta,
         user_metadata: { nome: nomeLimpo },
       });
-      if (error) return json({ status: "erro_auth", error: "falha ao criar usuário" }, 500, corsHeaders);
+      if (error) return json({ status: "erro_auth", error: "falha ao criar usuário" }, 500);
       uid = data.user.id;
       criada = true;
     }
@@ -162,7 +171,7 @@ Deno.serve(async (req) => {
     );
     if (errU) {
       if (criada) await admin.auth.admin.deleteUser(uid).catch(() => {});
-      return json({ status: "erro_auth", error: "falha ao vincular usuário à escola" }, 500, corsHeaders);
+      return json({ status: "erro_auth", error: "falha ao vincular usuário à escola" }, 500);
     }
 
     const { link, erro: erroLink } = await gerarLinkRecuperacao(emailLower);
@@ -187,7 +196,7 @@ Deno.serve(async (req) => {
         conta_nova: criada,
         link: null,
         erro_link: erroLink,
-      }, 200, corsHeaders);
+      });
     }
 
     return json({
@@ -197,9 +206,9 @@ Deno.serve(async (req) => {
       nome: nomeLimpo,
       conta_nova: criada,
       link,
-    }, 200, corsHeaders);
+    });
   } catch (e) {
     console.error("backoffice-coordenador:", (e as Error)?.message ?? "erro desconhecido");
-    return json({ status: "erro_auth", error: "falha ao provisionar coordenação" }, 500, corsHeaders);
+    return json({ status: "erro_auth", error: "falha ao provisionar coordenação" }, 500);
   }
 });

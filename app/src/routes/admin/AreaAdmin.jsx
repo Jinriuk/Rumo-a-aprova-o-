@@ -250,7 +250,8 @@ function NovaEscola({ aoCriar }) {
              corAcento: "", logoUrl: "", observacao: "",
              emailInstitucional: "", telefoneContato: "", contatoNome: "", contatoObservacao: "",
              opcaoCoord: "depois", coordNome: "", coordEmail: "" });
-      setTimeout(() => { setAberto(false); setOk(null); aoCriar?.(); }, 2000);
+      aoCriar?.();
+      setTimeout(() => { setAberto(false); setOk(null); }, 2000);
     } catch (e) { setErro(mensagemAmigavel(e, "salvar")); }
     setOcupado(false);
   }
