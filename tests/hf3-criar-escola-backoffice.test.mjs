@@ -46,11 +46,12 @@ test("HF3-1: super_admin cria escola com nome e slug (dados mínimos)", async ()
     );
     const id = r.rows[0].id;
     assert.ok(id, "deve retornar o uuid da escola criada");
-    const e = await c.query("select nome, slug, status from escolas where id = $1", [id]);
-    assert.equal(e.rows.length, 1, "escola deve existir na tabela");
-    assert.equal(e.rows[0].nome, "Escola Mínima HF3");
-    assert.equal(e.rows[0].slug, "escola-minima-hf3");
-    assert.equal(e.rows[0].status, "implantacao", "status padrão deve ser implantacao");
+    const d = await c.query("select public.backoffice_detalhe_escola($1) as j", [id]);
+    const escola = d.rows[0].j.escola;
+    assert.ok(escola, "escola deve existir na tabela");
+    assert.equal(escola.nome, "Escola Mínima HF3");
+    assert.equal(escola.slug, "escola-minima-hf3");
+    assert.equal(escola.status, "implantacao", "status padrão deve ser implantacao");
   });
 });
 
@@ -90,11 +91,8 @@ test("HF3-3: super_admin cria escola com todos os campos de contato", async () =
     );
     const id = r.rows[0].id;
     assert.ok(id, "deve retornar uuid");
-    const e = await c.query(
-      "select nome, slug, cidade, uf, plano, limite_alunos, status, email_institucional, telefone_contato, contato_nome, contato_observacao from escolas where id = $1",
-      [id],
-    );
-    const row = e.rows[0];
+    const d = await c.query("select public.backoffice_detalhe_escola($1) as j", [id]);
+    const row = d.rows[0].j.escola;
     assert.equal(row.nome, "Escola Completa HF3");
     assert.equal(row.cidade, "São Paulo");
     assert.equal(row.uf, "SP");
