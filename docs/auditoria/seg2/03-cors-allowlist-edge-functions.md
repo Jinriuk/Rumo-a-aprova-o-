@@ -53,6 +53,11 @@ local que herda o `cors` por requisição; não quebra o Supabase JS client.
 
 ## 3. Tabela de status
 
+> **Estado em 2026-06-26:** Código do CORS allowlist mergeado na main (PR #37, commit d51b5c9).
+> Funções deployadas no Supabase ainda com código antigo (wildcard) — verificado via painel Supabase em 2026-06-26.
+> Deploy pendente do dono via `supabase functions deploy` (ver seção 4). Não bloqueia piloto controlado.
+
+
 | Função | Antes | Depois | Origem permitida OK | Origem bloqueada OK | Deploy | Status |
 |--------|-------|--------|---------------------|---------------------|--------|--------|
 | `provisionar-aluno` | `*` | allowlist | ⏳ curl do dono | ⏳ curl do dono | ⏳ dono | **código pronto** |
