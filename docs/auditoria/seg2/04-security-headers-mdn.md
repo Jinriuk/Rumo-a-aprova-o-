@@ -58,7 +58,7 @@ frame-ancestors 'none'; base-uri 'self'; form-action 'self'; object-src 'none'
 
 ---
 
-## 4. Checklist do dono — validar pós-deploy
+## 4. Checklist — executado em 2026-06-26
 
 1. [ ] Confirmar na Vercel que a `main` foi **redeployada** com o `vercel.json` atual.
 2. [ ] `curl -I https://rumo-a-aprova-o.vercel.app/` → conferir os **6 headers** na resposta.
@@ -79,8 +79,10 @@ frame-ancestors 'none'; base-uri 'self'; form-action 'self'; object-src 'none'
 
 | Momento | SecurityHeaders | Observação |
 |---------|-----------------|------------|
-| SEG1 (scan público) | **D** | headers no branch, mas não servidos (main não redeployada) |
-| SEG2 (esperado pós-redeploy da main) | **A / A-** (a confirmar) | 6 headers servidos; A+ exige remover `unsafe-inline` |
+| SEG1 (scan público, pré-redeploy) | D | headers no branch, mas não servidos (main não redeployada) |
+| **SEG2 (2026-06-26 17:47 UTC — pós-redeploy da main)** | **A** | 6 headers servidos; grade capped at A por `unsafe-inline` no script-src |
+| SEG2-tardia / PR1 (futuro) | A+ (estimado) | remover `unsafe-inline` do script-src com nonce/hash |
+
 
 ---
 
