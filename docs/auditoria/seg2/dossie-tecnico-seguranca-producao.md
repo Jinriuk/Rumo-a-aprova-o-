@@ -112,7 +112,7 @@ A matriz é aplicada **duas vezes**: front roteia por papel; **banco impõe** po
 |----|-----|-----------|---------|
 | D-1 | P2 / bloqueado-plano | Leaked Password Protection (só Pro) | julho |
 | A-1 | P2 | Demo × real (projeto separado) | antes do aluno real |
-| J-1 | P2 | Branch protection (autorizada) | checklist turnkey (doc 02) |
+| J-1 | ~~P2~~ | ~~Branch protection (autorizada)~~ | ✅ **RESOLVIDA** em 2026-06-26 |
 | — | SEG2 | Backup/restore, staging, domínio, SMTP, sa-east-1 | julho |
 | K-2 | P3 | Retenção/rotação de logs | PR1 |
 
