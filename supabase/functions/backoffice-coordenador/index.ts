@@ -29,19 +29,38 @@ const admin = createClient(
   { auth: { persistSession: false } },
 );
 
-const cors = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, apikey, content-type, x-client-info",
-  "Access-Control-Allow-Methods": "POST, OPTIONS",
-};
+// CORS com allowlist (SEG2 / E-1). Função auto-contida (sem imports de
+// _shared/): versão canônica em _shared/cors.ts; cópia mínima de propósito.
+// ALLOWED_ORIGINS (CSV) no ambiente substitui a lista padrão.
+const ENV_ORIGINS = (Deno.env.get("ALLOWED_ORIGINS") ?? "")
+  .split(",").map((o) => o.trim()).filter(Boolean);
+const DEFAULT_ORIGINS = [
+  "https://rumo-a-aprova-o.vercel.app",
+  "http://localhost:5173",
+  "http://localhost:3000",
+];
+const ORIGINS = ENV_ORIGINS.length > 0 ? ENV_ORIGINS : DEFAULT_ORIGINS;
+const VERCEL_PREVIEW = /^https:\/\/rumo-a-aprova-o-[a-z0-9-]+\.vercel\.app$/i;
+
+function origemPermitida(origin: string): boolean {
+  if (!origin) return false;
+  if (ORIGINS.includes(origin)) return true;
+  return VERCEL_PREVIEW.test(origin);
+}
+
+function corsHeaders(req: Request): Record<string, string> {
+  const origin = req.headers.get("origin") ?? "";
+  const headers: Record<string, string> = {
+    "Vary": "Origin",
+    "Access-Control-Allow-Methods": "POST, OPTIONS",
+    "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+    "Access-Control-Max-Age": "86400",
+  };
+  if (origemPermitida(origin)) headers["Access-Control-Allow-Origin"] = origin;
+  return headers;
+}
 
 const REDIRECT_URL = "https://rumo-a-aprova-o.vercel.app/redefinir-senha";
-
-const json = (body: unknown, status = 200) =>
-  new Response(JSON.stringify(body), {
-    status,
-    headers: { ...cors, "content-type": "application/json" },
-  });
 
 async function superAdmin(req: Request): Promise<{ id: string; email: string } | null> {
   const auth = req.headers.get("authorization") ?? "";
@@ -89,6 +108,13 @@ async function gerarLinkRecuperacao(email: string): Promise<{ link: string | nul
 }
 
 Deno.serve(async (req) => {
+  const cors = corsHeaders(req);
+  const json = (body: unknown, status = 200) =>
+    new Response(JSON.stringify(body), {
+      status,
+      headers: { ...cors, "content-type": "application/json" },
+    });
+
   if (req.method === "OPTIONS") return new Response("ok", { status: 200, headers: cors });
   if (req.method !== "POST") return json({ status: "erro_auth", error: "método não suportado" }, 405);
 
