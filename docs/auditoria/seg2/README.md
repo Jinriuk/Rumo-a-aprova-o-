@@ -13,7 +13,7 @@ controlado". Itens dependentes de plano Pro/domínio ficam como **checklist para
 | `00-leitura-seg1-e-plano-seg2.md` | Consolidação SEG1 + plano | base lida; plano traçado |
 | `01-leaked-password-protection.md` | Leaked Password (S2-B) | bloqueado por plano Free; senha endurecida |
 | `02-github-branch-protection-security.md` | GitHub (S2-C) | ✅ Branch protection APLICADA + Dependabot+CodeQL+Secret Protection habilitados |
-| `03-cors-allowlist-edge-functions.md` | CORS (S2-D) | ✅ wildcard removido em código; deploy=dono |
+| `03-cors-allowlist-edge-functions.md` | CORS (S2-D) | ✅ wildcard removido em código; **6 funções deployadas ACTIVE** (MCP 2026-06-26); curls = dono |
 | `04-security-headers-mdn.md` | Headers (S2-E) | ✅ 6 headers ok; SecurityHeaders.com nota **A** (2026-06-26) |
 | `05-relatorio-scanners-externos.md` + `scanners-externos/` | Scanners (S2-F) | SecurityHeaders **A** executado; SSL Labs falhou (Vercel edge); outros=checklists |
 | `06-backup-restore-supabase.md` | Backup/restore (S2-G) | Free: manual; Pro: julho; restore a testar |
@@ -28,8 +28,8 @@ controlado". Itens dependentes de plano Pro/domínio ficam como **checklist para
 | `relatorio-seg2-seguranca-producao-infra-real.md` | Relatório final | **aprovada, 0 P0/P1** |
 
 ## Ações imediatas do dono (antes do piloto controlado)
-1. **Branch protection** — comando pronto em `02-…` §4.1.
-2. **Deploy das Edge Functions** com CORS allowlist + curls — `03-…` §4/§5.
+1. ✅ **Branch protection** — aplicada em 2026-06-26.
+2. ✅ **Deploy das Edge Functions** com CORS allowlist — concluído via MCP em 2026-06-26. **Rodar os curls de preflight** (doc 03 §5) da própria máquina para confirmar.
 3. **Redeploy da `main`** + re-scan de headers — `04-…` §4.
 
 ## Itens de julho (Pro + domínio)

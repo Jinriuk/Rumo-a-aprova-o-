@@ -54,38 +54,29 @@ local que herda o `cors` por requisição; não quebra o Supabase JS client.
 ## 3. Tabela de status
 
 > **Estado em 2026-06-26:** Código do CORS allowlist mergeado na main (PR #37, commit d51b5c9).
-> Funções deployadas no Supabase ainda com código antigo (wildcard) — verificado via painel Supabase em 2026-06-26.
-> Deploy pendente do dono via `supabase functions deploy` (ver seção 4). Não bloqueia piloto controlado.
-
+> **Deploy concluído via MCP Supabase** em 2026-06-26 (session claude/seg2-cors-deploy-verificacao).
+> Todas as 6 funções estão ACTIVE com o novo código CORS allowlist.
+> Curls de verificação (preflight) **pendentes do dono** — egresso `*.supabase.co` bloqueado neste runtime (ver seção 5).
 
 | Função | Antes | Depois | Origem permitida OK | Origem bloqueada OK | Deploy | Status |
 |--------|-------|--------|---------------------|---------------------|--------|--------|
-| `provisionar-aluno` | `*` | allowlist | ⏳ curl do dono | ⏳ curl do dono | ⏳ dono | **código pronto** |
-| `backoffice-coordenador` | `*` | allowlist | ⏳ | ⏳ | ⏳ | **código pronto** |
-| `revogar-responsavel` | `*` | allowlist | ⏳ | ⏳ | ⏳ | **código pronto** |
-| `gerar-meta` | `*` | allowlist | ⏳ | ⏳ | ⏳ | **código pronto** |
-| `virar-semana` | `*` | allowlist | ⏳ | ⏳ | ⏳ | **código pronto** |
-| `lgpd-titular` | `*` | allowlist | ⏳ | ⏳ | ⏳ | **código pronto** |
+| `provisionar-aluno` | `*` | allowlist | ⏳ curl do dono | ⏳ curl do dono | ✅ v3 ACTIVE | **deployado** |
+| `backoffice-coordenador` | `*` | allowlist | ⏳ | ⏳ | ✅ v5 ACTIVE | **deployado** |
+| `revogar-responsavel` | `*` | allowlist | ⏳ | ⏳ | ✅ v2 ACTIVE | **deployado** |
+| `gerar-meta` | `*` | allowlist | ⏳ | ⏳ | ✅ v2 ACTIVE | **deployado** |
+| `virar-semana` | `*` | allowlist | ⏳ | ⏳ | ✅ v2 ACTIVE (verify_jwt=false) | **deployado** |
+| `lgpd-titular` | `*` | allowlist | ⏳ | ⏳ | ✅ v2 ACTIVE | **deployado** |
 
-⏳ = pendente do dono. **Motivo:** esta sessão **não tem acesso Supabase** (sem MCP exposto)
-e o **egresso de rede está bloqueado** (`403 CONNECT` para `*.supabase.co`) → não dá para
-deployar nem rodar o preflight daqui. O código está pronto, mergeável e **build + 341 testes
-verdes** (a suíte node não exercita Deno, mas confirma que nada mais quebrou).
+⏳ curls = pendente do dono. **Motivo:** egresso de rede bloqueado neste runtime (`403 CONNECT` para
+`bdjkgrzfzoamchdpobbl.supabase.co`) — rodar os comandos da seção 5 da própria máquina.
 
 ---
 
-## 4. Deploy (dono) — passo a passo
+## 4. Deploy — concluído via MCP em 2026-06-26
 
-> Risco controlado: a allowlist **inclui a origem de produção**, então o app ao vivo
-> continua recebendo o Origin refletido. O risco só existe se a lista for mal configurada.
-> Como não há staging ainda, faça o deploy e **rode os curls da seção 5 logo em seguida**.
+> ✅ Todas as 6 funções foram deployadas via `mcp__Supabase__deploy_edge_function` com o
+> novo código CORS allowlist. Status `ACTIVE` confirmado pelo MCP. Versões: v3, v5, v2, v2, v2, v2.
 
-```bash
-# da raiz do repo, autenticado no projeto:
-supabase functions deploy provisionar-aluno backoffice-coordenador \
-  revogar-responsavel gerar-meta virar-semana lgpd-titular
-# (ou via MCP deploy_edge_function, função a função)
-```
 Opcional (quando houver domínio próprio): definir o secret
 ```bash
 supabase secrets set ALLOWED_ORIGINS="https://seudominio.com.br,https://www.seudominio.com.br,https://rumo-a-aprova-o.vercel.app"
