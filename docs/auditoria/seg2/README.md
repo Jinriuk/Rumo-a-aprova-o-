@@ -12,10 +12,10 @@ controlado". Itens dependentes de plano Pro/domínio ficam como **checklist para
 |-----|------|----------------|
 | `00-leitura-seg1-e-plano-seg2.md` | Consolidação SEG1 + plano | base lida; plano traçado |
 | `01-leaked-password-protection.md` | Leaked Password (S2-B) | bloqueado por plano Free; senha endurecida |
-| `02-github-branch-protection-security.md` | GitHub (S2-C) | CodeQL+Dependabot add; branch protection = checklist autorizado |
+| `02-github-branch-protection-security.md` | GitHub (S2-C) | ✅ Branch protection APLICADA + Dependabot+CodeQL+Secret Protection habilitados |
 | `03-cors-allowlist-edge-functions.md` | CORS (S2-D) | ✅ wildcard removido em código; deploy=dono |
-| `04-security-headers-mdn.md` | Headers (S2-E) | 6 headers ok; re-scan pós-redeploy |
-| `05-relatorio-scanners-externos.md` + `scanners-externos/` | Scanners (S2-F) | egresso bloqueado → checklists |
+| `04-security-headers-mdn.md` | Headers (S2-E) | ✅ 6 headers ok; SecurityHeaders.com nota **A** (2026-06-26) |
+| `05-relatorio-scanners-externos.md` + `scanners-externos/` | Scanners (S2-F) | SecurityHeaders **A** executado; SSL Labs falhou (Vercel edge); outros=checklists |
 | `06-backup-restore-supabase.md` | Backup/restore (S2-G) | Free: manual; Pro: julho; restore a testar |
 | `07-staging-isolado-e2e.md` | Staging (S2-H) | planejado; CI já suporta |
 | `08-separacao-demo-usuarios-reais.md` | Demo×real (S2-I) | Opção A + checklist |
