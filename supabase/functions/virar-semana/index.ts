@@ -7,9 +7,16 @@
 // Só aceita chamada com a chave de serviço — nenhum papel de
 // escola dispara virada global.
 // ============================================================
-import { admin, cors, json } from "../_shared/contexto.ts";
+import { admin, corsHeaders } from "../_shared/contexto.ts";
 
 Deno.serve(async (req) => {
+  const cors = corsHeaders(req);
+  const json = (body: unknown, status = 200) =>
+    new Response(JSON.stringify(body), {
+      status,
+      headers: { ...cors, "content-type": "application/json" },
+    });
+
   if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
   if (req.method !== "POST") return json({ error: "método não suportado" }, 405);
 
