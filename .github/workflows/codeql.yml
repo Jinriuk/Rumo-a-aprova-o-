@@ -7,7 +7,7 @@
 # repositório. Em repo público o CodeQL é gratuito; se o repo virar
 # privado sem GitHub Advanced Security, este workflow pode ser desligado
 # (remover o arquivo) — está documentado em
-# docs/auditoria/seg2/02-github-branch-protection-security.md.
+# docs/auditoria/seguranca/seg2/02-github-branch-protection-security.md.
 name: CodeQL
 
 on:
