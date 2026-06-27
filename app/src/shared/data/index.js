@@ -250,6 +250,21 @@ export async function salvarOnboarding(alunoId, campos) {
   return data;
 }
 
+// Onboarding pelo PRÓPRIO ALUNO (autoatendimento). A RLS direta de
+// aluno_onboarding só deixa a coordenação escrever; este RPC SECURITY
+// DEFINER grava apenas a linha do aluno logado (app.meu_aluno_id()),
+// sem enfraquecer a política. Usado pela tela de diagnóstico inicial.
+export async function salvarOnboardingAluno({ experiencia, disponibilidade, dificuldade, objetivo }) {
+  const { data, error } = await supabase.rpc("salvar_onboarding_aluno", {
+    p_experiencia: experiencia ?? null,
+    p_disponibilidade: disponibilidade ?? null,
+    p_dificuldade: dificuldade ?? null,
+    p_objetivo: objetivo ?? null,
+  });
+  if (error) throw falha("salvar onboarding", error);
+  return data;
+}
+
 /* ---------- trilhas e missões (Fase 15.4) ---------- */
 
 // Planos de trilha de um concurso (global, só leitura).
@@ -297,6 +312,18 @@ export async function carregarMissoesEscola(examTag) {
     }
     throw falha("ajustes de missão da escola", error);
   }
+  return data;
+}
+
+// Progresso PERSISTIDO de missões do aluno (motor de progresso, PED1):
+// uma linha por missão tocada, com estado (em andamento / concluída),
+// volume acumulado e acurácia. A RLS entrega só o que o usuário pode ver.
+export async function carregarMissoesAluno(alunoId) {
+  const { data, error } = await supabase
+    .from("aluno_missoes")
+    .select("*, missoes(nome, materia_codigo, objetivo, prioridade)")
+    .eq("aluno_id", alunoId);
+  if (error) throw falha("missões do aluno", error);
   return data;
 }
 

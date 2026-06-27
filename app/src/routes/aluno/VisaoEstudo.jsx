@@ -2,8 +2,9 @@
    Hoje / Registrar / Desempenho / Simulados / Histórico / Plano.
    Mesma composição para aluno (edita) e para coordenação (lê) — o
    banco decide o que cada um PODE; aqui só se esconde o que não cabe. */
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { SectionCard, Empty, Tag, SubjDot, Erro, BarraXP, StatusBadge } from "../../shared/ui/componentes.jsx";
+import { FeedbackProgresso, MissoesPersistidas } from "../../modules/motor/ProgressoVivido.jsx";
 import { Icone } from "../../shared/ui/Icones.jsx";
 import { MenuPrincipal } from "../../shared/ui/MenuPrincipal.jsx";
 import { Cronometro } from "../../shared/ui/Cronometro.jsx";
@@ -42,6 +43,47 @@ export function VisaoEstudo({ aluno, podeEditar, concurso = null, contexto = "Pl
   const [versao, setVersao] = useState(0);
   const [minutosSugeridos, setMinutosSugeridos] = useState(0);
   const recarregar = () => setVersao((v) => v + 1);
+
+  // ---- missões PERSISTIDAS (PED1): fecham sozinhas quando o aluno bate
+  // volume + acurácia. Lê a tabela aluno_missoes (motor no banco).
+  const examTag = concurso?.codigo ?? null;
+  const [gam, setGam] = useState({ missoes: [] });
+  const [feedback, setFeedback] = useState(null);
+  const snapRef = useRef(null);
+
+  useEffect(() => {
+    if (!aluno?.id || !examTag) { setGam({ missoes: [] }); snapRef.current = null; return; }
+    let vivo = true;
+    db.carregarMissoesAluno(aluno.id)
+      .then((missoes) => { if (vivo) setGam({ missoes: missoes ?? [] }); })
+      .catch(() => { /* missões são complementares: nunca derrubam a tela de estudo */ });
+    return () => { vivo = false; };
+  }, [aluno?.id, examTag, versao]);
+
+  // feedback no MOMENTO DA AÇÃO: compara o XP do ledger (fonte de verdade
+  // C0) e as missões fechadas entre recargas, e celebra o delta (só para
+  // quem registrou — o aluno).
+  useEffect(() => {
+    if (!podeEditar || !examTag) return;
+    const snap = {
+      xp: dados.xpPersistido?.total ?? 0,
+      missoes: gam.missoes.filter((mi) => mi.estado === "concluida").map((mi) => mi.missao_id),
+    };
+    const prev = snapRef.current;
+    snapRef.current = snap;
+    if (!prev) return; // 1ª carga é a linha de base, sem festejar nada
+    const ganhouXp = snap.xp - prev.xp;
+    const novasMissoes = snap.missoes.filter((id) => !prev.missoes.includes(id)).length;
+    if (ganhouXp > 0 || novasMissoes > 0) {
+      setFeedback({ xp: ganhouXp, missoes: novasMissoes, conquistas: 0, em: Date.now() });
+    }
+  }, [gam, dados.xpPersistido, podeEditar, examTag]);
+
+  useEffect(() => {
+    if (!feedback) return;
+    const t = setTimeout(() => setFeedback(null), 6000);
+    return () => clearTimeout(t);
+  }, [feedback]);
   // toda troca de aba (menu OU botões internos) nasce no topo da página
   const irAba = (k) => { setTab(k); window.scrollTo({ top: 0, left: 0, behavior: "instant" }); };
 
@@ -86,8 +128,8 @@ export function VisaoEstudo({ aluno, podeEditar, concurso = null, contexto = "Pl
 
   const itensMeta = (meta?.meta_atividades ?? []);
   const pendentes = itensMeta.filter((x) => x.estado === "pendente").length;
-  // XP da FONTE DE VERDADE (ledger persistido, Fase C0). Se o aluno ainda
-  // não tem eventos (base nova/antes do backfill), cai na estimativa legada.
+  // XP da FONTE DE VERDADE (ledger persistido, Fase C0 + PED1). Se o aluno
+  // ainda não tem eventos (base nova/antes do backfill), cai na estimativa legada.
   const xp = dados.xpPersistido?.eventos?.length
     ? dados.xpPersistido.total
     : calcularXP({ metas: dados.metas, totalQuestoes: m?.totDone ?? 0, simulados: dados.simulados.length });
@@ -102,6 +144,7 @@ export function VisaoEstudo({ aluno, podeEditar, concurso = null, contexto = "Pl
 
   return (
     <div>
+      {feedback && <FeedbackProgresso feedback={feedback} aoFechar={() => setFeedback(null)} />}
       {/* cronômetro: começa agora, e o tempo vai direto pro registro */}
       {podeEditar && (
         <div style={{ marginBottom: 12, display: "flex", justifyContent: "flex-end" }}>
@@ -118,6 +161,7 @@ export function VisaoEstudo({ aluno, podeEditar, concurso = null, contexto = "Pl
             <FaixaAspirante nome={aluno.nome.split(" ")[0]} contexto={contexto} xp={xp} streak={m?.streak ?? 0}
               aoAbrirConquistas={() => irAba("conquistas")} />
             <MissaoAtual meta={meta} trilha={trilha} m={m} aoAvancar={podeEditar ? irAba : undefined} />
+            {examTag && gam.missoes.length > 0 && <MissoesPersistidas missoes={gam.missoes} />}
             <MetaSemana meta={meta} trilha={trilha} podeEditar={podeEditar} aoMudar={recarregar}
               aoAbrirDesempenho={() => irAba("desempenho")} />
             {m && <ConquistasRecentes m={m} metas={dados.metas} simulados={dados.simulados} aoAbrir={() => irAba("conquistas")} />}

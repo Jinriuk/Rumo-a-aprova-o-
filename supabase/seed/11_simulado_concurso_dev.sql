@@ -7,6 +7,9 @@
 -- da avaliação por concurso. Roda depois de 03/05. Idempotente.
 -- ============================================================
 
+-- Fixture curado: não acionar o motor de progresso (0024) na semeadura.
+set app.motor_seed = 'on';
+
 insert into simulados (id, escola_id, aluno_id, nome, data, exam_tag, acertos, redacao_nota) values
   ('a4000000-0000-4000-8000-000000000001', '11111111-1111-4111-8111-111111111111',
    'a0000000-0000-4000-8000-000000000001', 'Simulado CN — estrutura real', '2026-06-10', 'cn',
