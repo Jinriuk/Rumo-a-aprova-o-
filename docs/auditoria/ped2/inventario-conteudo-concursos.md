@@ -23,7 +23,7 @@ schema completo em Postgres 15 (migrations + seeds), consulta à view
 | Catálogo pedagógico | `materias`, `assuntos`, `subassuntos` | `07_provas.sql` | assuntos por `exam_tag` |
 | Trilha **semanal** (calendário real) | `trilhas`, `disciplinas`, `trilha_semanas`, `atividades_modelo` | `02_trilha_cn.sql` (de `trilha-cn-v1.json`) | só **CN** hoje |
 | Trilha por horizonte + missões | `trilha_planos`, `missoes`, `trilha_plano_missoes` | `09_trilhas_missoes.sql` | planos (anual/reta) + missões starter |
-| **Maturidade** (PED2) | `concursos.maturidade`, view `vw_concurso_qualidade` | `13_maturidade_concursos.sql` / migration `0024` | nível de prontidão auditável |
+| **Maturidade** (PED2) | `concursos.maturidade`, view `vw_concurso_qualidade` | `18_maturidade_concursos.sql` / migration `0034` | nível de prontidão auditável |
 
 Há **dois conceitos de "trilha"** no sistema, e a confusão entre eles era a raiz
 do problema:

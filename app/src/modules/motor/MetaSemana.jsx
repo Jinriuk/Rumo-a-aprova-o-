@@ -10,7 +10,7 @@ import { L, PRIORIDADE, xpPorPrioridade, questoesSugeridas } from "./jargao.js";
 import { mensagemAmigavel } from "../../shared/lib/erros.js";
 import * as db from "../../shared/data/index.js";
 
-export function MetaSemana({ meta, trilha, podeEditar, aoMudar }) {
+export function MetaSemana({ meta, trilha, podeEditar, aoMudar, aoAbrirDesempenho }) {
   const T = useTema();
   const [erro, setErro] = useState(null);
   const [ocupado, setOcupado] = useState(null);
@@ -34,6 +34,42 @@ export function MetaSemana({ meta, trilha, podeEditar, aoMudar }) {
 
   const feitas = itens.filter((x) => x.estado === "concluida").length;
   const consideradas = itens.filter((x) => x.estado !== "ignorada").length;
+
+  // Semana 100% concluída: mostrar card de parabenização com próximos passos
+  if (podeEditar && consideradas > 0 && feitas >= consideradas) {
+    return (
+      <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+        <div style={{ background: `linear-gradient(135deg, ${T.green}22, ${T.card})`, border: `1.5px solid ${T.green}66`, borderRadius: 14, padding: "16px" }}>
+          <div style={{ fontSize: 20, marginBottom: 6 }}>🎯</div>
+          <div className="disp" style={{ fontSize: 16, fontWeight: 800, color: T.green }}>Semana concluída!</div>
+          <div style={{ fontSize: 13, color: T.sub, marginTop: 5, lineHeight: 1.5 }}>
+            Você cumpriu todos os {feitas} objetivos desta semana. Ótimo trabalho!
+          </div>
+          <div style={{ display: "flex", gap: 10, marginTop: 14, flexWrap: "wrap" }}>
+            {aoAbrirDesempenho && (
+              <button onClick={aoAbrirDesempenho}
+                style={{ border: `1px solid ${T.gold}`, background: `${T.gold}14`, color: T.gold, borderRadius: 9, fontWeight: 700, fontSize: 13, padding: "10px 16px", minHeight: 42 }}>
+                Ver meu desempenho
+              </button>
+            )}
+          </div>
+          <div style={{ fontSize: 11.5, color: T.sub, marginTop: 12, lineHeight: 1.4, borderTop: `1px solid ${T.line}`, paddingTop: 10 }}>
+            💡 <b>Próximos passos sugeridos:</b> revise matérias com acerto abaixo de 60%, faça questões extras ou aguarde a próxima semana começar.
+          </div>
+        </div>
+        {/* ainda mostra a lista completa abaixo do card, para referência */}
+        <SectionCard titulo={L.objetivos} sub={`${feitas} de ${consideradas} concluídos`} semPadding>
+          <div style={{ display: "flex", flexDirection: "column" }}>
+            {itens.map((item, i) => (
+              <ObjetivoItem key={item.id} item={item} trilha={trilha} podeEditar={false}
+                ocupado={false} ultimo={i === itens.length - 1}
+                aoConcluir={() => {}} aoAdiar={() => {}} />
+            ))}
+          </div>
+        </SectionCard>
+      </div>
+    );
+  }
 
   async function mudar(item, novo) {
     if (!podeEditar || ocupado) return;

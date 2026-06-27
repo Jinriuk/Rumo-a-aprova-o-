@@ -33,9 +33,9 @@ aparecem com maturidade correta e auditável; build, validador e **196 testes**
 |---|---|
 | `app/src/modules/conteudo/maturidade.js` | **Fonte única** da matriz de maturidade + helpers (puro, sem React/DB). |
 | `app/src/modules/conteudo/SeloMaturidade.jsx` | Selo visual + aviso honesto de maturidade. |
-| `supabase/migrations/0024_maturidade_concursos.sql` | Coluna `concursos.maturidade` + `conteudo_versao` + view `vw_concurso_qualidade`. Aditiva, idempotente, rollback no topo. |
-| `supabase/seed/13_maturidade_concursos.sql` | Seed **gerado** que carimba a maturidade (espelho da fonte única). |
-| `scripts/gerar-seed-maturidade.mjs` | Gera o seed 13 a partir da fonte única. |
+| `supabase/migrations/0034_maturidade_concursos.sql` | Coluna `concursos.maturidade` + `conteudo_versao` + view `vw_concurso_qualidade`. Aditiva, idempotente, rollback no topo. |
+| `supabase/seed/18_maturidade_concursos.sql` | Seed **gerado** que carimba a maturidade (espelho da fonte única). |
+| `scripts/gerar-seed-maturidade.mjs` | Gera o seed 18 a partir da fonte única. |
 | `scripts/validar-conteudo.mjs` | Validador offline: cruza matriz × conteúdo real + integridade. |
 | `tests/conteudo-maturidade.test.mjs` | 12 testes puros de maturidade e integridade. |
 | `docs/conteudo/fabrica-trilhas-concursos.md` | Pipeline de 6 passos para novos concursos. |
@@ -50,7 +50,7 @@ aparecem com maturidade correta e auditável; build, validador e **196 testes**
 ### Por quê assim
 - **Fonte única em JS, banco como espelho:** a UI não pode depender de uma
   migration ainda não aplicada em produção para se comportar com honestidade. O
-  `maturidade.js` é a verdade que a UI consome; o seed 13 (gerado dela) é o
+  `maturidade.js` é a verdade que a UI consome; o seed 18 (gerado dela) é o
   espelho auditável no banco. Um teste garante que os dois nunca divergem.
 - **Default `indisponivel`:** concurso novo/desconhecido nasce honesto. A regra
   de produto ("nada parcial aparece pronto") é garantida por código.
@@ -86,7 +86,7 @@ Saída real da view após migrations + seeds (Postgres 15 local):
   seguro; a view é `security_invoker` (respeita a RLS de quem consulta) e foi
   revogada do `anon`. Nenhuma policy enfraquecida, nenhuma feature fora de escopo.
 - **Teste:** ver §5.
-- **Rollback** (documentado no topo da `0024`, **executado e verificado**):
+- **Rollback** (documentado no topo da `0034`, **executado e verificado**):
   ```sql
   drop view if exists public.vw_concurso_qualidade;
   alter table concursos drop column if exists maturidade;
@@ -99,8 +99,8 @@ Saída real da view após migrations + seeds (Postgres 15 local):
 
 ### Primeira passada — funcionalidade como usuário real / banco
 - Postgres 15 local provisionado; `reset-db.sh` aplicou **24 migrations + 13
-  seeds duas vezes** (idempotência exercitada) **sem erro**, incluindo a `0024`
-  e o seed `13`.
+  seeds duas vezes** (idempotência exercitada) **sem erro**, incluindo a `0034`
+  e o seed `18`.
 - View `vw_concurso_qualidade` consultada: maturidade declarada bate com a
   densidade real; `suspeita_incoerencia = false` em todos.
 - Rollback aplicado e conferido (coluna `maturidade` removida → 0 ocorrências),
@@ -117,7 +117,7 @@ Saída real da view após migrations + seeds (Postgres 15 local):
 | 30 | Validadores: concurso sem trilha completa não aparece como completo | ✅ | `validar-conteudo.mjs` + teste; gate na UI |
 | 31 | Pipeline/fábrica de conteúdo em docs e seeds | ✅ | `fabrica-trilhas-concursos.md` + geradores |
 | 32 | UI não vende trilha incompleta como pronta | ✅ | `CadastroAlunos.jsx` (gating + bloqueio) / `AreaAluno.jsx` (aviso) |
-| 33 | Marcador de maturidade (completa/beta/esqueleto/indisponível) | ✅ | `SeloMaturidade.jsx` + enum/CHECK na `0024` |
+| 33 | Marcador de maturidade (completa/beta/esqueleto/indisponível) | ✅ | `SeloMaturidade.jsx` + enum/CHECK na `0034` |
 | 34 | Preparar terreno p/ ENEM e Policiais sem implementar | ✅ | default `indisponivel`; `fabrica` §5 |
 
 ### Testes obrigatórios da camada

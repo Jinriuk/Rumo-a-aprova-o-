@@ -17,6 +17,16 @@ export const todayISO = () => {
 
 export const fmtBR = (iso) => { const [, m, d] = iso.split("-"); return `${d}/${m}`; };
 
+// "22/06 (domingo)" — data curta com o dia da semana, em horário LOCAL
+// (mesmo critério de todayISO: a virada é à meia-noite do Brasil).
+const DIAS_SEMANA = ["domingo", "segunda-feira", "terça-feira", "quarta-feira", "quinta-feira", "sexta-feira", "sábado"];
+export const fmtBRDiaSemana = (iso) => {
+  const [y, m, d] = String(iso).split("-").map(Number);
+  if (!y || !m || !d) return fmtBR(String(iso));
+  const dt = new Date(y, m - 1, d);
+  return `${String(d).padStart(2, "0")}/${String(m).padStart(2, "0")} (${DIAS_SEMANA[dt.getDay()]})`;
+};
+
 export const daysBetween = (a, b) => Math.round((b - a) / 86400000);
 
 // Semana ativa da trilha: intervalo [inicio, fim] INCLUSIVO contém

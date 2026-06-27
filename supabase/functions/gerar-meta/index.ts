@@ -6,9 +6,16 @@
 // A geração em si roda no banco (app.gerar_meta), com privilégio
 // que o front não tem: nem aluno nem coordenação escrevem meta.
 // ============================================================
-import { admin, chamador, alunoDaEscola, cors, json } from "../_shared/contexto.ts";
+import { admin, chamador, alunoDaEscola, corsHeaders } from "../_shared/contexto.ts";
 
 Deno.serve(async (req) => {
+  const cors = corsHeaders(req);
+  const json = (body: unknown, status = 200) =>
+    new Response(JSON.stringify(body), {
+      status,
+      headers: { ...cors, "content-type": "application/json" },
+    });
+
   if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
   if (req.method !== "POST") return json({ error: "método não suportado" }, 405);
 

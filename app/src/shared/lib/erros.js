@@ -6,13 +6,28 @@ const MENSAGENS = {
   carregar: "Não conseguimos carregar esses dados. Atualize a página ou tente novamente.",
   salvar: "Não foi possível salvar agora. Tente novamente em alguns instantes.",
   acao: "Não foi possível concluir a ação. Tente novamente.",
+  provisionar: "Não foi possível criar o acesso do coordenador. Tente novamente.",
+  reenviar: "Não foi possível reenviar o acesso. Tente novamente.",
 };
 
 const REDE = /failed to fetch|network|timeout|conex[aã]o|offline/i;
+
+// Mensagens funcionais seguras vindas das Edge Functions — podem ser exibidas
+// diretamente ao usuário (não contêm detalhes técnicos internos).
+const EDGE_SEGURAS = [
+  { test: /e-?mail inv[aá]lido/i, msg: "O e-mail informado é inválido." },
+  { test: /acesso restrito|sem permiss[aã]o|super_admin/i, msg: "Você não tem permissão para esta ação." },
+  { test: /escola n[aã]o encontrada/i, msg: "Escola não encontrada. Atualize a página." },
+  { test: /informe.*escola_id|informe.*nome|informe.*email/i, msg: "Preencha todos os campos obrigatórios." },
+  { test: /informe o email/i, msg: "Informe o e-mail do coordenador." },
+];
 
 export function mensagemAmigavel(erro, contexto = "acao") {
   console.error(erro);
   const tecnica = erro?.message ?? String(erro ?? "");
   if (REDE.test(tecnica)) return "Sua conexão parece instável. Verifique e tente de novo.";
+  for (const { test, msg } of EDGE_SEGURAS) {
+    if (test.test(tecnica)) return msg;
+  }
   return MENSAGENS[contexto] ?? MENSAGENS.acao;
 }

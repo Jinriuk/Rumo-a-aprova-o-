@@ -11,7 +11,7 @@
 //     ou maturidade de concurso inexistente);
 //   • há furo de integridade: semana vazia, assunto sem nome, matéria
 //     sem código (slug), plano de trilha apontando concurso inexistente;
-//   • o seed gerado (13_maturidade_concursos.sql) está dessincronizado
+//   • o seed gerado (18_maturidade_concursos.sql) está dessincronizado
 //     da fonte única.
 //
 // Uso:  node scripts/validar-conteudo.mjs
@@ -139,13 +139,13 @@ export function integridadeConteudo() {
   return erros;
 }
 
-// Paridade: o seed 13 commitado bate com a fonte única?
+// Paridade: o seed 18 commitado bate com a fonte única?
 export function seedMaturidadeEmDia() {
   const erros = [];
-  const seed = ler("supabase/seed/13_maturidade_concursos.sql");
+  const seed = ler("supabase/seed/18_maturidade_concursos.sql");
   for (const c of Object.values(MATURIDADE_CONCURSOS)) {
     const re = new RegExp(`maturidade\\s*=\\s*'${c.maturidade}',\\s*conteudo_versao\\s*=\\s*${c.versao}\\s*\\n\\s*where codigo = '${c.codigo}'`);
-    if (!re.test(seed)) erros.push(`seed 13 dessincronizado para '${c.codigo}' (esperado ${c.maturidade}/v${c.versao}) — rode scripts/gerar-seed-maturidade.mjs`);
+    if (!re.test(seed)) erros.push(`seed 18 dessincronizado para '${c.codigo}' (esperado ${c.maturidade}/v${c.versao}) — rode scripts/gerar-seed-maturidade.mjs`);
   }
   return erros;
 }

@@ -76,7 +76,7 @@ de outro concurso não vaza para o aluno.
    (suba `conteudo_versao` quando o conteúdo mudar de forma relevante).
 2. Regenere o seed espelho:
    ```bash
-   node scripts/gerar-seed-maturidade.mjs   # → supabase/seed/13_maturidade_concursos.sql
+   node scripts/gerar-seed-maturidade.mjs   # → supabase/seed/18_maturidade_concursos.sql
    ```
 3. Valide:
    ```bash
@@ -110,7 +110,7 @@ O `validar-conteudo.mjs` é o porteiro central. Ele **reprova** quando:
   maturidade de concurso inexistente);
 - há furo de integridade: **semana vazia**, **assunto sem nome**, **matéria sem
   slug/código**, **plano de trilha apontando concurso inexistente**;
-- o seed gerado `13_maturidade_concursos.sql` está dessincronizado da fonte
+- o seed gerado `18_maturidade_concursos.sql` está dessincronizado da fonte
   única (esqueceram de rodar o gerador).
 
 Auditoria no banco a qualquer momento:
@@ -126,7 +126,7 @@ select * from vw_concurso_qualidade order by maturidade, codigo;
 1. Os quatro porteiros do §3 estão verdes.
 2. Migrations aplicadas pelo pipeline normal (ver
    [`docs/deploy-checklist.md`](../deploy-checklist.md)). **Migration de
-   conteúdo só com justificativa, rollback e teste** — a `0024` é o modelo
+   conteúdo só com justificativa, rollback e teste** — a `0034` é o modelo
    (aditiva, idempotente, rollback documentado no topo do arquivo).
 3. `node scripts/checar-migrations.mjs` confirma paridade repo × banco antes de
    publicar o front.
@@ -138,7 +138,7 @@ select * from vw_concurso_qualidade order by maturidade, codigo;
 O terreno já está pronto:
 
 - Adicionar o concurso em `05_concursos.sql` faz ele nascer `indisponivel` no
-  banco (default da `0024`).
+  banco (default da `0034`).
 - `maturidadeDe(codigo)` devolve `indisponivel` para qualquer código que ainda
   não esteja na matriz — então **nada quebra na UI** ao introduzir um concurso
   sem conteúdo: o selo aparece como "Indisponível" e o cadastro recusa alunos.

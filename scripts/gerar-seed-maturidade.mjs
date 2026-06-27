@@ -1,4 +1,4 @@
-// Gera supabase/seed/13_maturidade_concursos.sql a partir da FONTE
+// Gera supabase/seed/18_maturidade_concursos.sql a partir da FONTE
 // ÚNICA app/src/modules/conteudo/maturidade.js. O SQL gerado é
 // commitado para o seed rodar com psql puro. Idempotente: usa UPDATE
 // por código (não cria concurso — só carimba a maturidade do que já
@@ -19,7 +19,7 @@ linhas.push(`-- ============================================================
 -- SEED — MATURIDADE DE CONTEÚDO POR CONCURSO (PED2)
 -- GERADO por scripts/gerar-seed-maturidade.mjs a partir de
 -- app/src/modules/conteudo/maturidade.js — NÃO editar à mão.
--- Carimba concursos.maturidade / conteudo_versao (migration 0024).
+-- Carimba concursos.maturidade / conteudo_versao (migration 0034).
 -- Idempotente: UPDATE por código; roda depois de 05_concursos.sql.
 -- ============================================================
 `);
@@ -32,6 +32,6 @@ for (const c of Object.values(MATURIDADE_CONCURSOS)) {
 }
 linhas.push("");
 
-const destino = join(raiz, "supabase/seed/13_maturidade_concursos.sql");
+const destino = join(raiz, "supabase/seed/18_maturidade_concursos.sql");
 writeFileSync(destino, linhas.join("\n"), "utf8");
 console.log(`✓ gerado ${destino} (${Object.keys(MATURIDADE_CONCURSOS).length} concursos)`);

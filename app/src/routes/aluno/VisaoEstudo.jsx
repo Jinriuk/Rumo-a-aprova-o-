@@ -2,8 +2,9 @@
    Hoje / Registrar / Desempenho / Simulados / Histórico / Plano.
    Mesma composição para aluno (edita) e para coordenação (lê) — o
    banco decide o que cada um PODE; aqui só se esconde o que não cabe. */
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { SectionCard, Empty, Tag, SubjDot, Erro, BarraXP, StatusBadge } from "../../shared/ui/componentes.jsx";
+import { FeedbackProgresso, MissoesPersistidas } from "../../modules/motor/ProgressoVivido.jsx";
 import { Icone } from "../../shared/ui/Icones.jsx";
 import { MenuPrincipal } from "../../shared/ui/MenuPrincipal.jsx";
 import { Cronometro } from "../../shared/ui/Cronometro.jsx";
@@ -14,6 +15,7 @@ import { MetaSemana } from "../../modules/motor/MetaSemana.jsx";
 import { Registrar } from "../../modules/motor/Registrar.jsx";
 import { Arquivo } from "../../modules/motor/Arquivo.jsx";
 import { Conquistas, ConquistasRecentes } from "../../modules/motor/Conquistas.jsx";
+import { TrilhaConcurso } from "../../modules/conteudo/TrilhaConcurso.jsx";
 import { calcularXP, patente } from "../../modules/motor/jargao.js";
 import { Progresso, Simulados } from "../../modules/desempenho/Progresso.jsx";
 import { InsightsDesempenho } from "../../modules/desempenho/Insights.jsx";
@@ -25,22 +27,71 @@ import { semanaAtual, fmtBR } from "../../shared/regras/regras.js";
 import { mensagemAmigavel } from "../../shared/lib/erros.js";
 import * as db from "../../shared/data/index.js";
 
+function SecaoDesempenho({ rotulo }) {
+  return (
+    <div style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.6, color: "#7E93A6", margin: "4px 2px 0" }}>
+      {rotulo}
+    </div>
+  );
+}
+
 export function VisaoEstudo({ aluno, podeEditar, concurso = null, contexto = "Plano de estudos" }) {
   const T = useTema();
   const [tab, setTab] = useState("hoje");
-  const [dados, setDados] = useState({ carregando: true, metas: [], registros: [], simulados: [], erro: null });
+  const [dados, setDados] = useState({ carregando: true, metas: [], registros: [], simulados: [], xpPersistido: null, erro: null });
   const { trilha, carregando: carregandoTrilha, erro: erroTrilha } = useTrilha(aluno?.trilha_id);
   const [versao, setVersao] = useState(0);
   const [minutosSugeridos, setMinutosSugeridos] = useState(0);
   const recarregar = () => setVersao((v) => v + 1);
+
+  // ---- missões PERSISTIDAS (PED1): fecham sozinhas quando o aluno bate
+  // volume + acurácia. Lê a tabela aluno_missoes (motor no banco).
+  const examTag = concurso?.codigo ?? null;
+  const [gam, setGam] = useState({ missoes: [] });
+  const [feedback, setFeedback] = useState(null);
+  const snapRef = useRef(null);
+
+  useEffect(() => {
+    if (!aluno?.id || !examTag) { setGam({ missoes: [] }); snapRef.current = null; return; }
+    let vivo = true;
+    db.carregarMissoesAluno(aluno.id)
+      .then((missoes) => { if (vivo) setGam({ missoes: missoes ?? [] }); })
+      .catch(() => { /* missões são complementares: nunca derrubam a tela de estudo */ });
+    return () => { vivo = false; };
+  }, [aluno?.id, examTag, versao]);
+
+  // feedback no MOMENTO DA AÇÃO: compara o XP do ledger (fonte de verdade
+  // C0) e as missões fechadas entre recargas, e celebra o delta (só para
+  // quem registrou — o aluno).
+  useEffect(() => {
+    if (!podeEditar || !examTag) return;
+    const snap = {
+      xp: dados.xpPersistido?.total ?? 0,
+      missoes: gam.missoes.filter((mi) => mi.estado === "concluida").map((mi) => mi.missao_id),
+    };
+    const prev = snapRef.current;
+    snapRef.current = snap;
+    if (!prev) return; // 1ª carga é a linha de base, sem festejar nada
+    const ganhouXp = snap.xp - prev.xp;
+    const novasMissoes = snap.missoes.filter((id) => !prev.missoes.includes(id)).length;
+    if (ganhouXp > 0 || novasMissoes > 0) {
+      setFeedback({ xp: ganhouXp, missoes: novasMissoes, conquistas: 0, em: Date.now() });
+    }
+  }, [gam, dados.xpPersistido, podeEditar, examTag]);
+
+  useEffect(() => {
+    if (!feedback) return;
+    const t = setTimeout(() => setFeedback(null), 6000);
+    return () => clearTimeout(t);
+  }, [feedback]);
   // toda troca de aba (menu OU botões internos) nasce no topo da página
   const irAba = (k) => { setTab(k); window.scrollTo({ top: 0, left: 0, behavior: "instant" }); };
 
   useEffect(() => {
     if (!aluno) return;
     let vivo = true;
-    Promise.all([db.listarMetas(aluno.id), db.listarRegistros(aluno.id), db.listarSimulados(aluno.id)])
-      .then(([metas, registros, simulados]) => vivo && setDados({ carregando: false, metas, registros, simulados, erro: null }))
+    Promise.all([db.listarMetas(aluno.id), db.listarRegistros(aluno.id), db.listarSimulados(aluno.id), db.carregarXpPersistido(aluno.id)])
+      .then(([metas, registros, simulados, xpPersistido]) => vivo && setDados({ carregando: false, metas, registros, simulados, xpPersistido, erro: null }))
       .catch((e) => vivo && setDados((d) => ({ ...d, carregando: false, erro: mensagemAmigavel(e, "carregar") })));
     return () => { vivo = false; };
   }, [aluno?.id, versao]);
@@ -63,15 +114,28 @@ export function VisaoEstudo({ aluno, podeEditar, concurso = null, contexto = "Pl
   }, [dados, trilha, semanaAtiva]);
 
   if (carregandoTrilha || dados.carregando) return <Empty txt="Carregando…" />;
-  if (erroTrilha || dados.erro) return <Erro>{erroTrilha || dados.erro}</Erro>;
-  if (!trilha) return <Empty txt="Aluno sem trilha de estudo." />;
+  if (dados.erro) return <Erro>{dados.erro}</Erro>;
+  if (erroTrilha) return <Erro>{erroTrilha}</Erro>;
+  if (!trilha) return (
+    <div style={{ padding: "32px 16px", textAlign: "center" }}>
+      <div style={{ fontSize: 28, opacity: 0.4 }}>🗺️</div>
+      <div style={{ fontSize: 15, fontWeight: 700, marginTop: 12 }}>Trilha ainda não configurada</div>
+      <div style={{ fontSize: 13, color: "#7E93A6", marginTop: 6, lineHeight: 1.5, maxWidth: 300, marginInline: "auto" }}>
+        Sua trilha de estudo ainda não foi configurada pela coordenação. Em breve você terá acesso ao seu plano.
+      </div>
+    </div>
+  );
 
   const itensMeta = (meta?.meta_atividades ?? []);
   const pendentes = itensMeta.filter((x) => x.estado === "pendente").length;
-  const xp = calcularXP({ metas: dados.metas, totalQuestoes: m?.totDone ?? 0, simulados: dados.simulados.length });
+  // XP da FONTE DE VERDADE (ledger persistido, Fase C0 + PED1). Se o aluno
+  // ainda não tem eventos (base nova/antes do backfill), cai na estimativa legada.
+  const xp = dados.xpPersistido?.eventos?.length
+    ? dados.xpPersistido.total
+    : calcularXP({ metas: dados.metas, totalQuestoes: m?.totDone ?? 0, simulados: dados.simulados.length });
 
   const ABAS = [
-    ["hoje", "Hoje", null, "ancora"], ["registrar", "Registrar", null, "lapis"],
+    ["hoje", "Hoje", null, "ancora"], ["concurso", "Trilha", null, "escudo"], ["registrar", "Registrar", null, "lapis"],
     ["desempenho", "Desempenho", null, "grafico"], ["simulados", "Simulados", null, "alvo"],
     ["conquistas", "Conquistas", null, "medalha"], ["historico", "Histórico", null, "arquivo"], ["plano", "Plano", null, "mapa"],
   ].filter(([k]) => podeEditar || k !== "registrar").map(
@@ -80,6 +144,7 @@ export function VisaoEstudo({ aluno, podeEditar, concurso = null, contexto = "Pl
 
   return (
     <div>
+      {feedback && <FeedbackProgresso feedback={feedback} aoFechar={() => setFeedback(null)} />}
       {/* cronômetro: começa agora, e o tempo vai direto pro registro */}
       {podeEditar && (
         <div style={{ marginBottom: 12, display: "flex", justifyContent: "flex-end" }}>
@@ -92,19 +157,24 @@ export function VisaoEstudo({ aluno, podeEditar, concurso = null, contexto = "Pl
 
       <div className="fade" key={tab}>
         {tab === "hoje" && (
-          <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: 16, paddingTop: 4 }}>
             <FaixaAspirante nome={aluno.nome.split(" ")[0]} contexto={contexto} xp={xp} streak={m?.streak ?? 0}
               aoAbrirConquistas={() => irAba("conquistas")} />
-            <MissaoAtual meta={meta} trilha={trilha} m={m} />
-            <MetaSemana meta={meta} trilha={trilha} podeEditar={podeEditar} aoMudar={recarregar} />
+            <MissaoAtual meta={meta} trilha={trilha} m={m} aoAvancar={podeEditar ? irAba : undefined} />
+            {examTag && gam.missoes.length > 0 && <MissoesPersistidas missoes={gam.missoes} />}
+            <MetaSemana meta={meta} trilha={trilha} podeEditar={podeEditar} aoMudar={recarregar}
+              aoAbrirDesempenho={() => irAba("desempenho")} />
             {m && <ConquistasRecentes m={m} metas={dados.metas} simulados={dados.simulados} aoAbrir={() => irAba("conquistas")} />}
             {podeEditar && (
               <button onClick={() => irAba("registrar")}
-                style={{ border: `1px dashed ${T.gold}66`, background: `${T.gold}0c`, color: T.gold, borderRadius: 12, fontWeight: 700, fontSize: 14, padding: "14px", minHeight: 50 }}>
+                style={{ border: `1px dashed ${T.gold}66`, background: `${T.gold}0c`, color: T.gold, borderRadius: 12, fontWeight: 700, fontSize: 14, padding: "16px", minHeight: 52, marginTop: 2 }}>
                 ✎ Registrar estudo de hoje
               </button>
             )}
           </div>
+        )}
+        {tab === "concurso" && (
+          <TrilhaConcurso examTag={concurso?.codigo ?? null} concursoNome={concurso?.nome ?? null} />
         )}
         {tab === "registrar" && podeEditar && (
           <Registrar aluno={aluno} trilha={trilha} registros={dados.registros}
@@ -113,8 +183,10 @@ export function VisaoEstudo({ aluno, podeEditar, concurso = null, contexto = "Pl
         {tab === "desempenho" && (
           <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
             {m && <InsightsDesempenho m={m} />}
+            <SecaoDesempenho rotulo="◉ Diagnóstico por matéria" />
             <NiveisPorMateria m={m} trilha={trilha} />
             <RadarDesempenho m={m} trilha={trilha} aoRegistrar={podeEditar ? () => irAba("registrar") : null} />
+            <SecaoDesempenho rotulo="▣ Histórico acumulado" />
             <Acumulado registros={dados.registros} trilha={trilha} />
             <Progresso registros={dados.registros} trilha={trilha} />
           </div>
@@ -154,7 +226,7 @@ function Plano({ trilha, semanaAtiva, meta }) {
       <div style={{ background: `linear-gradient(135deg, ${T.cardHi}, ${T.card})`, border: `1px solid ${T.line}`, borderRadius: 14, padding: "14px 16px" }}>
         <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 10, flexWrap: "wrap" }}>
           <div style={{ fontSize: 11, color: T.sub, textTransform: "uppercase", letterSpacing: 0.6, fontWeight: 700 }}>Sua jornada</div>
-          <div className="num" style={{ fontSize: 11.5, color: T.sub }}>missão <b className="disp" style={{ color: T.gold, fontSize: 15 }}>{posicao}</b> de {total}</div>
+          <div className="num" style={{ fontSize: 11.5, color: T.sub }}>semana <b className="disp" style={{ color: T.gold, fontSize: 15 }}>{posicao}</b> de {total}</div>
         </div>
         <div style={{ marginTop: 9 }}><BarraXP pct={pctJornada} alt={7} /></div>
       </div>
@@ -173,7 +245,7 @@ function Plano({ trilha, semanaAtiva, meta }) {
   );
 }
 
-// Uma etapa da jornada: nó na linha do tempo + cartão da missão.
+// Uma etapa da jornada: nó na linha do tempo + cartão da semana.
 function MissaoJornada({ w, trilha, ativaNum, estadosPorAtividade, T }) {
   const isNow = w.numero === ativaNum;
   const isPast = w.numero < ativaNum;
@@ -181,7 +253,7 @@ function MissaoJornada({ w, trilha, ativaNum, estadosPorAtividade, T }) {
   const dc = tarefas.filter((tk) => estadosPorAtividade[tk.id] === "concluida").length;
   const [aberto, setAberto] = useState(isNow);
   const tom = isNow ? "alerta" : isPast ? "ok" : "neutro";
-  const rotulo = isPast ? "Encerrada" : isNow ? "Em andamento" : "A desbloquear";
+  const rotulo = isPast ? "Encerrada" : isNow ? "Em andamento" : "Próxima";
   const pct = tarefas.length ? Math.round((dc / tarefas.length) * 100) : 0;
 
   // nó: encerrada = check; agora = ponto vivo; futura = cadeado
@@ -201,7 +273,7 @@ function MissaoJornada({ w, trilha, ativaNum, estadosPorAtividade, T }) {
       <div style={{ flex: 1, minWidth: 0, background: T.card, border: `1px solid ${isNow ? T.gold : T.line}`, borderWidth: isNow ? 1.5 : 1, borderRadius: 12, overflow: "hidden" }}>
         <div style={{ padding: "12px 14px" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-            <span className="disp" style={{ fontSize: 14.5, fontWeight: 700 }}>Missão {w.numero}</span>
+            <span className="disp" style={{ fontSize: 14.5, fontWeight: 700 }}>Semana {w.numero}</span>
             <StatusBadge tom={tom}>{rotulo}</StatusBadge>
             <span className="num" style={{ marginLeft: "auto", fontSize: 11, color: T.sub }}>{fmtBR(String(w.inicio))}–{fmtBR(String(w.fim))}</span>
           </div>

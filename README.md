@@ -13,7 +13,7 @@ regra de banco (RLS no Postgres), não disciplina de tela.**
 ```
 app/        Front (React + Vite). Módulos por domínio; shared/data é o ÚNICO ponto que fala com o Supabase.
 supabase/   Banco (migrations com RLS), Edge Functions (privilégio elevado), seed.
-docs/       Documentos de handoff (01–06), prompt de build e decisões.
+docs/       Documentação por área: fundacao/, fases/, auditoria/, operacao/, relatorios/. Índice em docs/README.md.
 tests/      Prova de isolamento (Bloco 0), motor e regras preservadas.
 scripts/    Ferramentas de operador (geração de seed, seed de usuários no Auth).
 ```

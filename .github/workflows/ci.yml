@@ -1,9 +1,19 @@
-# CI — Fase 14.5: build, testes unitários (incl. motor+RLS em Postgres
-# real via Supabase CLI) e suíte E2E Playwright.
+# CI — build + testes unitários (lógica pura + motor/RLS em Postgres real
+# via Supabase CLI) e, OPCIONALMENTE, a suíte E2E Playwright.
 #
-# SEGURANÇA: nenhum secret é necessário. O front usa só chaves
-# PÚBLICAS (app/.env.production: URL + anon key, publicáveis por
-# design — a segurança é a RLS). A service_role NUNCA entra aqui.
+# SEGURANÇA: nenhum secret é necessário para o gate principal. O front
+# usa só chaves PÚBLICAS (app/.env.production: URL + anon key, publicáveis
+# por design — a segurança é a RLS). A service_role NUNCA entra aqui.
+#
+# HONESTIDADE DE STATUS (S1.1/S1.2):
+#   • O gate AUTORITATIVO do PR é `build-e-unitarios` — determinístico,
+#     sem dependência de rede externa, roda as migrations + seeds 2x e a
+#     suíte `node --test` (lógica pura + motor + RLS + suspensão).
+#   • A E2E só roda contra um projeto Supabase ISOLADO (secrets
+#     E2E_SUPABASE_*). Sem esse ambiente, a E2E é PULADA de forma
+#     EXPLÍCITA (não fingimos verde) e NUNCA roda contra o banco de
+#     demo — evita poluir a vitrine e o falso-positivo de job cancelado.
+#     Ver docs/operacao/e2e-ambiente.md.
 name: CI
 
 on:
@@ -13,19 +23,15 @@ on:
 
 jobs:
   # ------------------------------------------------------------
-  # 1) Build de produção + testes unitários
-  #    - regras.test.mjs: lógica pura (sem banco)
-  #    - motor/isolamento.test.mjs: motor e RLS contra o Postgres
-  #      do Supabase local (mesmas migrations de produção)
+  # 1) GATE PRINCIPAL — build de produção + testes unitários.
+  #    É este job que protege a main. Não depende de secret nenhum.
   # ------------------------------------------------------------
   build-e-unitarios:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     # Postgres VANILLA de propósito: a migration 0001 cria as roles
     # (authenticated/anon/service_role) quando faltam, e a 0004 pula o
-    # pg_cron quando indisponível — é o desenho do reset-db.sh. O
-    # Postgres do Supabase NÃO serve aqui: nele o pg_cron só pode ser
-    # criado no database `postgres`, e o teste usa `rumo_teste`.
+    # pg_cron quando indisponível — é o desenho do reset-db.sh.
     services:
       postgres:
         image: postgres:15
@@ -45,9 +51,9 @@ jobs:
       PGPASSWORD: postgres
       PGDATABASE: rumo_teste
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v6
         with:
           node-version: 22
           cache: npm
@@ -71,29 +77,61 @@ jobs:
         working-directory: tests
         run: bash reset-db.sh
 
-      - name: Testes unitários (regras + motor + isolamento RLS)
+      - name: Testes unitários (regras + motor + isolamento RLS + suspensão)
         working-directory: tests
         run: npm test
 
+      # Guarda anti-"verde vazio": se a suíte rodar 0 teste (ex.: seed
+      # abortou e o passo anterior foi pulado), o CI tem que FALHAR.
+      - name: Conferir que a suíte realmente rodou (mínimo de testes)
+        working-directory: tests
+        run: |
+          N=$(node --test 2>/dev/null | sed -n 's/^# pass \([0-9]\+\)$/\1/p' | tail -1)
+          echo "testes que passaram: ${N:-0}"
+          if [ "${N:-0}" -lt 200 ]; then
+            echo "::error::Suíte rodou ${N:-0} testes (< 200). Algo foi pulado silenciosamente."
+            exit 1
+          fi
+
   # ------------------------------------------------------------
-  # 2) E2E Playwright: o build REAL contra o Supabase de demo.
-  #    Os próprios testes validam erros de console (coletarErros).
+  # 2) GUARDA da E2E: decide se há ambiente ISOLADO configurado.
+  #    Secrets não podem ir direto num `if:` de job — então um job
+  #    leve traduz a presença do secret num output booleano.
+  # ------------------------------------------------------------
+  e2e-guard:
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    outputs:
+      isolado: ${{ steps.chk.outputs.isolado }}
+    steps:
+      - id: chk
+        env:
+          E2E_URL: ${{ secrets.E2E_SUPABASE_URL }}
+        run: |
+          if [ -n "$E2E_URL" ]; then
+            echo "isolado=true" >> "$GITHUB_OUTPUT"
+            echo "E2E: ambiente isolado configurado — a suíte vai rodar."
+          else
+            echo "isolado=false" >> "$GITHUB_OUTPUT"
+            echo "::warning::E2E PULADA — sem projeto Supabase isolado (E2E_SUPABASE_URL). Não rodamos E2E contra o banco de demo para não poluí-lo. Configure os secrets E2E_SUPABASE_URL/E2E_SUPABASE_ANON_KEY (ver docs/operacao/e2e-ambiente.md)."
+          fi
+
+  # ------------------------------------------------------------
+  # 3) E2E Playwright — SÓ contra o projeto isolado. Nunca toca o demo.
+  #    Pulada de forma explícita quando não há ambiente isolado.
   # ------------------------------------------------------------
   e2e:
+    needs: e2e-guard
+    if: needs.e2e-guard.outputs.isolado == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 25
-    # o banco de demo é COMPARTILHADO e o teste de marca escreve e
-    # restaura — nunca duas suítes ao mesmo tempo
-    concurrency:
-      group: e2e-demo-db
-      cancel-in-progress: false
     defaults:
       run:
         working-directory: app
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v6
         with:
           node-version: 22
           cache: npm
@@ -102,17 +140,13 @@ jobs:
       - name: Instalar dependências
         run: npm ci
 
-      - name: Apontar E2E para projeto isolado (Fase 17.2, se configurado)
+      - name: Apontar E2E para o projeto ISOLADO (obrigatório aqui)
         env:
           E2E_URL: ${{ secrets.E2E_SUPABASE_URL }}
           E2E_KEY: ${{ secrets.E2E_SUPABASE_ANON_KEY }}
         run: |
-          if [ -n "$E2E_URL" ]; then
-            printf 'VITE_SUPABASE_URL=%s\nVITE_SUPABASE_ANON_KEY=%s\n' "$E2E_URL" "$E2E_KEY" > .env.production.local
-            echo "E2E isolado: build apontando para o projeto de teste (não toca no demo)."
-          else
-            echo "::warning::E2E_SUPABASE_URL ausente — E2E roda contra o ambiente padrão (demo). Configure os secrets E2E_SUPABASE_URL / E2E_SUPABASE_ANON_KEY para isolar (ver docs/e2e-ambiente.md)."
-          fi
+          printf 'VITE_SUPABASE_URL=%s\nVITE_SUPABASE_ANON_KEY=%s\n' "$E2E_URL" "$E2E_KEY" > .env.production.local
+          echo "E2E isolado: build apontando para o projeto de teste (não toca no demo)."
 
       - name: Build de produção
         run: npm run build
@@ -120,14 +154,14 @@ jobs:
       - name: Instalar Chromium do Playwright
         run: npx playwright install --with-deps chromium
 
-      - name: Suíte E2E (42 testes, desktop + mobile)
+      - name: Suíte E2E (desktop + mobile)
         run: npm run test:e2e
         env:
           CI: "true"
 
       - name: Publicar relatório (em falha)
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: playwright-report
           path: app/playwright-report/

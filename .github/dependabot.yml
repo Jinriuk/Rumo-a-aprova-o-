@@ -1,0 +1,43 @@
+# Dependabot — atualizações de dependências (SEG2 / J-3).
+# Abre PRs de atualização (agrupados, semanais) para reduzir dívida de
+# segurança antes do piloto real. NÃO substitui os Dependabot *alerts*
+# (configuração de repositório: Settings > Code security) — apenas as
+# atualizações de versão. Limite de PRs baixo para não gerar ruído num
+# repositório de dev solo.
+version: 2
+updates:
+  # Front (Vite/React)
+  - package-ecosystem: "npm"
+    directory: "/app"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    open-pull-requests-limit: 5
+    groups:
+      app-deps:
+        patterns: ["*"]
+    commit-message:
+      prefix: "deps(app)"
+
+  # Suíte de testes (node --test + utilitários)
+  - package-ecosystem: "npm"
+    directory: "/tests"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    open-pull-requests-limit: 5
+    groups:
+      tests-deps:
+        patterns: ["*"]
+    commit-message:
+      prefix: "deps(tests)"
+
+  # Actions usadas no CI/CodeQL
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: "ci"
