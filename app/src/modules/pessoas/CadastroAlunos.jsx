@@ -8,6 +8,8 @@ import { useTema } from "../../shared/branding/BrandingContext.jsx";
 import { limparNome, nomeValido } from "../../shared/validacao.js";
 import { mensagemAmigavel } from "../../shared/lib/erros.js";
 import { comConcorrenciaLimitada } from "../../shared/lib/concorrencia.js";
+import { AvisoMaturidade } from "../conteudo/SeloMaturidade.jsx";
+import { maturidadeDe, rotuloMaturidade, podeAtribuirTrilhaSemanal, aceitaAluno } from "../conteudo/maturidade.js";
 import * as db from "../../shared/data/index.js";
 
 // Fase B-min, B.6: cadastro em lote pode trazer 300+ nomes de uma vez.
@@ -69,15 +71,25 @@ export function NovoAluno({ turmas, trilhaPadrao, concursos = [], aoMudar }) {
   const [ocupado, setOcupado] = useState(false);
   const [feito, setFeito] = useState(null);
 
-  const pronto = nomeValido(nome) && (!consentiu || nomeValido(consentimentoNome));
+  // Maturidade do concurso selecionado governa o que o sistema oferece:
+  // só concurso COMPLETO recebe a trilha semanal (calendário); indisponível
+  // não recebe aluno (PED2). Sem essa trava, todo aluno herdava o calendário
+  // do CN, e trilha incompleta aparecia como pronta.
+  const cnId = concursos.find((c) => c.codigo === "cn")?.id ?? null;
+  const codigoSel = concursos.find((c) => c.id === (concursoId || cnId))?.codigo ?? null;
+  const usaTrilhaSemanal = codigoSel ? podeAtribuirTrilhaSemanal(codigoSel) : false;
+  const concursoBloqueado = codigoSel ? !aceitaAluno(codigoSel) : false;
+
+  const pronto = nomeValido(nome) && !concursoBloqueado && (!consentiu || nomeValido(consentimentoNome));
 
   async function cadastrar() {
     if (!pronto || ocupado) return;
     setOcupado(true); setErro(null); setFeito(null);
     try {
-      const concursoEscolhido = concursoId || concursos.find((c) => c.codigo === "cn")?.id || null;
+      const concursoEscolhido = concursoId || cnId || null;
+      const trilhaEscolhida = usaTrilhaSemanal ? (trilhaPadrao?.id ?? null) : null;
       const alunos = await db.cadastrarAlunos(
-        [limparNome(nome)], turmaId || null, trilhaPadrao?.id ?? null, concursoEscolhido,
+        [limparNome(nome)], turmaId || null, trilhaEscolhida, concursoEscolhido,
       );
       if (consentiu && nomeValido(consentimentoNome)) {
         await db.registrarConsentimento(alunos[0].id, limparNome(consentimentoNome));
@@ -108,13 +120,21 @@ export function NovoAluno({ turmas, trilhaPadrao, concursos = [], aoMudar }) {
         {concursos.length > 0 && (
           <div style={{ flex: 1, minWidth: 160 }}>
             <label style={lbl}>Concurso</label>
-            <select value={concursoId || (concursos.find((c) => c.codigo === "cn")?.id ?? "")}
+            <select value={concursoId || (cnId ?? "")}
               onChange={(e) => setConcursoId(e.target.value)} style={inputS}>
-              {concursos.map((c) => <option key={c.id} value={c.id} style={{ background: T.bg2 }}>{c.nome}</option>)}
+              {concursos.map((c) => (
+                <option key={c.id} value={c.id} style={{ background: T.bg2 }}>
+                  {c.nome} · {rotuloMaturidade(c.codigo)}
+                </option>
+              ))}
             </select>
           </div>
         )}
       </div>
+      {/* Honestidade de conteúdo (PED2): concurso não-completo mostra o estado real. */}
+      {codigoSel && maturidadeDe(codigoSel) !== "completa" && (
+        <AvisoMaturidade codigo={codigoSel} style={{ marginBottom: 12 }} />
+      )}
       <div style={{ border: `1px solid ${T.line}`, borderRadius: 8, padding: 12, marginBottom: 12 }}>
         <label style={{ display: "flex", gap: 10, alignItems: "flex-start", cursor: "pointer" }}>
           <input type="checkbox" checked={consentiu} onChange={(e) => setConsentiu(e.target.checked)}
@@ -130,6 +150,11 @@ export function NovoAluno({ turmas, trilhaPadrao, concursos = [], aoMudar }) {
           </div>
         )}
       </div>
+      {concursoBloqueado && (
+        <div style={{ color: T.gold, fontSize: 12, marginBottom: 10 }}>
+          Este concurso está indisponível (sem conteúdo). Escolha outro para cadastrar.
+        </div>
+      )}
       <Botao onClick={cadastrar} disabled={!pronto || ocupado}>
         {ocupado ? "Cadastrando…" : "+ Cadastrar aluno"}
       </Botao>
@@ -186,14 +211,22 @@ export function NovosAlunos({ turmas, trilhaPadrao, concursos = [], aoMudar }) {
     if (fileRef.current) fileRef.current.value = "";
   }
 
-  const prontoTexto = listaTexto.length > 0 && (!emLoteTexto || !consentiu || nomeValido(consentimentoNome));
-  const prontoCsv = linhasValidas.length > 0;
+  // Maturidade do concurso: só completo recebe trilha semanal; indisponível
+  // não recebe aluno (PED2). Evita herdar o calendário do CN por engano.
+  const cnId = concursos.find((c) => c.codigo === "cn")?.id ?? null;
+  const codigoSel = concursos.find((c) => c.id === (concursoId || cnId))?.codigo ?? null;
+  const usaTrilhaSemanal = codigoSel ? podeAtribuirTrilhaSemanal(codigoSel) : false;
+  const concursoBloqueado = codigoSel ? !aceitaAluno(codigoSel) : false;
+
+  const prontoTexto = !concursoBloqueado && listaTexto.length > 0 && (!emLoteTexto || !consentiu || nomeValido(consentimentoNome));
+  const prontoCsv = !concursoBloqueado && linhasValidas.length > 0;
 
   async function cadastrar() {
-    if (ocupado) return;
+    if (ocupado || concursoBloqueado) return;
     setOcupado(true); setErro(null); setFeito(null);
     try {
-      const concursoEscolhido = concursoId || concursos.find((c) => c.codigo === "cn")?.id || null;
+      const concursoEscolhido = concursoId || cnId || null;
+      const trilhaEscolhida = usaTrilhaSemanal ? (trilhaPadrao?.id ?? null) : null;
 
       if (modo === "csv") {
         const grupos = new Map();
@@ -205,7 +238,7 @@ export function NovosAlunos({ turmas, trilhaPadrao, concursos = [], aoMudar }) {
         }
         let total = 0;
         for (const { turmaId: tid, nomes: ns } of grupos.values()) {
-          const alunos = await db.cadastrarAlunos(ns, tid, trilhaPadrao?.id ?? null, concursoEscolhido);
+          const alunos = await db.cadastrarAlunos(ns, tid, trilhaEscolhida, concursoEscolhido);
           await comConcorrenciaLimitada(alunos, CONCORRENCIA_GERAR_META, (a) =>
             db.gerarMeta(a.id).catch((e) => console.error(`gerar meta (aluno ${a.id}):`, e.message)),
           );
@@ -216,7 +249,7 @@ export function NovosAlunos({ turmas, trilhaPadrao, concursos = [], aoMudar }) {
         limparCsv();
       } else {
         const alunos = await db.cadastrarAlunos(
-          listaTexto, turmaId || null, trilhaPadrao?.id ?? null, concursoEscolhido,
+          listaTexto, turmaId || null, trilhaEscolhida, concursoEscolhido,
         );
         if (!emLoteTexto && consentiu && nomeValido(consentimentoNome)) {
           await db.registrarConsentimento(alunos[0].id, limparNome(consentimentoNome));
@@ -260,17 +293,33 @@ export function NovosAlunos({ turmas, trilhaPadrao, concursos = [], aoMudar }) {
         {concursos.length > 0 && (
           <div style={{ flex: 1, minWidth: 160 }}>
             <label style={lbl}>Concurso</label>
-            <select value={concursoId || (concursos.find((c) => c.codigo === "cn")?.id ?? "")}
+            <select value={concursoId || (cnId ?? "")}
               onChange={(e) => setConcursoId(e.target.value)} style={inputS}>
-              {concursos.map((c) => <option key={c.id} value={c.id} style={{ background: T.bg2 }}>{c.nome}</option>)}
+              {concursos.map((c) => (
+                <option key={c.id} value={c.id} style={{ background: T.bg2 }}>
+                  {c.nome} · {rotuloMaturidade(c.codigo)}
+                </option>
+              ))}
             </select>
           </div>
         )}
         <div style={{ flex: 1, minWidth: 160 }}>
           <label style={lbl}>Trilha de estudo</label>
-          <input value={trilhaPadrao?.nome ?? "—"} disabled style={{ ...inputS, color: T.sub }} />
+          <input
+            value={usaTrilhaSemanal ? (trilhaPadrao?.nome ?? "—") : "Sem trilha semanal — usa a contagem do concurso"}
+            disabled style={{ ...inputS, color: T.sub }} />
         </div>
       </div>
+
+      {/* Honestidade de conteúdo (PED2): concurso não-completo mostra o estado real. */}
+      {codigoSel && maturidadeDe(codigoSel) !== "completa" && (
+        <AvisoMaturidade codigo={codigoSel} style={{ marginBottom: 12 }} />
+      )}
+      {concursoBloqueado && (
+        <div style={{ color: T.gold, fontSize: 12, marginBottom: 10 }}>
+          Este concurso está indisponível (sem conteúdo). Escolha outro para cadastrar.
+        </div>
+      )}
 
       {/* ── modo TEXTO ── */}
       {modo === "texto" && (

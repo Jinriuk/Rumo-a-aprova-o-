@@ -6,6 +6,7 @@ import React, { useEffect, useState } from "react";
 import { Cabecalho } from "../../shared/ui/Cabecalho.jsx";
 import { Empty, Erro } from "../../shared/ui/componentes.jsx";
 import { VisaoEstudo } from "./VisaoEstudo.jsx";
+import { AvisoMaturidade } from "../../modules/conteudo/SeloMaturidade.jsx";
 import { Onboarding } from "../../modules/motor/Onboarding.jsx";
 import { diasParaProva } from "../../modules/conteudo/concursos.js";
 import { fmtBR } from "../../shared/regras/regras.js";
@@ -82,7 +83,10 @@ export default function AreaAluno({ perfil }) {
           <Onboarding aluno={aluno} materias={materiasProva} aoConcluir={() => setOnboarding({ concluido_em: new Date().toISOString() })} />
         )}
         {aluno && onboarding !== undefined && onboarding?.concluido_em && (
-          <VisaoEstudo aluno={aluno} podeEditar concurso={concurso} contexto={concurso ? concurso.nome.split(" (")[0] : "Plano de estudos"} />
+          <>
+            {concurso && <AvisoMaturidade codigo={concurso.codigo} style={{ marginBottom: 14 }} />}
+            <VisaoEstudo aluno={aluno} podeEditar concurso={concurso} contexto={concurso ? concurso.nome.split(" (")[0] : "Plano de estudos"} />
+          </>
         )}
       </main>
     </div>
