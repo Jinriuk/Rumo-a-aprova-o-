@@ -22,14 +22,27 @@ export const L = {
   tempoProva: "Tempo p/ a prova",
 };
 
-// XP derivado de PROGRESSO REAL (atividades cumpridas, questões,
-// simulados). Só exibição — não persiste, não falsifica nada.
+// LEGADO (Fase ≤16): XP derivado em runtime no cliente. Mantido só
+// como ESTIMATIVA de fallback quando o aluno ainda não tem eventos
+// persistidos (base nova, antes do backfill). A fonte de verdade da
+// Fase C0 é o ledger `aluno_eventos_progresso` — ver xpTotal().
 export function calcularXP({ metas = [], totalQuestoes = 0, simulados = 0 }) {
   const cumpridas = metas.reduce(
     (a, m) => a + (m.meta_atividades ?? []).filter((x) => x.estado === "concluida").length,
     0,
   );
   return cumpridas * 100 + totalQuestoes + simulados * 50;
+}
+
+// FONTE DE VERDADE (Fase C0): XP total = soma de xp_delta dos eventos
+// VÁLIDOS do ledger persistido. O banco é quem concede (gatilhos
+// SECURITY DEFINER); aqui só somamos o que já está gravado. Pura e
+// testável: a mesma conta roda no front e nos testes.
+export function xpTotal(eventos = []) {
+  return eventos.reduce(
+    (a, e) => a + (e.status === "estornado" ? 0 : (+e.xp_delta || 0)),
+    0,
+  );
 }
 
 // Patentes por faixa de XP — escala do EXÉRCITO (padrão e neutra

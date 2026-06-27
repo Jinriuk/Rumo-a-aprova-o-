@@ -3,23 +3,15 @@
 // NUNCA aparece no front nem no repositório (Doc 4, seção 12, risco nº 1).
 import { createClient, SupabaseClient } from "jsr:@supabase/supabase-js@2";
 
+// CORS com allowlist (SEG2 / E-1). O Deno/Supabase CLI resolve este
+// import relativo e empacota _shared/cors.ts junto com cada função.
+export { buildCorsHeaders as corsHeaders } from "./cors.ts";
+
 export const admin: SupabaseClient = createClient(
   Deno.env.get("SUPABASE_URL")!,
   Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
   { auth: { persistSession: false } },
 );
-
-export const cors = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, apikey, content-type",
-  "Access-Control-Allow-Methods": "POST, OPTIONS",
-};
-
-export const json = (body: unknown, status = 200) =>
-  new Response(JSON.stringify(body), {
-    status,
-    headers: { ...cors, "content-type": "application/json" },
-  });
 
 export type Chamador = {
   id: string;

@@ -3,6 +3,7 @@
    o banco aplica a mesma matriz por RLS. */
 import React from "react";
 import Login from "./routes/publico/Login.jsx";
+import RedefinirSenha from "./routes/publico/RedefinirSenha.jsx";
 import AreaAluno from "./routes/aluno/AreaAluno.jsx";
 import AreaEscola from "./routes/escola/AreaEscola.jsx";
 import AreaResponsavel from "./routes/responsavel/AreaResponsavel.jsx";
@@ -12,6 +13,14 @@ import { BrandingProvider, useTema } from "./shared/branding/BrandingContext.jsx
 import { FONTES_CSS } from "./shared/ui/tema.js";
 import * as db from "./shared/data/index.js";
 
+// Detecta fluxo de recuperação de senha via hash da URL.
+// O Supabase redireciona com #access_token=...&type=recovery após verificar o OTP.
+function detectarRecuperacao() {
+  if (typeof window === "undefined") return false;
+  const hash = new URLSearchParams(window.location.hash.slice(1));
+  return hash.get("type") === "recovery" && !!hash.get("access_token");
+}
+
 const AREAS = {
   coordenacao: AreaEscola,
   aluno: AreaAluno,
@@ -20,6 +29,17 @@ const AREAS = {
 
 export default function App() {
   const { carregando, sessao, perfil, superAdmin, erro } = useSessao();
+
+  // Fluxo de recuperação detectado antes de qualquer roteamento por papel.
+  // Verifica o hash da URL na renderização inicial (síncrono) para garantir
+  // que o coordenador veja a tela de redefinição mesmo se já estiver logado.
+  if (detectarRecuperacao()) {
+    return (
+      <BrandingProvider escola={{ nome: "Rumo à Aprovação", slug: "app", logo_url: null, cor_acento: null }}>
+        <RedefinirSenha />
+      </BrandingProvider>
+    );
+  }
 
   if (carregando) return <TelaNeutra>Carregando…</TelaNeutra>;
   if (!sessao) return <Login />;
@@ -46,6 +66,15 @@ export default function App() {
     );
   }
 
+  // Escola suspensa/cancelada (S1, migration 0027): a RLS já esconde
+  // todo o dado da escola — sem este gate o usuário entraria num painel
+  // VAZIO sem explicação (era o sintoma do bug D1A). Aqui mostramos o
+  // motivo de forma clara. O bloqueio continua sendo do banco; o front
+  // só o torna legível (não o aplica e não o afrouxa).
+  if (!db.escolaOperacional(perfil.escola)) {
+    return <TelaAcessoSuspenso escola={perfil.escola} />;
+  }
+
   const Area = AREAS[perfil.usuario.papel];
   if (!Area) return <TelaNeutra>Papel desconhecido: {perfil.usuario.papel}</TelaNeutra>;
 
@@ -55,6 +84,28 @@ export default function App() {
         <Area perfil={perfil} />
       </Casca>
     </BrandingProvider>
+  );
+}
+
+function TelaAcessoSuspenso({ escola }) {
+  const cancelada = escola?.status === "cancelada";
+  return (
+    <TelaNeutra>
+      <div style={{ fontSize: 40, marginBottom: 14 }}>{cancelada ? "🚫" : "⏸️"}</div>
+      <div style={{ color: "#E8D8A8", fontWeight: 800, fontSize: 18, marginBottom: 10 }}>
+        {cancelada ? "Acesso encerrado" : "Acesso temporariamente suspenso"}
+      </div>
+      <div style={{ fontSize: 14, maxWidth: 380, lineHeight: 1.6, marginBottom: 22 }}>
+        O acesso de <b style={{ color: "#C8D8E8" }}>{escola?.nome ?? "sua escola"}</b>{" "}
+        {cancelada
+          ? "foi encerrado. Fale com o responsável pela conta para mais informações."
+          : "está suspenso no momento. Assim que for reativado pela administração, seu painel volta automaticamente."}
+      </div>
+      <button onClick={() => db.sair().catch(console.error)}
+        style={{ padding: "11px 20px", borderRadius: 9, border: "1px solid #1E3A52", background: "#102236", color: "#8AA4BC", fontWeight: 700, fontSize: 14 }}>
+        Sair
+      </button>
+    </TelaNeutra>
   );
 }
 

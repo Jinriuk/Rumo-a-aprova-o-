@@ -68,11 +68,20 @@ export async function meuPerfil() {
     .from("usuarios").select("id, escola_id, papel, nome").eq("id", uid).maybeSingle();
   if (error) throw falha("perfil", error);
   if (!u) throw new Error("perfil: usuário sem cadastro nesta escola");
+  // `status` entra aqui de propósito (D1A.1): a S1 bloqueia a escola
+  // suspensa/cancelada na RLS, mas o SELECT de `escolas` continua
+  // visível para o dono — então o front LÊ o status para explicar
+  // "acesso suspenso" em vez de mostrar um painel vazio sem motivo.
   const { data: e, error: e2 } = await supabase
-    .from("escolas").select("id, nome, slug, logo_url, cor_acento").eq("id", u.escola_id).single();
+    .from("escolas").select("id, nome, slug, logo_url, cor_acento, status").eq("id", u.escola_id).single();
   if (e2) throw falha("escola", e2);
   return { usuario: u, escola: e };
 }
+
+// Espelho do gate de suspensão do banco — módulo PURO (testável sem
+// cliente). Reexportado aqui para o front continuar pedindo tudo a
+// `db.*` num lugar só.
+export { escolaOperacional } from "./operacional.js";
 
 /* ---------- conteúdo (trilha — global, só leitura) ---------- */
 
@@ -274,12 +283,35 @@ export async function carregarMissoes(examTag, { nivel } = {}) {
   return data;
 }
 
+// Plano pedagógico COMPLETO de um concurso (Fase 15.4), por exam_tag:
+// horizontes (trilha_planos), missões oficiais e os ajustes da escola
+// (estes isolados por RLS). É o ponto único que a UI usa para mostrar a
+// "trilha do concurso" do aluno — derivada do exam_tag dele, NUNCA de
+// uma trilha fixa. A montagem/regra de exibição fica em conteudo/missoes.js
+// (lógica pura), não aqui: o seam só busca.
+export async function carregarPlanoConcurso(examTag) {
+  if (!examTag) return { planos: [], missoes: [], ajustesEscola: [] };
+  const [planos, missoes, ajustesEscola] = await Promise.all([
+    carregarTrilhaPlanos(examTag),
+    carregarMissoes(examTag),
+    carregarMissoesEscola(examTag),
+  ]);
+  return { planos, missoes, ajustesEscola };
+}
+
 // Ajustes de missão da escola do usuário (isolado por RLS).
+// Degrada graciosamente se a tabela não existir ou o join falhar —
+// o aluno ainda vê as missões oficiais, só sem os ajustes da escola.
 export async function carregarMissoesEscola(examTag) {
-  // junta o exam_tag via missões (a tabela de ajuste não tem exam_tag)
   const { data, error } = await supabase
     .from("missoes_escola").select("*, missoes!inner(exam_tag)").eq("missoes.exam_tag", examTag);
-  if (error) throw falha("ajustes de missão da escola", error);
+  if (error) {
+    if (tabelaInexistente(error) || /relationship|foreign/i.test(error?.message ?? "")) {
+      console.warn("missoes_escola: tabela ou join indisponível, usando missões oficiais sem ajuste");
+      return [];
+    }
+    throw falha("ajustes de missão da escola", error);
+  }
   return data;
 }
 
@@ -360,6 +392,53 @@ export async function desbloquearConquista({ alunoId, examTag, conquistaId }) {
   return data;
 }
 
+/* ---------- motor de progresso persistido (Fase C0) ---------- */
+
+// Rollout em fases: se a migration 0024 não estiver aplicada num
+// ambiente (ex.: demo antiga), a tabela não existe. Aqui o motor é
+// ADITIVO: se a leitura falhar (tabela ausente), degrada para vazio e o
+// front cai na estimativa legada — não derruba a tela. Erro fica no
+// console para diagnóstico. Quando 0024 existe, a leitura é normal.
+function tabelaInexistente(error) {
+  const c = error?.code || error?.causa?.code;
+  return c === "42P01" || c === "PGRST205" || /does not exist|could not find the table/i.test(error?.message || "");
+}
+
+// Eventos de progresso do aluno (ledger real). A RLS decide o que sai:
+// aluno vê o próprio, coordenação a escola, responsável o vinculado.
+// O aluno NÃO escreve aqui — quem grava é o gatilho no servidor.
+export async function carregarEventosProgresso(alunoId, { limite = 50 } = {}) {
+  const { data, error } = await supabase
+    .from("aluno_eventos_progresso")
+    .select("*")
+    .eq("aluno_id", alunoId)
+    .order("criado_em", { ascending: false })
+    .limit(limite);
+  if (error) {
+    if (tabelaInexistente(error)) { console.warn("motor de progresso ainda não migrado neste ambiente"); return []; }
+    throw falha("eventos de progresso", error);
+  }
+  return data;
+}
+
+// XP persistido do aluno: soma do ledger (todos os eventos válidos).
+// Devolve { eventos, total } — o total é a verdade; patente deriva dele.
+export async function carregarXpPersistido(alunoId) {
+  const { data, error } = await supabase
+    .from("aluno_eventos_progresso")
+    .select("xp_delta, status, tipo_evento")
+    .eq("aluno_id", alunoId);
+  if (error) {
+    if (tabelaInexistente(error)) { console.warn("motor de progresso ainda não migrado neste ambiente"); return { eventos: [], total: 0 }; }
+    throw falha("XP persistido", error);
+  }
+  const total = (data ?? []).reduce(
+    (a, e) => a + (e.status === "estornado" ? 0 : (+e.xp_delta || 0)),
+    0,
+  );
+  return { eventos: data ?? [], total };
+}
+
 /* ---------- pessoas ---------- */
 
 export async function meuAluno() {
@@ -412,6 +491,23 @@ export async function listarAlunos() {
     .order("nome");
   if (error) throw falha("alunos", error);
   return data;
+}
+
+export async function listarTrilhas() {
+  const { data, error } = await supabase
+    .from("trilhas").select("id, nome, versao").order("versao", { ascending: false });
+  if (error) throw falha("trilhas", error);
+  return data;
+}
+
+export async function listarVinculos(alunoId) {
+  const { data, error } = await supabase
+    .from("vinculos_responsaveis")
+    .select("id, responsavel_id, criado_em, usuarios(nome, papel)")
+    .eq("aluno_id", alunoId)
+    .order("criado_em");
+  if (error) throw falha("responsáveis", error);
+  return data ?? [];
 }
 
 // cadastro um a um ou em lote: `nomes` é um array (1..N)
@@ -488,8 +584,40 @@ async function invocar(fn, body) {
 export const provisionarAluno = (alunoId) => invocar("provisionar-aluno", { tipo: "aluno", aluno_id: alunoId });
 export const provisionarResponsavel = (alunoId, nome) =>
   invocar("provisionar-aluno", { tipo: "responsavel", aluno_id: alunoId, nome });
+export const vincularResponsavelExistente = (alunoId, responsavelId) =>
+  invocar("provisionar-aluno", { tipo: "vincular-responsavel", aluno_id: alunoId, responsavel_id: responsavelId });
 export const gerarMeta = (alunoId) => invocar("gerar-meta", { aluno_id: alunoId });
 export const lgpdTitular = (acao, alunoId) => invocar("lgpd-titular", { acao, aluno_id: alunoId });
+export const revogarResponsavel = (vinculoId) => invocar("revogar-responsavel", { vinculo_id: vinculoId });
+
+// Lista todos os responsáveis da escola (RLS restringe ao tenant do usuário logado).
+// Usado para mostrar responsáveis disponíveis para re-vinculação.
+export async function listarResponsaveisEscola() {
+  const { data, error } = await supabase
+    .from("usuarios")
+    .select("id, nome")
+    .eq("papel", "responsavel")
+    .order("nome");
+  if (error) throw falha("responsáveis da escola", error);
+  return data ?? [];
+}
+
+// Envia e-mail de recuperação de senha para coordenação.
+// Mensagem genérica ao chamador — não revela se o e-mail existe.
+export async function recuperarSenha(email) {
+  const redirectTo = `${typeof window !== "undefined" ? window.location.origin : "https://rumo-a-aprova-o.vercel.app"}/redefinir-senha`;
+  const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo });
+  if (error) throw falha("recuperar senha", error);
+}
+
+// Redefine a senha do usuário com sessão de recuperação ativa.
+// Chamado apenas a partir da rota /redefinir-senha após o Supabase
+// processar o hash de recuperação e criar a sessão.
+export async function redefinirSenha(novaSenha) {
+  const { data, error } = await supabase.auth.updateUser({ password: novaSenha });
+  if (error) throw falha("redefinir senha", error);
+  return data;
+}
 
 /* ---------- motor (meta + registro) ---------- */
 
@@ -664,10 +792,18 @@ export async function registrarAcaoAdmin(acao, escolaId = null, detalhe = {}) {
 }
 
 // Criar escola pelo backoffice (RPC com porteiro no banco). Devolve o id.
-export async function backofficeCriarEscola({ nome, slug, cidade, uf, plano, limiteAlunos }) {
+export async function backofficeCriarEscola({
+  nome, slug, cidade, uf, plano, limiteAlunos, statusInicial,
+  emailInstitucional, telefoneContato, contatoNome, contatoObservacao,
+}) {
   const { data, error } = await supabase.rpc("backoffice_criar_escola", {
     p_nome: nome, p_slug: slug, p_cidade: cidade ?? null, p_uf: uf ?? null,
     p_plano: plano ?? null, p_limite_alunos: limiteAlunos ?? null,
+    p_status_inicial: statusInicial ?? null,
+    p_email_institucional: emailInstitucional ?? null,
+    p_telefone_contato: telefoneContato ?? null,
+    p_contato_nome: contatoNome ?? null,
+    p_contato_observacao: contatoObservacao ?? null,
   });
   if (error) throw falha("criar escola", error);
   return data;
@@ -687,4 +823,101 @@ export async function backofficeLogs(limite = 30) {
     .from("admin_logs").select("acao, escola_id, detalhe, em").order("em", { ascending: false }).limit(limite);
   if (error) throw falha("atividade administrativa", error);
   return data;
+}
+
+/* ---------- backoffice D0 (super_admin) — operar sem entrar no banco ---------- */
+
+// Contadores agregados para o dashboard do operador (RPC com porteiro
+// eh_super_admin no banco — migration 0025). Devolve um objeto jsonb.
+export async function backofficeDashboard() {
+  const { data, error } = await supabase.rpc("backoffice_dashboard");
+  if (error) throw falha("dashboard (backoffice)", error);
+  return data;
+}
+
+// Editar dados básicos da escola. Manda só o que mudou (NULL = não
+// mexer, COALESCE no banco). Registra antes/depois no admin_logs.
+export async function backofficeEditarEscola(escolaId, campos) {
+  const { error } = await supabase.rpc("backoffice_editar_escola", {
+    p_escola: escolaId,
+    p_nome: campos.nome ?? null,
+    p_plano: campos.plano ?? null,
+    p_cor_acento: campos.corAcento ?? null,
+    p_logo_url: campos.logoUrl ?? null,
+    p_cidade: campos.cidade ?? null,
+    p_uf: campos.uf ?? null,
+    p_limite_alunos: campos.limiteAlunos ?? null,
+    p_observacao: campos.observacao ?? null,
+    p_email_institucional: campos.emailInstitucional ?? null,
+    p_telefone_contato: campos.telefoneContato ?? null,
+    p_contato_nome: campos.contatoNome ?? null,
+    p_contato_observacao: campos.contatoObservacao ?? null,
+  });
+  if (error) throw falha("editar escola", error);
+}
+
+// Provisionar coordenador pelo backoffice (Edge Function no servidor;
+// nunca chama a admin API do Supabase direto do navegador).
+export async function backofficeProvisionarCoordenador({ escolaId, nome, email }) {
+  const { data, error } = await supabase.functions.invoke("backoffice-coordenador", {
+    body: { acao: "criar", escola_id: escolaId, nome, email },
+  });
+  if (error) {
+    let detalhe = error.message;
+    try { const ctx = await error.context?.json?.(); if (ctx?.error) detalhe = ctx.error; } catch { /* */ }
+    throw falha("provisionar coordenador", new Error(detalhe));
+  }
+  if (data?.error) throw falha("provisionar coordenador", new Error(data.error));
+  return data;
+}
+
+// Reenviar acesso (link de reset password) para coordenador existente.
+// Registra admin_logs via RPC antes de chamar a Edge Function.
+export async function backofficeReenviarAcesso({ escolaId, usuarioId, email }) {
+  // 1. log de auditoria (best-effort — não derruba o reenvio se falhar)
+  const { error: logErr } = await supabase.rpc("backoffice_registrar_reenvio", {
+    p_escola: escolaId, p_usuario_id: usuarioId,
+  });
+  if (logErr) console.error("log de reenvio não registrado:", logErr.message);
+  // 2. envio real via Edge Function
+  const { data, error } = await supabase.functions.invoke("backoffice-coordenador", {
+    body: { acao: "reenviar", email },
+  });
+  if (error) {
+    let detalhe = error.message;
+    try { const ctx = await error.context?.json?.(); if (ctx?.error) detalhe = ctx.error; } catch { /* */ }
+    throw falha("reenviar acesso", new Error(detalhe));
+  }
+  if (data?.error) throw falha("reenviar acesso", new Error(data.error));
+  return data;
+}
+
+// Recuperação de senha — coordenação/superadmin (fluxo Auth padrão).
+// Mensagem sempre genérica para não vazar se o e-mail existe ou não.
+export async function solicitarRecuperacaoSenha(email) {
+  const { error } = await supabase.auth.resetPasswordForEmail(email.trim().toLowerCase(), {
+    redirectTo: `${window.location.origin}/redefinir-senha`,
+  });
+  if (error) throw falha("solicitar recuperação de senha", error);
+}
+
+// Recuperação de código do aluno/responsável — coleta o e-mail e
+// registra a solicitação. O coordenador recebe notificação manual.
+// (Infraestrutura de e-mail para aluno é decisão de produto pendente.)
+export async function solicitarRecuperacaoCodigo(email) {
+  const emailLimpo = email.trim().toLowerCase();
+  const { error } = await supabase.from("solicitacoes_acesso").insert({
+    email: emailLimpo, tipo: "recuperacao_codigo", em: new Date().toISOString(),
+  }).select("id").maybeSingle();
+  // Tabela pode ainda não existir (D1C). Silenciosa para o usuário;
+  // a mensagem genérica é sempre exibida independentemente do resultado.
+  if (error) console.warn("solicitação de recuperação de código não gravada:", error.message);
+  return { ok: true };
+}
+
+// Suspender / ativar / mudar status (ação reversível; nunca apaga
+// dado). O banco valida o status e registra ação específica no log.
+export async function backofficeDefinirStatus(escolaId, status) {
+  const { error } = await supabase.rpc("backoffice_definir_status", { p_escola: escolaId, p_status: status });
+  if (error) throw falha("alterar status da escola", error);
 }

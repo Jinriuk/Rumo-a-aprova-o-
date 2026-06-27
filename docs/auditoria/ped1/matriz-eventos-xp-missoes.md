@@ -1,98 +1,79 @@
 # PED1 — Matriz de eventos: XP, missões, níveis, conquistas
 
-> Mapa **completo** do motor pedagógico-gamificado e de como cada evento
-> do aluno passa a conceder progresso **persistido e idempotente**.
-> Fonte de verdade no banco: migrations `0011`, `0012`, `0013` (tabelas) e
-> `0024_motor_progresso_vivido.sql` (motor). Seeds `08`–`11` (conteúdo).
+> Mapa do motor pedagógico-gamificado **reconciliado com a Fase C0**. A fonte
+> de verdade do XP é o ledger **`aluno_eventos_progresso`** (C0,
+> `0024_motor_progresso.sql`). A PED1 (`0033_ped1_missoes_niveis.sql`) **estende**
+> esse ledger: missão que fecha por volume+acurácia, nível por matéria
+> persistido, conquistas data-driven e onboarding do aluno.
 
 ---
 
-## 1. Tabelas e funções do motor (inventário)
+## 1. Tabelas e funções (inventário)
 
-| Domínio | Tabela | Conteúdo | Escrita |
+| Domínio | Objeto | Origem | Escrita |
 |---|---|---|---|
-| XP | `aluno_xp_eventos` | ledger append-only de XP por origem/exam_tag | coordenação (RLS) **ou** motor (SECURITY DEFINER) |
-| Patentes | `patentes` | catálogo global (XP cumulativo) | operador (service_role) |
-| Conquistas | `conquistas` | catálogo global (critério jsonb por tipo) | operador |
-| Conquistas do aluno | `aluno_conquistas` | medalhas desbloqueadas (unique) | coordenação **ou** motor |
-| Missões | `missoes` | template global + **`meta_questoes`/`meta_acuracia`** (0024) | operador |
-| Ajuste da escola | `missoes_escola` | override de qtd/xp/critério, `desvio_do_edital` | coordenação |
-| **Progresso de missão** | **`aluno_missoes` (0024)** | uma linha por (aluno, missão): estado, volume, acurácia, XP | coordenação **ou** motor |
-| Níveis | `aluno_niveis` | nível geral e por matéria (origem: calculado/manual/diagnóstico/validar) | coordenação **ou** motor |
-| Histórico de nível | `aluno_nivel_historico` | trilha de auditoria append-only | gatilho `app.registrar_nivel_historico` |
-| Onboarding | `aluno_onboarding` | diagnóstico inicial (1:1 com aluno) | coordenação **ou** `salvar_onboarding_aluno` (aluno) |
-| Recorrência | `recorrencia_assunto`, `vw_recorrencia_medida` | grau estimada/validada/medida | operador |
+| **Ledger de XP** | `aluno_eventos_progresso` (+ `vw_aluno_xp_total`) | C0 | motor (SECURITY DEFINER); coordenação só `ajuste_coordenacao` |
+| Conquistas (catálogo) | `conquistas` | 0013 + C0 (basics) | operador |
+| Conquistas do aluno | `aluno_conquistas` | 0013 | coordenação ou motor |
+| Missões (catálogo) | `missoes` + **`meta_questoes`/`meta_acuracia`** (PED1) | 0012 + PED1 | operador |
+| Ajuste da escola | `missoes_escola` | 0012 | coordenação |
+| **Progresso de missão** | **`aluno_missoes`** (PED1) | PED1 | coordenação ou motor |
+| Níveis | `aluno_niveis` (+ histórico) | 0011 | coordenação ou motor |
+| Onboarding | `aluno_onboarding` | 0011 | coordenação **ou** `salvar_onboarding_aluno` (aluno) |
 
-**Primitivas do motor (0024, SECURITY DEFINER, dono = `postgres`):**
+**Funções do C0 (fonte de verdade do XP):** `app.progresso_de_registro`,
+`app.progresso_de_missao` (objetivo da meta), `app.progresso_de_simulado`,
+`app.desbloquear_conquista_basica`, `app.backfill_progresso`.
 
-| Função | Papel |
-|---|---|
-| `app.exam_tag_do_aluno(aluno)` | resolve o concurso-alvo; sem alvo → `null` (motor para) |
-| `app.motor_conceder_xp(...)` | insere XP **idempotente** por `(aluno, exam_tag, origem, referencia_id)` |
-| `app.motor_desbloquear_conquista(...)` | desbloqueia por código + credita o bônus (idempotente) |
-| `app.motor_streak_dias(aluno)` | maior sequência de dias consecutivos de estudo |
-| `app.motor_avaliar_aluno(aluno)` | recalcula missões, níveis e conquistas data-driven |
-| `app.motor_processar_simulado(simulado)` | XP de simulado + conquista "veterano" |
-| `app.motor_semana_completa(meta)` | bônus quando todas as atividades da meta fecham |
-| `public.salvar_onboarding_aluno(...)` | autoatendimento do aluno (só a própria linha) |
+**Funções da PED1 (SECURITY DEFINER, escrevem no ledger do C0):**
+`app.motor_avaliar_aluno` (fecha missão / persiste nível / conquistas),
+`app.motor_conquista_xp`, `app.motor_streak_dias`, `app.exam_tag_do_aluno`,
+`public.salvar_onboarding_aluno`.
 
-**Gatilhos** (param na semeadura via `app.motor_semeando()`):
-`registros_estudo` (INSERT/UPDATE/DELETE) → `motor_avaliar_aluno`;
-`simulados` (INSERT) → `motor_processar_simulado` + `motor_avaliar_aluno`;
-`meta_atividades` (UPDATE→concluida) → `motor_semana_completa`.
+**Gatilhos:** C0 — `registros_estudo`, `meta_atividades`, `simulados`.
+PED1 — `trg_ped1_registro` em `registros_estudo` (gate de seed).
 
 ---
 
-## 2. Matriz EVENTO → CONCESSÃO (persistida)
+## 2. Matriz EVENTO → CONCESSÃO (no ledger `aluno_eventos_progresso`)
 
-| Evento do aluno | Origem XP | Pontos | Idempotência (referência) | Efeito colateral |
+| Evento do aluno | Camada | tipo_evento / origem | xp_delta | Idempotência (idempotency_key) |
 |---|---|---|---|---|
-| Registrar estudo que **fecha** uma missão (volume ≥ `meta_questoes` **e** acurácia ≥ `meta_acuracia`) | `missao` | `missoes_escola.xp` ou `missoes.xp_sugerido` | `referencia_id = missao_id` | `aluno_missoes.estado='concluida'`; recalcula nível |
-| Registrar estudo (qualquer) | — | — | — | atualiza progresso da missão; recalcula **nível por matéria** (`calculado`); avalia conquistas |
-| Entregar **simulado** | `simulado` | 150 | `referencia_id = simulado_id` | conquista `veterano` (1º simulado) |
-| Fechar **todas** as atividades da meta da semana | `semana_completa` | 60 | `referencia_id = meta_id` | — |
-| 7 dias consecutivos de estudo | `conquista` (bônus) | `conquistas.xp_bonus` | `referencia_id = conquista_id` | conquista `maratona_7` (constância) |
-| ≥600 questões/30d **com** acurácia ≥ piso | `conquista` (bônus) | `xp_bonus` | `referencia_id = conquista_id` | conquista `maratonista` (volume **com domínio**) |
-| Matéria-alvo com acurácia ≥ piso (ex.: mat ≥80%, ing ≥80%) | `conquista` (bônus) | `xp_bonus` | `referencia_id = conquista_id` | `geometra` / `ingles_estrat` |
-| Coordenação concede manualmente | `ajuste_manual` | livre | sem referência (fora do índice idem) | trilha de auditoria |
+| Registrar estudo | C0 | `registro_estudo` | 0 (anti-grind) | `registro:<id>` |
+| Concluir **objetivo** da meta (checkbox) | C0 | `missao_concluida` / meta_atividades | XP por prioridade (F100/P60/X40) | `meta_atividade:<id>` |
+| Lançar **simulado** | C0 | `simulado_finalizado` | 50 | `simulado:<id>` |
+| 1ª vez: registro / missão / simulado | C0 | `conquista_desbloqueada` | 0 | `conquista:<aluno>:<codigo>` |
+| **Missão do catálogo FECHA** (volume ≥ `meta_questoes` **e** acurácia ≥ `meta_acuracia`) | **PED1** | `missao_concluida` / **`motor_missao`** | `missoes_escola.xp` ou `missoes.xp_sugerido` | `missao_motor:<aluno>:<missao_id>` |
+| Registrar estudo (qualquer) | PED1 | — | — | atualiza `aluno_missoes`; recalcula **nível por matéria** |
+| 7 dias consecutivos | PED1 | `conquista_desbloqueada` / `motor_conquista` | `conquistas.xp_bonus` | `conquista:<aluno>:maratona_7` |
+| ≥600 questões/30d **com** acurácia ≥ piso | PED1 | idem | `xp_bonus` | `conquista:<aluno>:maratonista` |
+| Matéria-alvo com acurácia ≥ piso (mat/ing ≥80%) | PED1 | idem | `xp_bonus` | `conquista:<aluno>:geometra` / `:ingles_estrat` |
 
-**Anti-gaming (doc §11/§12):** XP nunca vem de volume puro de cliques.
-A missão só fecha com **acurácia** (domínio), a conquista de volume exige
-**piso de acerto**, e o aluno **não** insere XP direto (RLS recusa) — o motor
-concede, derivado do estudo real.
-
----
-
-## 3. Conquistas: implementadas × adiadas
-
-| Tipo | Estado | Sinal usado |
-|---|---|---|
-| `constancia` | ✅ no motor | sequência de dias de `registros_estudo` |
-| `volume` | ✅ no motor | questões/30d + acurácia |
-| `materia` / `alavancagem` | ✅ no motor | acurácia da matéria nos registros |
-| `simulado` | ✅ no motor | existência de simulado |
-| `desempenho`, `evolucao`, `corte`, `recuperacao`, `reta_final` | ⏳ adiado | exigem leitura por-simulado/temporal mais rica (tagueamento de matéria no simulado, série histórica). A lógica pura já existe em `gamificacao.js`; falta o sinal persistido confiável. Documentado como **pendente honesto**, não simulado. |
+**Anti-gaming:** registrar estudo não dá XP; a missão só fecha com **domínio**
+(acurácia); conquista de volume exige **piso de acerto**; o aluno **não** insere
+evento de XP (RLS recusa) — o motor deriva do estudo real.
 
 ---
 
-## 4. Níveis: persistência e auditoria
+## 3. Níveis: persistência e auditoria (PED1)
 
-- A cada registro, o motor recalcula o **nível por matéria** com os mesmos
-  limiares da lógica pura (`niveisAluno.js`): `<20` questões não classifica;
-  `<40%` → base; `≥70%` **e** `≥100` questões → avançado; senão intermediário.
-- Grava em `aluno_niveis` com `origem='calculado'`; o gatilho de histórico
-  registra a mudança (quem/quando/de→para).
-- **Nunca** sobrescreve `origem='manual'` ou `'diagnostico'` (decisão da
-  coordenação prevalece). Provado em teste.
+- A cada registro, recalcula o **nível por matéria** (limiares de
+  `niveisAluno.js`: `<20`q não classifica; `<40%`→base; `≥70%` e `≥100`q→avançado;
+  senão intermediário), grava em `aluno_niveis` (`origem='calculado'`).
+- O gatilho de histórico (0011) registra quem/quando/de→para.
+- **Nunca** sobrescreve `origem='manual'`/`'diagnostico'`. Provado em teste.
 
----
+## 4. Conquistas: implementadas × adiadas
+
+| Tipo | Estado |
+|---|---|
+| `constancia`, `volume`, `materia`/`alavancagem` | ✅ PED1 (data-driven, com piso de acurácia) |
+| "primeira vez" (registro/missão/simulado) | ✅ C0 |
+| `desempenho`, `evolucao`, `corte`, `recuperacao`, `reta_final` | ⏳ adiado (exigem sinal por-simulado/temporal; lógica pura existe em `gamificacao.js`) |
 
 ## 5. Limitações conhecidas (honestas)
 
-1. O fechamento de missão usa o agregado **por matéria** dos registros (não
-   por assunto), porque `registros_estudo` só tem `disciplina_codigo` + tópico
-   livre. O `criterio_excelencia`/assunto segue como texto orientador.
-2. `meta_acuracia` foi semeada com piso uniforme de **70%** (🟡 calibrar por
-   edital); o `criterio_conclusao` textual original continua exibido.
-3. Recorrência permanece como nas fases anteriores (amostra pequena); fora do
-   escopo desta camada ampliar o tagueamento — ver §7 do prompt PED1.
+1. Fechamento de missão é **por matéria** (registro só tem `disciplina_codigo`);
+   o `criterio_excelencia`/assunto segue como texto orientador.
+2. `meta_acuracia` semeada com piso uniforme **70%** (🟡 calibrar por edital).
+3. Recorrência permanece como nas fases anteriores — fora do escopo da PED1.

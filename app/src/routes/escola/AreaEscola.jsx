@@ -5,7 +5,7 @@ import { Cabecalho } from "../../shared/ui/Cabecalho.jsx";
 import { SectionCard, Empty, Erro, EmptyState } from "../../shared/ui/componentes.jsx";
 import { MenuPrincipal } from "../../shared/ui/MenuPrincipal.jsx";
 import { useTema } from "../../shared/branding/BrandingContext.jsx";
-import { NovaTurma, NovosAlunos, CredencialGerada } from "../../modules/pessoas/CadastroAlunos.jsx";
+import { NovaTurma, PainelCadastroAlunos, CredencialGerada } from "../../modules/pessoas/CadastroAlunos.jsx";
 import { ListaAlunos } from "../../modules/pessoas/ListaAlunos.jsx";
 import { Marca } from "../../modules/escola/Marca.jsx";
 import { PainelConformidade } from "../../modules/consentimento/PainelConformidade.jsx";
@@ -17,17 +17,19 @@ import { adaptarResumoEscola } from "../../shared/metricas/agregados.js";
 import { mensagemAmigavel } from "../../shared/lib/erros.js";
 import * as db from "../../shared/data/index.js";
 
-const VAZIO = { turmas: [], alunos: [], consentimentos: [], logs: [], trilha: null, concursos: [], resumo: [], simuladosEscola: [] };
+const VAZIO = { turmas: [], alunos: [], consentimentos: [], logs: [], trilha: null, concursos: [], resumo: [], simuladosEscola: [], trilhas: [] };
 
 export default function AreaEscola({ perfil }) {
   const T = useTema();
   const [tab, setTab] = useState("painel");
+  const [filtroAlunosStatus, setFiltroAlunosStatus] = useState("");
   const { dados: carregado, carregando, erro, recarregar } = useRecurso(
     () => Promise.all([
       db.listarTurmas(), db.listarAlunos(), db.listarConsentimentos(), db.listarLogsAcesso(),
       db.trilhaPadrao(), db.listarConcursos(), db.resumoEscola(), db.listarSimuladosEscola(),
-    ]).then(([turmas, alunos, consentimentos, logs, trilha, concursos, resumo, simuladosEscola]) =>
-      ({ turmas, alunos, consentimentos, logs, trilha, concursos, resumo, simuladosEscola })),
+      db.listarTrilhas(),
+    ]).then(([turmas, alunos, consentimentos, logs, trilha, concursos, resumo, simuladosEscola, trilhas]) =>
+      ({ turmas, alunos, consentimentos, logs, trilha, concursos, resumo, simuladosEscola, trilhas })),
     [],
   );
   const dados = carregado ?? VAZIO;
@@ -37,7 +39,8 @@ export default function AreaEscola({ perfil }) {
   const aoTopo = () => window.scrollTo({ top: 0, left: 0, behavior: "instant" });
   useEffect(aoTopo, []); // entrar no sistema = nascer no topo
 
-  function irPara(t) { setTab(t); setAlunoAberto(null); aoTopo(); }
+  function irPara(t) { setFiltroAlunosStatus(""); setTab(t); setAlunoAberto(null); aoTopo(); }
+  function irParaFiltrado(tab, filtro) { setFiltroAlunosStatus(filtro ?? ""); setTab(tab); setAlunoAberto(null); aoTopo(); }
 
   function verAluno(aluno) {
     setAlunoAberto(aluno);
@@ -69,7 +72,7 @@ export default function AreaEscola({ perfil }) {
 
         <div className="fade" key={tab + (alunoAberto?.id ?? "")}>
           {erro && <Erro>{erro}</Erro>}
-          {carregando && <Empty txt="Carregando…" />}
+          {carregando && <Empty txt="Carregando dados da escola…" />}
 
           {!carregando && alunoAberto && (
             <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
@@ -79,15 +82,16 @@ export default function AreaEscola({ perfil }) {
           )}
 
           {!carregando && !alunoAberto && tab === "painel" && (
-            <PainelGestao resumo={resumoLista} aoIr={irPara} />
+            <PainelGestao resumo={resumoLista} aoIr={irPara} aoIrFiltrado={irParaFiltrado} />
           )}
 
           {!carregando && !alunoAberto && tab === "alunos" && (
             <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-              <NovosAlunos turmas={dados.turmas} trilhaPadrao={dados.trilha} concursos={dados.concursos} aoMudar={recarregar} />
+              <PainelCadastroAlunos turmas={dados.turmas} trilhaPadrao={dados.trilha} concursos={dados.concursos} aoMudar={recarregar} />
               <ListaAlunos alunos={dados.alunos} consentimentos={dados.consentimentos} concursos={dados.concursos}
-                turmas={dados.turmas} resumoPorAluno={resumoPorAluno}
-                aoMudar={recarregar} aoGerarCredencial={setCredencial} aoVerAluno={verAluno} />
+                turmas={dados.turmas} trilhas={dados.trilhas} resumoPorAluno={resumoPorAluno}
+                aoMudar={recarregar} aoGerarCredencial={setCredencial} aoVerAluno={verAluno}
+                filtroStatusInicial={filtroAlunosStatus} />
             </div>
           )}
 
@@ -205,7 +209,7 @@ function Turmas({ turmas, alunos, porAluno, aoMudar, aoVerRanking, aoVerAluno })
                               <div style={{ fontSize: 13.5, fontWeight: 700, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{a.nome}</div>
                               {r && (
                                 <div className="num" style={{ fontSize: 11, color: T.sub, marginTop: 1 }}>
-                                  {r.qSem} questões (7d) · acerto <b style={{ color: r.acc == null ? T.sub : r.acc >= 70 ? T.green : T.gold }}>{r.acc == null ? "—" : `${r.acc}%`}</b> · {r.diasSem} dias
+                                  {r.qSem} questões (7d) · acerto <b style={{ color: r.accSem == null ? T.sub : r.accSem >= 70 ? T.green : T.gold }}>{r.accSem == null ? "—" : `${r.accSem}%`}</b> · {r.diasSem} dias
                                   {r.semAtividade && <b style={{ color: T.red }}> · sem atividade</b>}
                                 </div>
                               )}

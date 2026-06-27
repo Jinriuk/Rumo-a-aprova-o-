@@ -76,11 +76,16 @@ export function Registrar({ aluno, trilha, registros, aoMudar, minutosSugeridos 
   }
 
   async function apagar(id) {
+    // #18 — confirmação obrigatória: um toque acidental no × (sobretudo em
+    // mobile) não pode apagar um registro de estudo sem aviso.
+    if (typeof window !== "undefined" && !window.confirm("Remover este registro de estudo? Esta ação não pode ser desfeita.")) return;
     setErro(null);
     try { await db.removerRegistro(id); aoMudar?.(); } catch (e) { setErro(mensagemAmigavel(e, "acao")); }
   }
 
-  const recentes = registros.slice(0, 12);
+  const [limiteRecentes, setLimiteRecentes] = useState(7);
+  const recentes = registros.slice(0, limiteRecentes);
+  const temMaisRecentes = registros.length > limiteRecentes;
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
@@ -148,7 +153,17 @@ export function Registrar({ aluno, trilha, registros, aoMudar, minutosSugeridos 
         {recentes.length === 0 ? (
           <div style={{ padding: 8 }}><EmptyState icone="✎" titulo="Nada registrado ainda" dica="Seu primeiro registro aparece aqui e alimenta o radar de desempenho." /></div>
         ) : (
-          <ListaRegistros registros={recentes} porCodigo={trilha.porCodigo} aoApagar={apagar} rotuloAcerto />
+          <>
+            <ListaRegistros registros={recentes} porCodigo={trilha.porCodigo} aoApagar={apagar} rotuloAcerto />
+            {temMaisRecentes && (
+              <div style={{ padding: "10px 14px", borderTop: `1px solid ${T.line}` }}>
+                <button onClick={() => setLimiteRecentes(registros.length)}
+                  style={{ border: "none", background: "transparent", color: T.gold, fontSize: 13, fontWeight: 700, padding: 0, cursor: "pointer" }}>
+                  Ver mais ({registros.length - limiteRecentes} registros)
+                </button>
+              </div>
+            )}
+          </>
         )}
       </SectionCard>
     </div>

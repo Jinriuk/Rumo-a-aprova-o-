@@ -9,7 +9,7 @@
 -- NÃO fica em supabase/seed/ de propósito: tests/reset-db.sh aplica
 -- TODO arquivo `supabase/seed/[0-9][0-9]_*.sql` em todo `npm test`, e
 -- isso inflaria e desaceleraria a suíte padrão. Este script é
--- separado, sob demanda — ver docs/massa-volume-coordenacao.md.
+-- separado, sob demanda — ver docs/operacao/massa-volume-coordenacao.md.
 --
 -- Pré-requisito: supabase/seed/01..12 já aplicados (precisa da
 -- escola A, da trilha CN e do concurso CN já existirem).
