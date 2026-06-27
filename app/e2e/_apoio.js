@@ -76,7 +76,10 @@ export async function loginCoordenacao(page, conta = CONTAS.coordenacaoVitrine) 
 async function loginPorCodigo(page, codigo) {
   await abrirLogin(page);
   await page.getByRole("button", { name: /Aluno \/ Responsável/ }).click();
-  await page.getByPlaceholder("XXXX-XXXX-XXXX").fill(codigo);
+  // Seletor por rótulo (label "Código de acesso" + input). Antes usava
+  // getByPlaceholder("XXXX-XXXX-XXXX"), que deixou de casar quando o
+  // placeholder virou "Ex.: LUCASDEMO2026" — quebrava todo login por código.
+  await campo(page, "Código de acesso").fill(codigo);
   await page.getByRole("button", { name: "Entrar" }).click();
 }
 
