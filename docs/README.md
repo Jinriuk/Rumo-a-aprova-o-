@@ -30,6 +30,7 @@ Ponto de entrada. Visão geral rápida e estado do projeto.
 - [02-linha-do-tempo.md](./00-indices/02-linha-do-tempo.md) — cronologia completa das fases
 - [03-status-atual.md](./00-indices/03-status-atual.md) — estado do sistema hoje (banco, funções, CI, segurança)
 - [04-o-que-ler-primeiro.md](./00-indices/04-o-que-ler-primeiro.md) — guia de leitura por perfil
+- [05-camadas-faltantes.md](./00-indices/05-camadas-faltantes.md) — **registro vivo das lacunas (fonte única de verdade, REG0)** · [resumo executivo](./00-indices/05-camadas-faltantes-resumo-executivo.md)
 - [06-mapa-de-dependencias.md](./00-indices/06-mapa-de-dependencias.md) — dependências entre fases
 - [07-pendencias-para-piloto-real.md](./00-indices/07-pendencias-para-piloto-real.md) — o que falta para o piloto real
 

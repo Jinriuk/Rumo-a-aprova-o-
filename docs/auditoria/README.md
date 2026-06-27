@@ -50,6 +50,14 @@ apoio numerados.
 
 ---
 
+## 🧭 reg0/ — registro vivo das lacunas (governança)
+
+| Fase | Foco | Entrada |
+|---|---|---|
+| **REG0** | Fonte única de verdade das 10 camadas faltantes (status verificado no código) | [`reg0/relatorio-reg0-inventario-camadas.md`](./reg0/relatorio-reg0-inventario-camadas.md) |
+
+> Inventário e quadro de decisão completos em [`docs/00-indices/05-camadas-faltantes.md`](../00-indices/05-camadas-faltantes.md).
+
 ## 🗃 antigos/ — histórico (não reflete o estado atual)
 
 Auditorias retrospectivas e fases iniciais já integradas. Ver
