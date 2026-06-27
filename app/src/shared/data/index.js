@@ -318,13 +318,21 @@ export async function carregarMissoesEscola(examTag) {
 // Progresso PERSISTIDO de missões do aluno (motor de progresso, PED1):
 // uma linha por missão tocada, com estado (em andamento / concluída),
 // volume acumulado e acurácia. A RLS entrega só o que o usuário pode ver.
+// Degrada graciosamente (sem erro de console) se a tabela/join ainda não
+// existir no ambiente — as missões são complementares à tela de estudo.
 export async function carregarMissoesAluno(alunoId) {
   const { data, error } = await supabase
     .from("aluno_missoes")
     .select("*, missoes(nome, materia_codigo, objetivo, prioridade)")
     .eq("aluno_id", alunoId);
-  if (error) throw falha("missões do aluno", error);
-  return data;
+  if (error) {
+    if (tabelaInexistente(error) || /relationship|foreign/i.test(error?.message ?? "")) {
+      console.warn("aluno_missoes: motor de missões ainda não migrado neste ambiente");
+      return [];
+    }
+    throw falha("missões do aluno", error);
+  }
+  return data ?? [];
 }
 
 // Cria/ajusta o override de uma missão (só coordenação, via RLS).
