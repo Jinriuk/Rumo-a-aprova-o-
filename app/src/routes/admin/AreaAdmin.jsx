@@ -14,6 +14,12 @@ import { useRecurso } from "../../shared/hooks/useRecurso.js";
 import { nomeValido, limparNome } from "../../shared/validacao.js";
 import { mensagemAmigavel } from "../../shared/lib/erros.js";
 import * as db from "../../shared/data/index.js";
+import {
+  categoriaEscola, avisosRisco, severidadeMaxima,
+  checklistGoLive, resumoChecklist,
+  modalidadesDaEscola, ESTADO_MODALIDADE,
+  resumoRisco, filtrarLogs, acoesPresentes,
+} from "../../modules/backoffice/operacao.js";
 
 const fmtData = (iso) => (iso ? new Date(iso).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit", year: "2-digit" }) : "—");
 
@@ -32,7 +38,7 @@ export default function AreaAdmin() {
   const T = useTema();
   const { dados: escolas, carregando, erro, recarregar } = useRecurso(() => db.backofficeEscolas(), []);
   const { dados: dash, recarregar: recDash } = useRecurso(() => db.backofficeDashboard(), []);
-  const { dados: logs, recarregar: recLogs } = useRecurso(() => db.backofficeLogs(25), []);
+  const { dados: logs, recarregar: recLogs } = useRecurso(() => db.backofficeLogs(200), []);
   const [aberta, setAberta] = useState(null);
 
   const recarregarTudo = () => { recarregar(); recDash(); recLogs(); };
@@ -67,7 +73,7 @@ export default function AreaAdmin() {
 
         {!carregando && !erro && !aberta && (
           <>
-            <Dashboard dash={dash} />
+            <Dashboard dash={dash} lista={lista} />
             <NovaEscola aoCriar={recarregarTudo} />
             <ListaEscolas lista={lista} aoAbrir={setAberta} />
             <AtividadeAdmin logs={logs} nomePorEscola={nomePorEscola} />
@@ -79,11 +85,14 @@ export default function AreaAdmin() {
 }
 
 /* ---------- Dashboard ---------- */
-function Dashboard({ dash }) {
+function Dashboard({ dash, lista = [] }) {
   const T = useTema();
   if (!dash) return null;
   const semCoord = Number(dash.escolas_sem_coordenador || 0);
   const suspensas = Number(dash.escolas_suspensas || 0);
+  // Resumo de risco/categoria derivado da LISTA (puro). Separa demo/teste/
+  // real/individual e conta pendências para o painel de saúde (ADM2 t.36/38).
+  const risco = useMemo(() => resumoRisco(lista), [lista]);
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(150px,1fr))", gap: 10 }}>
@@ -98,8 +107,40 @@ function Dashboard({ dash }) {
         <StatCard rotulo="Coordenadores" valor={Number(dash.coordenadores_total || 0)} icone="🎓" />
         <StatCard rotulo="Sem coordenador" valor={semCoord} icone="⚠" tom={semCoord ? "risco" : "ok"} sub={semCoord ? "precisam de provisão" : "tudo coberto"} />
       </div>
+
+      {/* Saúde da operação: categoria das escolas + risco agregado */}
+      <SectionCard titulo="Saúde da operação" sub="Separação demo/teste/real/individual e pendências que pedem atenção." semPadding>
+        <div style={{ padding: 12, display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(120px,1fr))", gap: 10 }}>
+          <MiniSaude rotulo="Reais (B2B)" valor={risco.real} tom="ok" icone="🏫" />
+          <MiniSaude rotulo="Teste/piloto" valor={risco.teste} tom="alerta" icone="◷" />
+          <MiniSaude rotulo="Demonstração" valor={risco.demo} tom="alerta" icone="◑" />
+          <MiniSaude rotulo="Individual/B2C" valor={risco.individual} tom="neutro" icone="👤" />
+          <MiniSaude rotulo="Sem alunos" valor={risco.semAlunos} tom={risco.semAlunos ? "risco" : "ok"} icone="∅" />
+          <MiniSaude rotulo="Com risco" valor={risco.comRisco} tom={risco.comRisco ? "risco" : "ok"} icone="⚠" sub="risco ou alerta aberto" />
+        </div>
+      </SectionCard>
     </div>
   );
+}
+
+function MiniSaude({ rotulo, valor, tom, icone, sub }) {
+  const T = useTema();
+  const cor = tom === "ok" ? T.green : tom === "alerta" ? T.gold : tom === "risco" ? T.red : T.ink;
+  return (
+    <div style={{ background: T.bg, border: `1px solid ${T.line}`, borderRadius: 10, padding: "10px 12px" }}>
+      <div style={{ fontSize: 10.5, color: T.sub, textTransform: "uppercase", letterSpacing: 0.3, display: "flex", gap: 5, alignItems: "center" }}>
+        <span style={{ opacity: 0.8 }}>{icone}</span>{rotulo}
+      </div>
+      <div className="num disp" style={{ fontSize: 21, fontWeight: 800, color: cor, marginTop: 3 }}>{valor}</div>
+      {sub && <div style={{ fontSize: 10.5, color: T.sub, marginTop: 1 }}>{sub}</div>}
+    </div>
+  );
+}
+
+// Selo de categoria operacional (demo/teste/real/individual).
+function SeloCategoria({ escola }) {
+  const cat = categoriaEscola(escola);
+  return <StatusBadge tom={cat.tom}>{cat.icone} {cat.rotulo}</StatusBadge>;
 }
 
 /* ---------- Lista de escolas ---------- */
@@ -109,6 +150,7 @@ function ListaEscolas({ lista, aoAbrir }) {
   const [busca, setBusca] = useState("");
   const [fStatus, setFStatus] = useState("");
   const [fPlano, setFPlano] = useState("");
+  const [fCategoria, setFCategoria] = useState("");
   const [ordem, setOrdem] = useState("nome");
 
   const planos = useMemo(() => [...new Set(lista.map((e) => e.plano).filter(Boolean))].sort(), [lista]);
@@ -117,7 +159,8 @@ function ListaEscolas({ lista, aoAbrir }) {
     const q = busca.trim().toLowerCase();
     let r = lista.filter((e) => {
       const txt = `${e.nome} ${e.slug} ${e.cidade ?? ""}`.toLowerCase();
-      return (!q || txt.includes(q)) && (!fStatus || e.status === fStatus) && (!fPlano || e.plano === fPlano);
+      return (!q || txt.includes(q)) && (!fStatus || e.status === fStatus) && (!fPlano || e.plano === fPlano)
+        && (!fCategoria || categoriaEscola(e).chave === fCategoria);
     });
     const por = {
       nome: (a, b) => a.nome.localeCompare(b.nome),
@@ -143,6 +186,16 @@ function ListaEscolas({ lista, aoAbrir }) {
           </select>
         </div>
         <div>
+          <label style={lbl}>Categoria</label>
+          <select value={fCategoria} onChange={(e) => setFCategoria(e.target.value)} style={selS}>
+            <option value="">Todas</option>
+            <option value="real">Escola real (B2B)</option>
+            <option value="teste">Teste/Piloto</option>
+            <option value="demo">Demonstração</option>
+            <option value="individual">Individual/B2C</option>
+          </select>
+        </div>
+        <div>
           <label style={lbl}>Plano</label>
           <select value={fPlano} onChange={(e) => setFPlano(e.target.value)} style={selS}>
             <option value="">Todos</option>
@@ -165,12 +218,15 @@ function ListaEscolas({ lista, aoAbrir }) {
         <div style={{ display: "flex", flexDirection: "column" }}>
           {filtrada.map((e, i) => {
             const semCoord = Number(e.coordenadores) === 0;
+            const sev = severidadeMaxima(avisosRisco(e, null));
             return (
               <button key={e.escola_id} className="row" onClick={() => aoAbrir(e.escola_id)}
                 style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 15px", borderBottom: i === filtrada.length - 1 ? "none" : `1px solid ${T.line}`, flexWrap: "wrap", width: "100%", textAlign: "left", border: "none", background: "transparent", color: T.ink }}>
+                <span style={{ width: 8, height: 8, borderRadius: "50%", flexShrink: 0, background: sev === "risco" ? T.red : sev === "alerta" ? T.gold : T.green }} title={sev === "ok" ? "sem pendências" : `${sev} aberto`} />
                 <div style={{ flex: 1, minWidth: 180 }}>
                   <div style={{ fontSize: 14.5, fontWeight: 700, display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
                     {e.nome}
+                    <SeloCategoria escola={e} />
                     <StatusBadge tom={STATUS[e.status]?.tom ?? "neutro"}>{rotuloStatus(e.status)}</StatusBadge>
                     {semCoord && <StatusBadge tom="risco">sem coordenador</StatusBadge>}
                   </div>
@@ -397,14 +453,62 @@ function BlocoLabel({ titulo }) {
   );
 }
 
-/* ---------- Atividade administrativa (logs globais) ---------- */
+/* ---------- Atividade administrativa (logs globais, com filtros) ---------- */
 function AtividadeAdmin({ logs, nomePorEscola }) {
   const T = useTema();
-  const lista = logs ?? [];
+  const { input: inputS, label: lbl } = useInputStyle();
+  const todas = logs ?? [];
+  const [busca, setBusca] = useState("");
+  const [fAcao, setFAcao] = useState("");
+  const [fEscola, setFEscola] = useState("");
+  const [fPeriodo, setFPeriodo] = useState(0);
+
+  const acoes = useMemo(() => acoesPresentes(todas), [todas]);
+  const escolasComLog = useMemo(
+    () => [...new Set(todas.map((l) => l.escola_id).filter(Boolean))]
+      .map((id) => [id, nomePorEscola[id] ?? "escola"]).sort((a, b) => a[1].localeCompare(b[1])),
+    [todas, nomePorEscola]);
+
+  const lista = useMemo(
+    () => filtrarLogs(todas, { busca, acao: fAcao, escolaId: fEscola, periodoDias: +fPeriodo, nomePorEscola }),
+    [todas, busca, fAcao, fEscola, fPeriodo, nomePorEscola]);
+
+  const selS = { ...inputS, minHeight: 42, fontSize: 13.5, padding: "9px 10px" };
+
   return (
-    <SectionCard titulo="Atividade administrativa" sub="Ações do operador — trilha de auditoria (admin_logs)." semPadding>
+    <SectionCard titulo="Logs administrativos" sub={`${lista.length} de ${todas.length} · trilha de auditoria (admin_logs) — filtre por escola, ação ou período.`} semPadding>
+      <div style={{ padding: 12, borderBottom: `1px solid ${T.line}`, display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(150px,1fr))", gap: 10 }}>
+        <div style={{ gridColumn: "1 / -1" }}>
+          <input value={busca} onChange={(e) => setBusca(e.target.value)} placeholder="🔎 Buscar por ação, escola, nome ou e-mail" style={inputS} />
+        </div>
+        <div>
+          <label style={lbl}>Ação</label>
+          <select value={fAcao} onChange={(e) => setFAcao(e.target.value)} style={selS}>
+            <option value="">Todas</option>
+            {acoes.map((a) => <option key={a} value={a}>{rotuloAcao(a)}</option>)}
+          </select>
+        </div>
+        <div>
+          <label style={lbl}>Escola</label>
+          <select value={fEscola} onChange={(e) => setFEscola(e.target.value)} style={selS}>
+            <option value="">Todas</option>
+            {escolasComLog.map(([id, nome]) => <option key={id} value={id}>{nome}</option>)}
+          </select>
+        </div>
+        <div>
+          <label style={lbl}>Período</label>
+          <select value={fPeriodo} onChange={(e) => setFPeriodo(+e.target.value)} style={selS}>
+            <option value={0}>Todo o histórico</option>
+            <option value={1}>Últimas 24h</option>
+            <option value={7}>Últimos 7 dias</option>
+            <option value={30}>Últimos 30 dias</option>
+            <option value={90}>Últimos 90 dias</option>
+          </select>
+        </div>
+      </div>
+
       {lista.length === 0 ? (
-        <div style={{ padding: 8 }}><EmptyState icone="🗒️" titulo="Sem atividade ainda" dica="As ações do backoffice aparecem aqui." /></div>
+        <div style={{ padding: 8 }}><EmptyState icone="🗒️" titulo="Nenhum log para o filtro" dica="Ajuste a busca/filtros — ou as ações do backoffice aparecem aqui assim que ocorrerem." /></div>
       ) : (
         <div style={{ display: "flex", flexDirection: "column" }}>
           {lista.map((l, i) => (
@@ -468,7 +572,7 @@ function DetalheEscola({ escolaId, aoVoltar, aoMudar }) {
       <BotaoVoltar aoVoltar={aoVoltar} />
 
       <SectionCard
-        titulo={<span style={{ display: "inline-flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>{e.nome} <StatusBadge tom={STATUS[e.status]?.tom ?? "neutro"}>{rotuloStatus(e.status)}</StatusBadge></span>}
+        titulo={<span style={{ display: "inline-flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>{e.nome} <SeloCategoria escola={e} /> <StatusBadge tom={STATUS[e.status]?.tom ?? "neutro"}>{rotuloStatus(e.status)}</StatusBadge></span>}
         sub={`/${e.slug}${e.cidade ? ` · ${e.cidade}${e.uf ? "/" + e.uf : ""}` : ""}`}
         acao={<BotaoMini destaque onClick={() => setEditando((v) => !v)}>{editando ? "Fechar edição" : "✎ Editar"}</BotaoMini>}>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(130px,1fr))", gap: 10 }}>
@@ -490,11 +594,15 @@ function DetalheEscola({ escolaId, aoVoltar, aoMudar }) {
 
       {editando && <EditarEscola escola={e} aoSalvar={() => { setEditando(false); recarregarLocal(); }} />}
 
+      <AvisosRisco escola={e} d={d} />
+
       <AcoesStatus escola={e} aoMudar={recarregarLocal} />
 
-      <ChecklistImplantacao d={d} />
+      <ChecklistGoLive d={d} />
 
       <Coordenadores d={d} escolaId={escolaId} aoMudar={recarregarLocal} />
+
+      <Modalidades escola={e} />
 
       <SectionCard titulo="Atividade desta escola" sub="Últimas ações administrativas sobre esta escola." semPadding>
         {logsEscola.length === 0 ? (
@@ -691,53 +799,122 @@ function ConfirmacaoModal({ titulo, corpo, perigo, ocupado, rotuloConfirmar = "C
   );
 }
 
-/* ---------- Checklist de implantação (dados reais) ---------- */
-function ChecklistImplantacao({ d }) {
+/* ---------- Avisos de risco (ADM2 t.41) ---------- */
+function AvisosRisco({ escola, d }) {
   const T = useTema();
-  const e = d.escola ?? {};
-  const marca = !!(e.cor_acento || e.logo_url);
-  const dadosBasicos = !!(e.nome && e.slug);
-  const op = operacional(e.status);
-  const coords = d.coordenadores ?? [];
-  const turmas = d.turmas ?? [];
-  const temContato = !!(e.email_institucional || e.contato_nome || e.telefone_contato);
-
-  const checklist = [
-    { ok: true, label: "Escola criada" },
-    { ok: dadosBasicos, label: "Dados básicos preenchidos (nome e slug)" },
-    { ok: temContato, label: "Contato administrativo informado" },
-    {
-      ok: coords.length > 0,
-      label: "Coordenador provisionado",
-      dica: coords.length === 0 ? "Use o botão 'Criar coordenador' abaixo para provisionar pelo backoffice." : null,
-    },
-    { ok: marca, label: "Marca configurada (cor ou logo)" },
-    { ok: turmas.length > 0, label: "Turmas criadas" },
-    { ok: Number(d.alunos) > 0, label: "Alunos cadastrados" },
-    { ok: Number(d.alunos_com_credencial) > 0, label: "Credenciais/códigos gerados" },
-    { ok: Number(d.responsaveis) > 0, label: "Responsáveis vinculados" },
-    {
-      ok: op,
-      label: e.status === "ativa" ? "Escola ativada (status ativa)" : `Acesso operacional (${rotuloStatus(e.status)})`,
-      dica: op ? null : `Escola ${rotuloStatus(e.status).toLowerCase()} — acesso bloqueado pela RLS até reativar`,
-    },
-  ];
-  const feitos = checklist.filter((x) => x.ok).length;
-
+  const avisos = useMemo(() => avisosRisco(escola, d), [escola, d]);
+  if (avisos.length === 0) {
+    return (
+      <SectionCard titulo="Avisos de risco" sub="Nenhuma pendência crítica detectada nesta escola.">
+        <div style={{ fontSize: 13, color: T.green, display: "flex", alignItems: "center", gap: 8 }}>
+          <span>✓</span> Sem riscos ou alertas abertos.
+        </div>
+      </SectionCard>
+    );
+  }
+  const tomDe = (n) => (n === "risco" ? T.red : n === "alerta" ? T.gold : T.sub);
+  const rotuloNivel = { risco: "Risco", alerta: "Alerta", info: "Info" };
   return (
-    <SectionCard titulo="Checklist de implantação" sub={`${feitos} de ${checklist.length} concluídos`} semPadding>
+    <SectionCard titulo="Avisos de risco" sub={`${avisos.length} ponto(s) de atenção — riscos primeiro.`} semPadding>
       <div style={{ display: "flex", flexDirection: "column" }}>
-        {checklist.map((x, i) => (
-          <div key={x.label} style={{ display: "flex", alignItems: "center", gap: 11, padding: "11px 15px", borderBottom: i === checklist.length - 1 ? "none" : `1px solid ${T.line}` }}>
-            <span style={{ width: 22, height: 22, borderRadius: "50%", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, fontWeight: 800, background: x.ok ? `${T.green}22` : T.bg, color: x.ok ? T.green : T.sub, border: `1px solid ${x.ok ? T.green + "66" : T.line}` }}>
-              {x.ok ? "✓" : "○"}
+        {[...avisos].sort((a, b) => severidadePeso(b.nivel) - severidadePeso(a.nivel)).map((a, i, arr) => (
+          <div key={a.codigo} style={{ display: "flex", alignItems: "flex-start", gap: 11, padding: "11px 15px", borderBottom: i === arr.length - 1 ? "none" : `1px solid ${T.line}`, borderLeft: `3px solid ${tomDe(a.nivel)}` }}>
+            <span style={{ flexShrink: 0, marginTop: 1, fontSize: 10.5, fontWeight: 800, color: tomDe(a.nivel), border: `1px solid ${tomDe(a.nivel)}66`, background: `${tomDe(a.nivel)}14`, borderRadius: 5, padding: "1px 6px", textTransform: "uppercase", letterSpacing: 0.3 }}>
+              {rotuloNivel[a.nivel] ?? a.nivel}
             </span>
             <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontSize: 13.5, color: x.ok ? T.ink : T.sub }}>{x.label}</div>
-              {x.dica && <div style={{ fontSize: 11, color: T.sub, marginTop: 1 }}>{x.dica}</div>}
+              <div style={{ fontSize: 13.5, fontWeight: 700, color: T.ink }}>{a.titulo}</div>
+              {a.recomendacao && <div style={{ fontSize: 11.5, color: T.sub, marginTop: 2, lineHeight: 1.45 }}>{a.recomendacao}</div>}
             </div>
           </div>
         ))}
+      </div>
+    </SectionCard>
+  );
+}
+const severidadePeso = (n) => (n === "risco" ? 3 : n === "alerta" ? 2 : n === "info" ? 1 : 0);
+
+/* ---------- Checklist de GO-LIVE (ADM2 t.37 — dados reais + manuais) ---------- */
+function ChecklistGoLive({ d }) {
+  const T = useTema();
+  const itens = useMemo(() => checklistGoLive(d), [d]);
+  const resumo = useMemo(() => resumoChecklist(itens), [itens]);
+
+  // agrupa por seção para a leitura ficar profissional
+  const grupos = useMemo(() => {
+    const g = {};
+    for (const it of itens) (g[it.grupo] ??= []).push(it);
+    return g;
+  }, [itens]);
+
+  const sub = resumo.prontoGoLive
+    ? "Pronto para go-live — todos os itens críticos concluídos."
+    : `${resumo.feitos}/${resumo.total} concluídos · ${resumo.criticosPendentes.length} crítico(s) pendente(s)`;
+
+  return (
+    <SectionCard
+      titulo="Checklist de go-live"
+      sub={sub}
+      semPadding
+      acao={<StatusBadge tom={resumo.prontoGoLive ? "ok" : resumo.criticosPendentes.length ? "risco" : "alerta"}>
+        {resumo.prontoGoLive ? "✓ go-live" : "pendente"}
+      </StatusBadge>}>
+      <div style={{ display: "flex", flexDirection: "column" }}>
+        {Object.entries(grupos).map(([grupo, lista]) => (
+          <div key={grupo}>
+            <div style={{ fontSize: 10.5, fontWeight: 800, color: T.gold, textTransform: "uppercase", letterSpacing: 0.6, padding: "9px 15px 4px", background: T.bg2 }}>{grupo}</div>
+            {lista.map((x) => (
+              <div key={x.chave} style={{ display: "flex", alignItems: "flex-start", gap: 11, padding: "10px 15px", borderTop: `1px solid ${T.line}` }}>
+                <span style={{ width: 22, height: 22, borderRadius: "50%", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, fontWeight: 800, background: x.ok ? `${T.green}22` : T.bg, color: x.ok ? T.green : T.sub, border: `1px solid ${x.ok ? T.green + "66" : T.line}` }}>
+                  {x.ok ? "✓" : x.manual ? "◌" : "○"}
+                </span>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: 13.5, color: x.ok ? T.ink : T.sub, display: "flex", alignItems: "center", gap: 7, flexWrap: "wrap" }}>
+                    {x.label}
+                    {x.critico && !x.ok && <span style={{ fontSize: 9.5, fontWeight: 800, color: T.red, border: `1px solid ${T.red}66`, background: `${T.red}14`, borderRadius: 4, padding: "0 5px", textTransform: "uppercase" }}>crítico</span>}
+                    {x.manual && <span style={{ fontSize: 9.5, fontWeight: 700, color: T.sub, border: `1px solid ${T.line}`, borderRadius: 4, padding: "0 5px", textTransform: "uppercase" }}>manual</span>}
+                  </div>
+                  {x.dica && <div style={{ fontSize: 11, color: T.sub, marginTop: 1, lineHeight: 1.4 }}>{x.dica}</div>}
+                </div>
+              </div>
+            ))}
+          </div>
+        ))}
+      </div>
+      {resumo.manuaisTotal > 0 && (
+        <div style={{ fontSize: 11.5, color: T.sub, padding: "10px 15px", borderTop: `1px solid ${T.line}`, lineHeight: 1.5, background: T.bg2 }}>
+          ◌ itens <b>manuais</b> (backup, smoke, SMTP, termo) são confirmados pelo operador fora do sistema —
+          ver <span style={{ color: T.gold }}>docs/operacao/checklist-go-live-escola.md</span>. Eles não fecham
+          automaticamente para não dar falso "pronto".
+        </div>
+      )}
+    </SectionCard>
+  );
+}
+
+/* ---------- Modalidades habilitadas (ADM2 t.39 — placeholder controlado) ---------- */
+function Modalidades({ escola }) {
+  const T = useTema();
+  const mods = useMemo(() => modalidadesDaEscola(escola), [escola]);
+  return (
+    <SectionCard titulo="Modalidades" sub="Roadmap de modalidades. Só 'concurso' está em produção — o resto é placeholder declarado (não habilita nada).">
+      <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+        {mods.map((m) => {
+          const est = ESTADO_MODALIDADE[m.estado] ?? { rotulo: m.estado, tom: "neutro" };
+          return (
+            <div key={m.codigo} style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 12px", background: T.bg, border: `1px solid ${T.line}`, borderRadius: 9, flexWrap: "wrap" }}>
+              <div style={{ flex: 1, minWidth: 160 }}>
+                <div style={{ fontSize: 13.5, fontWeight: 700, color: m.habilitada ? T.ink : T.sub }}>{m.rotulo}</div>
+                <div style={{ fontSize: 11, color: T.sub, marginTop: 1 }}>{m.nota}</div>
+              </div>
+              <StatusBadge tom={est.tom}>{est.rotulo}</StatusBadge>
+              <StatusBadge tom={m.habilitada ? "ok" : "neutro"}>{m.habilitada ? "habilitada" : "—"}</StatusBadge>
+            </div>
+          );
+        })}
+      </div>
+      <div style={{ fontSize: 11, color: T.sub, marginTop: 10, lineHeight: 1.5 }}>
+        Persistência por escola é diferida (exigiria migration). MOD0 completo está fora do escopo desta camada.
       </div>
     </SectionCard>
   );

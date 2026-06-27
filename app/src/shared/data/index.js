@@ -820,7 +820,7 @@ export async function backofficeDetalheEscola(escolaId) {
 // a leitura ao super_admin. Para o painel de monitoramento (17.6).
 export async function backofficeLogs(limite = 30) {
   const { data, error } = await supabase
-    .from("admin_logs").select("acao, escola_id, detalhe, em").order("em", { ascending: false }).limit(limite);
+    .from("admin_logs").select("acao, escola_id, super_admin_id, detalhe, em").order("em", { ascending: false }).limit(limite);
   if (error) throw falha("atividade administrativa", error);
   return data;
 }
