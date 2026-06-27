@@ -1,46 +1,46 @@
 # Pendências para o Piloto Real (PR1)
 
-**Data:** 2026-06-24  
-**Fase de origem:** H1  
+**Atualizado em:** 2026-06-27 (pós-SEG2)
 **Próxima fase:** PR1
 
-Este documento lista o que **falta** antes de colocar a primeira escola real em produção. Os itens estão priorizados por criticidade.
+O que falta antes de colocar a primeira escola real em produção, priorizado por
+criticidade. **Nenhum P0/P1 de segurança** está aberto — os P0 abaixo são de
+**operação do go-live**.
 
 ---
 
-## P0 — Bloqueadores absolutos (must-have antes do go-live)
+## P0 — Bloqueadores do go-live (antes da primeira escola real)
 
-| # | Item | Responsável | Status |
-|---|------|------------|--------|
-| P0-1 | SMTP validado com domínio real do piloto (não o de demo) | Operação | 🔲 Pendente |
-| P0-2 | Escola real criada no Supabase (`escolas`, `usuarios` coordenação, `auth.users`) | Operação | 🔲 Pendente |
-| P0-3 | Primeira turma e alunos reais provisionados via backoffice | Coordenação | 🔲 Pendente |
-| P0-4 | Login do primeiro aluno real testado end-to-end | QA | 🔲 Pendente |
-| P0-5 | Recuperação de senha do aluno testada com e-mail real | QA | 🔲 Pendente |
-| P0-6 | Revisão do `docs/operacao/checklist-go-live-piloto.md` | Todos | 🔲 Pendente |
+| # | Item | Responsável |
+|---|------|------------|
+| P0-1 | SMTP validado com domínio real do piloto (não o de demo) | Operação |
+| P0-2 | Escola real criada (`escolas` + coordenação + `auth.users`) | Operação |
+| P0-3 | Primeira turma e alunos reais provisionados via backoffice | Coordenação |
+| P0-4 | Login do primeiro aluno real testado end-to-end | QA |
+| P0-5 | Recuperação de senha testada com e-mail real | QA |
+| P0-6 | Revisão do `docs/operacao/checklist-go-live-piloto.md` | Todos |
 
 ---
 
-## P1 — Alta prioridade (resolver antes ou logo após o go-live)
+## P1 — Alta prioridade (antes ou logo após o go-live)
 
-| # | Item | Responsável | Status |
-|---|------|------------|--------|
-| P1-1 | Habilitar backups automáticos no Supabase (plano pago) | Infra | 🔲 Pendente |
-| P1-2 | Configurar alertas de uptime (Supabase / Vercel) | Infra | 🔲 Pendente |
-| P1-3 | Validar RLS com usuário real de coordenação (não seed) | QA | 🔲 Pendente |
-| P1-4 | Teste de responsável vinculado + revogação com dados reais | QA | 🔲 Pendente |
-| P1-5 | Plano de I1 revisado e aprovado (`docs/auditoria/i1/00-plano-implantacao-escola-nova.md`) | Operação | 🔲 Pendente |
+| # | Item | Destino |
+|---|------|---------|
+| P1-1 | Backups automáticos no Supabase (plano Pro) + **restore testado** | Julho / Infra |
+| P1-2 | Região `sa-east-1` (LGPD — dado de menor no Brasil) | Julho / Infra |
+| P1-3 | Alertas de uptime (Supabase / Vercel) | Infra |
+| P1-4 | Validar RLS e responsável+revogação com dados reais (não seed) | QA |
 
 ---
 
 ## P2 — Importantes (roadmap próximo)
 
-| # | Item | Status |
+| # | Item | Estado |
 |---|------|--------|
-| P2-1 | Ambiente E2E isolado (secrets `E2E_SUPABASE_URL` / `E2E_SUPABASE_ANON_KEY`) | 🔲 Pendente |
-| P2-2 | Branch `claude/naval-system-build-g9h0t5` deletada (sem commits únicos) | 🔲 Pendente |
-| P2-3 | 2 alunos orphans na escola demo resolvidos (sem `usuario_id`) | 🔲 Pendente (baixo risco) |
-| P2-4 | Smoke test manual em produção pós-merge H1 | 🔲 Pendente |
+| P2-1 | Curls de verificação do CORS preflight (deploy já feito na SEG2) | ⏳ dono — `auditoria/seguranca/seg2/03-cors-allowlist-edge-functions.md` §5 |
+| P2-2 | Separação demo × real (projeto Supabase dedicado) | 🔲 antes do aluno real |
+| P2-3 | Staging isolado (CI já suporta `e2e-guard`) | 🔲 Julho |
+| P2-4 | Leaked Password Protection (recurso Pro) | 🔲 Julho |
 
 ---
 
@@ -48,22 +48,24 @@ Este documento lista o que **falta** antes de colocar a primeira escola real em 
 
 | # | Item |
 |---|------|
-| P3-1 | Endurecer `Access-Control-Allow-Origin: *` para domínio Vercel nas Edge Functions |
-| P3-2 | Tabela `admin_logs` separada para ações de superadmin (hoje usa `logs_coordenacao`) |
-| P3-3 | Otimizar dupla chamada `auth.getUser()` em `revogar-responsavel` para superadmin |
-| P3-4 | Implementar ambiente E2E isolado (ver `docs/operacao/e2e-ambiente.md`) |
+| P3-1 | Retenção/rotação de logs (`admin_logs`, `logs_*`) |
+| P3-2 | Endurecer CSP (remover `unsafe-inline` do `script-src`) |
+| P3-3 | Tabela `admin_logs` separada para ações de superadmin |
 
 ---
 
-## O que já está resolvido (não é mais pendência)
+## Já resolvido (não é mais pendência)
 
-| Item | Quando resolvido |
-|------|-----------------|
-| `revogar-responsavel` não estava deployada (P1 AV1) | HF1 — 2026-06-24 |
-| Bug: revogar apagava usuário responsável | HF1 — 2026-06-24 |
-| Superadmin não conseguia revogar | HF1 — 2026-06-24 |
-| CORS nas Edge Functions | D1B |
-| SMTP de recuperação de senha | D1C |
-| CI gate com 200+ testes | S1 |
-| RLS multi-escola auditada | S1/DB1 |
-| 32 migrations sincronizadas | DB2 |
+| Item | Fase |
+|------|------|
+| CORS `*` → allowlist nas 6 Edge Functions (código **e deploy**) | SEG1/SEG2 |
+| Branch protection na `main` | SEG2 |
+| CodeQL + Dependabot + Secret Protection | SEG1/SEG2 |
+| Headers de segurança nota A | SEG1/SEG2 |
+| `revogar-responsavel` deployada + bugs corrigidos | HF1 |
+| `provisionar-aluno` CORS + re-vínculo de responsável | HF2 |
+| Criação de escola pelo backoffice (BUG-P1-001) | HF3 |
+| Onboarding de alunos sem SQL (códigos, CSV, trilhas) | I2 |
+| SMTP de recuperação de senha (fluxo) | D1C |
+| RLS multi-escola auditada · 32 migrations sincronizadas | S1 / DB1 / DB2 |
+| Suíte de testes (341) + gate de CI verde | S1 → SEG2 |

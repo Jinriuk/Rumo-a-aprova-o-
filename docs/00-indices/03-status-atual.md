@@ -1,87 +1,88 @@
 # Status Atual do Projeto
 
-**Data:** 2026-06-24  
-**Fase encerrada:** H1 — Higiene de Repositório, Documentação e Pendências Operacionais  
+**Data:** 2026-06-27
+**Fase encerrada:** SEG2 — Segurança de Produção e Infraestrutura Real
 **Próxima fase:** PR1 — Prontidão de Piloto Real
 
 ---
 
 ## Resumo executivo
 
-O projeto está **pronto para a fase PR1**. Todas as funções de coordenação operacional estão deployadas e funcionando. A documentação foi consolidada. Os riscos operacionais identificados estão documentados. A suíte de testes passa com 32+ testes e o build de produção está verde.
+Sistema **liberado para piloto controlado pequeno**. Branch protection aplicada,
+CodeQL/Dependabot/Secret Protection ativos, headers de segurança nota **A**, as 6
+Edge Functions **deployadas com CORS allowlist** (substituindo o curinga `*`).
+Build de produção verde e **341 testes** passando. **Nenhum P0/P1.** Itens de
+piloto real **amplo** dependem de julho (Pro + backup/restore testado + staging +
+SMTP + domínio próprio + região `sa-east-1`).
 
 ---
 
-## Estado do Supabase remoto (2026-06-24)
+## Estado do Supabase remoto
 
-### Edge Functions (todas ACTIVE)
+**Projeto:** `bdjkgrzfzoamchdpobbl` (us-east-1, Free)
 
-| Função | Versão | Descrição |
-|--------|--------|-----------|
-| `provisionar-aluno` | v1 | Cria `usuarios` + `auth.users` para aluno |
-| `backoffice-coordenador` | v4 | CRUD de turmas, alunos, responsáveis |
-| `revogar-responsavel` | v1 | Revoga vínculo responsável-aluno ✅ HF1 |
-| `gerar-meta` | v1 | Gera meta semanal para aluno |
-| `virar-semana` | v1 | Avança semana pedagógica |
-| `lgpd-titular` | v1 | Exporta/apaga dados do titular |
+### Edge Functions (todas ACTIVE, com CORS allowlist — SEG2)
+
+| Função | Versão | verify_jwt | Descrição |
+|--------|--------|-----------|-----------|
+| `provisionar-aluno` | v3 | true | Cria `usuarios` + `auth.users` para aluno |
+| `backoffice-coordenador` | v5 | true | CRUD de turmas, alunos, responsáveis |
+| `revogar-responsavel` | v2 | true | Revoga vínculo responsável-aluno |
+| `gerar-meta` | v2 | true | Gera meta semanal para aluno |
+| `virar-semana` | v2 | false | Virada operacional (gate por service_role) |
+| `lgpd-titular` | v2 | true | Exporta/apaga dados do titular |
+
+> CORS: allowlist refletida (produção Vercel + localhost + previews do projeto),
+> configurável por `ALLOWED_ORIGINS`. Curls de verificação = checklist do dono
+> (`auditoria/seguranca/seg2/03-cors-allowlist-edge-functions.md`).
 
 ### Migrations
-
-- **Total aplicadas:** 32
-- **Última:** `0032_d1b_provisionamento_acessos`
-- **Estado:** em sincronia com o repositório
-
-### Escolas cadastradas
-
-| Escola | Tipo | Alunos |
-|--------|------|--------|
-| Colégio e Curso Ícone | Real (piloto candidata) | — |
-| Escola Piloto I1 | Ambiente de testes | — |
-| Curso Beta Preparatório | Demo/semente | 68 |
-| Matriz Educação RM | Demo/semente | — |
+- **Última:** `0032_d1b_provisionamento_acessos` (+ migrations posteriores de fase)
+- **Estado:** em sincronia com o repositório (runbook em `operacao/runbook-migrations-supabase.md`)
 
 ---
 
-## Estado do repositório (2026-06-24)
+## Segurança / GitHub (SEG2)
 
-### Branches abertas (não mergeadas)
+| Item | Estado |
+|------|--------|
+| Branch protection na `main` | ✅ Aplicada (PR + CI + linear history + no force-push, bypass do dono) |
+| CORS wildcard `*` removido das 6 funções | ✅ Em código **e deployado** |
+| SecurityHeaders.com | ✅ Nota **A** (6 headers) |
+| CodeQL | ✅ Ativo em PR/main |
+| Dependabot (alerts + security updates + dependency graph) | ✅ Habilitado |
+| Secret scanning / Secret Protection | ✅ Habilitado |
+| Repositório | Público (intencional/documentado) |
+| Leaked Password Protection | ❌ Só no plano Pro (julho); senha endurecida ≥8 + letras/dígitos |
 
-| Branch | Ahead/Behind | Recomendação |
-|--------|-------------|-------------|
-| `claude/av1-auditoria-geral-jaoscu` | +1 / -2 | Preservar — tem commit único |
-| `claude/demo-base-realista-auditoria-t5ji99` | +8 / -91 | Preservar — 8 commits únicos |
-| `claude/naval-system-build-g9h0t5` | +0 / -52 | Pode ser deletada (sem commits únicos) |
-| `claude/h1-higiene-repo-docs-operacao` | em andamento | Esta branch (H1) |
+---
 
-### CI
+## CI e testes
 
 - **Gate principal:** `build-e-unitarios` — verde
-- **E2E:** pulada (sem ambiente isolado configurado)
-- **Testes:** 32+ testes passando
+- **Testes:** **341/341** (Postgres efêmero, migrations + seed)
+- **Build de produção:** `npm run build` verde (Vite)
 
 ---
 
-## Pontos de atenção para PR1
+## Escolas cadastradas
 
-| Item | Status | Onde documentado |
-|------|--------|-----------------|
-| 2 alunos sem `usuario_id` (orphans em demo) | ⚠️ Baixo risco — escola demo | `docs/auditoria/h1/alunos-sem-credencial.md` |
-| Repositório público — secrets auditadas | ✅ Nenhuma secret commitada | `docs/operacao/github/repositorio-publico.md` |
-| Leaked Password Protection | ✅ Ativa | `docs/operacao/supabase/leaked-password-protection.md` |
-| CORS `*` nas Edge Functions | ⚠️ P3 — aceitável com JWT | Pode ser endurecido no futuro |
-| Branch `claude/naval-system-build-g9h0t5` sem commits únicos | ⚠️ Recomenda-se deleção | `docs/operacao/github/relatorio-branches-h1.md` |
+| Escola | Tipo |
+|--------|------|
+| Colégio e Curso Ícone | Real (piloto candidata) |
+| Escola Piloto I1 | Ambiente de testes |
+| Curso Beta Preparatório | Demo / semente |
+| Matriz Educação RM | Demo / semente |
 
 ---
 
-## Checklist de prontidão para PR1
+## Pendências para PR1 (resumo)
 
-- [x] Todas as Edge Functions deployadas e ACTIVE
-- [x] Migrations sincronizadas (32/32)
-- [x] CI verde (gate `build-e-unitarios`)
-- [x] Build de produção passa (`npm run build`)
-- [x] Documentação consolidada (este índice)
-- [x] Riscos operacionais documentados
-- [ ] SMTP validado com domínio real do piloto
-- [ ] Primeira escola real criada e testada end-to-end
-- [ ] Credenciais de alunos reais provisionadas
-- [ ] Checklist de go-live revisado (`docs/operacao/checklist-go-live-piloto.md`)
+| Item | Severidade | Onde |
+|------|-----------|------|
+| SMTP com domínio real + escola real provisionada e testada e2e | P0 | `07-pendencias-para-piloto-real.md` |
+| Backup/restore testado (Pro) | P1 | `operacao/backup-retencao-lgpd.md` |
+| Curls de verificação do CORS (preflight) | P2 | `auditoria/seguranca/seg2/03-cors-allowlist-edge-functions.md` §5 |
+| Região `sa-east-1` (LGPD dado de menor) | P1/julho | `operacao/plano-migracao-sa-east-1.md` |
+
+Lista completa e priorizada em [`07-pendencias-para-piloto-real.md`](./07-pendencias-para-piloto-real.md).

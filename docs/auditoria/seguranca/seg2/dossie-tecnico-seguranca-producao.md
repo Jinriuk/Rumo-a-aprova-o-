@@ -65,7 +65,7 @@ A matriz é aplicada **duas vezes**: front roteia por papel; **banco impõe** po
 - Antes: `Access-Control-Allow-Origin: *`. Agora: **reflete o Origin só se permitido**
   (produção + localhost + previews do projeto); fora da lista → **sem** header (navegador bloqueia).
 - Configurável por **`ALLOWED_ORIGINS`** (CSV) — domínio próprio entra sem mexer no código.
-- Sem `Allow-Credentials` (modelo Bearer). Deploy + curls = checklist do dono (doc 03).
+- Sem `Allow-Credentials` (modelo Bearer). **Deploy concluído** (MCP 2026-06-26, 6 funções ACTIVE). Curls de preflight = checklist do dono (doc 03 §5).
 
 ## 7. Secrets
 - Front: só `VITE_SUPABASE_URL` + `VITE_SUPABASE_ANON_KEY` (públicas).

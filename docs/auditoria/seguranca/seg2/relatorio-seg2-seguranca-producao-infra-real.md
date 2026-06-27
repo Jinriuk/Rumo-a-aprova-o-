@@ -31,7 +31,7 @@ real amplo depende dos itens de julho (Pro + backup/restore testado + staging + 
 | Leaked Password Protection ativada? | ❌ Não — recurso só no plano Pro (projeto em Free). Senha endurecida (≥8 + letras/dígitos). Checklist p/ julho |
 | Branch protection configurada? | ✅ **APLICADA** em 2026-06-26 via Settings → Branches (PR + CI + linear history + no force-push + no delete + bypass do dono) |
 | Repo privado? | ❌ Não (público, intencional/documentado). Recomendação p/ antes de aluno real |
-| CORS wildcard removido? | ✅ Em código nas 6 funções. Deploy pendente (dono) |
+| CORS wildcard removido? | ✅ Em código + **deployado** nas 6 funções (MCP 2026-06-26). Curls de verificação = dono |
 | SecurityHeaders saiu de D? | ✅ **Nota A** (26 Jun 2026 17:47 UTC) — 6 headers presentes. Capped at A por unsafe-inline (futuro) |
 | MDN Observatory executado? | ❌ Domínio bloqueado no runtime — checklist manual |
 | SSL Labs executado? | ⚠️ Tentado — "Unexpected failure" / "Failed to communicate" (comum com Vercel edge). Vercel usa TLS 1.3 / A+ por padrão |
@@ -58,7 +58,7 @@ real amplo depende dos itens de julho (Pro + backup/restore testado + staging + 
 
 | Item | Arquivos | Status |
 |------|----------|--------|
-| CORS allowlist (E-1) | _shared/cors.ts, _shared/contexto.ts, 6 × index.ts | ✅ build + 341 testes verdes |
+| CORS allowlist (E-1) | _shared/cors.ts, _shared/contexto.ts, 6 × index.ts | ✅ build + 341 testes verdes + **6 funções deployadas ACTIVE** |
 | CodeQL (J-3) | .github/workflows/codeql.yml | ✅ ativa em PR/main, last scan ~3h |
 | Dependabot (J-3) | .github/dependabot.yml | ✅ semanal agrupado |
 | Documentação SEG2 | docs/auditoria/seg2/** (00–13, scanners, dossiê, este relatório) | ✅ |
@@ -94,7 +94,7 @@ real amplo depende dos itens de julho (Pro + backup/restore testado + staging + 
 |----|------|---------|
 | D-1 | Leaked Password Protection (só Pro) | Manual/julho |
 | A-1 | Demo × real (projeto separado) | Manual/antes do aluno real |
-| E-1 | Deploy CORS + curls de verificação | Manual (dono) — código pronto |
+| E-1 | Curls de verificação CORS (preflight) | Dono (egresso bloqueado neste runtime) — deploy ✅ |
 
 ### P3
 
@@ -104,7 +104,7 @@ real amplo depende dos itens de julho (Pro + backup/restore testado + staging + 
 
 ### Manual (checklists nos docs)
 
-Deploy + curls do CORS (doc 03); re-scan MDN Observatory, Sucuri, Unxpose (doc 05); restore testado
+Curls CORS preflight (doc 03 §5) — deploy ✅, egresso do runtime bloqueado; re-scan MDN Observatory, Sucuri, Unxpose (doc 05); restore testado
 (doc 06); SMTP/URLs no domínio (docs 09/10); rotação das credenciais de demo (doc 08).
 
 ### SEG2 (julho — Pro/domínio)
@@ -144,5 +144,4 @@ SecurityHeaders nota A, CORS em código, branch stale removida, scanners documen
 Sem P0/P1. Deploy do CORS (dono), restore testado e itens de julho (Pro/backup/staging/SMTP/domínio)
 são os próximos passos documentados com checklist claro.
 
-**Liberado para piloto controlado pequeno** após o dono deployar as Edge Functions com CORS allowlist
-(doc 03, passo a passo). Piloto real amplo após julho.
+**Liberado para piloto controlado pequeno.** Edge Functions deployadas com CORS allowlist (doc 03). Dono deve rodar os curls de preflight (doc 03 §5) para confirmar. Piloto real amplo após julho.

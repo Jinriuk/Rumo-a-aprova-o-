@@ -1,86 +1,83 @@
 # Linha do Tempo — Rumo à Aprovação
 
-**Atualizado em:** 2026-06-24 (H1)
+**Atualizado em:** 2026-06-27 (pós-SEG2)
 
 ---
 
-## Histórico de fases (cronológico)
+## Visão macro
 
 ```
-QA1 ──► S1 ──► DB1 ──► DB2 ──► D1A ──► D1B ──► D1C ──► HF1 ──► H1 ──► PR1 ...
+BUILD (fundação)         AUDITORIAS/FASES INICIAIS        LINHA OPERACIONAL MODERNA
+14.5 → 15.1..15.7        A · B-min · C0 · C0.5 · R        QA1 → S1 → DB1 → DB2
+  → 16 → 17              C1A..C1D · D0                      → D1A → D1B → D1C → HF1 → H1
+                         audit-all · QA0 · Fase 18          → (AV2 · I2 · PED-UX1 · HF2)
+                         (tudo em auditoria/antigos/)       → HF3 → SEG1 → SEG2 → [PR1]
 ```
 
 ---
 
-## Detalhamento
+## 1. Build / fundação — `docs/fases/`
 
-### QA1 — Demo-pedagogia
-- **Objetivo:** Validar vitrine pública e motor pedagógico (provas, assuntos, missões, XP)
-- **Entregável:** Relatório `docs/auditoria/relatorio-qa1-demo-pedagogia.md`
-- **Branch:** integrado na main
+Construção do produto: núcleo pedagógico (provas, matérias, assuntos, níveis,
+trilhas/missões, XP/patentes/conquistas, simulados) e camada visual.
 
-### S1 — Segurança
-- **Objetivo:** CI verde com gate determinístico, RLS auditada, Edge Functions com `verify_jwt: true`, proteção de secrets, plano de backup/LGPD
-- **Entregáveis:** `docs/auditoria/s1/00-relatorio-s1.md` e arquivos em `docs/auditoria/s1/`
-- **Branch:** integrado na main
+`14.5` (encerramento) → `15.1`…`15.7` (fundação pedagógica) → `16` (camada visual) → `17` (operação/go-live).
 
-### DB1 — Consolidação Supabase
-- **Objetivo:** Inventariar e documentar tabelas, RLS, RPCs, views e Edge Functions remotas
-- **Entregável:** `docs/auditoria/db1/relatorio-db1-consolidacao-supabase.md`
-- **Branch:** integrado na main
+## 2. Fases iniciais e auditorias retrospectivas — `docs/auditoria/antigos/`
 
-### DB2 — Migrations consolidadas
-- **Objetivo:** Garantir idempotência das migrations, reconciliação repo vs. remoto
-- **Entregável:** `docs/relatorios/COMPARACAO_MIGRATIONS_REPO_REMOTO.md`
-- **Branch:** integrado na main
+Integradas à `main`; o documento é histórico, a funcionalidade está viva.
 
-### D1A — Acesso coordenação
-- **Objetivo:** Corrigir acesso da coordenação ao backoffice; resolver conflitos de PR
-- **Entregável:** `docs/auditoria/d1a/relatorio-d1a-coordenacao-backoffice.md`
-- **Branch:** integrado na main
+- **A** segurança/logs/observabilidade · **B-min** performance · **C0** motor de XP/ledger
+- **C0.5** auditoria da Fase 15 + ligação por `exam_tag` · **R** higiene de branches
+- **C1A–D** credibilidade da demo, UX, polimento, 30 pontos · **D0** backoffice/superoperador
+- **audit-all** (retrospectiva 2026-06-20) · **QA0** (global pós-D0) · **Fase 18** (multivisão 12 personas, ~74/100)
 
-### D1B — Provisionamento
-- **Objetivo:** Provisionar alunos (criar `usuarios` + `auth.users` + `vinculos_responsaveis`), CORS na Edge Function `backoffice-coordenador`, login
-- **Entregável:** `docs/auditoria/d1b/relatorio-d1b-provisionamento-login.md`
-- **Branch:** integrado na main
+## 3. Linha operacional moderna — `docs/auditoria/`
 
-### D1C — Email e recuperação de acesso
-- **Objetivo:** Configurar SMTP, fluxo de convite/redefinição de senha, reenvio de acesso
-- **Entregável:** `docs/auditoria/d1c/relatorio-d1c-email-recuperacao-acesso.md`
-- **Branch:** integrado na main
+```
+QA1 ─► S1 ─► DB1 ─► DB2 ─► D1A ─► D1B ─► D1C ─► HF1 ─► H1 ─┬─► HF3 ─► SEG1 ─► SEG2 ─► [PR1]
+                                                            ├─ AV2  (auditoria funcional)
+                                                            ├─ I2   (onboarding)
+                                                            ├─ PED-UX1 (plano×trilha/UX)
+                                                            └─ HF2  (provisionar-aluno CORS)
+```
 
-### HF1 — Hotfix revogar-responsavel
-- **Objetivo:** Deployar `revogar-responsavel` (não existia remotamente), corrigir bug de deleção de usuário e ausência de suporte a superadmin
-- **Branch:** `claude/hf1-deploy-revogar-responsavel-cpey7k` → PR #30 → merged 2026-06-24
-- **Entregável:** `docs/auditoria/hf1/relatorio-hf1-revogar-responsavel.md`
-
-### H1 — Higiene de repositório
-- **Objetivo:** Documentação consolidada, índices, relatório de branches, riscos operacionais documentados, plano I1
-- **Branch:** `claude/h1-higiene-repo-docs-operacao`
-- **Entregável:** `docs/auditoria/h1/relatorio-h1-higiene-repo-docs-operacao.md`
+| Fase | Objetivo | Local |
+|---|---|---|
+| **QA1** | Validar vitrine pública e motor pedagógico | `antigos/relatorio-qa1-demo-pedagogia.md` |
+| **S1** | Segurança baseline: CI verde, RLS, `verify_jwt`, secrets, backup/LGPD | `auditoria/seguranca/s1/` |
+| **DB1** | Inventário do Supabase (tabelas, RLS, RPCs, views, Edge Functions) | `auditoria/banco/db1/` |
+| **DB2** | Limpeza controlada, idempotência de migrations, runbook | `auditoria/banco/db2/` |
+| **D1A** | Acesso da coordenação ao backoffice | `auditoria/operacional/d1a/` |
+| **D1B** | Provisionamento de alunos + CORS `backoffice-coordenador` | `auditoria/operacional/d1b/` |
+| **D1C** | SMTP, convite/redefinição de senha, reenvio de acesso | `auditoria/operacional/d1c/` |
+| **HF1** | Deploy `revogar-responsavel` + correção de bugs | `auditoria/operacional/hf1/` |
+| **H1** | Higiene de repositório, documentação, pendências operacionais | `auditoria/operacional/h1/` |
+| **AV2** | Auditoria funcional total e coerência do produto | `auditoria/produto/av2/` |
+| **I1** | Plano de implantação de escola nova | `auditoria/operacional/i1/` |
+| **I2** | Onboarding de alunos/responsáveis, códigos e trilhas (sem SQL) | `auditoria/operacional/i2/` |
+| **PED-UX1** | Correção Plano × Trilha + refinamento de UX | `auditoria/produto/ped-ux1/` |
+| **HF2** | Hotfix `provisionar-aluno` CORS + re-vínculo de responsável | `auditoria/operacional/hf2/` |
+| **HF3** | Hotfix criação de escola pelo backoffice (BUG-P1-001) | `auditoria/operacional/hf3/` |
+| **SEG1** | Segurança operacional imediata (exposição, secrets, CORS, headers, scanners) | `auditoria/seguranca/seg1/` |
+| **SEG2** | Produção/infra real: branch protection, CORS allowlist (deployado), headers A | `auditoria/seguranca/seg2/` |
 
 ---
 
 ## Próxima fase
 
 ### PR1 — Prontidão de Piloto Real
-- **Objetivo:** Preparar o ambiente para receber a primeira escola real em produção
-- **Pré-requisito:** H1 mergeado
-- **Escopo esperado:** checklist de go-live, validação de escola I1, credenciais de alunos reais, SMTP validado com domínio real, monitoramento mínimo
+Primeira escola real em produção. Pré-requisitos e pendências em
+[`07-pendencias-para-piloto-real.md`](./07-pendencias-para-piloto-real.md).
 
 ---
 
 ## Marcos de infraestrutura
 
-| Data (aprox.) | Marco |
-|---------------|-------|
-| — | Repositório criado, stack inicial |
-| — | Motor pedagógico (provas, XP, patentes) |
-| — | Multi-escola com RLS |
-| — | Fases 14.5 → 17 (histórico de build) |
-| 2026-06 | QA1: vitrine validada |
-| 2026-06 | S1: segurança baseline |
-| 2026-06 | DB1/DB2: banco consolidado |
-| 2026-06 | D1A/D1B/D1C: coordenação operacional |
-| 2026-06-24 | HF1: `revogar-responsavel` deployada |
-| 2026-06-24 | H1: higiene e docs |
+| Data | Marco |
+|---|---|
+| 2026-06-20 | audit-all: retrospectiva de todas as fases técnicas |
+| 2026-06-21 | DB2: runbook de migrations; backup/segurança apurados |
+| 2026-06-24 | HF1, H1, AV2, I2, PED-UX1, HF2 |
+| 2026-06-25 | HF3, SEG1 |
+| 2026-06-26/27 | SEG2: branch protection aplicada; 6 Edge Functions com CORS allowlist deployadas; headers nota A |
