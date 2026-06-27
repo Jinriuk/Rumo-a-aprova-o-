@@ -77,3 +77,17 @@ insert into missoes_escola (escola_id, missao_id, ativa, qtd_questoes, criterio_
   ('11111111-1111-4111-8111-111111111111', 'a1000000-0000-4000-8000-000000000002', true, 60,
    '≥60 questões e ≥75% nas últimas 20.', true, 'aaaaaaaa-0000-4000-8000-000000000001')
   on conflict (escola_id, missao_id) do nothing;
+
+-- ------------------------------------------------------------
+-- 5) CRITÉRIO ESTRUTURADO de fechamento (motor de progresso, PED1).
+--    O `criterio_conclusao` textual continua para a UI; o motor fecha
+--    a missão por número: meta_questoes (volume) + meta_acuracia
+--    (domínio na matéria). Volume vem do que a missão já sugeria;
+--    a acurácia-piso é um padrão de domínio uniforme (🟡 calibrar por
+--    edital). Sem qtd sugerida (ex.: redação), a missão não fecha
+--    sozinha — fica como acompanhamento manual da coordenação.
+-- ------------------------------------------------------------
+update missoes
+  set meta_questoes = coalesce(meta_questoes, qtd_questoes_sugerida),
+      meta_acuracia = coalesce(meta_acuracia, 70)
+  where qtd_questoes_sugerida is not null and meta_questoes is null;

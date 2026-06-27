@@ -16,14 +16,19 @@ import * as db from "../../shared/data/index.js";
 
 export function FichaAluno({ aluno, concurso }) {
   const T = useTema();
+  const examTag = concurso?.codigo ?? null;
   const { dados: carregado, carregando: carregandoDados, erro: erroDados } = useRecurso(
     () => (aluno
-      ? Promise.all([db.listarMetas(aluno.id), db.listarRegistros(aluno.id), db.listarSimulados(aluno.id)])
-          .then(([metas, registros, simulados]) => ({ metas, registros, simulados }))
-      : Promise.resolve({ metas: [], registros: [], simulados: [] })),
-    [aluno?.id],
+      ? Promise.all([
+          db.listarMetas(aluno.id), db.listarRegistros(aluno.id), db.listarSimulados(aluno.id),
+          // XP PERSISTIDO do aluno (motor PED1): best-effort, isolado por RLS
+          examTag ? db.carregarGamificacaoAluno(aluno.id, examTag).catch(() => ({ eventos: [] })) : Promise.resolve({ eventos: [] }),
+        ])
+          .then(([metas, registros, simulados, gam]) => ({ metas, registros, simulados, gam }))
+      : Promise.resolve({ metas: [], registros: [], simulados: [], gam: { eventos: [] } })),
+    [aluno?.id, examTag],
   );
-  const dados = carregado ?? { metas: [], registros: [], simulados: [] };
+  const dados = carregado ?? { metas: [], registros: [], simulados: [], gam: { eventos: [] } };
   const { trilha, carregando: carregandoTrilha, erro: erroTrilha } = useTrilha(aluno?.trilha_id);
 
   const semanasRegras = useMemo(
@@ -47,7 +52,11 @@ export function FichaAluno({ aluno, concurso }) {
   if (!m || !semanaAtiva) return <Empty txt="Fora do período da trilha deste aluno." />;
 
   const meta = dados.metas.find((x) => x.status === "ativa") ?? dados.metas[0] ?? null;
-  const xp = calcularXP({ metas: dados.metas, totalQuestoes: m.totDone, simulados: dados.simulados.length });
+  // XP PERSISTIDO manda quando há ledger; sem evento ainda, cai no derivado.
+  const xpPersistido = (dados.gam?.eventos ?? []).reduce((s, e) => s + (Number(e.pontos) || 0), 0);
+  const xp = (examTag && (dados.gam?.eventos ?? []).length > 0)
+    ? xpPersistido
+    : calcularXP({ metas: dados.metas, totalQuestoes: m.totDone, simulados: dados.simulados.length });
   const p = patente(xp);
   const turma = (aluno.alunos_turmas ?? []).map((v) => v.turmas?.nome).filter(Boolean)[0];
   const recentes = dados.registros.slice(0, 8);

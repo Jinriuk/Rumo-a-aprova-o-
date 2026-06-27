@@ -7,6 +7,11 @@
 -- Idempotente.
 -- ============================================================
 
+-- Fixture curado: o motor de progresso (0024) NÃO deve disparar em
+-- cima do seed e duplicar XP/níveis/missões já definidos manualmente
+-- nos seeds 08/10. O gatilho respeita este flag e não roda na semeadura.
+set app.motor_seed = 'on';
+
 select app.gerar_meta('a0000000-0000-4000-8000-000000000001');
 select app.gerar_meta('b0000000-0000-4000-8000-000000000001');
 
