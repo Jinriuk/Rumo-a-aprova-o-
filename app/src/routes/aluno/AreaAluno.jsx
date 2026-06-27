@@ -6,6 +6,7 @@ import React, { useEffect, useState } from "react";
 import { Cabecalho } from "../../shared/ui/Cabecalho.jsx";
 import { Empty, Erro } from "../../shared/ui/componentes.jsx";
 import { VisaoEstudo } from "./VisaoEstudo.jsx";
+import { AvisoMaturidade } from "../../modules/conteudo/SeloMaturidade.jsx";
 import { diasParaProva } from "../../modules/conteudo/concursos.js";
 import { fmtBR } from "../../shared/regras/regras.js";
 import { mensagemAmigavel } from "../../shared/lib/erros.js";
@@ -61,6 +62,9 @@ export default function AreaAluno({ perfil }) {
         {erro && <Erro>{erro}</Erro>}
         {aluno === undefined && !erro && <Empty txt="Carregando…" />}
         {aluno === null && <Empty txt="Sua conta não está ligada a um aluno. Fale com a coordenação." />}
+        {aluno && concurso && (
+          <AvisoMaturidade codigo={concurso.codigo} style={{ marginBottom: 14 }} />
+        )}
         {aluno && <VisaoEstudo aluno={aluno} podeEditar concurso={concurso} contexto={concurso ? concurso.nome.split(" (")[0] : "Plano de estudos"} />}
       </main>
     </div>
