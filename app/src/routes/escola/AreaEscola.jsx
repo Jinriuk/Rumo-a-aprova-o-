@@ -10,6 +10,7 @@ import { ListaAlunos } from "../../modules/pessoas/ListaAlunos.jsx";
 import { Marca } from "../../modules/escola/Marca.jsx";
 import { PainelConformidade } from "../../modules/consentimento/PainelConformidade.jsx";
 import { ClassificacaoTurma } from "../../modules/desempenho/ClassificacaoTurma.jsx";
+import { Relatorios } from "../../modules/desempenho/Relatorios.jsx";
 import { PainelGestao } from "../../modules/desempenho/PainelGestao.jsx";
 import { FichaAluno } from "../../modules/desempenho/FichaAluno.jsx";
 import { useRecurso } from "../../shared/hooks/useRecurso.js";
@@ -96,9 +97,14 @@ export default function AreaEscola({ perfil }) {
           )}
 
           {!carregando && !alunoAberto && tab === "ranking" && (
-            <ClassificacaoTurma alunos={dados.alunos} turmas={dados.turmas}
-              resumoPorAluno={resumoPorAluno}
-              simulados={dados.simuladosEscola} concursosPorId={concursosPorId} />
+            <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+              <ClassificacaoTurma alunos={dados.alunos} turmas={dados.turmas}
+                resumoPorAluno={resumoPorAluno}
+                simulados={dados.simuladosEscola} concursosPorId={concursosPorId} />
+              <Relatorios alunos={dados.alunos} turmas={dados.turmas}
+                concursosPorId={concursosPorId} resumoPorAluno={resumoPorAluno}
+                escolaNome={perfil.escola.nome} />
+            </div>
           )}
 
           {!carregando && !alunoAberto && tab === "turmas" && (
