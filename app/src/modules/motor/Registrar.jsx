@@ -2,8 +2,8 @@
    rápido com campos principais (matéria, questões, acertos, minutos) e
    secundários recolhíveis (tópico, observações, data). Resumo do dia
    no topo. Só o aluno escreve; o banco garante isso, não esta tela. */
-import React, { useEffect, useMemo, useState } from "react";
-import { SectionCard, EmptyState, Botao, Erro, useInputStyle, StatCard } from "../../shared/ui/componentes.jsx";
+import React, { useEffect, useId, useMemo, useState } from "react";
+import { SectionCard, EmptyState, Botao, Erro, useInputStyle, StatCard, Toast, useToast, useDialogo } from "../../shared/ui/componentes.jsx";
 import { useTema } from "../../shared/branding/BrandingContext.jsx";
 import { todayISO } from "../../shared/regras/regras.js";
 import { resumirRegistros } from "../../shared/metricas/agregados.js";
@@ -31,6 +31,11 @@ export function Registrar({ aluno, trilha, registros, aoMudar, minutosSugeridos 
   const { ocupado, erro, setErro, enviar } = useEnvioUnico("salvar");
   const [maisCampos, setMaisCampos] = useState(false);
   const set = (k, v) => setF({ ...f, [k]: v });
+  // confirmação visível de que o registro foi salvo (AV2 MEL-P3-001).
+  const { toast, mostrar, fechar } = useToast();
+  const dialogo = useDialogo();
+  const uid = useId();
+  const id = (k) => `${uid}-${k}`;
 
   // o cronômetro do topo manda o tempo direto pra cá, já formatado
   useEffect(() => {
@@ -63,15 +68,24 @@ export function Registrar({ aluno, trilha, registros, aoMudar, minutosSugeridos 
       await db.adicionarRegistro({ escola_id: aluno.escola_id, aluno_id: aluno.id, ...v.campos });
       setF({ ...branco, data: f.data, disciplina_codigo: f.disciplina_codigo });
       aoMudar?.();
+      mostrar("Registro salvo! Já entrou no seu desempenho.", "ok");
     });
   }
 
-  async function apagar(id) {
+  async function apagar(idRegistro) {
     // #18 — confirmação obrigatória: um toque acidental no × (sobretudo em
-    // mobile) não pode apagar um registro de estudo sem aviso.
-    if (typeof window !== "undefined" && !window.confirm("Remover este registro de estudo? Esta ação não pode ser desfeita.")) return;
+    // mobile) não pode apagar um registro de estudo sem aviso. Agora via
+    // modal do design system (UX1.2) no lugar do window.confirm nativo.
+    const ok = await dialogo.confirmar({
+      titulo: "Remover registro",
+      mensagem: "Remover este registro de estudo? Esta ação não pode ser desfeita.",
+      rotuloConfirmar: "Remover",
+      rotuloCancelar: "Cancelar",
+      perigo: true,
+    });
+    if (!ok) return;
     setErro(null);
-    try { await db.removerRegistro(id); aoMudar?.(); } catch (e) { setErro(mensagemAmigavel(e, "acao")); }
+    try { await db.removerRegistro(idRegistro); aoMudar?.(); } catch (e) { setErro(mensagemAmigavel(e, "acao")); }
   }
 
   const [limiteRecentes, setLimiteRecentes] = useState(7);
@@ -80,6 +94,8 @@ export function Registrar({ aluno, trilha, registros, aoMudar, minutosSugeridos 
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+      {dialogo.elemento}
+      {toast && <Toast texto={toast.texto} tom={toast.tom} aoFechar={fechar} />}
       {/* RESUMO DO DIA */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(150px,1fr))", gap: 10 }}>
         <StatCard rotulo="Questões hoje" valor={resumo.q} icone="✦" tom={resumo.q > 0 ? "neutro" : "neutro"} />
@@ -94,24 +110,26 @@ export function Registrar({ aluno, trilha, registros, aoMudar, minutosSugeridos 
       <SectionCard titulo="Registro rápido" sub="Lance o que estudou agora — leva segundos.">
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(140px,1fr))", gap: 12 }}>
           <div style={{ gridColumn: "1 / -1" }}>
-            <label style={lbl}>Matéria</label>
-            <select value={f.disciplina_codigo} onChange={(e) => set("disciplina_codigo", e.target.value)} style={inputS}>
+            <label htmlFor={id("mat")} style={lbl}>Matéria</label>
+            <select id={id("mat")} value={f.disciplina_codigo} onChange={(e) => set("disciplina_codigo", e.target.value)} style={inputS}>
               {trilha.disciplinas.map((s) => <option key={s.codigo} value={s.codigo} style={{ background: T.bg2 }}>{s.nome}</option>)}
             </select>
           </div>
           <div style={{ gridColumn: "1 / -1" }}>
-            <label style={lbl}>Tópico <span style={{ color: T.gold }}>*</span></label>
-            <input value={f.topico} onChange={(e) => set("topico", e.target.value)} placeholder="ex: divisibilidade — MDC e MMC" style={inputS} />
+            <label htmlFor={id("top")} style={lbl}>Tópico <span style={{ color: T.gold }} title="Campo obrigatório">*</span></label>
+            <input id={id("top")} value={f.topico} onChange={(e) => set("topico", e.target.value)} aria-required="true" placeholder="ex: divisibilidade — MDC e MMC (obrigatório)" style={inputS} />
           </div>
-          <div><label style={lbl}>Questões</label><input type="number" inputMode="numeric" min="0" value={f.questoes} onChange={(e) => set("questoes", e.target.value)} placeholder="0" style={inputS} /></div>
+          <div><label htmlFor={id("q")} style={lbl}>Questões</label><input id={id("q")} type="number" inputMode="numeric" min="0" value={f.questoes} onChange={(e) => set("questoes", e.target.value)} placeholder="0" style={inputS} /></div>
           <div>
-            <label style={lbl}>Acertos</label>
-            <input type="number" inputMode="numeric" min="0" value={f.acertos} onChange={(e) => set("acertos", e.target.value)} placeholder="0"
+            <label htmlFor={id("ac")} style={lbl}>Acertos</label>
+            <input id={id("ac")} type="number" inputMode="numeric" min="0" value={f.acertos} onChange={(e) => set("acertos", e.target.value)} placeholder="0"
+              aria-invalid={acertosDemais ? true : undefined}
               style={{ ...inputS, borderColor: acertosDemais ? T.red : T.line }} />
           </div>
           <div>
-            <label style={lbl}>Tempo</label>
-            <input value={f.tempo} onChange={(e) => set("tempo", e.target.value)} placeholder="1h30, 45min…"
+            <label htmlFor={id("tempo")} style={lbl}>Tempo</label>
+            <input id={id("tempo")} value={f.tempo} onChange={(e) => set("tempo", e.target.value)} placeholder="1h30, 45min…"
+              aria-invalid={tempoInvalido ? true : undefined}
               style={{ ...inputS, borderColor: tempoInvalido ? T.red : minutosSugeridos > 0 && f.tempo ? T.gold : T.line }} />
           </div>
         </div>
@@ -125,8 +143,8 @@ export function Registrar({ aluno, trilha, registros, aoMudar, minutosSugeridos 
         </button>
         {maisCampos && (
           <div style={{ display: "grid", gap: 12, marginTop: 4 }}>
-            <div><label style={lbl}>Observações</label><input value={f.obs} onChange={(e) => set("obs", e.target.value)} placeholder="onde travou, o que revisar…" style={inputS} /></div>
-            <div style={{ maxWidth: 200 }}><label style={lbl}>Data</label><input type="date" value={f.data} onChange={(e) => set("data", e.target.value)} style={inputS} /></div>
+            <div><label htmlFor={id("obs")} style={lbl}>Observações</label><input id={id("obs")} value={f.obs} onChange={(e) => set("obs", e.target.value)} placeholder="onde travou, o que revisar…" style={inputS} /></div>
+            <div style={{ maxWidth: 200 }}><label htmlFor={id("data")} style={lbl}>Data</label><input id={id("data")} type="date" value={f.data} onChange={(e) => set("data", e.target.value)} style={inputS} /></div>
           </div>
         )}
 

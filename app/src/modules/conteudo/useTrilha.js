@@ -1,15 +1,19 @@
 /* Consumo da trilha (conteúdo global, SÓ leitura no front — o
    método é do operador; a escola e o aluno consomem). */
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import * as db from "../../shared/data/index.js";
 import { mensagemAmigavel } from "../../shared/lib/erros.js";
 
 export function useTrilha(trilhaId) {
   const [estado, setEstado] = useState({ carregando: true, erro: null, trilha: null });
+  // versão permite recarregar (retry) sem mudar o trilhaId.
+  const [versao, setVersao] = useState(0);
+  const recarregar = useCallback(() => setVersao((v) => v + 1), []);
 
   useEffect(() => {
     if (!trilhaId) { setEstado({ carregando: false, erro: null, trilha: null }); return; }
     let vivo = true;
+    setEstado((e) => (e.trilha == null ? { carregando: true, erro: null, trilha: null } : { ...e, erro: null }));
     db.carregarTrilha(trilhaId)
       .then((dados) => {
         if (!vivo) return;
@@ -26,7 +30,8 @@ export function useTrilha(trilhaId) {
       })
       .catch((e) => vivo && setEstado({ carregando: false, erro: mensagemAmigavel(e, "carregar"), trilha: null }));
     return () => { vivo = false; };
-  }, [trilhaId]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [trilhaId, versao]);
 
-  return estado;
+  return { ...estado, recarregar };
 }

@@ -112,7 +112,7 @@ export function ClassificacaoTurma({ alunos, turmas, resumoPorAluno = {}, simula
           {modo === "estudos" && seletor(criterio, setCriterio, Object.entries(CRITERIOS_ESTUDO).map(([k, c]) => [k, c.rotulo]))}
           {modo === "estudos" && seletor(janela, setJanela, [["semana", "7 dias"], ["geral", "Geral"]])}
           {turmas.length > 0 && (
-            <select value={turmaId} onChange={(e) => setTurmaId(e.target.value)}
+            <select value={turmaId} onChange={(e) => setTurmaId(e.target.value)} aria-label="Filtrar por turma"
               style={{ background: T.bg, border: `1px solid ${T.line}`, color: T.ink, borderRadius: 8, padding: "8px 10px", fontSize: 13 }}>
               <option value="" style={{ background: T.bg2 }}>Todas as turmas</option>
               {turmas.map((t) => <option key={t.id} value={t.id} style={{ background: T.bg2 }}>{t.nome}</option>)}

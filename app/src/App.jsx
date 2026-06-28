@@ -41,7 +41,14 @@ export default function App() {
     );
   }
 
-  if (carregando) return <TelaNeutra>Carregando…</TelaNeutra>;
+  if (carregando) return (
+    <TelaNeutra>
+      <div role="status" aria-live="polite" style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 14 }}>
+        <div className="skel" style={{ width: 44, height: 44, borderRadius: 11 }} />
+        <div style={{ fontSize: 14 }}>Preparando seu painel…</div>
+      </div>
+    </TelaNeutra>
+  );
   if (!sessao) return <Login />;
 
   // Backoffice interno (17.4): invisível para qualquer papel de escola;

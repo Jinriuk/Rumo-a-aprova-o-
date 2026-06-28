@@ -12,7 +12,7 @@
    que cada um lê).
    ============================================================ */
 import React from "react";
-import { SectionCard, Empty, Erro, EmptyState, StatusBadge } from "../../shared/ui/componentes.jsx";
+import { SectionCard, EmptyState, StatusBadge, CarregandoBloco } from "../../shared/ui/componentes.jsx";
 import { useTema } from "../../shared/branding/BrandingContext.jsx";
 import { useRecurso } from "../../shared/hooks/useRecurso.js";
 import { montarMissoesDoAluno, desviosDeMissao } from "./missoes.js";
@@ -41,7 +41,11 @@ export function TrilhaConcurso({ examTag, concursoNome, nivel = null, compacto =
       </SectionCard>
     );
   }
-  if (carregando) return <Empty txt="Carregando a trilha do concurso…" />;
+  if (carregando) return (
+    <SectionCard titulo="Trilha do concurso" sub="Plano pedagógico por prova.">
+      <CarregandoBloco titulo="Carregando a trilha do concurso…" linhas={4} />
+    </SectionCard>
+  );
   if (erro) {
     const ehProblemaDeRede = /instável|connexão|offline/i.test(erro);
     return (
@@ -67,7 +71,9 @@ export function TrilhaConcurso({ examTag, concursoNome, nivel = null, compacto =
       {/* horizontes da trilha (anual / reta final / …) por concurso */}
       <SectionCard
         titulo="Trilha do concurso"
-        sub={concursoNome ? `Plano de ${concursoNome.split(" (")[0]} (por prova).` : "Plano pedagógico por prova."}
+        sub={concursoNome
+          ? `Plano de ${concursoNome.split(" (")[0]} (por prova). Cartões apenas informativos.`
+          : "Plano pedagógico por prova. Cartões apenas informativos."}
         semPadding
       >
         {planos.length === 0 ? (

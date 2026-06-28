@@ -107,7 +107,7 @@ export function PainelGestao({ resumo, aoIr, aoIrFiltrado }) {
       {/* RANKING RESUMIDO — critério escolhido pela escola */}
       <SectionCard titulo="Destaques da semana" acao={
         <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-          <select value={criterio} onChange={(e) => setCriterio(e.target.value)}
+          <select value={criterio} onChange={(e) => setCriterio(e.target.value)} aria-label="Critério de destaque"
             style={{ background: T.bg, border: `1px solid ${T.line}`, color: T.ink, borderRadius: 8, padding: "7px 9px", fontSize: 12 }}>
             {Object.entries(CRITERIOS).map(([k, c]) => <option key={k} value={k} style={{ background: T.bg2 }}>{c.rotulo}</option>)}
           </select>

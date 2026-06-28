@@ -2,7 +2,8 @@
    Painel / Alunos / Ranking / Turmas / LGPD / Marca. */
 import React, { useEffect, useMemo, useReducer, useState } from "react";
 import { Cabecalho } from "../../shared/ui/Cabecalho.jsx";
-import { SectionCard, Empty, Erro, EmptyState } from "../../shared/ui/componentes.jsx";
+import { SectionCard, Erro, ErroComRetry, EmptyState, CarregandoBloco, useDialogo } from "../../shared/ui/componentes.jsx";
+import { nomeValido, limparNome } from "../../shared/validacao.js";
 import { MenuPrincipal } from "../../shared/ui/MenuPrincipal.jsx";
 import { useTema } from "../../shared/branding/BrandingContext.jsx";
 import { NovaTurma, PainelCadastroAlunos, CredencialGerada } from "../../modules/pessoas/CadastroAlunos.jsx";
@@ -78,8 +79,8 @@ export default function AreaEscola({ perfil }) {
           usuario={{ nome: perfil.usuario.nome, sub: "Coordenação" }} />
 
         <div className="fade" key={tab + (alunoAberto?.id ?? "")}>
-          {erro && <Erro>{erro}</Erro>}
-          {carregando && <Empty txt="Carregando dados da escola…" />}
+          {erro && <ErroComRetry aoTentar={recarregar}>{erro}</ErroComRetry>}
+          {carregando && <CarregandoBloco titulo="Carregando dados da escola…" cartoes={4} linhas={4} />}
 
           {!carregando && alunoAberto && (
             <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
@@ -140,6 +141,7 @@ export default function AreaEscola({ perfil }) {
 function Turmas({ turmas, alunos, porAluno, aoMudar, aoVerRanking, aoVerAluno }) {
   const T = useTema();
   const [turmaAberta, setTurmaAberta] = useState(null);
+  const dialogo = useDialogo();
 
   // Fase B-min, B.6: antes recalculava alunos+stats de TODAS as turmas
   // a cada render (inclusive ao só abrir/fechar uma turma) — O(turmas
@@ -166,21 +168,53 @@ function Turmas({ turmas, alunos, porAluno, aoMudar, aoVerRanking, aoVerAluno })
   const alunosDaTurma = (turmaId) => (porTurma.get(turmaId) ?? vazia).alunos;
   const statsTurma = (turmaId) => porTurma.get(turmaId) ?? vazia;
 
-  // a escola gerencia as próprias turmas: renomear e excluir (Fase 10)
+  const [erroAcao, setErroAcao] = useState(null);
+
+  // a escola gerencia as próprias turmas: renomear e excluir (Fase 10).
+  // Diálogos do design system (UX1.2) no lugar de prompt/confirm/alert nativos.
   async function renomear(t) {
-    const nome = window.prompt("Novo nome da turma:", t.nome);
-    if (!nome || nome.trim() === t.nome) return;
-    try { await db.renomearTurma(t.id, nome.trim()); aoMudar?.(); } catch (e) { window.alert(mensagemAmigavel(e, "salvar")); }
+    const nome = await dialogo.prompt({
+      titulo: "Renomear turma",
+      mensagem: `Escolha um novo nome para a turma "${t.nome}".`,
+      rotulo: "Nome da turma",
+      valorInicial: t.nome,
+      placeholder: "ex: Turma CN 2026 — manhã",
+      rotuloConfirmar: "Salvar nome",
+      validar: (v) => (nomeValido(v) ? null : "Use de 2 a 80 caracteres."),
+    });
+    if (!nome || limparNome(nome) === t.nome) return;
+    setErroAcao(null);
+    try { await db.renomearTurma(t.id, limparNome(nome)); aoMudar?.(); }
+    catch (e) { setErroAcao(mensagemAmigavel(e, "salvar")); }
   }
   async function excluir(t, n) {
-    if (n > 0) { window.alert(`A turma "${t.nome}" tem ${n} aluno(s). Mova os alunos antes de excluir.`); return; }
-    if (!window.confirm(`Excluir a turma "${t.nome}"? Esta ação não tem volta.`)) return;
-    try { await db.removerTurma(t.id); aoMudar?.(); } catch (e) { window.alert(mensagemAmigavel(e, "acao")); }
+    if (n > 0) {
+      await dialogo.confirmar({
+        titulo: "Não é possível excluir agora",
+        mensagem: `A turma "${t.nome}" tem ${n} aluno(s). Mova os alunos para outra turma antes de excluí-la.`,
+        rotuloConfirmar: "Entendi",
+        rotuloCancelar: "Fechar",
+      });
+      return;
+    }
+    const ok = await dialogo.confirmar({
+      titulo: "Excluir turma",
+      mensagem: `Excluir a turma "${t.nome}"? Esta ação não pode ser desfeita.`,
+      rotuloConfirmar: "Excluir turma",
+      rotuloCancelar: "Cancelar",
+      perigo: true,
+    });
+    if (!ok) return;
+    setErroAcao(null);
+    try { await db.removerTurma(t.id); aoMudar?.(); }
+    catch (e) { setErroAcao(mensagemAmigavel(e, "acao")); }
   }
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+      {dialogo.elemento}
       <NovaTurma aoMudar={aoMudar} />
+      {erroAcao && <Erro>{erroAcao}</Erro>}
       <SectionCard titulo="Turmas" sub="Visão rápida do desempenho de cada turma" semPadding>
         {turmas.length === 0 ? (
           <div style={{ padding: 8 }}><EmptyState icone="🎓" titulo="Nenhuma turma ainda" dica="Crie a primeira turma acima e cadastre alunos na aba Alunos." /></div>

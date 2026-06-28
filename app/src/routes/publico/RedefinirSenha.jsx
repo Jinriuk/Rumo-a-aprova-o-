@@ -2,7 +2,7 @@
    link de acesso enviado pelo backoffice ou no "Esqueci minha senha".
    O Supabase processa o hash da URL automaticamente e cria a sessão de
    recuperação; esta tela só lida com o updateUser. */
-import React, { useState } from "react";
+import React, { useId, useState } from "react";
 import { BASE, FONTES_CSS } from "../../shared/ui/tema.js";
 import * as db from "../../shared/data/index.js";
 
@@ -31,6 +31,8 @@ export default function RedefinirSenha() {
   const [confirmacao, setConfirmacao] = useState("");
   const [estado, setEstado] = useState("idle"); // idle | salvando | sucesso | erro
   const [erro, setErro] = useState("");
+  const uid = useId();
+  const idSenha = `${uid}-senha`, idConfirma = `${uid}-confirma`;
 
   const forca = forcaSenha(senha);
   const senhaOk = forca.nivel >= 2;
@@ -94,13 +96,15 @@ export default function RedefinirSenha() {
         </p>
 
         <form onSubmit={submit}>
-          <label style={lbl}>Nova senha</label>
+          <label htmlFor={idSenha} style={lbl}>Nova senha</label>
           <input
+            id={idSenha}
             type="password"
             value={senha}
             onChange={(e) => { setSenha(e.target.value); setErro(""); }}
             autoComplete="new-password"
             placeholder="Mínimo 8 caracteres"
+            aria-invalid={senha && !senhaOk ? true : undefined}
             style={{ ...inputS, borderColor: senha && !senhaOk ? T.red : T.line }}
           />
           {senha && (
@@ -109,13 +113,15 @@ export default function RedefinirSenha() {
             </div>
           )}
 
-          <label style={lbl}>Confirmar senha</label>
+          <label htmlFor={idConfirma} style={lbl}>Confirmar senha</label>
           <input
+            id={idConfirma}
             type="password"
             value={confirmacao}
             onChange={(e) => { setConfirmacao(e.target.value); setErro(""); }}
             autoComplete="new-password"
             placeholder="Digite a senha novamente"
+            aria-invalid={confirmacao && !igual ? true : undefined}
             style={{ ...inputS, borderColor: confirmacao && !igual ? T.red : T.line }}
           />
           {confirmacao && !igual && (

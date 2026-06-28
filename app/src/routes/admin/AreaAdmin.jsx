@@ -4,10 +4,10 @@
    com edição, ações de status e provisionamento de coordenador — tudo
    via RPC/Edge Function com porteiro. Credencial de admin nunca no navegador.
    D1B: backoffice substitui os scripts manuais de provisionamento. */
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useId, useMemo, useState } from "react";
 import {
-  SectionCard, Empty, Erro, EmptyState, StatCard, StatusBadge,
-  Botao, BotaoMini, useInputStyle,
+  SectionCard, Erro, ErroComRetry, EmptyState, StatCard, StatusBadge,
+  Botao, BotaoMini, useInputStyle, CarregandoBloco, Tabs,
 } from "../../shared/ui/componentes.jsx";
 import { useTema } from "../../shared/branding/BrandingContext.jsx";
 import { useRecurso } from "../../shared/hooks/useRecurso.js";
@@ -40,6 +40,9 @@ export default function AreaAdmin() {
   const { dados: dash, recarregar: recDash } = useRecurso(() => db.backofficeDashboard(), []);
   const { dados: logs, recarregar: recLogs } = useRecurso(() => db.backofficeLogs(200), []);
   const [aberta, setAberta] = useState(null);
+  // Abas do backoffice (UX1.2): Visão / Escolas / Logs — antes tudo numa
+  // página só, com rolagem longa. Cada aba carrega seu bloco.
+  const [abaAdmin, setAbaAdmin] = useState("visao");
 
   const recarregarTudo = () => { recarregar(); recDash(); recLogs(); };
   const lista = escolas ?? [];
@@ -52,7 +55,7 @@ export default function AreaAdmin() {
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
             <div className="disp" style={{ width: 34, height: 34, borderRadius: 8, background: `linear-gradient(135deg,${T.gold},#9c7d2e)`, display: "flex", alignItems: "center", justifyContent: "center", color: "#0A1622", fontWeight: 800, fontSize: 17 }}>⚓</div>
             <div>
-              <div className="disp" style={{ fontSize: 16, fontWeight: 800, color: T.gold, lineHeight: 1.1 }}>Backoffice</div>
+              <h1 className="disp" style={{ margin: 0, fontSize: 16, fontWeight: 800, color: T.gold, lineHeight: 1.1 }}>Backoffice</h1>
               <div style={{ fontSize: 11.5, color: T.sub }}>Operação interna · super_admin</div>
             </div>
           </div>
@@ -64,8 +67,8 @@ export default function AreaAdmin() {
       </header>
 
       <main style={{ maxWidth: 1080, margin: "0 auto", padding: "16px", display: "flex", flexDirection: "column", gap: 16 }}>
-        {erro && <Erro>{erro}</Erro>}
-        {carregando && <Empty txt="Carregando escolas…" />}
+        {erro && <ErroComRetry aoTentar={recarregarTudo}>{erro}</ErroComRetry>}
+        {carregando && <CarregandoBloco titulo="Carregando escolas…" cartoes={4} linhas={5} />}
 
         {!carregando && !erro && aberta && (
           <DetalheEscola escolaId={aberta} aoVoltar={() => { setAberta(null); recarregarTudo(); }} aoMudar={recarregarTudo} />
@@ -73,10 +76,25 @@ export default function AreaAdmin() {
 
         {!carregando && !erro && !aberta && (
           <>
-            <Dashboard dash={dash} lista={lista} />
-            <NovaEscola aoCriar={recarregarTudo} />
-            <ListaEscolas lista={lista} aoAbrir={setAberta} />
-            <AtividadeAdmin logs={logs} nomePorEscola={nomePorEscola} />
+            <Tabs
+              abas={[
+                ["visao", "Visão geral"],
+                ["escolas", "Escolas", lista.length],
+                ["logs", "Logs", (logs ?? []).length],
+              ]}
+              ativo={abaAdmin}
+              aoTrocar={(k) => { setAbaAdmin(k); window.scrollTo({ top: 0, behavior: "instant" }); }}
+            />
+            <div className="fade" key={abaAdmin} style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+              {abaAdmin === "visao" && <Dashboard dash={dash} lista={lista} />}
+              {abaAdmin === "escolas" && (
+                <>
+                  <NovaEscola aoCriar={recarregarTudo} />
+                  <ListaEscolas lista={lista} aoAbrir={setAberta} />
+                </>
+              )}
+              {abaAdmin === "logs" && <AtividadeAdmin logs={logs} nomePorEscola={nomePorEscola} />}
+            </div>
           </>
         )}
       </main>
@@ -147,6 +165,8 @@ function SeloCategoria({ escola }) {
 function ListaEscolas({ lista, aoAbrir }) {
   const T = useTema();
   const { input: inputS, label: lbl } = useInputStyle();
+  const uid = useId();
+  const fid = (k) => `${uid}-${k}`;
   const [busca, setBusca] = useState("");
   const [fStatus, setFStatus] = useState("");
   const [fPlano, setFPlano] = useState("");
@@ -176,18 +196,18 @@ function ListaEscolas({ lista, aoAbrir }) {
     <SectionCard titulo="Escolas" sub={`${filtrada.length} de ${lista.length} · clique para ver detalhe e ações`} semPadding>
       <div style={{ padding: 12, borderBottom: `1px solid ${T.line}`, display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(150px,1fr))", gap: 10 }}>
         <div style={{ gridColumn: "1 / -1" }}>
-          <input value={busca} onChange={(e) => setBusca(e.target.value)} placeholder="🔎 Buscar por nome, slug ou cidade" style={inputS} />
+          <input value={busca} onChange={(e) => setBusca(e.target.value)} placeholder="🔎 Buscar por nome, slug ou cidade" aria-label="Buscar escola por nome, slug ou cidade" style={inputS} />
         </div>
         <div>
-          <label style={lbl}>Status</label>
-          <select value={fStatus} onChange={(e) => setFStatus(e.target.value)} style={selS}>
+          <label htmlFor={fid("status")} style={lbl}>Status</label>
+          <select id={fid("status")} value={fStatus} onChange={(e) => setFStatus(e.target.value)} style={selS}>
             <option value="">Todos</option>
             {Object.entries(STATUS).map(([k, v]) => <option key={k} value={k}>{v.rotulo}</option>)}
           </select>
         </div>
         <div>
-          <label style={lbl}>Categoria</label>
-          <select value={fCategoria} onChange={(e) => setFCategoria(e.target.value)} style={selS}>
+          <label htmlFor={fid("categoria")} style={lbl}>Categoria</label>
+          <select id={fid("categoria")} value={fCategoria} onChange={(e) => setFCategoria(e.target.value)} style={selS}>
             <option value="">Todas</option>
             <option value="real">Escola real (B2B)</option>
             <option value="teste">Teste/Piloto</option>
@@ -196,15 +216,15 @@ function ListaEscolas({ lista, aoAbrir }) {
           </select>
         </div>
         <div>
-          <label style={lbl}>Plano</label>
-          <select value={fPlano} onChange={(e) => setFPlano(e.target.value)} style={selS}>
+          <label htmlFor={fid("plano")} style={lbl}>Plano</label>
+          <select id={fid("plano")} value={fPlano} onChange={(e) => setFPlano(e.target.value)} style={selS}>
             <option value="">Todos</option>
             {planos.map((p) => <option key={p} value={p}>{p}</option>)}
           </select>
         </div>
         <div>
-          <label style={lbl}>Ordenar por</label>
-          <select value={ordem} onChange={(e) => setOrdem(e.target.value)} style={selS}>
+          <label htmlFor={fid("ordem")} style={lbl}>Ordenar por</label>
+          <select id={fid("ordem")} value={ordem} onChange={(e) => setOrdem(e.target.value)} style={selS}>
             <option value="nome">Nome (A–Z)</option>
             <option value="alunos">Mais alunos</option>
             <option value="recente">Acesso recente</option>
@@ -253,6 +273,8 @@ function ListaEscolas({ lista, aoAbrir }) {
 function NovaEscola({ aoCriar }) {
   const { input: inputS, label: lbl } = useInputStyle();
   const T = useTema();
+  const uid = useId();
+  const fid = (k) => `${uid}-${k}`;
   const [aberto, setAberto] = useState(false);
   const [f, setF] = useState({
     // Bloco A — dados da escola
@@ -331,53 +353,56 @@ function NovaEscola({ aoCriar }) {
       <BlocoLabel titulo="Bloco A — Dados da escola" />
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(150px,1fr))", gap: 12, marginBottom: 18 }}>
         <div style={{ gridColumn: "1 / -1" }}>
-          <label style={lbl}>Nome de exibição *</label>
-          <input value={f.nome} onChange={(e) => set("nome", e.target.value)} placeholder="ex: Colégio Vitrine Naval" style={inputS} />
+          <label htmlFor={fid("nome")} style={lbl}>Nome de exibição *</label>
+          <input id={fid("nome")} value={f.nome} onChange={(e) => set("nome", e.target.value)} placeholder="ex: Colégio Vitrine Naval" style={inputS} />
         </div>
         <div>
-          <label style={lbl}>Slug (URL) *</label>
-          <input value={f.slug} onChange={(e) => set("slug", e.target.value.toLowerCase())} placeholder="vitrine"
+          <label htmlFor={fid("slug")} style={lbl}>Slug (URL) *</label>
+          <input id={fid("slug")} value={f.slug} onChange={(e) => set("slug", e.target.value.toLowerCase())} placeholder="vitrine"
+            aria-invalid={f.slug && !slugValido ? true : undefined}
             style={{ ...inputS, borderColor: f.slug && !slugValido ? T.red : T.line, fontFamily: "monospace" }} />
           {f.slug && !slugValido && <div style={{ fontSize: 11, color: T.red, marginTop: 3 }}>2–40 chars, minúsculas, números e hífen.</div>}
         </div>
         <div>
-          <label style={lbl}>Status inicial</label>
-          <select value={f.statusInicial} onChange={(e) => set("statusInicial", e.target.value)} style={selS}>
+          <label htmlFor={fid("status")} style={lbl}>Status inicial</label>
+          <select id={fid("status")} value={f.statusInicial} onChange={(e) => set("statusInicial", e.target.value)} style={selS}>
             {Object.entries(STATUS).map(([k, v]) => <option key={k} value={k}>{v.rotulo}</option>)}
           </select>
         </div>
         <div>
-          <label style={lbl}>Plano</label>
-          <input value={f.plano} onChange={(e) => set("plano", e.target.value)} placeholder="ex: padrão" style={inputS} />
+          <label htmlFor={fid("plano")} style={lbl}>Plano</label>
+          <input id={fid("plano")} value={f.plano} onChange={(e) => set("plano", e.target.value)} placeholder="ex: padrão" style={inputS} />
         </div>
         <div>
-          <label style={lbl}>Limite de alunos</label>
-          <input type="number" min="0" inputMode="numeric" value={f.limite} onChange={(e) => set("limite", e.target.value)} placeholder="opcional" style={inputS} />
+          <label htmlFor={fid("limite")} style={lbl}>Limite de alunos</label>
+          <input id={fid("limite")} type="number" min="0" inputMode="numeric" value={f.limite} onChange={(e) => set("limite", e.target.value)} placeholder="opcional" style={inputS} />
         </div>
         <div>
-          <label style={lbl}>Cidade</label>
-          <input value={f.cidade} onChange={(e) => set("cidade", e.target.value)} style={inputS} />
+          <label htmlFor={fid("cidade")} style={lbl}>Cidade</label>
+          <input id={fid("cidade")} value={f.cidade} onChange={(e) => set("cidade", e.target.value)} style={inputS} />
         </div>
         <div>
-          <label style={lbl}>UF</label>
-          <input value={f.uf} onChange={(e) => set("uf", e.target.value.toUpperCase().slice(0, 2))} placeholder="RJ"
+          <label htmlFor={fid("uf")} style={lbl}>UF</label>
+          <input id={fid("uf")} value={f.uf} onChange={(e) => set("uf", e.target.value.toUpperCase().slice(0, 2))} placeholder="RJ"
+            aria-invalid={!ufValido ? true : undefined}
             style={{ ...inputS, borderColor: !ufValido ? T.red : T.line }} />
         </div>
         <div>
-          <label style={lbl}>Cor de acento</label>
+          <label htmlFor={fid("cor")} style={lbl}>Cor de acento</label>
           <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-            <input value={f.corAcento} onChange={(e) => set("corAcento", e.target.value)} placeholder="#CDA349"
+            <input id={fid("cor")} value={f.corAcento} onChange={(e) => set("corAcento", e.target.value)} placeholder="#CDA349"
+              aria-invalid={!corValida ? true : undefined}
               style={{ ...inputS, borderColor: corValida ? T.line : T.red, fontFamily: "monospace" }} />
             <span style={{ width: 38, height: 38, flexShrink: 0, borderRadius: 8, border: `1px solid ${T.line}`, background: corValida && f.corAcento ? f.corAcento : T.bg }} />
           </div>
         </div>
         <div style={{ gridColumn: "1 / -1" }}>
-          <label style={lbl}>Logo (URL)</label>
-          <input value={f.logoUrl} onChange={(e) => set("logoUrl", e.target.value)} placeholder="https://…" style={inputS} />
+          <label htmlFor={fid("logo")} style={lbl}>Logo (URL)</label>
+          <input id={fid("logo")} value={f.logoUrl} onChange={(e) => set("logoUrl", e.target.value)} placeholder="https://…" style={inputS} />
         </div>
         <div style={{ gridColumn: "1 / -1" }}>
-          <label style={lbl}>Observação interna (não aparece para a escola)</label>
-          <textarea value={f.observacao} onChange={(e) => set("observacao", e.target.value)} rows={2} style={{ ...inputS, minHeight: 56, resize: "vertical" }} />
+          <label htmlFor={fid("obs")} style={lbl}>Observação interna (não aparece para a escola)</label>
+          <textarea id={fid("obs")} value={f.observacao} onChange={(e) => set("observacao", e.target.value)} rows={2} style={{ ...inputS, minHeight: 56, resize: "vertical" }} />
         </div>
       </div>
 
@@ -385,21 +410,22 @@ function NovaEscola({ aoCriar }) {
       <BlocoLabel titulo="Bloco B — Contato administrativo" />
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(150px,1fr))", gap: 12, marginBottom: 18 }}>
         <div style={{ gridColumn: "1 / -1" }}>
-          <label style={lbl}>Nome do responsável administrativo</label>
-          <input value={f.contatoNome} onChange={(e) => set("contatoNome", e.target.value)} placeholder="ex: João Diretor" style={inputS} />
+          <label htmlFor={fid("contatoNome")} style={lbl}>Nome do responsável administrativo</label>
+          <input id={fid("contatoNome")} value={f.contatoNome} onChange={(e) => set("contatoNome", e.target.value)} placeholder="ex: João Diretor" style={inputS} />
         </div>
         <div style={{ gridColumn: "1 / -1" }}>
-          <label style={lbl}>E-mail institucional da escola</label>
-          <input type="email" value={f.emailInstitucional} onChange={(e) => set("emailInstitucional", e.target.value)} placeholder="escola@dominio.com.br"
+          <label htmlFor={fid("emailInst")} style={lbl}>E-mail institucional da escola</label>
+          <input id={fid("emailInst")} type="email" value={f.emailInstitucional} onChange={(e) => set("emailInstitucional", e.target.value)} placeholder="escola@dominio.com.br"
+            aria-invalid={f.emailInstitucional && !emailInstValido ? true : undefined}
             style={{ ...inputS, borderColor: f.emailInstitucional && !emailInstValido ? T.red : T.line }} />
         </div>
         <div style={{ gridColumn: "1 / -1" }}>
-          <label style={lbl}>Telefone / WhatsApp</label>
-          <input value={f.telefoneContato} onChange={(e) => set("telefoneContato", e.target.value)} placeholder="(21) 9xxxx-xxxx" style={inputS} />
+          <label htmlFor={fid("tel")} style={lbl}>Telefone / WhatsApp</label>
+          <input id={fid("tel")} value={f.telefoneContato} onChange={(e) => set("telefoneContato", e.target.value)} placeholder="(21) 9xxxx-xxxx" style={inputS} />
         </div>
         <div style={{ gridColumn: "1 / -1" }}>
-          <label style={lbl}>Observação de contato</label>
-          <textarea value={f.contatoObservacao} onChange={(e) => set("contatoObservacao", e.target.value)} rows={2} style={{ ...inputS, minHeight: 52, resize: "vertical" }} />
+          <label htmlFor={fid("contatoObs")} style={lbl}>Observação de contato</label>
+          <textarea id={fid("contatoObs")} value={f.contatoObservacao} onChange={(e) => set("contatoObservacao", e.target.value)} rows={2} style={{ ...inputS, minHeight: 52, resize: "vertical" }} />
         </div>
       </div>
 
@@ -422,12 +448,13 @@ function NovaEscola({ aoCriar }) {
         {f.opcaoCoord === "criar" && (
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(150px,1fr))", gap: 12, padding: "12px", background: T.bg, border: `1px solid ${T.line}`, borderRadius: 10 }}>
             <div style={{ gridColumn: "1 / -1" }}>
-              <label style={lbl}>Nome do coordenador *</label>
-              <input value={f.coordNome} onChange={(e) => set("coordNome", e.target.value)} placeholder="ex: Maria Coordenadora" style={inputS} />
+              <label htmlFor={fid("coordNome")} style={lbl}>Nome do coordenador *</label>
+              <input id={fid("coordNome")} value={f.coordNome} onChange={(e) => set("coordNome", e.target.value)} placeholder="ex: Maria Coordenadora" style={inputS} />
             </div>
             <div style={{ gridColumn: "1 / -1" }}>
-              <label style={lbl}>E-mail do coordenador *</label>
-              <input type="email" value={f.coordEmail} onChange={(e) => set("coordEmail", e.target.value)} placeholder="coord@escola.com.br"
+              <label htmlFor={fid("coordEmail")} style={lbl}>E-mail do coordenador *</label>
+              <input id={fid("coordEmail")} type="email" value={f.coordEmail} onChange={(e) => set("coordEmail", e.target.value)} placeholder="coord@escola.com.br"
+                aria-invalid={f.coordEmail && !emailCoordValido ? true : undefined}
                 style={{ ...inputS, borderColor: f.coordEmail && !emailCoordValido ? T.red : T.line }} />
               <div style={{ fontSize: 11, color: T.sub, marginTop: 4 }}>
                 Um link para definir a senha será enviado para este e-mail. Senha nunca é exposta.
@@ -457,6 +484,8 @@ function BlocoLabel({ titulo }) {
 function AtividadeAdmin({ logs, nomePorEscola }) {
   const T = useTema();
   const { input: inputS, label: lbl } = useInputStyle();
+  const uid = useId();
+  const fid = (k) => `${uid}-${k}`;
   const todas = logs ?? [];
   const [busca, setBusca] = useState("");
   const [fAcao, setFAcao] = useState("");
@@ -473,31 +502,38 @@ function AtividadeAdmin({ logs, nomePorEscola }) {
     () => filtrarLogs(todas, { busca, acao: fAcao, escolaId: fEscola, periodoDias: +fPeriodo, nomePorEscola }),
     [todas, busca, fAcao, fEscola, fPeriodo, nomePorEscola]);
 
+  // paginação simples (UX1.2): mostra 30 e carrega mais sob demanda — antes
+  // despejava até 200 linhas de uma vez. Volta a 30 quando o filtro muda.
+  const POR_PAGINA = 30;
+  const [limite, setLimite] = useState(POR_PAGINA);
+  useEffect(() => { setLimite(POR_PAGINA); }, [busca, fAcao, fEscola, fPeriodo]);
+  const visiveis = lista.slice(0, limite);
+
   const selS = { ...inputS, minHeight: 42, fontSize: 13.5, padding: "9px 10px" };
 
   return (
     <SectionCard titulo="Logs administrativos" sub={`${lista.length} de ${todas.length} · trilha de auditoria (admin_logs) — filtre por escola, ação ou período.`} semPadding>
       <div style={{ padding: 12, borderBottom: `1px solid ${T.line}`, display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(150px,1fr))", gap: 10 }}>
         <div style={{ gridColumn: "1 / -1" }}>
-          <input value={busca} onChange={(e) => setBusca(e.target.value)} placeholder="🔎 Buscar por ação, escola, nome ou e-mail" style={inputS} />
+          <input value={busca} onChange={(e) => setBusca(e.target.value)} placeholder="🔎 Buscar por ação, escola, nome ou e-mail" aria-label="Buscar logs por ação, escola, nome ou e-mail" style={inputS} />
         </div>
         <div>
-          <label style={lbl}>Ação</label>
-          <select value={fAcao} onChange={(e) => setFAcao(e.target.value)} style={selS}>
+          <label htmlFor={fid("acao")} style={lbl}>Ação</label>
+          <select id={fid("acao")} value={fAcao} onChange={(e) => setFAcao(e.target.value)} style={selS}>
             <option value="">Todas</option>
             {acoes.map((a) => <option key={a} value={a}>{rotuloAcao(a)}</option>)}
           </select>
         </div>
         <div>
-          <label style={lbl}>Escola</label>
-          <select value={fEscola} onChange={(e) => setFEscola(e.target.value)} style={selS}>
+          <label htmlFor={fid("escola")} style={lbl}>Escola</label>
+          <select id={fid("escola")} value={fEscola} onChange={(e) => setFEscola(e.target.value)} style={selS}>
             <option value="">Todas</option>
             {escolasComLog.map(([id, nome]) => <option key={id} value={id}>{nome}</option>)}
           </select>
         </div>
         <div>
-          <label style={lbl}>Período</label>
-          <select value={fPeriodo} onChange={(e) => setFPeriodo(+e.target.value)} style={selS}>
+          <label htmlFor={fid("periodo")} style={lbl}>Período</label>
+          <select id={fid("periodo")} value={fPeriodo} onChange={(e) => setFPeriodo(+e.target.value)} style={selS}>
             <option value={0}>Todo o histórico</option>
             <option value={1}>Últimas 24h</option>
             <option value={7}>Últimos 7 dias</option>
@@ -511,8 +547,8 @@ function AtividadeAdmin({ logs, nomePorEscola }) {
         <div style={{ padding: 8 }}><EmptyState icone="🗒️" titulo="Nenhum log para o filtro" dica="Ajuste a busca/filtros — ou as ações do backoffice aparecem aqui assim que ocorrerem." /></div>
       ) : (
         <div style={{ display: "flex", flexDirection: "column" }}>
-          {lista.map((l, i) => (
-            <div key={i} style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 15px", borderBottom: i === lista.length - 1 ? "none" : `1px solid ${T.line}`, fontSize: 12.5 }}>
+          {visiveis.map((l, i) => (
+            <div key={i} style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 15px", borderBottom: i === visiveis.length - 1 ? "none" : `1px solid ${T.line}`, fontSize: 12.5 }}>
               <span style={{ flex: 1, minWidth: 0, color: T.ink }}>
                 <b>{rotuloAcao(l.acao)}</b>
                 {l.escola_id && <span style={{ color: T.sub }}> · {nomePorEscola[l.escola_id] ?? l.detalhe?.nome ?? "escola"}</span>}
@@ -521,6 +557,14 @@ function AtividadeAdmin({ logs, nomePorEscola }) {
               <span className="num" style={{ color: T.sub, flexShrink: 0 }}>{fmtData(l.em)}</span>
             </div>
           ))}
+          {lista.length > limite && (
+            <div style={{ textAlign: "center", padding: 12, borderTop: `1px solid ${T.line}` }}>
+              <button onClick={() => setLimite((n) => n + POR_PAGINA)}
+                style={{ border: `1px solid ${T.line}`, background: T.bg, color: T.gold, borderRadius: 8, padding: "8px 16px", fontSize: 13, fontWeight: 700, minHeight: 38 }}>
+                Ver mais · {limite} de {lista.length}
+              </button>
+            </div>
+          )}
         </div>
       )}
     </SectionCard>
@@ -561,7 +605,7 @@ function DetalheEscola({ escolaId, aoVoltar, aoMudar }) {
   const { dados: logs, recarregar: recLogs } = useRecurso(() => db.backofficeLogs(60), []);
   const [editando, setEditando] = useState(false);
 
-  if (carregando) return <Empty txt="Carregando escola…" />;
+  if (carregando) return <CarregandoBloco titulo="Carregando escola…" cartoes={3} linhas={5} />;
   if (erro) return <><BotaoVoltar aoVoltar={aoVoltar} /><Erro>{erro}</Erro></>;
   const e = d.escola ?? {};
   const logsEscola = (logs ?? []).filter((l) => l.escola_id === escolaId);
@@ -641,6 +685,8 @@ function InfoLinha({ rotulo, valor, href, swatch }) {
 function EditarEscola({ escola, aoSalvar }) {
   const { input: inputS, label: lbl } = useInputStyle();
   const T = useTema();
+  const uid = useId();
+  const fid = (k) => `${uid}-${k}`;
   const [f, setF] = useState({
     nome: escola.nome ?? "", plano: escola.plano ?? "", cidade: escola.cidade ?? "", uf: escola.uf ?? "",
     corAcento: escola.cor_acento ?? "", logoUrl: escola.logo_url ?? "", limite: escola.limite_alunos ?? "",
@@ -681,40 +727,41 @@ function EditarEscola({ escola, aoSalvar }) {
     <SectionCard titulo="Editar dados da escola" sub="Em branco = mantém o valor atual. Toda alteração fica registrada na auditoria.">
       <BlocoLabel titulo="Dados da escola" />
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(150px,1fr))", gap: 12, marginBottom: 16 }}>
-        <div style={{ gridColumn: "1 / -1" }}><label style={lbl}>Nome de exibição</label><input value={f.nome} onChange={(e) => set("nome", e.target.value)} style={inputS} /></div>
-        <div><label style={lbl}>Plano</label><input value={f.plano} onChange={(e) => set("plano", e.target.value)} placeholder="ex: padrão" style={inputS} /></div>
-        <div><label style={lbl}>Limite de alunos</label><input type="number" min="0" inputMode="numeric" value={f.limite} onChange={(e) => set("limite", e.target.value)} style={inputS} /></div>
-        <div><label style={lbl}>Cidade</label><input value={f.cidade} onChange={(e) => set("cidade", e.target.value)} style={inputS} /></div>
-        <div><label style={lbl}>UF</label><input value={f.uf} onChange={(e) => set("uf", e.target.value.toUpperCase().slice(0, 2))} style={{ ...inputS, borderColor: ufValido ? T.line : T.red }} /></div>
+        <div style={{ gridColumn: "1 / -1" }}><label htmlFor={fid("nome")} style={lbl}>Nome de exibição</label><input id={fid("nome")} value={f.nome} onChange={(e) => set("nome", e.target.value)} style={inputS} /></div>
+        <div><label htmlFor={fid("plano")} style={lbl}>Plano</label><input id={fid("plano")} value={f.plano} onChange={(e) => set("plano", e.target.value)} placeholder="ex: padrão" style={inputS} /></div>
+        <div><label htmlFor={fid("limite")} style={lbl}>Limite de alunos</label><input id={fid("limite")} type="number" min="0" inputMode="numeric" value={f.limite} onChange={(e) => set("limite", e.target.value)} style={inputS} /></div>
+        <div><label htmlFor={fid("cidade")} style={lbl}>Cidade</label><input id={fid("cidade")} value={f.cidade} onChange={(e) => set("cidade", e.target.value)} style={inputS} /></div>
+        <div><label htmlFor={fid("uf")} style={lbl}>UF</label><input id={fid("uf")} value={f.uf} onChange={(e) => set("uf", e.target.value.toUpperCase().slice(0, 2))} aria-invalid={ufValido ? undefined : true} style={{ ...inputS, borderColor: ufValido ? T.line : T.red }} /></div>
         <div>
-          <label style={lbl}>Cor de acento</label>
+          <label htmlFor={fid("cor")} style={lbl}>Cor de acento</label>
           <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-            <input value={f.corAcento} onChange={(e) => set("corAcento", e.target.value)} placeholder="#CDA349" style={{ ...inputS, borderColor: corValida ? T.line : T.red, fontFamily: "monospace" }} />
+            <input id={fid("cor")} value={f.corAcento} onChange={(e) => set("corAcento", e.target.value)} placeholder="#CDA349" aria-invalid={corValida ? undefined : true} style={{ ...inputS, borderColor: corValida ? T.line : T.red, fontFamily: "monospace" }} />
             <span style={{ width: 38, height: 38, flexShrink: 0, borderRadius: 8, border: `1px solid ${T.line}`, background: corValida && f.corAcento ? f.corAcento : T.bg }} />
           </div>
         </div>
         <div style={{ gridColumn: "1 / -1" }}>
-          <label style={lbl}>Logo (URL)</label>
-          <input value={f.logoUrl} onChange={(e) => set("logoUrl", e.target.value)} placeholder="https://…" style={inputS} />
+          <label htmlFor={fid("logo")} style={lbl}>Logo (URL)</label>
+          <input id={fid("logo")} value={f.logoUrl} onChange={(e) => set("logoUrl", e.target.value)} placeholder="https://…" style={inputS} />
         </div>
         <div style={{ gridColumn: "1 / -1" }}>
-          <label style={lbl}>Observação interna</label>
-          <textarea value={f.observacao} onChange={(e) => set("observacao", e.target.value)} rows={2} style={{ ...inputS, minHeight: 56, resize: "vertical" }} />
+          <label htmlFor={fid("obs")} style={lbl}>Observação interna</label>
+          <textarea id={fid("obs")} value={f.observacao} onChange={(e) => set("observacao", e.target.value)} rows={2} style={{ ...inputS, minHeight: 56, resize: "vertical" }} />
         </div>
       </div>
 
       <BlocoLabel titulo="Contato administrativo" />
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(150px,1fr))", gap: 12, marginBottom: 8 }}>
-        <div style={{ gridColumn: "1 / -1" }}><label style={lbl}>Nome do responsável administrativo</label><input value={f.contatoNome} onChange={(e) => set("contatoNome", e.target.value)} style={inputS} /></div>
+        <div style={{ gridColumn: "1 / -1" }}><label htmlFor={fid("contatoNome")} style={lbl}>Nome do responsável administrativo</label><input id={fid("contatoNome")} value={f.contatoNome} onChange={(e) => set("contatoNome", e.target.value)} style={inputS} /></div>
         <div style={{ gridColumn: "1 / -1" }}>
-          <label style={lbl}>E-mail institucional</label>
-          <input type="email" value={f.emailInstitucional} onChange={(e) => set("emailInstitucional", e.target.value)}
+          <label htmlFor={fid("emailInst")} style={lbl}>E-mail institucional</label>
+          <input id={fid("emailInst")} type="email" value={f.emailInstitucional} onChange={(e) => set("emailInstitucional", e.target.value)}
+            aria-invalid={f.emailInstitucional && !emailInstValido ? true : undefined}
             style={{ ...inputS, borderColor: f.emailInstitucional && !emailInstValido ? T.red : T.line }} />
         </div>
-        <div style={{ gridColumn: "1 / -1" }}><label style={lbl}>Telefone / WhatsApp</label><input value={f.telefoneContato} onChange={(e) => set("telefoneContato", e.target.value)} style={inputS} /></div>
+        <div style={{ gridColumn: "1 / -1" }}><label htmlFor={fid("tel")} style={lbl}>Telefone / WhatsApp</label><input id={fid("tel")} value={f.telefoneContato} onChange={(e) => set("telefoneContato", e.target.value)} style={inputS} /></div>
         <div style={{ gridColumn: "1 / -1" }}>
-          <label style={lbl}>Observação de contato</label>
-          <textarea value={f.contatoObservacao} onChange={(e) => set("contatoObservacao", e.target.value)} rows={2} style={{ ...inputS, minHeight: 52, resize: "vertical" }} />
+          <label htmlFor={fid("contatoObs")} style={lbl}>Observação de contato</label>
+          <textarea id={fid("contatoObs")} value={f.contatoObservacao} onChange={(e) => set("contatoObservacao", e.target.value)} rows={2} style={{ ...inputS, minHeight: 52, resize: "vertical" }} />
         </div>
       </div>
 
@@ -924,6 +971,8 @@ function Modalidades({ escola }) {
 function Coordenadores({ d, escolaId, aoMudar }) {
   const T = useTema();
   const { input: inputS, label: lbl } = useInputStyle();
+  const uid = useId();
+  const fid = (k) => `${uid}-${k}`;
   const coords = d.coordenadores ?? [];
   const [criando, setCriando] = useState(false);
   const [f, setF] = useState({ nome: "", email: "" });
@@ -1001,12 +1050,13 @@ function Coordenadores({ d, escolaId, aoMudar }) {
           <div style={{ fontSize: 13, fontWeight: 700, color: T.ink, marginBottom: 12 }}>Novo coordenador</div>
           <div style={{ display: "grid", gap: 12 }}>
             <div>
-              <label style={lbl}>Nome *</label>
-              <input value={f.nome} onChange={(e) => set("nome", e.target.value)} placeholder="ex: Maria Coordenadora" style={inputS} />
+              <label htmlFor={fid("nome")} style={lbl}>Nome *</label>
+              <input id={fid("nome")} value={f.nome} onChange={(e) => set("nome", e.target.value)} placeholder="ex: Maria Coordenadora" style={inputS} />
             </div>
             <div>
-              <label style={lbl}>E-mail *</label>
-              <input type="email" value={f.email} onChange={(e) => set("email", e.target.value)} placeholder="coord@escola.com.br"
+              <label htmlFor={fid("email")} style={lbl}>E-mail *</label>
+              <input id={fid("email")} type="email" value={f.email} onChange={(e) => set("email", e.target.value)} placeholder="coord@escola.com.br"
+                aria-invalid={f.email && !emailValido ? true : undefined}
                 style={{ ...inputS, borderColor: f.email && !emailValido ? T.red : T.line }} />
               <div style={{ fontSize: 11, color: T.sub, marginTop: 4 }}>
                 Um link de definição de senha será enviado. Senha nunca é exibida nem registrada.

@@ -3,9 +3,10 @@
    missões, conquistas, simulados). Tudo leitura; a RLS já garante que
    só sai a escola da coordenação. Paginado e com empty-state humano. */
 import React, { useEffect, useState } from "react";
-import { SectionCard, Empty, Erro, EmptyState } from "../../shared/ui/componentes.jsx";
+import { SectionCard, Erro, EmptyState, CarregandoBloco } from "../../shared/ui/componentes.jsx";
 import { useTema } from "../../shared/branding/BrandingContext.jsx";
 import { fmtBR } from "../../shared/regras/regras.js";
+import { mensagemAmigavel } from "../../shared/lib/erros.js";
 import * as db from "../../shared/data/index.js";
 
 // rótulo humano por tipo de evento (sem jargão técnico na tela)
@@ -30,11 +31,11 @@ export function HistoricoProgresso({ alunoId }) {
     setEstado({ carregando: true, eventos: [], erro: null });
     db.carregarEventosProgresso(alunoId, { limite: 50 })
       .then((eventos) => vivo && setEstado({ carregando: false, eventos, erro: null }))
-      .catch((e) => vivo && setEstado({ carregando: false, eventos: [], erro: e.message }));
+      .catch((e) => vivo && setEstado({ carregando: false, eventos: [], erro: mensagemAmigavel(e, "carregar") }));
     return () => { vivo = false; };
   }, [alunoId]);
 
-  if (estado.carregando) return <SectionCard titulo="Histórico de progresso"><Empty txt="Carregando…" /></SectionCard>;
+  if (estado.carregando) return <SectionCard titulo="Histórico de progresso"><CarregandoBloco titulo="Carregando o histórico…" linhas={4} /></SectionCard>;
   if (estado.erro) return <SectionCard titulo="Histórico de progresso"><Erro>{estado.erro}</Erro></SectionCard>;
 
   const total = estado.eventos.length;

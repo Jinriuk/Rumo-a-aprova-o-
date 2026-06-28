@@ -2,7 +2,7 @@
    decide se o sistema é fácil ou um peso (Doc 6, 4.2). Um a um ou
    em lote (um nome por linha ou via CSV). O consentimento entra no mesmo
    passo: é termo no cadastro, não burocracia separada. */
-import React, { useRef, useState } from "react";
+import React, { useId, useRef, useState } from "react";
 import { Card, Botao, BotaoMini, Erro, useInputStyle } from "../../shared/ui/componentes.jsx";
 import { useTema } from "../../shared/branding/BrandingContext.jsx";
 import { limparNome, nomeValido } from "../../shared/validacao.js";
@@ -62,6 +62,8 @@ function validarLinhasCsv(linhas, turmas) {
 export function NovoAluno({ turmas, trilhaPadrao, concursos = [], aoMudar }) {
   const T = useTema();
   const { input: inputS, label: lbl } = useInputStyle();
+  const uid = useId();
+  const cid = (k) => `${uid}-${k}`;
   const [nome, setNome] = useState("");
   const [turmaId, setTurmaId] = useState("");
   const [concursoId, setConcursoId] = useState("");
@@ -104,21 +106,21 @@ export function NovoAluno({ turmas, trilhaPadrao, concursos = [], aoMudar }) {
     <div>
       <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginBottom: 12 }}>
         <div style={{ flex: 2, minWidth: 200 }}>
-          <label style={lbl}>Nome do aluno</label>
-          <input value={nome} onChange={(e) => { setNome(e.target.value); setFeito(null); }}
+          <label htmlFor={cid("nome")} style={lbl}>Nome do aluno</label>
+          <input id={cid("nome")} value={nome} onChange={(e) => { setNome(e.target.value); setFeito(null); }}
             placeholder="ex: Maria da Silva" style={inputS} />
         </div>
         <div style={{ flex: 1, minWidth: 160 }}>
-          <label style={lbl}>Turma</label>
-          <select value={turmaId} onChange={(e) => setTurmaId(e.target.value)} style={inputS}>
+          <label htmlFor={cid("turma")} style={lbl}>Turma</label>
+          <select id={cid("turma")} value={turmaId} onChange={(e) => setTurmaId(e.target.value)} style={inputS}>
             <option value="" style={{ background: T.bg2 }}>— sem turma —</option>
             {turmas.map((t) => <option key={t.id} value={t.id} style={{ background: T.bg2 }}>{t.nome}</option>)}
           </select>
         </div>
         {concursos.length > 0 && (
           <div style={{ flex: 1, minWidth: 160 }}>
-            <label style={lbl}>Concurso</label>
-            <select value={concursoId || (cnId ?? "")}
+            <label htmlFor={cid("concurso")} style={lbl}>Concurso</label>
+            <select id={cid("concurso")} value={concursoId || (cnId ?? "")}
               onChange={(e) => setConcursoId(e.target.value)} style={inputS}>
               {concursos.map((c) => (
                 <option key={c.id} value={c.id} style={{ background: T.bg2 }}>
@@ -143,8 +145,8 @@ export function NovoAluno({ turmas, trilhaPadrao, concursos = [], aoMudar }) {
         </label>
         {consentiu && (
           <div style={{ marginTop: 10 }}>
-            <label style={lbl}>Nome do responsável que consentiu</label>
-            <input value={consentimentoNome} onChange={(e) => setConsentimentoNome(e.target.value)} style={inputS} />
+            <label htmlFor={cid("consent")} style={lbl}>Nome do responsável que consentiu</label>
+            <input id={cid("consent")} value={consentimentoNome} onChange={(e) => setConsentimentoNome(e.target.value)} style={inputS} />
           </div>
         )}
       </div>
@@ -168,6 +170,8 @@ export function NovoAluno({ turmas, trilhaPadrao, concursos = [], aoMudar }) {
 export function NovosAlunos({ turmas, trilhaPadrao, concursos = [], aoMudar }) {
   const T = useTema();
   const { input: inputS, label: lbl } = useInputStyle();
+  const uid = useId();
+  const cid = (k) => `${uid}-${k}`;
   const [modo, setModo] = useState("texto"); // texto | csv
   const [nomes, setNomes] = useState("");
   const [csvLinhas, setCsvLinhas] = useState(null); // null = sem arquivo; array = preview
@@ -279,8 +283,8 @@ export function NovosAlunos({ turmas, trilhaPadrao, concursos = [], aoMudar }) {
       <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginBottom: 12 }}>
         {modo === "texto" || !csvLinhas ? (
           <div style={{ flex: 1, minWidth: 160 }}>
-            <label style={lbl}>Turma padrão</label>
-            <select value={turmaId} onChange={(e) => setTurmaId(e.target.value)} style={inputS}>
+            <label htmlFor={cid("turma")} style={lbl}>Turma padrão</label>
+            <select id={cid("turma")} value={turmaId} onChange={(e) => setTurmaId(e.target.value)} style={inputS}>
               <option value="" style={{ background: T.bg2 }}>— sem turma —</option>
               {turmas.map((t) => <option key={t.id} value={t.id} style={{ background: T.bg2 }}>{t.nome}</option>)}
             </select>
@@ -288,8 +292,8 @@ export function NovosAlunos({ turmas, trilhaPadrao, concursos = [], aoMudar }) {
         ) : null}
         {concursos.length > 0 && (
           <div style={{ flex: 1, minWidth: 160 }}>
-            <label style={lbl}>Concurso</label>
-            <select value={concursoId || (cnId ?? "")}
+            <label htmlFor={cid("concurso")} style={lbl}>Concurso</label>
+            <select id={cid("concurso")} value={concursoId || (cnId ?? "")}
               onChange={(e) => setConcursoId(e.target.value)} style={inputS}>
               {concursos.map((c) => (
                 <option key={c.id} value={c.id} style={{ background: T.bg2 }}>
@@ -300,8 +304,8 @@ export function NovosAlunos({ turmas, trilhaPadrao, concursos = [], aoMudar }) {
           </div>
         )}
         <div style={{ flex: 1, minWidth: 160 }}>
-          <label style={lbl}>Trilha de estudo</label>
-          <input
+          <label htmlFor={cid("trilha")} style={lbl}>Trilha de estudo</label>
+          <input id={cid("trilha")}
             value={usaTrilhaSemanal ? (trilhaPadrao?.nome ?? "—") : "Sem trilha semanal — usa a contagem do concurso"}
             disabled style={{ ...inputS, color: T.sub }} />
         </div>
@@ -320,8 +324,8 @@ export function NovosAlunos({ turmas, trilhaPadrao, concursos = [], aoMudar }) {
       {/* ── modo TEXTO ── */}
       {modo === "texto" && (
         <>
-          <label style={lbl}>Nome(s) — um por linha</label>
-          <textarea value={nomes} onChange={(e) => { setNomes(e.target.value); setFeito(null); }}
+          <label htmlFor={cid("nomes")} style={lbl}>Nome(s) — um por linha</label>
+          <textarea id={cid("nomes")} value={nomes} onChange={(e) => { setNomes(e.target.value); setFeito(null); }}
             rows={emLoteTexto ? 6 : 2}
             placeholder={"Maria da Silva\nJoão Souza"}
             style={{ ...inputS, resize: "vertical", fontFamily: "Archivo, sans-serif" }} />
@@ -341,8 +345,8 @@ export function NovosAlunos({ turmas, trilhaPadrao, concursos = [], aoMudar }) {
               </label>
               {consentiu && (
                 <div style={{ marginTop: 10 }}>
-                  <label style={lbl}>Nome do responsável que consentiu</label>
-                  <input value={consentimentoNome} onChange={(e) => setConsentimentoNome(e.target.value)} style={inputS} />
+                  <label htmlFor={cid("consent")} style={lbl}>Nome do responsável que consentiu</label>
+                  <input id={cid("consent")} value={consentimentoNome} onChange={(e) => setConsentimentoNome(e.target.value)} style={inputS} />
                 </div>
               )}
             </div>
@@ -363,7 +367,7 @@ export function NovosAlunos({ turmas, trilhaPadrao, concursos = [], aoMudar }) {
                 Linha de cabeçalho é detectada automaticamente.
               </div>
               <input ref={fileRef} type="file" accept=".csv,.tsv,.txt"
-                onChange={carregarCsv}
+                onChange={carregarCsv} aria-label="Selecionar arquivo CSV de alunos"
                 style={{ display: "block", marginBottom: 10, color: T.ink, fontSize: 13 }} />
             </div>
           ) : (
@@ -375,8 +379,8 @@ export function NovosAlunos({ turmas, trilhaPadrao, concursos = [], aoMudar }) {
                 </div>
                 <BotaoMini onClick={limparCsv}>Trocar arquivo</BotaoMini>
               </div>
-              <div style={{ maxHeight: 260, overflowY: "auto", border: `1px solid ${T.line}`, borderRadius: 8 }}>
-                <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12.5 }}>
+              <div style={{ maxHeight: 260, overflowY: "auto", overflowX: "auto", border: `1px solid ${T.line}`, borderRadius: 8 }}>
+                <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12.5, minWidth: 320 }}>
                   <thead>
                     <tr style={{ background: T.bg2, position: "sticky", top: 0 }}>
                       <th style={{ textAlign: "left", padding: "7px 10px", color: T.sub, fontWeight: 600, width: 30 }}>#</th>
@@ -427,6 +431,10 @@ export function NovosAlunos({ turmas, trilhaPadrao, concursos = [], aoMudar }) {
 export function PainelCadastroAlunos({ turmas, trilhaPadrao, concursos = [], aoMudar }) {
   const T = useTema();
   const [aba, setAba] = useState("individual");
+  // Colapsado por padrão (UX1.2): o formulário de cadastro não empurra
+  // mais a LISTA de alunos para baixo — quem só quer consultar abre direto
+  // a lista; quem vai cadastrar expande aqui.
+  const [aberto, setAberto] = useState(false);
 
   const tabS = (ativo) => ({
     border: "none", background: "none", color: ativo ? T.gold : T.sub,
@@ -436,18 +444,30 @@ export function PainelCadastroAlunos({ turmas, trilhaPadrao, concursos = [], aoM
 
   return (
     <Card>
-      <div className="disp" style={{ fontSize: 15, fontWeight: 700, marginBottom: 4 }}>Cadastrar alunos</div>
-      <div style={{ fontSize: 12, color: T.sub, marginBottom: 12 }}>
-        Só o nome — nada de CPF nem documento (minimização, LGPD).
-      </div>
-      <div style={{ display: "flex", gap: 0, marginBottom: 14, borderBottom: `1px solid ${T.line}` }}>
-        <button style={tabS(aba === "individual")} onClick={() => setAba("individual")}>Individual</button>
-        <button style={tabS(aba === "lote")} onClick={() => setAba("lote")}>Em lote</button>
-      </div>
-      {aba === "individual"
-        ? <NovoAluno turmas={turmas} trilhaPadrao={trilhaPadrao} concursos={concursos} aoMudar={aoMudar} />
-        : <NovosAlunos turmas={turmas} trilhaPadrao={trilhaPadrao} concursos={concursos} aoMudar={aoMudar} />
-      }
+      <button onClick={() => setAberto((v) => !v)} aria-expanded={aberto}
+        style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, width: "100%", border: "none", background: "transparent", textAlign: "left", padding: 0, color: T.ink, cursor: "pointer", minHeight: 40 }}>
+        <span>
+          <span className="disp" style={{ fontSize: 15, fontWeight: 700 }}>Cadastrar alunos</span>
+          <span style={{ display: "block", fontSize: 12, color: T.sub, marginTop: 3 }}>
+            Só o nome — nada de CPF nem documento (minimização, LGPD).
+          </span>
+        </span>
+        <span style={{ flexShrink: 0, border: `1px solid ${aberto ? T.gold : T.line}`, background: aberto ? `${T.gold}14` : "transparent", color: aberto ? T.gold : T.sub, borderRadius: 8, fontSize: 12.5, fontWeight: 700, padding: "7px 13px", whiteSpace: "nowrap" }}>
+          {aberto ? "Fechar ▴" : "+ Cadastrar ▾"}
+        </span>
+      </button>
+      {aberto && (
+        <div style={{ marginTop: 14 }}>
+          <div style={{ display: "flex", gap: 0, marginBottom: 14, borderBottom: `1px solid ${T.line}` }}>
+            <button style={tabS(aba === "individual")} onClick={() => setAba("individual")}>Individual</button>
+            <button style={tabS(aba === "lote")} onClick={() => setAba("lote")}>Em lote</button>
+          </div>
+          {aba === "individual"
+            ? <NovoAluno turmas={turmas} trilhaPadrao={trilhaPadrao} concursos={concursos} aoMudar={aoMudar} />
+            : <NovosAlunos turmas={turmas} trilhaPadrao={trilhaPadrao} concursos={concursos} aoMudar={aoMudar} />
+          }
+        </div>
+      )}
     </Card>
   );
 }
@@ -480,6 +500,7 @@ export function CredencialGerada({ credencial, aoFechar }) {
 
 export function NovaTurma({ aoMudar }) {
   const { input: inputS, label: lbl } = useInputStyle();
+  const uid = useId();
   const [nome, setNome] = useState("");
   const { ocupado, erro, enviar } = useEnvioUnico("salvar"); // trava de duplo "criar turma"
 
@@ -497,8 +518,8 @@ export function NovaTurma({ aoMudar }) {
       <div className="disp" style={{ fontSize: 15, fontWeight: 700, marginBottom: 10 }}>Nova turma</div>
       <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "flex-end" }}>
         <div style={{ flex: 1, minWidth: 200 }}>
-          <label style={lbl}>Nome da turma</label>
-          <input value={nome} onChange={(e) => setNome(e.target.value)} placeholder="ex: Turma CN 2026 — manhã" style={inputS} />
+          <label htmlFor={`${uid}-turma`} style={lbl}>Nome da turma</label>
+          <input id={`${uid}-turma`} value={nome} onChange={(e) => setNome(e.target.value)} placeholder="ex: Turma CN 2026 — manhã" style={inputS} />
         </div>
         <Botao onClick={criar} disabled={!nomeValido(nome) || ocupado}>{ocupado ? "Criando…" : "+ Criar turma"}</Botao>
       </div>

@@ -3,7 +3,7 @@
    (responsável, exportar/excluir LGPD) recolhidas em "Mais ações".
    Status visual claro com selos. */
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { SectionCard, EmptyState, Erro, StatusBadge, BotaoMini, MaisAcoes } from "../../shared/ui/componentes.jsx";
+import { SectionCard, EmptyState, Erro, StatusBadge, BotaoMini, MaisAcoes, useDialogo } from "../../shared/ui/componentes.jsx";
 import { useTema } from "../../shared/branding/BrandingContext.jsx";
 import { limparNome, nomeValido } from "../../shared/validacao.js";
 import { mensagemAmigavel } from "../../shared/lib/erros.js";
@@ -23,6 +23,7 @@ export function ListaAlunos({ alunos, consentimentos, concursos = [], turmas = [
   const [fStatus, setFStatus] = useState(filtroStatusInicial);
   const [pagina, setPagina] = useState(1);
   const [alunoVinculos, setAlunoVinculos] = useState(null);
+  const dialogo = useDialogo();
   const comConsentimento = useMemo(() => new Set(consentimentos.map((c) => c.aluno_id)), [consentimentos]);
 
   // Trava SÍNCRONA de ação sensível (gerar/regerar credencial, LGPD,
@@ -41,29 +42,29 @@ export function ListaAlunos({ alunos, consentimentos, concursos = [], turmas = [
   }
 
   const credencialAluno = (a) => comAcao(a, async () => aoGerarCredencial(await db.provisionarAluno(a.id)));
-  const pedirNome = (mensagem, atual) => {
-    const nome = window.prompt(mensagem, atual);
-    if (nome === null) return null; // cancelou
-    if (!nomeValido(nome)) { setErro("Nome inválido: use de 2 a 80 caracteres."); return null; }
-    return limparNome(nome);
-  };
-  const credencialResp = (a) => {
-    const nome = pedirNome(`Nome do responsável de ${a.nome}:`);
+  // Diálogos do design system (UX1.2) no lugar de window.prompt/confirm.
+  const pedirNome = (titulo, mensagem, atual = "") => dialogo.prompt({
+    titulo, mensagem, rotulo: "Nome", valorInicial: atual, placeholder: "Nome completo",
+    rotuloConfirmar: "Confirmar",
+    validar: (v) => (nomeValido(v.trim()) ? null : "Use de 2 a 80 caracteres."),
+  });
+  const credencialResp = async (a) => {
+    const nome = await pedirNome("Gerar credencial de responsável", `Informe o nome do responsável de ${a.nome}.`);
     if (!nome) return;
-    return comAcao(a, async () => aoGerarCredencial(await db.provisionarResponsavel(a.id, nome)));
+    return comAcao(a, async () => aoGerarCredencial(await db.provisionarResponsavel(a.id, limparNome(nome))));
   };
-  const consentir = (a) => {
-    const nome = pedirNome(`Nome do responsável que consente pelo aluno ${a.nome} (termo v1):`);
+  const consentir = async (a) => {
+    const nome = await pedirNome("Registrar consentimento", `Nome do responsável que consente pelo aluno ${a.nome} (termo v1).`);
     if (!nome) return;
-    return comAcao(a, () => db.registrarConsentimento(a.id, nome));
+    return comAcao(a, () => db.registrarConsentimento(a.id, limparNome(nome)));
   };
   const trocarConcurso = (a, concursoId) => comAcao(a, () => db.atualizarAluno(a.id, { concurso_id: concursoId || null }));
   const trocarTurma = (a, turmaId) => comAcao(a, () => db.definirTurma(a.id, turmaId || null));
   const trocarTrilha = (a, trilhaId) => comAcao(a, () => db.atualizarAluno(a.id, { trilha_id: trilhaId || null }));
-  const renomear = (a) => {
-    const nome = pedirNome("Novo nome do aluno:", a.nome);
-    if (!nome || nome === a.nome) return;
-    return comAcao(a, () => db.atualizarAluno(a.id, { nome }));
+  const renomear = async (a) => {
+    const nome = await pedirNome("Renomear aluno", "Escolha o novo nome do aluno.", a.nome);
+    if (!nome || limparNome(nome) === a.nome) return;
+    return comAcao(a, () => db.atualizarAluno(a.id, { nome: limparNome(nome) }));
   };
   async function exportar(a) {
     if (!travaRef.current.tentar()) return;
@@ -79,8 +80,14 @@ export function ListaAlunos({ alunos, consentimentos, concursos = [], turmas = [
     finally { travaRef.current.liberar(); }
     setOcupado(null);
   }
-  const excluir = (a) => {
-    const ok = window.confirm(`Apagar TODOS os dados de ${a.nome} (registros, metas, simulados, contas de acesso)? Atende um pedido do titular (LGPD) e não tem volta.`);
+  const excluir = async (a) => {
+    const ok = await dialogo.confirmar({
+      titulo: "Excluir todos os dados (LGPD)",
+      mensagem: `Apagar TODOS os dados de ${a.nome} — registros, metas, simulados e contas de acesso? Atende a um pedido do titular (LGPD) e não pode ser desfeito.`,
+      rotuloConfirmar: "Apagar definitivamente",
+      rotuloCancelar: "Cancelar",
+      perigo: true,
+    });
     if (ok) return comAcao(a, () => db.lgpdTitular("excluir", a.id));
   };
 
@@ -112,18 +119,20 @@ export function ListaAlunos({ alunos, consentimentos, concursos = [], turmas = [
   const selS = { background: T.bg, border: `1px solid ${T.line}`, color: T.ink, borderRadius: 8, padding: "7px 9px", fontSize: 12.5 };
 
   return (
+    <>
+    {dialogo.elemento}
     <SectionCard titulo="Alunos da escola" sub={`${filtrados.length} de ${alunos.length}`} semPadding
       acao={
         <div style={{ display: "flex", gap: 7, flexWrap: "wrap", justifyContent: "flex-end" }}>
-          <input value={busca} onChange={(e) => setBusca(e.target.value)} placeholder="Buscar…"
-            style={{ ...selS, width: 120 }} />
+          <input value={busca} onChange={(e) => setBusca(e.target.value)} placeholder="Buscar…" aria-label="Buscar aluno por nome"
+            style={{ ...selS, flex: "1 1 140px", minWidth: 120 }} />
           {turmas.length > 0 && (
-            <select value={fTurma} onChange={(e) => setFTurma(e.target.value)} style={selS}>
+            <select value={fTurma} onChange={(e) => setFTurma(e.target.value)} aria-label="Filtrar por turma" style={selS}>
               <option value="" style={{ background: T.bg2 }}>Todas as turmas</option>
               {turmas.map((t) => <option key={t.id} value={t.id} style={{ background: T.bg2 }}>{t.nome}</option>)}
             </select>
           )}
-          <select value={fStatus} onChange={(e) => setFStatus(e.target.value)} style={selS}>
+          <select value={fStatus} onChange={(e) => setFStatus(e.target.value)} aria-label="Filtrar por status" style={selS}>
             <option value="" style={{ background: T.bg2 }}>Todos os status</option>
             <option value="sem-credencial" style={{ background: T.bg2 }}>Sem credencial</option>
             <option value="sem-consentimento" style={{ background: T.bg2 }}>Sem consentimento</option>
@@ -224,5 +233,6 @@ export function ListaAlunos({ alunos, consentimentos, concursos = [], turmas = [
         />
       )}
     </SectionCard>
+    </>
   );
 }
