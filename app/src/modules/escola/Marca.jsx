@@ -80,11 +80,11 @@ export function Marca({ escola, aoMudar }) {
 function BrandPreview({ nome, logo, acento }) {
   const C = BASE;
   const logoTrim = String(logo ?? "").trim();
-  // Só http(s)/data:image viram <img src> (bloqueia javascript: e afins).
-  // O teste de esquema INLINE sobre a mesma variável usada no src é a
-  // barreira que a análise de taint reconhece (CodeQL DomBasedXss),
-  // fechando o alerta "DOM text reinterpreted as HTML".
-  const logoSeguro = /^(https?:\/\/|data:image\/)/i.test(logoTrim);
+  // Só vira <img src> uma URL http(s)/data:image SEM metacaracteres de
+  // HTML (sem aspas, < > ou espaço). A regex ancorada (início e fim) é
+  // uma barreira reconhecida pela análise de taint (CodeQL DomBasedXss),
+  // fechando "DOM text reinterpreted as HTML" — e bloqueia javascript: etc.
+  const logoSeguro = /^(https?:\/\/|data:image\/)[^\s"'<>]+$/i.test(logoTrim);
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
       {/* cabeçalho */}

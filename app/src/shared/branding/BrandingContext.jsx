@@ -25,9 +25,10 @@ export const useTema = () => useContext(BrandingContext).tema;
 export function MarcaEscola({ tamanho = 38 }) {
   const { escola, tema } = useBranding();
   const logoTrim = String(escola?.logo_url ?? "").trim();
-  // Só http(s)/data:image viram <img src> — barreira de esquema inline
-  // (bloqueia javascript: e afins; fecha js/xss-through-dom do CodeQL).
-  const logoSeguro = /^(https?:\/\/|data:image\/)/i.test(logoTrim);
+  // Só vira <img src> uma URL http(s)/data:image SEM metacaracteres de HTML
+  // (sem aspas, < > ou espaço) — regex ancorada = barreira reconhecida pela
+  // análise de taint (fecha js/xss-through-dom; bloqueia javascript: etc.).
+  const logoSeguro = /^(https?:\/\/|data:image\/)[^\s"'<>]+$/i.test(logoTrim);
   if (logoSeguro) {
     return (
       <img src={logoTrim} alt={escola.nome}
