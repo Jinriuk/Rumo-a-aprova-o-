@@ -10,21 +10,14 @@ import { resumirRegistros } from "../../shared/metricas/agregados.js";
 import { ListaRegistros } from "../../shared/ui/ListaRegistros.jsx";
 import { fmtHoras } from "./jargao.js";
 import { mensagemAmigavel } from "../../shared/lib/erros.js";
+import { useEnvioUnico } from "../../shared/hooks/useEnvioUnico.js";
+import { parseTempo, validarRegistroEstudo } from "../../shared/contratos/registroEstudo.js";
 import * as db from "../../shared/data/index.js";
 
-// Tempo AMIGÁVEL (Fase 4 do doc): aceita "45min", "1h", "1h30", "90".
-// Devolve minutos (int) ou null se vazio/não entendido.
-export function parseTempo(txt) {
-  const s = String(txt ?? "").trim().toLowerCase().replace(",", ".").replace(/\s+/g, "");
-  if (!s) return null;
-  let m = s.match(/^(\d+)h(\d{1,2})m?$/); // 1h30
-  if (m) return +m[1] * 60 + +m[2];
-  m = s.match(/^(\d+(?:\.\d+)?)h$/); // 1h, 1.5h
-  if (m) return Math.round(+m[1] * 60);
-  m = s.match(/^(\d+)(m|min|mins|minutos)?$/); // 45, 45min
-  if (m) return +m[1];
-  return NaN; // formato não entendido
-}
+// parseTempo e a validação do payload moram agora no contrato
+// shared/contratos/registroEstudo.js (lógica pura, testável fora do
+// React). Reexportado aqui para não quebrar quem importava daqui.
+export { parseTempo };
 
 const fmtTempoCurto = (min) => (min >= 60 ? `${Math.floor(min / 60)}h${String(min % 60).padStart(2, "0")}` : `${min}min`);
 
@@ -33,8 +26,9 @@ export function Registrar({ aluno, trilha, registros, aoMudar, minutosSugeridos 
   const { input: inputS, label: lbl } = useInputStyle();
   const branco = { data: todayISO(), disciplina_codigo: "mat", topico: "", questoes: "", acertos: "", tempo: "", obs: "" };
   const [f, setF] = useState(branco);
-  const [erro, setErro] = useState(null);
-  const [ocupado, setOcupado] = useState(false);
+  // Envio único: trava síncrona contra duplo clique no "Adicionar"
+  // (FE1, tarefa 82). `erro`/`setErro` vêm do hook (camada comum).
+  const { ocupado, erro, setErro, enviar } = useEnvioUnico("salvar");
   const [maisCampos, setMaisCampos] = useState(false);
   const set = (k, v) => setF({ ...f, [k]: v });
 
@@ -43,10 +37,13 @@ export function Registrar({ aluno, trilha, registros, aoMudar, minutosSugeridos 
     if (minutosSugeridos > 0) setF((atual) => ({ ...atual, tempo: fmtTempoCurto(minutosSugeridos) }));
   }, [minutosSugeridos]);
 
+  // Verdade da validação vem do contrato (mesma regra do payload que
+  // vai ao banco). As dicas inline de borda derivam dela.
+  const validacao = useMemo(() => validarRegistroEstudo(f), [f]);
   const minutosParse = parseTempo(f.tempo);
-  const tempoInvalido = Number.isNaN(minutosParse);
-  const acertosDemais = f.acertos !== "" && f.questoes !== "" && +f.acertos > +f.questoes;
-  const podeSalvar = f.questoes !== "" && +f.questoes > 0 && f.topico.trim() !== "" && !tempoInvalido && !acertosDemais && !ocupado;
+  const tempoInvalido = !!validacao.erros.tempo;
+  const acertosDemais = !!validacao.erros.acertos;
+  const podeSalvar = validacao.ok && !ocupado;
 
   // resumo do dia
   const hoje = todayISO();
@@ -59,20 +56,14 @@ export function Registrar({ aluno, trilha, registros, aoMudar, minutosSugeridos 
   }, [registros, hoje, trilha]);
 
   async function adicionar() {
-    if (!podeSalvar) return;
-    setOcupado(true); setErro(null);
-    try {
-      const acertos = f.acertos === "" ? null : Math.min(+f.acertos, +f.questoes);
-      await db.adicionarRegistro({
-        escola_id: aluno.escola_id, aluno_id: aluno.id,
-        data: f.data, disciplina_codigo: f.disciplina_codigo,
-        topico: f.topico.trim(), questoes: +f.questoes,
-        acertos, minutos: minutosParse, obs: f.obs || null,
-      });
+    const v = validarRegistroEstudo(f);
+    if (!v.ok) { setErro(Object.values(v.erros)[0]); return; }
+    // enviar() é a trava: um segundo clique no mesmo tick é ignorado.
+    await enviar(async () => {
+      await db.adicionarRegistro({ escola_id: aluno.escola_id, aluno_id: aluno.id, ...v.campos });
       setF({ ...branco, data: f.data, disciplina_codigo: f.disciplina_codigo });
       aoMudar?.();
-    } catch (e) { setErro(mensagemAmigavel(e, "salvar")); }
-    setOcupado(false);
+    });
   }
 
   async function apagar(id) {

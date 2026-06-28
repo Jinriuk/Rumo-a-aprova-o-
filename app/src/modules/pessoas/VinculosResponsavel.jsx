@@ -4,13 +4,19 @@ import React, { useEffect, useState } from "react";
 import { SectionCard, BotaoMini, Erro, EmptyState } from "../../shared/ui/componentes.jsx";
 import { useTema } from "../../shared/branding/BrandingContext.jsx";
 import { mensagemAmigavel } from "../../shared/lib/erros.js";
+import { useEnvioUnico } from "../../shared/hooks/useEnvioUnico.js";
+import { vinculosDTO, responsaveisDTO, dataCurtaBR } from "../../shared/contratos/dto.js";
 import * as db from "../../shared/data/index.js";
 
 export function VinculosResponsavel({ aluno, aoMudar, aoFechar }) {
   const T = useTema();
+  // Trabalha com DTOs (vinculoDTO): a tela lê responsavelNome/desde,
+  // não o shape cru v.usuarios?.nome do PostgREST (FE1, tarefa 79).
   const [vinculos, setVinculos] = useState([]);
   const [carregando, setCarregando] = useState(true);
-  const [erro, setErro] = useState(null);
+  // Trava única das mutações sensíveis (revogar/vincular): duplo clique
+  // não dispara duas Edge Functions (FE1, tarefa 82). `erro` é comum.
+  const { erro, setErro, enviar } = useEnvioUnico("acao");
   const [revogando, setRevogando] = useState(null);
   const [confirmando, setConfirmando] = useState(null);
 
@@ -25,24 +31,21 @@ export function VinculosResponsavel({ aluno, aoMudar, aoFechar }) {
     if (!aluno?.id) return;
     setCarregando(true);
     db.listarVinculos(aluno.id)
-      .then(setVinculos)
+      .then((linhas) => setVinculos(vinculosDTO(linhas)))
       .catch((e) => setErro(mensagemAmigavel(e, "carregar")))
       .finally(() => setCarregando(false));
   }, [aluno?.id]);
 
   async function revogar(vinculo) {
     setRevogando(vinculo.id);
-    setErro(null);
-    try {
+    const r = await enviar(async () => {
       await db.revogarResponsavel(vinculo.id);
       setVinculos((v) => v.filter((x) => x.id !== vinculo.id));
       setConfirmando(null);
       setFeedbackRevincular(null);
       aoMudar?.();
-    } catch (e) {
-      setErro(mensagemAmigavel(e, "revogar"));
-    }
-    setRevogando(null);
+    }, "revogar");
+    if (!r?.ignorado) setRevogando(null);
   }
 
   async function abrirRevincular() {
@@ -50,8 +53,8 @@ export function VinculosResponsavel({ aluno, aoMudar, aoFechar }) {
     setFeedbackRevincular(null);
     setCarregandoDisp(true);
     try {
-      const todos = await db.listarResponsaveisEscola();
-      const jaVinculados = new Set(vinculos.map((v) => v.responsavel_id));
+      const todos = responsaveisDTO(await db.listarResponsaveisEscola());
+      const jaVinculados = new Set(vinculos.map((v) => v.responsavelId));
       setResponsaveisDisponiveis(todos.filter((r) => !jaVinculados.has(r.id)));
     } catch (e) {
       setErro(mensagemAmigavel(e, "carregar responsáveis"));
@@ -61,28 +64,19 @@ export function VinculosResponsavel({ aluno, aoMudar, aoFechar }) {
 
   async function vincularExistente(responsavelId) {
     setVinculando(responsavelId);
-    setErro(null);
     setFeedbackRevincular(null);
-    try {
+    const r = await enviar(async () => {
       const resultado = await db.vincularResponsavelExistente(aluno.id, responsavelId);
       if (resultado?.estado === "vinculo_ja_existente") {
         setFeedbackRevincular(`Este responsável já estava vinculado a ${aluno.nome}.`);
       } else {
         setFeedbackRevincular(`Responsável vinculado novamente a ${aluno.nome}.`);
       }
-      // Recarrega lista de vínculos
-      const novosVinculos = await db.listarVinculos(aluno.id);
-      setVinculos(novosVinculos);
+      setVinculos(vinculosDTO(await db.listarVinculos(aluno.id)));
       setMostraRevincular(false);
       aoMudar?.();
-    } catch (e) {
-      setErro(mensagemAmigavel(e, "vincular responsável"));
-    }
-    setVinculando(null);
-  }
-
-  function fmtData(iso) {
-    try { return new Date(iso).toLocaleDateString("pt-BR"); } catch { return iso; }
+    }, "vincular responsável");
+    if (!r?.ignorado) setVinculando(null);
   }
 
   return (
@@ -121,7 +115,7 @@ export function VinculosResponsavel({ aluno, aoMudar, aoFechar }) {
         ) : (
           <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
             {vinculos.map((v) => {
-              const nome = v.usuarios?.nome ?? "Responsável";
+              const nome = v.responsavelNome;
               const ehConfirmando = confirmando === v.id;
               return (
                 <div key={v.id} style={{
@@ -131,7 +125,7 @@ export function VinculosResponsavel({ aluno, aoMudar, aoFechar }) {
                 }}>
                   <div>
                     <div style={{ fontSize: 14, fontWeight: 600 }}>{nome}</div>
-                    <div style={{ fontSize: 11.5, color: T.sub }}>desde {fmtData(v.criado_em)}</div>
+                    <div style={{ fontSize: 11.5, color: T.sub }}>desde {dataCurtaBR(v.desde)}</div>
                   </div>
                   <div style={{ display: "flex", gap: 6 }}>
                     {ehConfirmando ? (

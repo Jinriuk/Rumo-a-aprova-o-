@@ -1,6 +1,6 @@
 /* Área da coordenação — painel de gestão, não só cadastro (ref. spec):
    Painel / Alunos / Ranking / Turmas / LGPD / Marca. */
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useReducer, useState } from "react";
 import { Cabecalho } from "../../shared/ui/Cabecalho.jsx";
 import { SectionCard, Empty, Erro, EmptyState } from "../../shared/ui/componentes.jsx";
 import { MenuPrincipal } from "../../shared/ui/MenuPrincipal.jsx";
@@ -16,35 +16,41 @@ import { FichaAluno } from "../../modules/desempenho/FichaAluno.jsx";
 import { useRecurso } from "../../shared/hooks/useRecurso.js";
 import { adaptarResumoEscola } from "../../shared/metricas/agregados.js";
 import { mensagemAmigavel } from "../../shared/lib/erros.js";
+import { navReducer, NAV_INICIAL } from "./navegacaoEscola.js";
 import * as db from "../../shared/data/index.js";
 
 const VAZIO = { turmas: [], alunos: [], consentimentos: [], logs: [], trilha: null, concursos: [], resumo: [], simuladosEscola: [], trilhas: [] };
 
 export default function AreaEscola({ perfil }) {
   const T = useTema();
-  const [tab, setTab] = useState("painel");
-  const [filtroAlunosStatus, setFiltroAlunosStatus] = useState("");
+  // Navegação coordenada (aba + filtro + ficha) num reducer só — ver
+  // navegacaoEscola.js. Cada transição deixa o estado coerente.
+  const [nav, despacharNav] = useReducer(navReducer, NAV_INICIAL);
+  const { tab, filtroStatus: filtroAlunosStatus, alunoAberto } = nav;
+  // Cancelamento (tarefa 81): a carga mais pesada do app são estas 9
+  // leituras paralelas da coordenação. O signal do useRecurso é
+  // repassado a cada uma; se a coordenação sai da tela (ou recarrega)
+  // no meio, as viagens em curso são abortadas em vez de só ignoradas.
   const { dados: carregado, carregando, erro, recarregar } = useRecurso(
-    () => Promise.all([
-      db.listarTurmas(), db.listarAlunos(), db.listarConsentimentos(), db.listarLogsAcesso(),
-      db.trilhaPadrao(), db.listarConcursos(), db.resumoEscola(), db.listarSimuladosEscola(),
-      db.listarTrilhas(),
+    (signal) => Promise.all([
+      db.listarTurmas({ signal }), db.listarAlunos({ signal }), db.listarConsentimentos({ signal }),
+      db.listarLogsAcesso(100, { signal }), db.trilhaPadrao({ signal }), db.listarConcursos({ signal }),
+      db.resumoEscola({ signal }), db.listarSimuladosEscola({ signal }), db.listarTrilhas({ signal }),
     ]).then(([turmas, alunos, consentimentos, logs, trilha, concursos, resumo, simuladosEscola, trilhas]) =>
       ({ turmas, alunos, consentimentos, logs, trilha, concursos, resumo, simuladosEscola, trilhas })),
     [],
   );
   const dados = carregado ?? VAZIO;
   const [credencial, setCredencial] = useState(null);
-  const [alunoAberto, setAlunoAberto] = useState(null);
 
   const aoTopo = () => window.scrollTo({ top: 0, left: 0, behavior: "instant" });
   useEffect(aoTopo, []); // entrar no sistema = nascer no topo
 
-  function irPara(t) { setFiltroAlunosStatus(""); setTab(t); setAlunoAberto(null); aoTopo(); }
-  function irParaFiltrado(tab, filtro) { setFiltroAlunosStatus(filtro ?? ""); setTab(tab); setAlunoAberto(null); aoTopo(); }
+  function irPara(t) { despacharNav({ tipo: "ir", tab: t }); aoTopo(); }
+  function irParaFiltrado(tab, filtro) { despacharNav({ tipo: "irFiltrado", tab, filtro }); aoTopo(); }
 
   function verAluno(aluno) {
-    setAlunoAberto(aluno);
+    despacharNav({ tipo: "abrirAluno", aluno });
     aoTopo();
     db.registrarAcesso(perfil.escola.id, aluno.id, perfil.usuario.id, "coordenacao", "leitura-desempenho");
   }
@@ -77,7 +83,7 @@ export default function AreaEscola({ perfil }) {
 
           {!carregando && alunoAberto && (
             <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-              <button onClick={() => { setAlunoAberto(null); aoTopo(); }} style={{ alignSelf: "flex-start", border: `1px solid ${T.line}`, background: T.card, color: T.sub, borderRadius: 8, padding: "8px 14px", fontSize: 13, fontWeight: 600 }}>← voltar ao painel</button>
+              <button onClick={() => { despacharNav({ tipo: "fecharAluno" }); aoTopo(); }} style={{ alignSelf: "flex-start", border: `1px solid ${T.line}`, background: T.card, color: T.sub, borderRadius: 8, padding: "8px 14px", fontSize: 13, fontWeight: 600 }}>← voltar ao painel</button>
               <FichaAluno aluno={alunoAberto} concurso={concursoDoAluno} />
             </div>
           )}
@@ -248,7 +254,11 @@ function Turmas({ turmas, alunos, porAluno, aoMudar, aoVerRanking, aoVerAluno })
   );
 }
 
-function Mini({ rotulo, valor, cor }) {
+// Memoizado: aparece 4×/turma e re-renderiza a cada abrir/fechar de
+// turma, com props primitivas (rotulo/valor/cor). É o caso seguro de
+// React.memo — props estáveis, sem callbacks. Não é decoração: corta
+// re-render de tiles cujos números não mudaram (FE1, tarefa 84).
+const Mini = React.memo(function Mini({ rotulo, valor, cor }) {
   const T = useTema();
   return (
     <div style={{ background: T.bg, border: `1px solid ${T.line}`, borderRadius: 9, padding: "8px 10px" }}>
@@ -256,4 +266,4 @@ function Mini({ rotulo, valor, cor }) {
       <div className="num disp" style={{ fontSize: 18, fontWeight: 800, color: cor || T.ink, marginTop: 2 }}>{valor}</div>
     </div>
   );
-}
+});
