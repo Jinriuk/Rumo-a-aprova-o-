@@ -20,18 +20,26 @@ export function BrandingProvider({ escola, children }) {
 export const useBranding = () => useContext(BrandingContext);
 export const useTema = () => useContext(BrandingContext).tema;
 
+// Sanitiza a URL do logo antes do <img src> (autofix CodeQL
+// js/xss-through-dom): só data:image em base64 (formatos sem script) ou
+// URL absoluta http(s); o resto (javascript:, malformada…) vira "".
+function sanitizarUrlLogo(valor) {
+  const v = String(valor ?? "").trim();
+  if (/^data:image\/(?:png|jpe?g|webp|gif);base64,[a-z0-9+/=]+$/i.test(v)) return v;
+  try {
+    const u = new URL(v);
+    return (u.protocol === "https:" || u.protocol === "http:") ? u.toString() : "";
+  } catch { return ""; }
+}
+
 // O selo da escola no topo: logo dela se houver, senão a âncora
 // sobre o gradiente de acento (mesma assinatura visual da versão atual).
 export function MarcaEscola({ tamanho = 38 }) {
   const { escola, tema } = useBranding();
-  const logoTrim = String(escola?.logo_url ?? "").trim();
-  // Só vira <img src> uma URL http(s)/data:image SEM metacaracteres de HTML
-  // (sem aspas, < > ou espaço) — regex ancorada = barreira reconhecida pela
-  // análise de taint (fecha js/xss-through-dom; bloqueia javascript: etc.).
-  const logoSeguro = /^(https?:\/\/|data:image\/)[^\s"'<>]+$/i.test(logoTrim);
-  if (logoSeguro) {
+  const logoSrcSeguro = sanitizarUrlLogo(escola?.logo_url);
+  if (logoSrcSeguro) {
     return (
-      <img src={logoTrim} alt={escola.nome}
+      <img src={logoSrcSeguro} alt={escola.nome}
         style={{ width: tamanho, height: tamanho, borderRadius: 8, objectFit: "cover", flexShrink: 0 }} />
     );
   }

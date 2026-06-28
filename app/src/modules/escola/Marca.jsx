@@ -76,21 +76,29 @@ export function Marca({ escola, aoMudar }) {
   );
 }
 
+// Sanitiza a URL do logo antes de usá-la como `src` de <img>
+// (autofix CodeQL js/xss-through-dom): aceita só data:image em base64 de
+// formatos sem script (SVG fica de fora de propósito) OU URL absoluta
+// http(s); qualquer outra coisa (javascript:, malformada…) vira "".
+function sanitizarUrlLogo(valor) {
+  const v = String(valor ?? "").trim();
+  if (/^data:image\/(?:png|jpe?g|webp|gif);base64,[a-z0-9+/=]+$/i.test(v)) return v;
+  try {
+    const u = new URL(v);
+    return (u.protocol === "https:" || u.protocol === "http:") ? u.toString() : "";
+  } catch { return ""; }
+}
+
 // Preview ESTÁTICO (não usa o tema da sessão — mostra a cor escolhida AGORA).
 function BrandPreview({ nome, logo, acento }) {
   const C = BASE;
-  const logoTrim = String(logo ?? "").trim();
-  // Só vira <img src> uma URL http(s)/data:image SEM metacaracteres de
-  // HTML (sem aspas, < > ou espaço). A regex ancorada (início e fim) é
-  // uma barreira reconhecida pela análise de taint (CodeQL DomBasedXss),
-  // fechando "DOM text reinterpreted as HTML" — e bloqueia javascript: etc.
-  const logoSeguro = /^(https?:\/\/|data:image\/)[^\s"'<>]+$/i.test(logoTrim);
+  const logoSrcSeguro = sanitizarUrlLogo(logo);
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
       {/* cabeçalho */}
       <div style={{ background: C.bg2, border: `1px solid ${C.line}`, borderRadius: 10, padding: "10px 12px", display: "flex", alignItems: "center", gap: 10 }}>
-        {logoSeguro
-          ? <img src={logoTrim} alt="" style={{ width: 32, height: 32, borderRadius: 8, objectFit: "cover" }} onError={(e) => { e.currentTarget.style.display = "none"; }} />
+        {logoSrcSeguro
+          ? <img src={logoSrcSeguro} alt="" style={{ width: 32, height: 32, borderRadius: 8, objectFit: "cover" }} onError={(e) => { e.currentTarget.style.display = "none"; }} />
           : <div className="disp" style={{ width: 32, height: 32, borderRadius: 8, background: `linear-gradient(135deg, ${acento}, #9c7d2e)`, display: "flex", alignItems: "center", justifyContent: "center", color: "#0A1622", fontWeight: 800 }}>⚓</div>}
         <div style={{ flex: 1, minWidth: 0 }}>
           <div className="disp" style={{ fontSize: 14, fontWeight: 700, color: C.ink, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{nome}</div>
