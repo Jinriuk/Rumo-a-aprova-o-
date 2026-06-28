@@ -3,7 +3,7 @@
    vinculado, com linguagem clara. Todo acesso fica no log (LGPD). */
 import React, { useEffect, useMemo, useState } from "react";
 import { Cabecalho } from "../../shared/ui/Cabecalho.jsx";
-import { Empty, Erro, ErroComRetry, CarregandoBloco } from "../../shared/ui/componentes.jsx";
+import { Empty, ErroComRetry, CarregandoBloco } from "../../shared/ui/componentes.jsx";
 import { ResumoResponsavel } from "../../modules/desempenho/ResumoResponsavel.jsx";
 import { useTrilha } from "../../modules/conteudo/useTrilha.js";
 import { calcularMetricas } from "../../modules/desempenho/metricas.js";

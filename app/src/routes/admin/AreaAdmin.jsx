@@ -6,7 +6,7 @@
    D1B: backoffice substitui os scripts manuais de provisionamento. */
 import React, { useEffect, useId, useMemo, useState } from "react";
 import {
-  SectionCard, Empty, Erro, ErroComRetry, EmptyState, StatCard, StatusBadge,
+  SectionCard, Erro, ErroComRetry, EmptyState, StatCard, StatusBadge,
   Botao, BotaoMini, useInputStyle, CarregandoBloco, Tabs,
 } from "../../shared/ui/componentes.jsx";
 import { useTema } from "../../shared/branding/BrandingContext.jsx";

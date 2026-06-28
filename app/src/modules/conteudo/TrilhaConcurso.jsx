@@ -12,7 +12,7 @@
    que cada um lê).
    ============================================================ */
 import React from "react";
-import { SectionCard, Empty, Erro, EmptyState, StatusBadge, CarregandoBloco } from "../../shared/ui/componentes.jsx";
+import { SectionCard, EmptyState, StatusBadge, CarregandoBloco } from "../../shared/ui/componentes.jsx";
 import { useTema } from "../../shared/branding/BrandingContext.jsx";
 import { useRecurso } from "../../shared/hooks/useRecurso.js";
 import { montarMissoesDoAluno, desviosDeMissao } from "./missoes.js";

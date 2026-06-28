@@ -3,7 +3,7 @@
    missões, conquistas, simulados). Tudo leitura; a RLS já garante que
    só sai a escola da coordenação. Paginado e com empty-state humano. */
 import React, { useEffect, useState } from "react";
-import { SectionCard, Empty, Erro, EmptyState, CarregandoBloco } from "../../shared/ui/componentes.jsx";
+import { SectionCard, Erro, EmptyState, CarregandoBloco } from "../../shared/ui/componentes.jsx";
 import { useTema } from "../../shared/branding/BrandingContext.jsx";
 import { fmtBR } from "../../shared/regras/regras.js";
 import { mensagemAmigavel } from "../../shared/lib/erros.js";

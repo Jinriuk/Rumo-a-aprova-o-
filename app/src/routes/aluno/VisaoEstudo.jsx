@@ -3,7 +3,7 @@
    Mesma composição para aluno (edita) e para coordenação (lê) — o
    banco decide o que cada um PODE; aqui só se esconde o que não cabe. */
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { SectionCard, Empty, Tag, SubjDot, Erro, ErroComRetry, BarraXP, StatusBadge, CarregandoBloco } from "../../shared/ui/componentes.jsx";
+import { Tag, SubjDot, ErroComRetry, BarraXP, StatusBadge, CarregandoBloco } from "../../shared/ui/componentes.jsx";
 import { FeedbackProgresso, MissoesPersistidas } from "../../modules/motor/ProgressoVivido.jsx";
 import { Icone } from "../../shared/ui/Icones.jsx";
 import { MenuPrincipal } from "../../shared/ui/MenuPrincipal.jsx";

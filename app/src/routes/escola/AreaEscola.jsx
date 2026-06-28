@@ -2,7 +2,7 @@
    Painel / Alunos / Ranking / Turmas / LGPD / Marca. */
 import React, { useEffect, useMemo, useReducer, useState } from "react";
 import { Cabecalho } from "../../shared/ui/Cabecalho.jsx";
-import { SectionCard, Empty, Erro, ErroComRetry, EmptyState, CarregandoBloco, useDialogo } from "../../shared/ui/componentes.jsx";
+import { SectionCard, Erro, ErroComRetry, EmptyState, CarregandoBloco, useDialogo } from "../../shared/ui/componentes.jsx";
 import { nomeValido, limparNome } from "../../shared/validacao.js";
 import { MenuPrincipal } from "../../shared/ui/MenuPrincipal.jsx";
 import { useTema } from "../../shared/branding/BrandingContext.jsx";
