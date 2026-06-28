@@ -2,7 +2,6 @@
    nome e cor de acento da escola POR CIMA do design fixo. */
 import React, { createContext, useContext, useState } from "react";
 import { BASE, tema as temaDaEscola } from "../ui/tema.js";
-import { urlImagemSegura } from "../validacao.js";
 
 const BrandingContext = createContext({ escola: null, tema: BASE, aplicarMarca: () => {} });
 
@@ -25,10 +24,13 @@ export const useTema = () => useContext(BrandingContext).tema;
 // sobre o gradiente de acento (mesma assinatura visual da versão atual).
 export function MarcaEscola({ tamanho = 38 }) {
   const { escola, tema } = useBranding();
-  const logoUrl = urlImagemSegura(escola?.logo_url);
-  if (logoUrl) {
+  const logoTrim = String(escola?.logo_url ?? "").trim();
+  // Só http(s)/data:image viram <img src> — barreira de esquema inline
+  // (bloqueia javascript: e afins; fecha js/xss-through-dom do CodeQL).
+  const logoSeguro = /^(https?:\/\/|data:image\/)/i.test(logoTrim);
+  if (logoSeguro) {
     return (
-      <img src={logoUrl} alt={escola.nome}
+      <img src={logoTrim} alt={escola.nome}
         style={{ width: tamanho, height: tamanho, borderRadius: 8, objectFit: "cover", flexShrink: 0 }} />
     );
   }
