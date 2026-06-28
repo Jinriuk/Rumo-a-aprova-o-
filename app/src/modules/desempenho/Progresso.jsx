@@ -5,11 +5,13 @@ import {
   BarChart, Bar, LineChart, Line, ComposedChart, XAxis, YAxis, CartesianGrid,
   Tooltip, ResponsiveContainer, Cell, Legend,
 } from "recharts";
-import { Card, Empty } from "../../shared/ui/componentes.jsx";
+import { Card, Empty, CarregandoBloco } from "../../shared/ui/componentes.jsx";
 import { useTema } from "../../shared/branding/BrandingContext.jsx";
+import { useRecurso } from "../../shared/hooks/useRecurso.js";
 import { todayISO, fmtBR } from "../../shared/regras/regras.js";
 import { resumirRegistros } from "../../shared/metricas/agregados.js";
 import { mensagemAmigavel } from "../../shared/lib/erros.js";
+import { SimuladoConcurso } from "./SimuladoConcurso.jsx";
 import * as db from "../../shared/data/index.js";
 
 const RANGES = [
@@ -166,7 +168,35 @@ function proximoNomeSimulado(simulados) {
   return `Simulado ${max + 1}`;
 }
 
-export function Simulados({ aluno, simulados, podeEditar, semanaAtiva, concurso, aoMudar }) {
+/* Ponto de entrada dos Simulados: decide o FORMATO. Quando o concurso
+   tem modelo de eliminação e/ou papel de redação (militares) e a 15.2
+   cadastrou a estrutura da prova, usa o simulado no formato do concurso
+   (eliminação/redação/nota por dia via simuladoConcurso.js). Sem isso,
+   mantém o simulado genérico atual — nada regride para quem não tem
+   concurso de formato. A escolha do formato carrega só a config + a
+   estrutura; o histórico já vem pronto na prop `simulados`. */
+export function Simulados(props) {
+  const { concurso } = props;
+  const examTag = concurso?.codigo ?? null;
+  const { dados, carregando } = useRecurso(
+    () => examTag
+      ? Promise.all([db.carregarConcursoPorTag(examTag), db.carregarEstruturaProva(examTag)])
+        .then(([cfg, estrutura]) => ({ cfg, estrutura }))
+        // estrutura de concurso é complementar: se falhar, cai no genérico.
+        .catch(() => null)
+      : Promise.resolve(null),
+    [examTag],
+  );
+  const cfg = dados?.cfg ?? null;
+  const temFormato = !!(cfg && (cfg.elimination_model || cfg.redacao_role) && (dados?.estrutura?.materias?.length));
+
+  // enquanto decide o formato, não pisca entre genérico↔concurso.
+  if (examTag && carregando) return <CarregandoBloco titulo="Carregando os simulados…" cartoes={2} linhas={3} />;
+  if (temFormato) return <SimuladoConcurso {...props} cfg={cfg} estrutura={dados.estrutura} />;
+  return <SimuladoGenerico {...props} />;
+}
+
+function SimuladoGenerico({ aluno, simulados, podeEditar, semanaAtiva, concurso, aoMudar }) {
   const T = useTema();
   const prova = provaDoConcurso(concurso?.codigo);
   const materias = materiasDaProva(prova);

@@ -2,7 +2,7 @@
    Hoje / Registrar / Desempenho / Simulados / Histórico / Plano.
    Mesma composição para aluno (edita) e para coordenação (lê) — o
    banco decide o que cada um PODE; aqui só se esconde o que não cabe. */
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { lazy, Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { Tag, SubjDot, ErroComRetry, BarraXP, StatusBadge, CarregandoBloco } from "../../shared/ui/componentes.jsx";
 import { FeedbackProgresso, MissoesPersistidas } from "../../modules/motor/ProgressoVivido.jsx";
 import { Icone } from "../../shared/ui/Icones.jsx";
@@ -17,11 +17,16 @@ import { Arquivo } from "../../modules/motor/Arquivo.jsx";
 import { Conquistas, ConquistasRecentes } from "../../modules/motor/Conquistas.jsx";
 import { TrilhaConcurso } from "../../modules/conteudo/TrilhaConcurso.jsx";
 import { calcularXP, patente } from "../../modules/motor/jargao.js";
-import { Progresso, Simulados } from "../../modules/desempenho/Progresso.jsx";
 import { InsightsDesempenho } from "../../modules/desempenho/Insights.jsx";
-import { Acumulado } from "../../modules/desempenho/Acumulado.jsx";
-import { RadarDesempenho } from "../../modules/desempenho/RadarDesempenho.jsx";
 import { NiveisPorMateria } from "../../modules/desempenho/Niveis.jsx";
+
+// ETAPA 3 — code-splitting: os painéis de gráfico carregam o recharts
+// (a maior dependência do bundle). Importados sob demanda (só quando o
+// aluno abre as abas Desempenho/Simulados), saem do bundle principal.
+const Progresso = lazy(() => import("../../modules/desempenho/Progresso.jsx").then((m) => ({ default: m.Progresso })));
+const Simulados = lazy(() => import("../../modules/desempenho/Progresso.jsx").then((m) => ({ default: m.Simulados })));
+const Acumulado = lazy(() => import("../../modules/desempenho/Acumulado.jsx").then((m) => ({ default: m.Acumulado })));
+const RadarDesempenho = lazy(() => import("../../modules/desempenho/RadarDesempenho.jsx").then((m) => ({ default: m.RadarDesempenho })));
 import { calcularMetricas } from "../../modules/desempenho/metricas.js";
 import { semanaAtual, fmtBR } from "../../shared/regras/regras.js";
 import { mensagemAmigavel } from "../../shared/lib/erros.js";
@@ -174,6 +179,7 @@ export function VisaoEstudo({ aluno, podeEditar, concurso = null, contexto = "Pl
       <MenuPrincipal abas={ABAS} ativo={tab} aoTrocar={setTab}
         usuario={{ nome: aluno.nome, sub: `${patente(xp).nome} · ${xp.toLocaleString("pt-BR")} XP` }} />
 
+      <Suspense fallback={<CarregandoBloco titulo="Carregando o painel…" cartoes={2} linhas={3} />}>
       <div className="fade" key={tab}>
         {tab === "hoje" && (
           <div style={{ display: "flex", flexDirection: "column", gap: 16, paddingTop: 4 }}>
@@ -249,6 +255,7 @@ export function VisaoEstudo({ aluno, podeEditar, concurso = null, contexto = "Pl
         )}
         {tab === "plano" && <Plano trilha={trilha} semanaAtiva={semanaAtiva} meta={meta} />}
       </div>
+      </Suspense>
     </div>
   );
 }

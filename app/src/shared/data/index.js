@@ -198,6 +198,38 @@ export async function carregarRecorrenciaMedida(examTag) {
   return data;
 }
 
+// Recorrência por assunto JÁ ACOMPANHADA dos assuntos/matérias do
+// edital e da recorrência medida ao vivo — o pacote que a tela da
+// trilha consome para mostrar o grau de recorrência e a prioridade
+// sugerida por assunto. Lógica de consolidação fica em
+// conteudo/recorrencia.js (pura); aqui o seam só busca. Degrada
+// graciosamente: se a estrutura de recorrência (15.7) ainda não
+// existir no ambiente, devolve vazio em vez de derrubar a trilha.
+export async function carregarRecorrenciaDoConcurso(examTag) {
+  if (!examTag) return { assuntos: [], materias: [], recorrencia: [], medida: [] };
+  try {
+    const [assuntos, materias, recorrencia, medida] = await Promise.all([
+      supabase.from("assuntos").select("*").eq("exam_tag", examTag).order("ordem"),
+      supabase.from("prova_materias").select("materia_codigo, peso, num_questoes").eq("exam_tag", examTag),
+      supabase.from("recorrencia_assunto").select("*").eq("exam_tag", examTag),
+      supabase.from("vw_recorrencia_medida").select("*").eq("exam_tag", examTag),
+    ]);
+    for (const r of [assuntos, materias, recorrencia, medida]) {
+      if (r.error) {
+        if (tabelaInexistente(r.error)) {
+          console.warn("recorrência por assunto: estrutura ausente, trilha segue sem o painel de incidência");
+          return { assuntos: [], materias: [], recorrencia: [], medida: [] };
+        }
+        throw falha("recorrência do concurso", r.error);
+      }
+    }
+    return { assuntos: assuntos.data ?? [], materias: materias.data ?? [], recorrencia: recorrencia.data ?? [], medida: medida.data ?? [] };
+  } catch (e) {
+    if (tabelaInexistente(e?.causa ?? e)) return { assuntos: [], materias: [], recorrencia: [], medida: [] };
+    throw e;
+  }
+}
+
 /* ---------- níveis e onboarding (Fase 15.3) ---------- */
 
 // Níveis do aluno (geral + por matéria). A RLS decide o que sai:
