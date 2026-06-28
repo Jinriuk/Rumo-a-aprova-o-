@@ -16,6 +16,14 @@ function falha(contexto, error) {
   return e;
 }
 
+// Cancelamento (FE1, tarefa 81): aplica `.abortSignal` num builder do
+// PostgREST/RPC SÓ quando há signal — assim a leitura pode ser cancelada
+// quando a tela desmonta (useRecurso aborta), e quem chama sem signal
+// (a maioria dos pontos) continua igual. Opt-in, sem big bang.
+function comSinal(query, signal) {
+  return signal ? query.abortSignal(signal) : query;
+}
+
 /* ---------- identidade ---------- */
 
 // O aluno/responsável digita só o CÓDIGO (XXXX-XXXX-XXXX). A
@@ -96,9 +104,11 @@ export async function carregarTrilha(trilhaId) {
   return { trilha: t.data, disciplinas: d.data, semanas: s.data, atividades: a.data };
 }
 
-export async function trilhaPadrao() {
-  const { data, error } = await supabase
-    .from("trilhas").select("id, nome").order("versao", { ascending: false }).limit(1);
+export async function trilhaPadrao({ signal } = {}) {
+  const { data, error } = await comSinal(
+    supabase.from("trilhas").select("id, nome").order("versao", { ascending: false }).limit(1),
+    signal,
+  );
   if (error) throw falha("trilha padrão", error);
   return data[0] ?? null;
 }
@@ -110,8 +120,8 @@ export async function carregarConcursoPorTag(examTag) {
   return data ?? null;
 }
 
-export async function listarConcursos() {
-  const { data, error } = await supabase.from("concursos").select("*").order("ordem");
+export async function listarConcursos({ signal } = {}) {
+  const { data, error } = await comSinal(supabase.from("concursos").select("*").order("ordem"), signal);
   if (error) throw falha("concursos", error);
   return data;
 }
@@ -464,8 +474,8 @@ export async function alunoVinculado() {
   return a;
 }
 
-export async function listarTurmas() {
-  const { data, error } = await supabase.from("turmas").select("*").order("nome");
+export async function listarTurmas({ signal } = {}) {
+  const { data, error } = await comSinal(supabase.from("turmas").select("*").order("nome"), signal);
   if (error) throw falha("turmas", error);
   return data;
 }
@@ -492,18 +502,20 @@ export async function removerTurma(turmaId) {
   await registrarLogCoordenacao("excluiu-turma", { entidade: "turma", entidadeId: turmaId });
 }
 
-export async function listarAlunos() {
-  const { data, error } = await supabase
-    .from("alunos")
-    .select("*, alunos_turmas(turma_id, turmas(nome))")
-    .order("nome");
+export async function listarAlunos({ signal } = {}) {
+  const { data, error } = await comSinal(
+    supabase.from("alunos").select("*, alunos_turmas(turma_id, turmas(nome))").order("nome"),
+    signal,
+  );
   if (error) throw falha("alunos", error);
   return data;
 }
 
-export async function listarTrilhas() {
-  const { data, error } = await supabase
-    .from("trilhas").select("id, nome, versao").order("versao", { ascending: false });
+export async function listarTrilhas({ signal } = {}) {
+  const { data, error } = await comSinal(
+    supabase.from("trilhas").select("id, nome, versao").order("versao", { ascending: false }),
+    signal,
+  );
   if (error) throw falha("trilhas", error);
   return data;
 }
@@ -558,17 +570,19 @@ export async function atualizarAluno(alunoId, campos) {
 // O painel NÃO baixa mais todos os registros/metas: a agregação por
 // aluno acontece no banco (função resumo_escola, migration 0016) e
 // volta uma linha por aluno. Escala para centenas de alunos.
-export async function resumoEscola() {
-  const { data, error } = await supabase.rpc("resumo_escola");
+export async function resumoEscola({ signal } = {}) {
+  const { data, error } = await comSinal(supabase.rpc("resumo_escola"), signal);
   if (error) throw falha("resumo da escola", error);
   return data;
 }
 
 // Simulados continuam crus (volume bem menor e o ranking precisa do
 // detalhe por simulado); indexados no cliente por aluno.
-export async function listarSimuladosEscola() {
-  const { data, error } = await supabase
-    .from("simulados").select("aluno_id, nome, data, acertos").order("data");
+export async function listarSimuladosEscola({ signal } = {}) {
+  const { data, error } = await comSinal(
+    supabase.from("simulados").select("aluno_id, nome, data, acertos").order("data"),
+    signal,
+  );
   if (error) throw falha("simulados da escola", error);
   return data;
 }
@@ -721,15 +735,20 @@ export async function registrarConsentimento(alunoId, responsavelNome) {
   return data;
 }
 
-export async function listarConsentimentos() {
-  const { data, error } = await supabase.from("consentimentos").select("*").order("aceito_em", { ascending: false });
+export async function listarConsentimentos({ signal } = {}) {
+  const { data, error } = await comSinal(
+    supabase.from("consentimentos").select("*").order("aceito_em", { ascending: false }),
+    signal,
+  );
   if (error) throw falha("consentimentos", error);
   return data;
 }
 
-export async function listarLogsAcesso(limite = 100) {
-  const { data, error } = await supabase
-    .from("logs_acesso").select("*").order("em", { ascending: false }).limit(limite);
+export async function listarLogsAcesso(limite = 100, { signal } = {}) {
+  const { data, error } = await comSinal(
+    supabase.from("logs_acesso").select("*").order("em", { ascending: false }).limit(limite),
+    signal,
+  );
   if (error) throw falha("logs de acesso", error);
   return data;
 }

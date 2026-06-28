@@ -1,8 +1,9 @@
 /* Login — aluno/responsável entram com código; coordenação com e-mail+senha.
    D1B: campo senha com olhinho, "Esqueci minha senha" para coordenação,
    "Esqueci meu código de acesso" para aluno/responsável. */
-import React, { useState } from "react";
+import React, { useRef, useState } from "react";
 import { BASE, FONTES_CSS } from "../../shared/ui/tema.js";
+import { criarTrava } from "../../shared/lib/travaEnvio.js";
 import * as db from "../../shared/data/index.js";
 
 const T = BASE;
@@ -19,8 +20,18 @@ export default function Login() {
   const [emailRecup, setEmailRecup] = useState("");
   const [msgConfirmacao, setMsgConfirmacao] = useState("");
 
+  // Trava SÍNCRONA contra duplo envio do login e dos pedidos de
+  // recuperação (FE1, tarefa 82). O `busy`/`disabled` só vale no
+  // próximo render; o latch recusa o segundo disparo no mesmo tick
+  // (duplo clique, clique + Enter). As telas nunca são simultâneas, um
+  // latch só serve às três. Mantemos as mensagens de erro próprias
+  // daqui (texto específico de login) — por isso não usamos o hook.
+  const travaRef = useRef(null);
+  if (travaRef.current === null) travaRef.current = criarTrava();
+
   async function entrar(e) {
     e?.preventDefault();
+    if (!travaRef.current.tentar()) return;
     setBusy(true); setErr("");
     try {
       if (modo === "codigo") await db.entrarComCodigo(codigo);
@@ -28,16 +39,20 @@ export default function Login() {
     } catch {
       setErr(modo === "codigo" ? "Código não reconhecido. Confira com a escola." : "E-mail ou senha incorretos.");
       setBusy(false);
+    } finally {
+      travaRef.current.liberar();
     }
   }
 
   async function solicitarSenha(e) {
     e?.preventDefault();
     if (!emailRecup.trim()) { setErr("Informe o e-mail."); return; }
+    if (!travaRef.current.tentar()) return;
     setBusy(true); setErr("");
     try {
       await db.recuperarSenha(emailRecup.trim());
     } catch { /* mensagem genérica independentemente do resultado */ }
+    finally { travaRef.current.liberar(); }
     setBusy(false);
     setMsgConfirmacao("Se este e-mail estiver cadastrado, enviaremos instruções de recuperação.");
     setTela("confirmacao");
@@ -46,10 +61,12 @@ export default function Login() {
   async function solicitarCodigo(e) {
     e?.preventDefault();
     if (!emailRecup.trim()) { setErr("Informe o e-mail."); return; }
+    if (!travaRef.current.tentar()) return;
     setBusy(true); setErr("");
     try {
       await db.solicitarRecuperacaoCodigo(emailRecup.trim());
     } catch { /* silencioso */ }
+    finally { travaRef.current.liberar(); }
     setBusy(false);
     setMsgConfirmacao("Se houver um acesso vinculado a este e-mail, enviaremos as instruções. Caso não receba, procure a coordenação da escola.");
     setTela("confirmacao");

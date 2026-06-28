@@ -2,11 +2,12 @@
    desempenho"; ação importante "Gerar credencial"; secundárias
    (responsável, exportar/excluir LGPD) recolhidas em "Mais ações".
    Status visual claro com selos. */
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { SectionCard, EmptyState, Erro, StatusBadge, BotaoMini, MaisAcoes } from "../../shared/ui/componentes.jsx";
 import { useTema } from "../../shared/branding/BrandingContext.jsx";
 import { limparNome, nomeValido } from "../../shared/validacao.js";
 import { mensagemAmigavel } from "../../shared/lib/erros.js";
+import { criarTrava } from "../../shared/lib/travaEnvio.js";
 import { paginar } from "../../shared/lib/paginacao.js";
 import { VinculosResponsavel } from "./VinculosResponsavel.jsx";
 import * as db from "../../shared/data/index.js";
@@ -24,9 +25,18 @@ export function ListaAlunos({ alunos, consentimentos, concursos = [], turmas = [
   const [alunoVinculos, setAlunoVinculos] = useState(null);
   const comConsentimento = useMemo(() => new Set(consentimentos.map((c) => c.aluno_id)), [consentimentos]);
 
+  // Trava SÍNCRONA de ação sensível (gerar/regerar credencial, LGPD,
+  // trocar turma/concurso): duplo clique numa linha não dispara a ação
+  // duas vezes (FE1, tarefa 82). `ocupado` (id) segue dando o feedback
+  // visual por linha; o latch é o que garante a unicidade no mesmo tick.
+  const travaRef = useRef(null);
+  if (travaRef.current === null) travaRef.current = criarTrava();
+
   async function comAcao(aluno, fn) {
+    if (!travaRef.current.tentar()) return;
     setOcupado(aluno.id); setErro(null);
     try { await fn(); aoMudar?.(); } catch (e) { setErro(mensagemAmigavel(e, "acao")); }
+    finally { travaRef.current.liberar(); }
     setOcupado(null);
   }
 
@@ -56,6 +66,7 @@ export function ListaAlunos({ alunos, consentimentos, concursos = [], turmas = [
     return comAcao(a, () => db.atualizarAluno(a.id, { nome }));
   };
   async function exportar(a) {
+    if (!travaRef.current.tentar()) return;
     setOcupado(a.id); setErro(null);
     try {
       const { dossie } = await db.lgpdTitular("exportar", a.id);
@@ -65,6 +76,7 @@ export function ListaAlunos({ alunos, consentimentos, concursos = [], turmas = [
       link.download = `dados-${a.nome.toLowerCase().replace(/\s+/g, "-")}.json`;
       link.click(); URL.revokeObjectURL(link.href);
     } catch (e) { setErro(mensagemAmigavel(e, "acao")); }
+    finally { travaRef.current.liberar(); }
     setOcupado(null);
   }
   const excluir = (a) => {

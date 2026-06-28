@@ -6,7 +6,7 @@ import React, { useRef, useState } from "react";
 import { Card, Botao, BotaoMini, Erro, useInputStyle } from "../../shared/ui/componentes.jsx";
 import { useTema } from "../../shared/branding/BrandingContext.jsx";
 import { limparNome, nomeValido } from "../../shared/validacao.js";
-import { mensagemAmigavel } from "../../shared/lib/erros.js";
+import { useEnvioUnico } from "../../shared/hooks/useEnvioUnico.js";
 import { comConcorrenciaLimitada } from "../../shared/lib/concorrencia.js";
 import { AvisoMaturidade } from "../conteudo/SeloMaturidade.jsx";
 import { maturidadeDe, rotuloMaturidade, podeAtribuirTrilhaSemanal, aceitaAluno } from "../conteudo/maturidade.js";
@@ -67,8 +67,7 @@ export function NovoAluno({ turmas, trilhaPadrao, concursos = [], aoMudar }) {
   const [concursoId, setConcursoId] = useState("");
   const [consentiu, setConsentiu] = useState(false);
   const [consentimentoNome, setConsentimentoNome] = useState("");
-  const [erro, setErro] = useState(null);
-  const [ocupado, setOcupado] = useState(false);
+  const { ocupado, erro, enviar } = useEnvioUnico("salvar"); // trava de duplo cadastro
   const [feito, setFeito] = useState(null);
 
   // Maturidade do concurso selecionado governa o que o sistema oferece:
@@ -83,9 +82,9 @@ export function NovoAluno({ turmas, trilhaPadrao, concursos = [], aoMudar }) {
   const pronto = nomeValido(nome) && !concursoBloqueado && (!consentiu || nomeValido(consentimentoNome));
 
   async function cadastrar() {
-    if (!pronto || ocupado) return;
-    setOcupado(true); setErro(null); setFeito(null);
-    try {
+    if (!pronto) return;
+    setFeito(null);
+    await enviar(async () => {
       const concursoEscolhido = concursoId || cnId || null;
       const trilhaEscolhida = usaTrilhaSemanal ? (trilhaPadrao?.id ?? null) : null;
       const alunos = await db.cadastrarAlunos(
@@ -98,8 +97,7 @@ export function NovoAluno({ turmas, trilhaPadrao, concursos = [], aoMudar }) {
       setFeito(`${limparNome(nome)} cadastrado. Gere a credencial na lista abaixo.`);
       setNome(""); setConsentiu(false); setConsentimentoNome("");
       aoMudar?.();
-    } catch (e) { setErro(mensagemAmigavel(e, "salvar")); }
-    setOcupado(false);
+    });
   }
 
   return (
@@ -178,8 +176,7 @@ export function NovosAlunos({ turmas, trilhaPadrao, concursos = [], aoMudar }) {
   const [concursoId, setConcursoId] = useState("");
   const [consentimentoNome, setConsentimentoNome] = useState("");
   const [consentiu, setConsentiu] = useState(false);
-  const [erro, setErro] = useState(null);
-  const [ocupado, setOcupado] = useState(false);
+  const { ocupado, erro, setErro, enviar } = useEnvioUnico("salvar"); // trava de duplo import
   const [feito, setFeito] = useState(null);
 
   // ── modo texto ──
@@ -222,9 +219,9 @@ export function NovosAlunos({ turmas, trilhaPadrao, concursos = [], aoMudar }) {
   const prontoCsv = !concursoBloqueado && linhasValidas.length > 0;
 
   async function cadastrar() {
-    if (ocupado || concursoBloqueado) return;
-    setOcupado(true); setErro(null); setFeito(null);
-    try {
+    if (concursoBloqueado) return;
+    setFeito(null);
+    await enviar(async () => {
       const concursoEscolhido = concursoId || cnId || null;
       const trilhaEscolhida = usaTrilhaSemanal ? (trilhaPadrao?.id ?? null) : null;
 
@@ -261,8 +258,7 @@ export function NovosAlunos({ turmas, trilhaPadrao, concursos = [], aoMudar }) {
         setNomes(""); setConsentimentoNome(""); setConsentiu(false);
       }
       aoMudar?.();
-    } catch (e) { setErro(mensagemAmigavel(e, "salvar")); }
-    setOcupado(false);
+    });
   }
 
   const selS = { background: T.bg, border: `1px solid ${T.line}`, color: T.ink, borderRadius: 8, padding: "7px 9px", fontSize: 12.5 };
@@ -485,18 +481,15 @@ export function CredencialGerada({ credencial, aoFechar }) {
 export function NovaTurma({ aoMudar }) {
   const { input: inputS, label: lbl } = useInputStyle();
   const [nome, setNome] = useState("");
-  const [erro, setErro] = useState(null);
-  const [ocupado, setOcupado] = useState(false);
+  const { ocupado, erro, enviar } = useEnvioUnico("salvar"); // trava de duplo "criar turma"
 
   async function criar() {
-    if (!nomeValido(nome) || ocupado) return;
-    setOcupado(true); setErro(null);
-    try {
+    if (!nomeValido(nome)) return;
+    await enviar(async () => {
       await db.criarTurma(limparNome(nome));
       setNome("");
       aoMudar?.();
-    } catch (e) { setErro(mensagemAmigavel(e, "salvar")); }
-    setOcupado(false);
+    });
   }
 
   return (
