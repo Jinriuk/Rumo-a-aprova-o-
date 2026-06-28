@@ -13,9 +13,9 @@ export function Cabecalho({ titulo, subtitulo, diasProva, diasProvaMedia, nomeUs
       <div style={{ padding: "10px max(18px, env(safe-area-inset-right)) 10px max(18px, env(safe-area-inset-left))", display: "flex", alignItems: "center", gap: 11 }}>
         <MarcaEscola tamanho={34} />
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div className="disp hdr-title" style={{ fontSize: 17, fontWeight: 700, lineHeight: 1.1, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+          <h1 className="disp hdr-title" style={{ margin: 0, fontSize: 17, fontWeight: 700, lineHeight: 1.1, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", color: T.ink }}>
             {escola?.nome ?? titulo}
-          </div>
+          </h1>
           {subtitulo && <div style={{ fontSize: 11, color: T.sub, marginTop: 2, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{subtitulo}</div>}
         </div>
 

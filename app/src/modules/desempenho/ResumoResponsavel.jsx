@@ -57,8 +57,33 @@ export function ResumoResponsavel({ aluno, m, meta, trilha, simulados, semanaAti
   const melhor = comAcc.length ? [...comAcc].sort((a, b) => b.acc - a.acc)[0] : null;
   const pior = comAcc.length > 1 ? [...comAcc].sort((a, b) => a.acc - b.acc)[0] : null;
 
+  // Semáforo simples "está indo bem?" (ped-ux1 8.5) — leitura única para
+  // o responsável, com limiares honestos e alinhados ao resto da tela
+  // (70% = bom acerto; 5+ dias = rotina forte). Não inventa nota; resume.
+  const semaforo = (() => {
+    if (m.diasSemana === 0)
+      return { tom: T.red, rotulo: "Precisa de atenção", txt: `${primeiroNome} ainda não estudou nesta semana — um incentivo ajuda a retomar.` };
+    if ((m.acerto > 0 && m.acerto < 55) || (m.diasSemana < 3 && pendentes > 0))
+      return { tom: T.gold, rotulo: "Vale acompanhar", txt: "Há sinais para acompanhar de perto nesta semana (veja os pontos de atenção abaixo)." };
+    if ((metaConcluida && m.diasSemana >= 3) || (m.diasSemana >= 5 && (m.acerto === 0 || m.acerto >= 70)))
+      return { tom: T.green, rotulo: "Indo bem", txt: "A semana está indo bem — rotina consistente e metas em dia." };
+    return { tom: T.gold, rotulo: "No caminho", txt: "Estudo em andamento; ainda há atividades para concluir nesta semana." };
+  })();
+  // benchmark textual "isso é bom?" para os indicadores-chave.
+  const lerAcerto = m.acerto === 0 ? "sem questões ainda" : m.acerto >= 70 ? "bom nível" : m.acerto >= 55 ? "dá para melhorar" : "precisa de reforço";
+  const lerDias = m.diasSemana >= 5 ? "ótima rotina" : m.diasSemana >= 3 ? "rotina razoável" : "rotina baixa";
+
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+      {/* semáforo: leitura única "está indo bem?" */}
+      <div role="status" style={{ display: "flex", alignItems: "center", gap: 13, background: `${semaforo.tom}10`, border: `1px solid ${semaforo.tom}55`, borderLeft: `5px solid ${semaforo.tom}`, borderRadius: 12, padding: "13px 16px" }}>
+        <span style={{ width: 16, height: 16, borderRadius: "50%", background: semaforo.tom, flexShrink: 0, boxShadow: `0 0 10px ${semaforo.tom}88` }} />
+        <div style={{ minWidth: 0 }}>
+          <div className="disp" style={{ fontSize: 15.5, fontWeight: 800, color: T.ink, lineHeight: 1.2 }}>{semaforo.rotulo}</div>
+          <div style={{ fontSize: 12.5, color: T.sub, marginTop: 2, lineHeight: 1.45 }}>{semaforo.txt}</div>
+        </div>
+      </div>
+
       {/* frase interpretativa */}
       <div style={{ background: `linear-gradient(160deg, ${T.cardHi}, ${T.card})`, border: `1px solid ${T.line}`, borderLeft: `4px solid ${metaConcluida ? T.green : T.gold}`, borderRadius: 12, padding: "14px 16px" }}>
         <div style={{ fontSize: 14.5, color: T.ink, lineHeight: 1.55 }}>{frase}</div>
@@ -70,9 +95,9 @@ export function ResumoResponsavel({ aluno, m, meta, trilha, simulados, semanaAti
           tom={metaConcluida ? "ok" : pendentes > 0 ? "alerta" : "neutro"} />
         <StatCard rotulo="Questões" valor={m.qSem} sub="nesta semana" icone="✦" />
         <StatCard rotulo="Tempo estudado" valor={fmtHoras(m.minutosSemana ?? 0)} sub="nesta semana" icone="◷" />
-        <StatCard rotulo="Acerto geral" valor={m.acerto > 0 ? `${m.acerto}%` : "—"} icone="◎"
+        <StatCard rotulo="Acerto geral" valor={m.acerto > 0 ? `${m.acerto}%` : "—"} sub={lerAcerto} icone="◎"
           tom={m.acerto >= 70 ? "ok" : m.acerto > 0 ? "alerta" : "neutro"} />
-        <StatCard rotulo="Dias ativos" valor={`${m.diasSemana}/7`} icone="📆"
+        <StatCard rotulo="Dias ativos" valor={`${m.diasSemana}/7`} sub={lerDias} icone="📆"
           tom={m.diasSemana >= 5 ? "ok" : m.diasSemana >= 3 ? "alerta" : "risco"} />
       </div>
 

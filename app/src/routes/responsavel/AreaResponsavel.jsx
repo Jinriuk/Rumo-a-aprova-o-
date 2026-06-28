@@ -3,7 +3,7 @@
    vinculado, com linguagem clara. Todo acesso fica no log (LGPD). */
 import React, { useEffect, useMemo, useState } from "react";
 import { Cabecalho } from "../../shared/ui/Cabecalho.jsx";
-import { Empty, Erro, CarregandoBloco } from "../../shared/ui/componentes.jsx";
+import { Empty, Erro, ErroComRetry, CarregandoBloco } from "../../shared/ui/componentes.jsx";
 import { ResumoResponsavel } from "../../modules/desempenho/ResumoResponsavel.jsx";
 import { useTrilha } from "../../modules/conteudo/useTrilha.js";
 import { calcularMetricas } from "../../modules/desempenho/metricas.js";
@@ -18,7 +18,9 @@ export default function AreaResponsavel({ perfil }) {
   const [dados, setDados] = useState({ metas: [], registros: [], simulados: [] });
   const [concurso, setConcurso] = useState(null);
   const [prova, setProva] = useState(null);
-  const { trilha } = useTrilha(aluno?.trilha_id);
+  const [versao, setVersao] = useState(0);
+  const { trilha, recarregar: recarregarTrilha } = useTrilha(aluno?.trilha_id);
+  const recarregar = () => { setErro(null); setAluno(undefined); setVersao((v) => v + 1); recarregarTrilha(); };
 
   useEffect(() => window.scrollTo({ top: 0, left: 0, behavior: "instant" }), []); // login nasce no topo
 
@@ -51,7 +53,8 @@ export default function AreaResponsavel({ perfil }) {
       } catch (e) { if (vivo) setErro(mensagemAmigavel(e, "carregar")); }
     })();
     return () => { vivo = false; };
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [versao]);
 
   const semanasRegras = useMemo(
     () => (trilha ? trilha.semanas.map((s) => ({ ...s, inicio: String(s.inicio), fim: String(s.fim) })) : []),
@@ -80,7 +83,7 @@ export default function AreaResponsavel({ perfil }) {
       <Cabecalho subtitulo={subtitulo} diasProva={prova?.dias ?? null} diasProvaMedia={prova?.media}
         nomeUsuario={perfil.usuario.nome} rotuloPapel="Responsável" />
       <main style={{ maxWidth: 760, margin: "0 auto", padding: "18px max(16px, env(safe-area-inset-right)) calc(88px + env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left))" }}>
-        {erro && <Erro>{erro}</Erro>}
+        {erro && <ErroComRetry aoTentar={recarregar}>{erro}</ErroComRetry>}
         {aluno === undefined && !erro && <CarregandoBloco titulo="Carregando os dados do aluno…" cartoes={2} linhas={3} />}
         {aluno === null && <Empty txt="Nenhum aluno vinculado a este acesso. Fale com a escola." />}
         {aluno && m && trilha && (

@@ -4,10 +4,10 @@
    com edição, ações de status e provisionamento de coordenador — tudo
    via RPC/Edge Function com porteiro. Credencial de admin nunca no navegador.
    D1B: backoffice substitui os scripts manuais de provisionamento. */
-import React, { useId, useMemo, useState } from "react";
+import React, { useEffect, useId, useMemo, useState } from "react";
 import {
-  SectionCard, Empty, Erro, EmptyState, StatCard, StatusBadge,
-  Botao, BotaoMini, useInputStyle, CarregandoBloco,
+  SectionCard, Empty, Erro, ErroComRetry, EmptyState, StatCard, StatusBadge,
+  Botao, BotaoMini, useInputStyle, CarregandoBloco, Tabs,
 } from "../../shared/ui/componentes.jsx";
 import { useTema } from "../../shared/branding/BrandingContext.jsx";
 import { useRecurso } from "../../shared/hooks/useRecurso.js";
@@ -40,6 +40,9 @@ export default function AreaAdmin() {
   const { dados: dash, recarregar: recDash } = useRecurso(() => db.backofficeDashboard(), []);
   const { dados: logs, recarregar: recLogs } = useRecurso(() => db.backofficeLogs(200), []);
   const [aberta, setAberta] = useState(null);
+  // Abas do backoffice (UX1.2): Visão / Escolas / Logs — antes tudo numa
+  // página só, com rolagem longa. Cada aba carrega seu bloco.
+  const [abaAdmin, setAbaAdmin] = useState("visao");
 
   const recarregarTudo = () => { recarregar(); recDash(); recLogs(); };
   const lista = escolas ?? [];
@@ -52,7 +55,7 @@ export default function AreaAdmin() {
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
             <div className="disp" style={{ width: 34, height: 34, borderRadius: 8, background: `linear-gradient(135deg,${T.gold},#9c7d2e)`, display: "flex", alignItems: "center", justifyContent: "center", color: "#0A1622", fontWeight: 800, fontSize: 17 }}>⚓</div>
             <div>
-              <div className="disp" style={{ fontSize: 16, fontWeight: 800, color: T.gold, lineHeight: 1.1 }}>Backoffice</div>
+              <h1 className="disp" style={{ margin: 0, fontSize: 16, fontWeight: 800, color: T.gold, lineHeight: 1.1 }}>Backoffice</h1>
               <div style={{ fontSize: 11.5, color: T.sub }}>Operação interna · super_admin</div>
             </div>
           </div>
@@ -64,7 +67,7 @@ export default function AreaAdmin() {
       </header>
 
       <main style={{ maxWidth: 1080, margin: "0 auto", padding: "16px", display: "flex", flexDirection: "column", gap: 16 }}>
-        {erro && <Erro>{erro}</Erro>}
+        {erro && <ErroComRetry aoTentar={recarregarTudo}>{erro}</ErroComRetry>}
         {carregando && <CarregandoBloco titulo="Carregando escolas…" cartoes={4} linhas={5} />}
 
         {!carregando && !erro && aberta && (
@@ -73,10 +76,25 @@ export default function AreaAdmin() {
 
         {!carregando && !erro && !aberta && (
           <>
-            <Dashboard dash={dash} lista={lista} />
-            <NovaEscola aoCriar={recarregarTudo} />
-            <ListaEscolas lista={lista} aoAbrir={setAberta} />
-            <AtividadeAdmin logs={logs} nomePorEscola={nomePorEscola} />
+            <Tabs
+              abas={[
+                ["visao", "Visão geral"],
+                ["escolas", "Escolas", lista.length],
+                ["logs", "Logs", (logs ?? []).length],
+              ]}
+              ativo={abaAdmin}
+              aoTrocar={(k) => { setAbaAdmin(k); window.scrollTo({ top: 0, behavior: "instant" }); }}
+            />
+            <div className="fade" key={abaAdmin} style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+              {abaAdmin === "visao" && <Dashboard dash={dash} lista={lista} />}
+              {abaAdmin === "escolas" && (
+                <>
+                  <NovaEscola aoCriar={recarregarTudo} />
+                  <ListaEscolas lista={lista} aoAbrir={setAberta} />
+                </>
+              )}
+              {abaAdmin === "logs" && <AtividadeAdmin logs={logs} nomePorEscola={nomePorEscola} />}
+            </div>
           </>
         )}
       </main>
@@ -484,6 +502,13 @@ function AtividadeAdmin({ logs, nomePorEscola }) {
     () => filtrarLogs(todas, { busca, acao: fAcao, escolaId: fEscola, periodoDias: +fPeriodo, nomePorEscola }),
     [todas, busca, fAcao, fEscola, fPeriodo, nomePorEscola]);
 
+  // paginação simples (UX1.2): mostra 30 e carrega mais sob demanda — antes
+  // despejava até 200 linhas de uma vez. Volta a 30 quando o filtro muda.
+  const POR_PAGINA = 30;
+  const [limite, setLimite] = useState(POR_PAGINA);
+  useEffect(() => { setLimite(POR_PAGINA); }, [busca, fAcao, fEscola, fPeriodo]);
+  const visiveis = lista.slice(0, limite);
+
   const selS = { ...inputS, minHeight: 42, fontSize: 13.5, padding: "9px 10px" };
 
   return (
@@ -522,8 +547,8 @@ function AtividadeAdmin({ logs, nomePorEscola }) {
         <div style={{ padding: 8 }}><EmptyState icone="🗒️" titulo="Nenhum log para o filtro" dica="Ajuste a busca/filtros — ou as ações do backoffice aparecem aqui assim que ocorrerem." /></div>
       ) : (
         <div style={{ display: "flex", flexDirection: "column" }}>
-          {lista.map((l, i) => (
-            <div key={i} style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 15px", borderBottom: i === lista.length - 1 ? "none" : `1px solid ${T.line}`, fontSize: 12.5 }}>
+          {visiveis.map((l, i) => (
+            <div key={i} style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 15px", borderBottom: i === visiveis.length - 1 ? "none" : `1px solid ${T.line}`, fontSize: 12.5 }}>
               <span style={{ flex: 1, minWidth: 0, color: T.ink }}>
                 <b>{rotuloAcao(l.acao)}</b>
                 {l.escola_id && <span style={{ color: T.sub }}> · {nomePorEscola[l.escola_id] ?? l.detalhe?.nome ?? "escola"}</span>}
@@ -532,6 +557,14 @@ function AtividadeAdmin({ logs, nomePorEscola }) {
               <span className="num" style={{ color: T.sub, flexShrink: 0 }}>{fmtData(l.em)}</span>
             </div>
           ))}
+          {lista.length > limite && (
+            <div style={{ textAlign: "center", padding: 12, borderTop: `1px solid ${T.line}` }}>
+              <button onClick={() => setLimite((n) => n + POR_PAGINA)}
+                style={{ border: `1px solid ${T.line}`, background: T.bg, color: T.gold, borderRadius: 8, padding: "8px 16px", fontSize: 13, fontWeight: 700, minHeight: 38 }}>
+                Ver mais · {limite} de {lista.length}
+              </button>
+            </div>
+          )}
         </div>
       )}
     </SectionCard>

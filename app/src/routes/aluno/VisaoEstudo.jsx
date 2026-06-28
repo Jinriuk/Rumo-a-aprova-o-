@@ -3,7 +3,7 @@
    Mesma composição para aluno (edita) e para coordenação (lê) — o
    banco decide o que cada um PODE; aqui só se esconde o que não cabe. */
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { SectionCard, Empty, Tag, SubjDot, Erro, BarraXP, StatusBadge, CarregandoBloco } from "../../shared/ui/componentes.jsx";
+import { SectionCard, Empty, Tag, SubjDot, Erro, ErroComRetry, BarraXP, StatusBadge, CarregandoBloco } from "../../shared/ui/componentes.jsx";
 import { FeedbackProgresso, MissoesPersistidas } from "../../modules/motor/ProgressoVivido.jsx";
 import { Icone } from "../../shared/ui/Icones.jsx";
 import { MenuPrincipal } from "../../shared/ui/MenuPrincipal.jsx";
@@ -39,10 +39,23 @@ export function VisaoEstudo({ aluno, podeEditar, concurso = null, contexto = "Pl
   const T = useTema();
   const [tab, setTab] = useState("hoje");
   const [dados, setDados] = useState({ carregando: true, metas: [], registros: [], simulados: [], xpPersistido: null, erro: null });
-  const { trilha, carregando: carregandoTrilha, erro: erroTrilha } = useTrilha(aluno?.trilha_id);
+  const { trilha, carregando: carregandoTrilha, erro: erroTrilha, recarregar: recarregarTrilha } = useTrilha(aluno?.trilha_id);
   const [versao, setVersao] = useState(0);
   const [minutosSugeridos, setMinutosSugeridos] = useState(0);
   const recarregar = () => setVersao((v) => v + 1);
+  const recarregarTudo = () => { recarregar(); recarregarTrilha(); };
+
+  // Modo essencial (UX1.2): reduz a aba "Hoje" ao núcleo "o que faço
+  // agora" (faixa + missão + meta + registrar), recolhendo os extras de
+  // gamificação. Preferência persistida por aluno neste navegador.
+  const [essencial, setEssencial] = useState(() => {
+    try { return localStorage.getItem("rumo-modo-essencial") === "1"; } catch { return false; }
+  });
+  const alternarEssencial = () => setEssencial((v) => {
+    const n = !v;
+    try { localStorage.setItem("rumo-modo-essencial", n ? "1" : "0"); } catch { /* ignora */ }
+    return n;
+  });
 
   // ---- missões PERSISTIDAS (PED1): fecham sozinhas quando o aluno bate
   // volume + acurácia. Lê a tabela aluno_missoes (motor no banco).
@@ -87,6 +100,11 @@ export function VisaoEstudo({ aluno, podeEditar, concurso = null, contexto = "Pl
   // toda troca de aba (menu OU botões internos) nasce no topo da página
   const irAba = (k) => { setTab(k); window.scrollTo({ top: 0, left: 0, behavior: "instant" }); };
 
+  // índice de navegação da aba Desempenho (rola até a seção) — reduz a
+  // sensação de "parede de blocos" sem esconder conteúdo (UX1.2).
+  const refResumo = useRef(null), refMaterias = useRef(null), refHistorico = useRef(null);
+  const rolarPara = (ref) => ref.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+
   useEffect(() => {
     if (!aluno) return;
     let vivo = true;
@@ -114,8 +132,8 @@ export function VisaoEstudo({ aluno, podeEditar, concurso = null, contexto = "Pl
   }, [dados, trilha, semanaAtiva]);
 
   if (carregandoTrilha || dados.carregando) return <CarregandoBloco titulo="Carregando seu painel de estudos…" cartoes={3} linhas={4} />;
-  if (dados.erro) return <Erro>{dados.erro}</Erro>;
-  if (erroTrilha) return <Erro>{erroTrilha}</Erro>;
+  if (dados.erro) return <ErroComRetry aoTentar={recarregarTudo}>{dados.erro}</ErroComRetry>;
+  if (erroTrilha) return <ErroComRetry aoTentar={recarregarTudo}>{erroTrilha}</ErroComRetry>;
   if (!trilha) return (
     <div style={{ padding: "32px 16px", textAlign: "center" }}>
       <div style={{ fontSize: 28, opacity: 0.4 }}>🗺️</div>
@@ -145,8 +163,9 @@ export function VisaoEstudo({ aluno, podeEditar, concurso = null, contexto = "Pl
   return (
     <div>
       {feedback && <FeedbackProgresso feedback={feedback} aoFechar={() => setFeedback(null)} />}
-      {/* cronômetro: começa agora, e o tempo vai direto pro registro */}
-      {podeEditar && (
+      {/* cronômetro: só nas abas onde o estudo é registrado (Hoje/Registrar),
+          para não ocupar espaço em Desempenho, Plano etc. (UX1.2) */}
+      {podeEditar && (tab === "hoje" || tab === "registrar") && (
         <div style={{ marginBottom: 12, display: "flex", justifyContent: "flex-end" }}>
           <Cronometro aoFinalizar={(min) => { setMinutosSugeridos(min); irAba("registrar"); }} />
         </div>
@@ -158,18 +177,34 @@ export function VisaoEstudo({ aluno, podeEditar, concurso = null, contexto = "Pl
       <div className="fade" key={tab}>
         {tab === "hoje" && (
           <div style={{ display: "flex", flexDirection: "column", gap: 16, paddingTop: 4 }}>
+            {podeEditar && (
+              <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: -6 }}>
+                <button onClick={alternarEssencial}
+                  aria-pressed={essencial}
+                  title={essencial ? "Mostrar tudo na tela inicial" : "Reduzir a tela inicial ao essencial"}
+                  style={{ display: "inline-flex", alignItems: "center", gap: 7, border: `1px solid ${essencial ? T.gold : T.line}`, background: essencial ? `${T.gold}14` : "transparent", color: essencial ? T.gold : T.sub, borderRadius: 999, fontSize: 12, fontWeight: 700, padding: "6px 13px", minHeight: 34 }}>
+                  <span style={{ width: 7, height: 7, borderRadius: "50%", background: essencial ? T.gold : T.sub }} />
+                  {essencial ? "Modo essencial" : "Modo completo"}
+                </button>
+              </div>
+            )}
             <FaixaAspirante nome={aluno.nome.split(" ")[0]} contexto={contexto} xp={xp} streak={m?.streak ?? 0}
               aoAbrirConquistas={() => irAba("conquistas")} />
             <MissaoAtual meta={meta} trilha={trilha} m={m} aoAvancar={podeEditar ? irAba : undefined} />
-            {examTag && gam.missoes.length > 0 && <MissoesPersistidas missoes={gam.missoes} />}
+            {!essencial && examTag && gam.missoes.length > 0 && <MissoesPersistidas missoes={gam.missoes} />}
             <MetaSemana meta={meta} trilha={trilha} podeEditar={podeEditar} aoMudar={recarregar}
               aoAbrirDesempenho={() => irAba("desempenho")} />
-            {m && <ConquistasRecentes m={m} metas={dados.metas} simulados={dados.simulados} aoAbrir={() => irAba("conquistas")} />}
+            {!essencial && m && <ConquistasRecentes m={m} metas={dados.metas} simulados={dados.simulados} aoAbrir={() => irAba("conquistas")} />}
             {podeEditar && (
               <button onClick={() => irAba("registrar")}
                 style={{ border: `1px dashed ${T.gold}66`, background: `${T.gold}0c`, color: T.gold, borderRadius: 12, fontWeight: 700, fontSize: 14, padding: "16px", minHeight: 52, marginTop: 2 }}>
                 ✎ Registrar estudo de hoje
               </button>
+            )}
+            {essencial && (
+              <div style={{ fontSize: 11.5, color: T.sub, textAlign: "center", lineHeight: 1.5 }}>
+                Modo essencial ativo — conquistas e missões extras estão recolhidas. Toque em “Modo essencial” acima para ver tudo.
+              </div>
             )}
           </div>
         )}
@@ -182,13 +217,25 @@ export function VisaoEstudo({ aluno, podeEditar, concurso = null, contexto = "Pl
         )}
         {tab === "desempenho" && (
           <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-            {m && <InsightsDesempenho m={m} />}
-            <SecaoDesempenho rotulo="◉ Diagnóstico por matéria" />
-            <NiveisPorMateria m={m} trilha={trilha} />
-            <RadarDesempenho m={m} trilha={trilha} aoRegistrar={podeEditar ? () => irAba("registrar") : null} />
-            <SecaoDesempenho rotulo="▣ Histórico acumulado" />
-            <Acumulado registros={dados.registros} trilha={trilha} />
-            <Progresso registros={dados.registros} trilha={trilha} />
+            <nav aria-label="Seções do desempenho" className="navwrap" style={{ display: "flex", gap: 8, overflowX: "auto", paddingBottom: 2 }}>
+              {[["Resumo", refResumo], ["Por matéria", refMaterias], ["Histórico", refHistorico]].map(([rot, r]) => (
+                <button key={rot} onClick={() => rolarPara(r)}
+                  style={{ flexShrink: 0, border: `1px solid ${T.line}`, background: T.card, color: T.sub, borderRadius: 999, fontSize: 12.5, fontWeight: 700, padding: "7px 14px", minHeight: 36, whiteSpace: "nowrap" }}>
+                  {rot}
+                </button>
+              ))}
+            </nav>
+            <div ref={refResumo}>{m && <InsightsDesempenho m={m} />}</div>
+            <div ref={refMaterias} style={{ display: "flex", flexDirection: "column", gap: 16, scrollMarginTop: 72 }}>
+              <SecaoDesempenho rotulo="◉ Diagnóstico por matéria" />
+              <NiveisPorMateria m={m} trilha={trilha} />
+              <RadarDesempenho m={m} trilha={trilha} aoRegistrar={podeEditar ? () => irAba("registrar") : null} />
+            </div>
+            <div ref={refHistorico} style={{ display: "flex", flexDirection: "column", gap: 16, scrollMarginTop: 72 }}>
+              <SecaoDesempenho rotulo="▣ Histórico acumulado" />
+              <Acumulado registros={dados.registros} trilha={trilha} />
+              <Progresso registros={dados.registros} trilha={trilha} />
+            </div>
           </div>
         )}
         {tab === "simulados" && (

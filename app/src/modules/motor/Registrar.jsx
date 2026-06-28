@@ -3,7 +3,7 @@
    secundários recolhíveis (tópico, observações, data). Resumo do dia
    no topo. Só o aluno escreve; o banco garante isso, não esta tela. */
 import React, { useEffect, useId, useMemo, useState } from "react";
-import { SectionCard, EmptyState, Botao, Erro, useInputStyle, StatCard, Toast, useToast } from "../../shared/ui/componentes.jsx";
+import { SectionCard, EmptyState, Botao, Erro, useInputStyle, StatCard, Toast, useToast, useDialogo } from "../../shared/ui/componentes.jsx";
 import { useTema } from "../../shared/branding/BrandingContext.jsx";
 import { todayISO } from "../../shared/regras/regras.js";
 import { resumirRegistros } from "../../shared/metricas/agregados.js";
@@ -33,6 +33,7 @@ export function Registrar({ aluno, trilha, registros, aoMudar, minutosSugeridos 
   const set = (k, v) => setF({ ...f, [k]: v });
   // confirmação visível de que o registro foi salvo (AV2 MEL-P3-001).
   const { toast, mostrar, fechar } = useToast();
+  const dialogo = useDialogo();
   const uid = useId();
   const id = (k) => `${uid}-${k}`;
 
@@ -71,12 +72,20 @@ export function Registrar({ aluno, trilha, registros, aoMudar, minutosSugeridos 
     });
   }
 
-  async function apagar(id) {
+  async function apagar(idRegistro) {
     // #18 — confirmação obrigatória: um toque acidental no × (sobretudo em
-    // mobile) não pode apagar um registro de estudo sem aviso.
-    if (typeof window !== "undefined" && !window.confirm("Remover este registro de estudo? Esta ação não pode ser desfeita.")) return;
+    // mobile) não pode apagar um registro de estudo sem aviso. Agora via
+    // modal do design system (UX1.2) no lugar do window.confirm nativo.
+    const ok = await dialogo.confirmar({
+      titulo: "Remover registro",
+      mensagem: "Remover este registro de estudo? Esta ação não pode ser desfeita.",
+      rotuloConfirmar: "Remover",
+      rotuloCancelar: "Cancelar",
+      perigo: true,
+    });
+    if (!ok) return;
     setErro(null);
-    try { await db.removerRegistro(id); aoMudar?.(); } catch (e) { setErro(mensagemAmigavel(e, "acao")); }
+    try { await db.removerRegistro(idRegistro); aoMudar?.(); } catch (e) { setErro(mensagemAmigavel(e, "acao")); }
   }
 
   const [limiteRecentes, setLimiteRecentes] = useState(7);
@@ -85,6 +94,7 @@ export function Registrar({ aluno, trilha, registros, aoMudar, minutosSugeridos 
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+      {dialogo.elemento}
       {toast && <Toast texto={toast.texto} tom={toast.tom} aoFechar={fechar} />}
       {/* RESUMO DO DIA */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(150px,1fr))", gap: 10 }}>
@@ -106,8 +116,8 @@ export function Registrar({ aluno, trilha, registros, aoMudar, minutosSugeridos 
             </select>
           </div>
           <div style={{ gridColumn: "1 / -1" }}>
-            <label htmlFor={id("top")} style={lbl}>Tópico <span style={{ color: T.gold }}>*</span></label>
-            <input id={id("top")} value={f.topico} onChange={(e) => set("topico", e.target.value)} placeholder="ex: divisibilidade — MDC e MMC" style={inputS} />
+            <label htmlFor={id("top")} style={lbl}>Tópico <span style={{ color: T.gold }} title="Campo obrigatório">*</span></label>
+            <input id={id("top")} value={f.topico} onChange={(e) => set("topico", e.target.value)} aria-required="true" placeholder="ex: divisibilidade — MDC e MMC (obrigatório)" style={inputS} />
           </div>
           <div><label htmlFor={id("q")} style={lbl}>Questões</label><input id={id("q")} type="number" inputMode="numeric" min="0" value={f.questoes} onChange={(e) => set("questoes", e.target.value)} placeholder="0" style={inputS} /></div>
           <div>

@@ -379,8 +379,8 @@ export function NovosAlunos({ turmas, trilhaPadrao, concursos = [], aoMudar }) {
                 </div>
                 <BotaoMini onClick={limparCsv}>Trocar arquivo</BotaoMini>
               </div>
-              <div style={{ maxHeight: 260, overflowY: "auto", border: `1px solid ${T.line}`, borderRadius: 8 }}>
-                <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12.5 }}>
+              <div style={{ maxHeight: 260, overflowY: "auto", overflowX: "auto", border: `1px solid ${T.line}`, borderRadius: 8 }}>
+                <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12.5, minWidth: 320 }}>
                   <thead>
                     <tr style={{ background: T.bg2, position: "sticky", top: 0 }}>
                       <th style={{ textAlign: "left", padding: "7px 10px", color: T.sub, fontWeight: 600, width: 30 }}>#</th>
@@ -431,6 +431,10 @@ export function NovosAlunos({ turmas, trilhaPadrao, concursos = [], aoMudar }) {
 export function PainelCadastroAlunos({ turmas, trilhaPadrao, concursos = [], aoMudar }) {
   const T = useTema();
   const [aba, setAba] = useState("individual");
+  // Colapsado por padrão (UX1.2): o formulário de cadastro não empurra
+  // mais a LISTA de alunos para baixo — quem só quer consultar abre direto
+  // a lista; quem vai cadastrar expande aqui.
+  const [aberto, setAberto] = useState(false);
 
   const tabS = (ativo) => ({
     border: "none", background: "none", color: ativo ? T.gold : T.sub,
@@ -440,18 +444,30 @@ export function PainelCadastroAlunos({ turmas, trilhaPadrao, concursos = [], aoM
 
   return (
     <Card>
-      <div className="disp" style={{ fontSize: 15, fontWeight: 700, marginBottom: 4 }}>Cadastrar alunos</div>
-      <div style={{ fontSize: 12, color: T.sub, marginBottom: 12 }}>
-        Só o nome — nada de CPF nem documento (minimização, LGPD).
-      </div>
-      <div style={{ display: "flex", gap: 0, marginBottom: 14, borderBottom: `1px solid ${T.line}` }}>
-        <button style={tabS(aba === "individual")} onClick={() => setAba("individual")}>Individual</button>
-        <button style={tabS(aba === "lote")} onClick={() => setAba("lote")}>Em lote</button>
-      </div>
-      {aba === "individual"
-        ? <NovoAluno turmas={turmas} trilhaPadrao={trilhaPadrao} concursos={concursos} aoMudar={aoMudar} />
-        : <NovosAlunos turmas={turmas} trilhaPadrao={trilhaPadrao} concursos={concursos} aoMudar={aoMudar} />
-      }
+      <button onClick={() => setAberto((v) => !v)} aria-expanded={aberto}
+        style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, width: "100%", border: "none", background: "transparent", textAlign: "left", padding: 0, color: T.ink, cursor: "pointer", minHeight: 40 }}>
+        <span>
+          <span className="disp" style={{ fontSize: 15, fontWeight: 700 }}>Cadastrar alunos</span>
+          <span style={{ display: "block", fontSize: 12, color: T.sub, marginTop: 3 }}>
+            Só o nome — nada de CPF nem documento (minimização, LGPD).
+          </span>
+        </span>
+        <span style={{ flexShrink: 0, border: `1px solid ${aberto ? T.gold : T.line}`, background: aberto ? `${T.gold}14` : "transparent", color: aberto ? T.gold : T.sub, borderRadius: 8, fontSize: 12.5, fontWeight: 700, padding: "7px 13px", whiteSpace: "nowrap" }}>
+          {aberto ? "Fechar ▴" : "+ Cadastrar ▾"}
+        </span>
+      </button>
+      {aberto && (
+        <div style={{ marginTop: 14 }}>
+          <div style={{ display: "flex", gap: 0, marginBottom: 14, borderBottom: `1px solid ${T.line}` }}>
+            <button style={tabS(aba === "individual")} onClick={() => setAba("individual")}>Individual</button>
+            <button style={tabS(aba === "lote")} onClick={() => setAba("lote")}>Em lote</button>
+          </div>
+          {aba === "individual"
+            ? <NovoAluno turmas={turmas} trilhaPadrao={trilhaPadrao} concursos={concursos} aoMudar={aoMudar} />
+            : <NovosAlunos turmas={turmas} trilhaPadrao={trilhaPadrao} concursos={concursos} aoMudar={aoMudar} />
+          }
+        </div>
+      )}
     </Card>
   );
 }
