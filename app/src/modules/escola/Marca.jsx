@@ -1,7 +1,7 @@
 /* Configuração da marca (white-label leve) + PREVIEW ao vivo (ref.
    spec): a escola vê, na hora, como ficam cabeçalho, botão e card
    com a cor e o logo dela. O design segue fixo — só a marca muda. */
-import React, { useState } from "react";
+import React, { useId, useState } from "react";
 import { SectionCard, Botao, Erro, useInputStyle } from "../../shared/ui/componentes.jsx";
 import { useTema, useBranding } from "../../shared/branding/BrandingContext.jsx";
 import { BASE, luminancia, garantirLegivel } from "../../shared/ui/tema.js";
@@ -18,6 +18,8 @@ export function Marca({ escola, aoMudar }) {
   const [erro, setErro] = useState(null);
   const [ok, setOk] = useState(false);
   const [ocupado, setOcupado] = useState(false);
+  const uid = useId();
+  const id = (k) => `${uid}-${k}`;
 
   const corValida = /^#[0-9a-fA-F]{6}$/.test(cor);
   const corEscura = corValida && luminancia(cor) < 0.32;
@@ -40,18 +42,18 @@ export function Marca({ escola, aoMudar }) {
       <SectionCard titulo="Marca da escola" sub="O sistema leva o nome e a cara da escola. Layout e tipografia são fixos.">
         <div style={{ display: "grid", gap: 14 }}>
           <div>
-            <label style={lbl}>Nome de exibição</label>
-            <input value={nome} onChange={(e) => setNome(e.target.value)} placeholder="ex: Colégio Vitrine Naval" style={inputS} />
+            <label htmlFor={id("nome")} style={lbl}>Nome de exibição</label>
+            <input id={id("nome")} value={nome} onChange={(e) => setNome(e.target.value)} placeholder="ex: Colégio Vitrine Naval" style={inputS} />
           </div>
           <div>
-            <label style={lbl}>URL do logo (quadrado, opcional)</label>
-            <input value={logo} onChange={(e) => setLogo(e.target.value)} placeholder="https://…/logo.png" style={inputS} />
+            <label htmlFor={id("logo")} style={lbl}>URL do logo (quadrado, opcional)</label>
+            <input id={id("logo")} value={logo} onChange={(e) => setLogo(e.target.value)} placeholder="https://…/logo.png" style={inputS} />
           </div>
           <div>
-            <label style={lbl}>Cor de destaque</label>
+            <label htmlFor={id("cor")} style={lbl}>Cor de destaque</label>
             <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
-              <input type="color" value={corValida ? cor : "#CDA349"} onChange={(e) => setCor(e.target.value)} style={{ width: 54, height: 44, border: `1px solid ${T.line}`, borderRadius: 8, background: T.bg, padding: 4 }} />
-              <input value={cor} onChange={(e) => setCor(e.target.value)} placeholder="#CDA349"
+              <input id={id("cor")} type="color" value={corValida ? cor : "#CDA349"} onChange={(e) => setCor(e.target.value)} style={{ width: 54, height: 44, border: `1px solid ${T.line}`, borderRadius: 8, background: T.bg, padding: 4 }} />
+              <input value={cor} onChange={(e) => setCor(e.target.value)} placeholder="#CDA349" aria-label="Cor de destaque em hexadecimal"
                 style={{ ...inputS, width: 130, fontFamily: "monospace" }} />
             </div>
           </div>

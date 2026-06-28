@@ -2,7 +2,7 @@
    Painel / Alunos / Ranking / Turmas / LGPD / Marca. */
 import React, { useEffect, useMemo, useReducer, useState } from "react";
 import { Cabecalho } from "../../shared/ui/Cabecalho.jsx";
-import { SectionCard, Empty, Erro, EmptyState } from "../../shared/ui/componentes.jsx";
+import { SectionCard, Empty, Erro, EmptyState, CarregandoBloco } from "../../shared/ui/componentes.jsx";
 import { MenuPrincipal } from "../../shared/ui/MenuPrincipal.jsx";
 import { useTema } from "../../shared/branding/BrandingContext.jsx";
 import { NovaTurma, PainelCadastroAlunos, CredencialGerada } from "../../modules/pessoas/CadastroAlunos.jsx";
@@ -79,7 +79,7 @@ export default function AreaEscola({ perfil }) {
 
         <div className="fade" key={tab + (alunoAberto?.id ?? "")}>
           {erro && <Erro>{erro}</Erro>}
-          {carregando && <Empty txt="Carregando dados da escola…" />}
+          {carregando && <CarregandoBloco titulo="Carregando dados da escola…" cartoes={4} linhas={4} />}
 
           {!carregando && alunoAberto && (
             <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>

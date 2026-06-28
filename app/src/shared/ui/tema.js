@@ -62,6 +62,43 @@ export const FONTES_CSS = `
   .disp { font-family: 'Fraunces', Georgia, serif; }
   button { cursor:pointer; }
   .chk { transition: all .15s; }
+  /* ── Acessibilidade (UX1) ──
+     Foco VISÍVEL no teclado: o anel dourado só aparece para quem
+     navega por Tab (:focus-visible), nunca no clique de mouse. Garante
+     o critério "foco visível" sem poluir a UI de quem usa ponteiro. */
+  a:focus-visible, button:focus-visible, input:focus-visible,
+  select:focus-visible, textarea:focus-visible, [tabindex]:focus-visible {
+    outline: 2px solid ${BASE.gold};
+    outline-offset: 2px;
+    border-radius: 6px;
+  }
+  /* não duplica anel no clique de mouse (navegadores que ainda mandam :focus) */
+  :focus:not(:focus-visible) { outline: none; }
+  /* texto só para leitor de tela: nome acessível sem ocupar pixel */
+  .sr-only {
+    position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+    overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0;
+  }
+  /* esqueleto de carga (skeleton): brilho que varre o bloco enquanto o
+     dado não chega — comunica "carregando" sem parecer travado. */
+  .skel {
+    position: relative; overflow: hidden;
+    background: ${BASE.card}; border: 1px solid ${BASE.line};
+    border-radius: 10px;
+  }
+  .skel::after {
+    content: ""; position: absolute; inset: 0;
+    background: linear-gradient(90deg, transparent, ${BASE.cardHi}, transparent);
+    transform: translateX(-100%); animation: skelvarre 1.25s ease-in-out infinite;
+  }
+  @keyframes skelvarre { 100% { transform: translateX(100%); } }
+  /* respeita quem pediu menos movimento no SO: sem animações de varredura
+     nem de fade (mantém o conteúdo, corta o movimento). */
+  @media (prefers-reduced-motion: reduce) {
+    .skel::after { animation: none; }
+    .fade { animation: none; }
+    * { scroll-behavior: auto !important; }
+  }
   .navwrap { -webkit-overflow-scrolling: touch; scrollbar-width: none; }
   .navwrap::-webkit-scrollbar { display: none; }
   /* em telas grandes DE COMPUTADOR (mouse/trackpad: pointer fine) o

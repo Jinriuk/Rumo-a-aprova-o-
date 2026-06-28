@@ -3,7 +3,7 @@
    vinculado, com linguagem clara. Todo acesso fica no log (LGPD). */
 import React, { useEffect, useMemo, useState } from "react";
 import { Cabecalho } from "../../shared/ui/Cabecalho.jsx";
-import { Empty, Erro } from "../../shared/ui/componentes.jsx";
+import { Empty, Erro, CarregandoBloco } from "../../shared/ui/componentes.jsx";
 import { ResumoResponsavel } from "../../modules/desempenho/ResumoResponsavel.jsx";
 import { useTrilha } from "../../modules/conteudo/useTrilha.js";
 import { calcularMetricas } from "../../modules/desempenho/metricas.js";
@@ -81,13 +81,13 @@ export default function AreaResponsavel({ perfil }) {
         nomeUsuario={perfil.usuario.nome} rotuloPapel="Responsável" />
       <main style={{ maxWidth: 760, margin: "0 auto", padding: "18px max(16px, env(safe-area-inset-right)) calc(88px + env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left))" }}>
         {erro && <Erro>{erro}</Erro>}
-        {aluno === undefined && !erro && <Empty txt="Carregando…" />}
+        {aluno === undefined && !erro && <CarregandoBloco titulo="Carregando os dados do aluno…" cartoes={2} linhas={3} />}
         {aluno === null && <Empty txt="Nenhum aluno vinculado a este acesso. Fale com a escola." />}
         {aluno && m && trilha && (
           <ResumoResponsavel aluno={aluno} m={m} meta={meta} trilha={trilha}
             simulados={dados.simulados} semanaAtiva={semanaAtiva} concurso={concurso} />
         )}
-        {aluno && (!m || !trilha) && <Empty txt="Carregando dados do aluno…" />}
+        {aluno && (!m || !trilha) && <CarregandoBloco titulo="Carregando os dados do aluno…" cartoes={2} linhas={3} />}
       </main>
     </div>
   );

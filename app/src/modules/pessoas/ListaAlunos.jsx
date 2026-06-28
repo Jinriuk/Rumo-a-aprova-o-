@@ -115,15 +115,15 @@ export function ListaAlunos({ alunos, consentimentos, concursos = [], turmas = [
     <SectionCard titulo="Alunos da escola" sub={`${filtrados.length} de ${alunos.length}`} semPadding
       acao={
         <div style={{ display: "flex", gap: 7, flexWrap: "wrap", justifyContent: "flex-end" }}>
-          <input value={busca} onChange={(e) => setBusca(e.target.value)} placeholder="Buscar…"
+          <input value={busca} onChange={(e) => setBusca(e.target.value)} placeholder="Buscar…" aria-label="Buscar aluno por nome"
             style={{ ...selS, width: 120 }} />
           {turmas.length > 0 && (
-            <select value={fTurma} onChange={(e) => setFTurma(e.target.value)} style={selS}>
+            <select value={fTurma} onChange={(e) => setFTurma(e.target.value)} aria-label="Filtrar por turma" style={selS}>
               <option value="" style={{ background: T.bg2 }}>Todas as turmas</option>
               {turmas.map((t) => <option key={t.id} value={t.id} style={{ background: T.bg2 }}>{t.nome}</option>)}
             </select>
           )}
-          <select value={fStatus} onChange={(e) => setFStatus(e.target.value)} style={selS}>
+          <select value={fStatus} onChange={(e) => setFStatus(e.target.value)} aria-label="Filtrar por status" style={selS}>
             <option value="" style={{ background: T.bg2 }}>Todos os status</option>
             <option value="sem-credencial" style={{ background: T.bg2 }}>Sem credencial</option>
             <option value="sem-consentimento" style={{ background: T.bg2 }}>Sem consentimento</option>

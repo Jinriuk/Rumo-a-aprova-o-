@@ -3,7 +3,7 @@
    Mesma composição para aluno (edita) e para coordenação (lê) — o
    banco decide o que cada um PODE; aqui só se esconde o que não cabe. */
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { SectionCard, Empty, Tag, SubjDot, Erro, BarraXP, StatusBadge } from "../../shared/ui/componentes.jsx";
+import { SectionCard, Empty, Tag, SubjDot, Erro, BarraXP, StatusBadge, CarregandoBloco } from "../../shared/ui/componentes.jsx";
 import { FeedbackProgresso, MissoesPersistidas } from "../../modules/motor/ProgressoVivido.jsx";
 import { Icone } from "../../shared/ui/Icones.jsx";
 import { MenuPrincipal } from "../../shared/ui/MenuPrincipal.jsx";
@@ -113,7 +113,7 @@ export function VisaoEstudo({ aluno, podeEditar, concurso = null, contexto = "Pl
     });
   }, [dados, trilha, semanaAtiva]);
 
-  if (carregandoTrilha || dados.carregando) return <Empty txt="Carregando…" />;
+  if (carregandoTrilha || dados.carregando) return <CarregandoBloco titulo="Carregando seu painel de estudos…" cartoes={3} linhas={4} />;
   if (dados.erro) return <Erro>{dados.erro}</Erro>;
   if (erroTrilha) return <Erro>{erroTrilha}</Erro>;
   if (!trilha) return (

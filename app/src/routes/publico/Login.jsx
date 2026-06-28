@@ -1,7 +1,7 @@
 /* Login — aluno/responsável entram com código; coordenação com e-mail+senha.
    D1B: campo senha com olhinho, "Esqueci minha senha" para coordenação,
    "Esqueci meu código de acesso" para aluno/responsável. */
-import React, { useRef, useState } from "react";
+import React, { useEffect, useId, useRef, useState } from "react";
 import { BASE, FONTES_CSS } from "../../shared/ui/tema.js";
 import { criarTrava } from "../../shared/lib/travaEnvio.js";
 import * as db from "../../shared/data/index.js";
@@ -19,6 +19,15 @@ export default function Login() {
   const [err, setErr] = useState("");
   const [emailRecup, setEmailRecup] = useState("");
   const [msgConfirmacao, setMsgConfirmacao] = useState("");
+  // AV2 MEL-P3-004: o login da coordenação leva ~6s (Supabase Auth). Para
+  // não parecer travado, depois de ~2,5s mostramos um aviso de que segue
+  // em andamento — feedback honesto enquanto a credencial é verificada.
+  const [demorando, setDemorando] = useState(false);
+  useEffect(() => {
+    if (!busy) { setDemorando(false); return; }
+    const t = setTimeout(() => setDemorando(true), 2500);
+    return () => clearTimeout(t);
+  }, [busy]);
 
   // Trava SÍNCRONA contra duplo envio do login e dos pedidos de
   // recuperação (FE1, tarefa 82). O `busy`/`disabled` só vale no
@@ -28,6 +37,10 @@ export default function Login() {
   // daqui (texto específico de login) — por isso não usamos o hook.
   const travaRef = useRef(null);
   if (travaRef.current === null) travaRef.current = criarTrava();
+
+  // ids estáveis para associar cada <label> ao seu controle (a11y, UX1).
+  const uid = useId();
+  const idCodigo = `${uid}-codigo`, idEmail = `${uid}-email`, idSenha = `${uid}-senha`, idRecup = `${uid}-recup`;
 
   async function entrar(e) {
     e?.preventDefault();
@@ -103,8 +116,8 @@ export default function Login() {
           Informe o e-mail da sua conta de coordenação. Enviaremos instruções de recuperação.
         </div>
         <form onSubmit={solicitarSenha}>
-          <label style={lblS}>E-mail</label>
-          <input type="email" value={emailRecup} onChange={(e) => { setEmailRecup(e.target.value); setErr(""); }}
+          <label htmlFor={idRecup} style={lblS}>E-mail</label>
+          <input id={idRecup} type="email" value={emailRecup} onChange={(e) => { setEmailRecup(e.target.value); setErr(""); }}
             placeholder="coord@escola.com.br" autoFocus style={{ ...inputS, marginBottom: 12 }} />
           {err && <div style={{ color: T.red, fontSize: 12.5, marginBottom: 8 }}>{err}</div>}
           <button type="submit" disabled={busy || !emailRecupValido}
@@ -127,8 +140,8 @@ export default function Login() {
           Se não tiver e-mail cadastrado, procure a coordenação da sua escola.
         </div>
         <form onSubmit={solicitarCodigo}>
-          <label style={lblS}>E-mail</label>
-          <input type="email" value={emailRecup} onChange={(e) => { setEmailRecup(e.target.value); setErr(""); }}
+          <label htmlFor={idRecup} style={lblS}>E-mail</label>
+          <input id={idRecup} type="email" value={emailRecup} onChange={(e) => { setEmailRecup(e.target.value); setErr(""); }}
             placeholder="seu@email.com" autoFocus style={{ ...inputS, marginBottom: 12 }} />
           {err && <div style={{ color: T.red, fontSize: 12.5, marginBottom: 8 }}>{err}</div>}
           <button type="submit" disabled={busy || !emailRecupValido}
@@ -168,21 +181,21 @@ export default function Login() {
       <form onSubmit={entrar}>
         {modo === "codigo" ? (
           <>
-            <label style={lblS}>Código de acesso</label>
-            <input value={codigo} autoComplete="off" autoCapitalize="characters"
+            <label htmlFor={idCodigo} style={lblS}>Código de acesso</label>
+            <input id={idCodigo} value={codigo} autoComplete="off" autoCapitalize="characters"
               onChange={(e) => { setCodigo(e.target.value.toUpperCase()); setErr(""); }}
               placeholder="Ex.: LUCASDEMO2026"
               style={{ ...inputS, letterSpacing: 1.5, textAlign: "center", fontFamily: "monospace" }} />
           </>
         ) : (
           <>
-            <label style={lblS}>E-mail</label>
-            <input type="email" value={email} placeholder="coordenacao@escola.com.br"
+            <label htmlFor={idEmail} style={lblS}>E-mail</label>
+            <input id={idEmail} type="email" value={email} placeholder="coordenacao@escola.com.br"
               onChange={(e) => { setEmail(e.target.value); setErr(""); }}
               style={{ ...inputS, marginBottom: 12 }} />
-            <label style={lblS}>Senha</label>
+            <label htmlFor={idSenha} style={lblS}>Senha</label>
             <div style={{ position: "relative" }}>
-              <input type={mostrarSenha ? "text" : "password"} value={senha}
+              <input id={idSenha} type={mostrarSenha ? "text" : "password"} value={senha}
                 placeholder="Senha de acesso"
                 onChange={(e) => { setSenha(e.target.value); setErr(""); }}
                 style={{ ...inputS, paddingRight: 46 }} />
@@ -201,6 +214,11 @@ export default function Login() {
           style={{ width: "100%", marginTop: 16, background: (busy || !pronto) ? T.line : T.gold, color: (busy || !pronto) ? T.sub : "#0A1622", border: "none", borderRadius: 10, padding: "14px", minHeight: 50, fontWeight: 800, fontSize: 15 }}>
           {busy ? "Entrando…" : "Entrar"}
         </button>
+        {demorando && (
+          <div role="status" aria-live="polite" style={{ fontSize: 12, color: T.sub, marginTop: 10, textAlign: "center", lineHeight: 1.5 }}>
+            Verificando suas credenciais com segurança… só um instante.
+          </div>
+        )}
       </form>
 
       {/* Links de recuperação contextuais */}

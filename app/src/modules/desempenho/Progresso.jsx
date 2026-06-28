@@ -1,6 +1,6 @@
 /* Gráficos de desempenho — reaproveitam o recharts da versão atual
    (questões/dia, evolução por semana, acerto e total por matéria). */
-import React, { useMemo, useState } from "react";
+import React, { useId, useMemo, useState } from "react";
 import {
   BarChart, Bar, LineChart, Line, ComposedChart, XAxis, YAxis, CartesianGrid,
   Tooltip, ResponsiveContainer, Cell, Legend,
@@ -178,6 +178,8 @@ export function Simulados({ aluno, simulados, podeEditar, semanaAtiva, concurso,
   const [f, setF] = useState(blank);
   const [erro, setErro] = useState(null);
   const set = (k, v) => setF({ ...f, [k]: v });
+  const uid = useId();
+  const id = (k) => `${uid}-${k}`;
 
   const inputS = { background: T.bg, border: `1px solid ${T.line}`, color: T.ink, borderRadius: 8, padding: "12px 12px", fontSize: 16, width: "100%", minHeight: 46 };
   const lbl = { fontSize: 11, color: T.sub, marginBottom: 4, display: "block" };
@@ -264,8 +266,8 @@ export function Simulados({ aluno, simulados, podeEditar, semanaAtiva, concurso,
             Acertos por matéria, com o máximo de cada prova. {totalMax} questões no total.
           </div>
           <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginBottom: 12 }}>
-            <div style={{ flex: 2, minWidth: 160 }}><label style={lbl}>Nome</label><input value={f.nome} onChange={(e) => set("nome", e.target.value)} style={inputS} /></div>
-            <div style={{ flex: 1, minWidth: 130 }}><label style={lbl}>Data</label><input type="date" value={f.data} onChange={(e) => set("data", e.target.value)} style={inputS} /></div>
+            <div style={{ flex: 2, minWidth: 160 }}><label htmlFor={id("nome")} style={lbl}>Nome</label><input id={id("nome")} value={f.nome} onChange={(e) => set("nome", e.target.value)} style={inputS} /></div>
+            <div style={{ flex: 1, minWidth: 130 }}><label htmlFor={id("data")} style={lbl}>Data</label><input id={id("data")} type="date" value={f.data} onChange={(e) => set("data", e.target.value)} style={inputS} /></div>
           </div>
           {prova.dias.map((dia) => (
             <div key={dia.nome} style={{ marginBottom: 12 }}>
@@ -275,8 +277,9 @@ export function Simulados({ aluno, simulados, podeEditar, semanaAtiva, concurso,
                   const estourou = f[m.k] !== "" && +f[m.k] > m.max;
                   return (
                     <div key={m.k}>
-                      <label style={lbl}>{m.nome} <b style={{ color: T.sub }}>/{m.max}</b></label>
-                      <input type="number" inputMode="numeric" min="0" max={m.max} value={f[m.k]} onChange={(e) => set(m.k, e.target.value)} placeholder="0"
+                      <label htmlFor={id(m.k)} style={lbl}>{m.nome} <b style={{ color: T.sub }}>/{m.max}</b></label>
+                      <input id={id(m.k)} type="number" inputMode="numeric" min="0" max={m.max} value={f[m.k]} onChange={(e) => set(m.k, e.target.value)} placeholder="0"
+                        aria-invalid={estourou ? true : undefined}
                         style={{ ...inputS, borderColor: estourou ? T.red : T.line }} />
                     </div>
                   );

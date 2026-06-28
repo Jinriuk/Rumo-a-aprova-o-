@@ -2,8 +2,8 @@
    página condensada, sem os menus do aluno. A escola vê o que
    importa: a semana na trilha, o desempenho e o histórico recente —
    no mesmo formato enxuto do responsável. Tudo leitura. */
-import React, { useMemo, useState } from "react";
-import { SectionCard, Empty, Erro, EmptyState, Botao, useInputStyle } from "../../shared/ui/componentes.jsx";
+import React, { useId, useMemo, useState } from "react";
+import { SectionCard, Empty, Erro, EmptyState, Botao, useInputStyle, CarregandoBloco } from "../../shared/ui/componentes.jsx";
 import { useTema } from "../../shared/branding/BrandingContext.jsx";
 import { useTrilha } from "../conteudo/useTrilha.js";
 import { useRecurso } from "../../shared/hooks/useRecurso.js";
@@ -44,7 +44,7 @@ export function FichaAluno({ aluno, concurso }) {
     });
   }, [dados, trilha, semanaAtiva]);
 
-  if (carregandoTrilha || carregandoDados) return <Empty txt="Carregando ficha do aluno…" />;
+  if (carregandoTrilha || carregandoDados) return <CarregandoBloco titulo="Carregando a ficha do aluno…" cartoes={3} linhas={4} />;
   if (erroTrilha || erroDados) return <Erro>{erroTrilha || erroDados}</Erro>;
   if (!trilha) return <Empty txt="Aluno sem trilha de estudo." />;
   if (!m || !semanaAtiva) return <Empty txt="Fora do período da trilha deste aluno." />;
@@ -115,6 +115,7 @@ export function FichaAluno({ aluno, concurso }) {
 function OnboardingAluno({ alunoId }) {
   const T = useTema();
   const { input: inputS, label: lbl } = useInputStyle();
+  const uid = useId();
   const [editando, setEditando] = useState(false);
   const [salvando, setSalvando] = useState(false);
   const [erroSalvar, setErroSalvar] = useState(null);
@@ -157,8 +158,9 @@ function OnboardingAluno({ alunoId }) {
 
   const campo = (k, label, placeholder, tipo = "text") => (
     <div key={k} style={{ flex: 1, minWidth: 180 }}>
-      <label style={lbl}>{label}</label>
+      <label htmlFor={`${uid}-${k}`} style={lbl}>{label}</label>
       <input
+        id={`${uid}-${k}`}
         type={tipo}
         value={form[k] ?? ""}
         placeholder={placeholder}
@@ -221,8 +223,9 @@ function OnboardingAluno({ alunoId }) {
             {campo("objetivo", "Objetivo do aluno", "ex: aprovação no 1º semestre 2027")}
           </div>
           <div style={{ marginBottom: 10 }}>
-            <label style={lbl}>Observação da coordenação</label>
+            <label htmlFor={`${uid}-obs`} style={lbl}>Observação da coordenação</label>
             <textarea
+              id={`${uid}-obs`}
               value={form.observacao_coordenacao ?? ""}
               onChange={(e) => setForm((f) => ({ ...f, observacao_coordenacao: e.target.value }))}
               placeholder="Notas internas — não visíveis ao aluno"
