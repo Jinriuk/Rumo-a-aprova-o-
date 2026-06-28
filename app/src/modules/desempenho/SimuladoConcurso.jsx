@@ -16,7 +16,7 @@ import { Card, Empty, StatusBadge } from "../../shared/ui/componentes.jsx";
 import { useTema } from "../../shared/branding/BrandingContext.jsx";
 import { todayISO, fmtBR } from "../../shared/regras/regras.js";
 import { mensagemAmigavel } from "../../shared/lib/erros.js";
-import { materiasObjetivas, materiaRedacao, materiasPorDia } from "../conteudo/estruturaProva.js";
+import { materiasObjetivas, materiasPorDia } from "../conteudo/estruturaProva.js";
 import { avaliarSimulado } from "../conteudo/simuladoConcurso.js";
 import { rotuloRedacao, rotuloEliminacao } from "../conteudo/pedagogia.js";
 import * as db from "../../shared/data/index.js";
@@ -42,7 +42,6 @@ export function SimuladoConcurso({ aluno, simulados, podeEditar, semanaAtiva, co
   const materias = estrutura?.materias ?? [];
   const dias = estrutura?.dias ?? [];
   const objetivas = materiasObjetivas(materias);
-  const redacao = materiaRedacao(materias);
   const temRedacao = cfg?.redacao_role && cfg.redacao_role !== "ausente";
   const grupos = materiasPorDia(objetivas, dias);
 
