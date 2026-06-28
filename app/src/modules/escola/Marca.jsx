@@ -5,6 +5,7 @@ import React, { useId, useState } from "react";
 import { SectionCard, Botao, Erro, useInputStyle } from "../../shared/ui/componentes.jsx";
 import { useTema, useBranding } from "../../shared/branding/BrandingContext.jsx";
 import { BASE, luminancia, garantirLegivel } from "../../shared/ui/tema.js";
+import { urlImagemSegura } from "../../shared/validacao.js";
 import { mensagemAmigavel } from "../../shared/lib/erros.js";
 import * as db from "../../shared/data/index.js";
 
@@ -79,12 +80,15 @@ export function Marca({ escola, aoMudar }) {
 // Preview ESTÁTICO (não usa o tema da sessão — mostra a cor escolhida AGORA).
 function BrandPreview({ nome, logo, acento }) {
   const C = BASE;
+  // logo só vira <img src> se for http(s)/data:image — guarda compartilhada
+  // (urlImagemSegura) que fecha o fluxo js/xss-through-dom apontado pelo CodeQL.
+  const logoUrl = urlImagemSegura(logo);
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
       {/* cabeçalho */}
       <div style={{ background: C.bg2, border: `1px solid ${C.line}`, borderRadius: 10, padding: "10px 12px", display: "flex", alignItems: "center", gap: 10 }}>
-        {logo
-          ? <img src={logo} alt="" style={{ width: 32, height: 32, borderRadius: 8, objectFit: "cover" }} onError={(e) => { e.currentTarget.style.display = "none"; }} />
+        {logoUrl
+          ? <img src={logoUrl} alt="" style={{ width: 32, height: 32, borderRadius: 8, objectFit: "cover" }} onError={(e) => { e.currentTarget.style.display = "none"; }} />
           : <div className="disp" style={{ width: 32, height: 32, borderRadius: 8, background: `linear-gradient(135deg, ${acento}, #9c7d2e)`, display: "flex", alignItems: "center", justifyContent: "center", color: "#0A1622", fontWeight: 800 }}>⚓</div>}
         <div style={{ flex: 1, minWidth: 0 }}>
           <div className="disp" style={{ fontSize: 14, fontWeight: 700, color: C.ink, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{nome}</div>

@@ -14,3 +14,19 @@ export function nomeValido(texto) {
   const n = limparNome(texto);
   return n.length >= 2 && n.length <= LIMITE_NOME;
 }
+
+/* URL de imagem segura para usar como `src` de <img> (logo white-label).
+   Aceita só http(s) e data:image; descarta qualquer outro esquema
+   (javascript:, vbscript:, etc.) e URLs malformadas. Devolve "" quando
+   não for segura — o chamador então mostra o fallback (âncora). Fecha o
+   fluxo que o CodeQL marca como "DOM text reinterpreted as HTML". */
+export function urlImagemSegura(url) {
+  const u = String(url ?? "").trim();
+  if (!u) return "";
+  if (/^data:image\//i.test(u)) return u;
+  try {
+    const parsed = new URL(u);
+    if (parsed.protocol === "http:" || parsed.protocol === "https:") return parsed.href;
+  } catch { /* URL malformada: descarta */ }
+  return "";
+}
