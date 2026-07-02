@@ -9,11 +9,26 @@
    ============================================================ */
 import { supabase } from "../../lib/supabase.js";
 
-function falha(contexto, error) {
+function falha(contexto, error, { esperada = false } = {}) {
   const e = new Error(`${contexto}: ${error.message}`);
   e.causa = error;
-  console.error(e);
+  // FIX1 (OBS-RC1-003): falha ESPERADA (credencial errada digitada pelo
+  // usuário) não é erro de sistema — warn em dev, silêncio em produção.
+  // mensagemAmigavel lê `esperada` e aplica o mesmo rebaixamento.
+  e.esperada = esperada;
+  if (esperada) {
+    if (import.meta.env?.DEV) console.warn(e);
+  } else {
+    console.error(e);
+  }
   return e;
+}
+
+// Credencial inválida é a falha de auth PREVISÍVEL: o usuário errou o
+// código ou a senha. Tudo mais (rede, RLS, config) segue inesperado.
+function credencialInvalida(error) {
+  return error?.code === "invalid_credentials"
+    || /invalid login credentials/i.test(error?.message ?? "");
 }
 
 // Cancelamento (FE1, tarefa 81): aplica `.abortSignal` num builder do
@@ -39,13 +54,13 @@ export async function entrarComCodigo(codigo) {
     email: `${canonico.toLowerCase()}@codigo.acesso.local`,
     password: canonico,
   });
-  if (error) throw falha("login por código", error);
+  if (error) throw falha("login por código", error, { esperada: credencialInvalida(error) });
   return data;
 }
 
 export async function entrarComEmail(email, senha) {
   const { data, error } = await supabase.auth.signInWithPassword({ email, password: senha });
-  if (error) throw falha("login", error);
+  if (error) throw falha("login", error, { esperada: credencialInvalida(error) });
   return data;
 }
 
@@ -497,13 +512,19 @@ export async function meuAluno() {
   return data[0] ?? null;
 }
 
-export async function alunoVinculado() {
-  const { data: v, error } = await supabase.from("vinculos_responsaveis").select("aluno_id").limit(1);
-  if (error) throw falha("vínculo", error);
-  if (!v?.length) return null;
-  const { data: a, error: e2 } = await supabase.from("alunos").select("*").eq("id", v[0].aluno_id).single();
-  if (e2) throw falha("aluno vinculado", e2);
-  return a;
+// FIX1 (OBS-RC1-004): TODOS os alunos vinculados ao responsável logado,
+// ordenados por nome (determinístico). O `.limit(1)` antigo escondia os
+// irmãos: responsável com 2+ filhos via um aluno indeterminado. A RLS
+// continua mandando: só saem os vínculos do próprio responsável, e só
+// os alunos que `app.sou_responsavel_de()` autoriza.
+export async function alunosVinculados() {
+  const { data: v, error } = await supabase.from("vinculos_responsaveis").select("aluno_id");
+  if (error) throw falha("vínculos", error);
+  const ids = [...new Set((v ?? []).map((x) => x.aluno_id))];
+  if (!ids.length) return [];
+  const { data: a, error: e2 } = await supabase.from("alunos").select("*").in("id", ids).order("nome");
+  if (e2) throw falha("alunos vinculados", e2);
+  return a ?? [];
 }
 
 export async function listarTurmas({ signal } = {}) {

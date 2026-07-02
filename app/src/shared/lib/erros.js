@@ -8,6 +8,11 @@ const MENSAGENS = {
   acao: "Não foi possível concluir a ação. Tente novamente.",
   provisionar: "Não foi possível criar o acesso do coordenador. Tente novamente.",
   reenviar: "Não foi possível reenviar o acesso. Tente novamente.",
+  // FIX1 (OBS-RC1-008): contextos usados por VinculosResponsavel que
+  // antes caíam no genérico "Não foi possível concluir a ação."
+  revogar: "Não foi possível revogar o acesso agora. Tente novamente.",
+  "vincular responsável": "Não foi possível vincular o responsável agora. Tente novamente.",
+  "carregar responsáveis": "Não conseguimos carregar a lista de responsáveis. Tente novamente.",
 };
 
 const REDE = /failed to fetch|network|timeout|conex[aã]o|offline/i;
@@ -23,7 +28,14 @@ const EDGE_SEGURAS = [
 ];
 
 export function mensagemAmigavel(erro, contexto = "acao") {
-  console.error(erro);
+  // FIX1 (OBS-RC1-003): falha ESPERADA (ex.: credencial errada digitada
+  // pelo usuário) é ruído previsível, não erro de sistema — warn em dev,
+  // silêncio em produção. Falha inesperada continua em console.error.
+  if (erro?.esperada) {
+    if (import.meta.env?.DEV) console.warn(erro);
+  } else {
+    console.error(erro);
+  }
   const tecnica = erro?.message ?? String(erro ?? "");
   if (REDE.test(tecnica)) return "Sua conexão parece instável. Verifique e tente de novo.";
   for (const { test, msg } of EDGE_SEGURAS) {

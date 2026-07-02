@@ -6,14 +6,14 @@ import * as db from "../data/index.js";
 import { mensagemAmigavel } from "../lib/erros.js";
 
 export function useSessao() {
-  const [estado, setEstado] = useState({ carregando: true, sessao: null, perfil: null, superAdmin: false, erro: null, suspensa: null });
+  const [estado, setEstado] = useState({ carregando: true, sessao: null, perfil: null, superAdmin: false, erro: null });
 
   useEffect(() => {
     let vivo = true;
 
     async function carregarPerfil(sessao) {
       if (!sessao) {
-        if (vivo) setEstado({ carregando: false, sessao: null, perfil: null, superAdmin: false, erro: null, suspensa: null });
+        if (vivo) setEstado({ carregando: false, sessao: null, perfil: null, superAdmin: false, erro: null });
         return;
       }
       try {
@@ -28,24 +28,23 @@ export function useSessao() {
         const podeSerAdmin = !email.endsWith("@codigo.acesso.local");
         const superAdmin = podeSerAdmin ? await db.souSuperAdmin() : false;
         if (superAdmin) {
-          if (vivo) setEstado({ carregando: false, sessao, perfil: null, superAdmin: true, erro: null, suspensa: null });
+          if (vivo) setEstado({ carregando: false, sessao, perfil: null, superAdmin: true, erro: null });
           return;
         }
         const perfil = await db.meuPerfil();
-        if (vivo) setEstado({ carregando: false, sessao, perfil, superAdmin: false, erro: null, suspensa: null });
+        if (vivo) setEstado({ carregando: false, sessao, perfil, superAdmin: false, erro: null });
       } catch (e) {
-        // S1.5 — escola suspensa/cancelada: estado próprio (não é "erro
-        // de carregar"); o App mostra a tela "Acesso suspenso" com a marca.
-        if (e?.code === "ESCOLA_SUSPENSA") {
-          if (vivo) setEstado({ carregando: false, sessao, perfil: null, superAdmin: false, erro: null, suspensa: e.escola ?? {} });
-          return;
-        }
-        if (vivo) setEstado({ carregando: false, sessao, perfil: null, superAdmin: false, erro: mensagemAmigavel(e, "carregar"), suspensa: null });
+        // Escola suspensa/cancelada NÃO passa por aqui: meuPerfil devolve
+        // o perfil com `escola.status`, e é o App quem decide a tela via
+        // escolaOperacional(perfil.escola). O bloqueio de dado é da RLS
+        // (migration 0027). FIX1 (OBS-RC1-005): removido o branch morto
+        // de ESCOLA_SUSPENSA — nenhum código lança esse código de erro.
+        if (vivo) setEstado({ carregando: false, sessao, perfil: null, superAdmin: false, erro: mensagemAmigavel(e, "carregar") });
       }
     }
 
     db.sessaoAtual().then(carregarPerfil).catch((e) => {
-      if (vivo) setEstado({ carregando: false, sessao: null, perfil: null, superAdmin: false, erro: mensagemAmigavel(e, "carregar"), suspensa: null });
+      if (vivo) setEstado({ carregando: false, sessao: null, perfil: null, superAdmin: false, erro: mensagemAmigavel(e, "carregar") });
     });
 
     const parar = db.aoMudarSessao((sessao) => {

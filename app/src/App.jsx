@@ -1,17 +1,33 @@
 /* Casca do app: sessão e roteamento por PAPEL. Magra de propósito —
    o monólito ficou na versão antiga (Doc 5). O papel vem do token;
    o banco aplica a mesma matriz por RLS. */
-import React from "react";
+import React, { Suspense, lazy } from "react";
 import Login from "./routes/publico/Login.jsx";
-import RedefinirSenha from "./routes/publico/RedefinirSenha.jsx";
-import AreaAluno from "./routes/aluno/AreaAluno.jsx";
-import AreaEscola from "./routes/escola/AreaEscola.jsx";
-import AreaResponsavel from "./routes/responsavel/AreaResponsavel.jsx";
-import AreaAdmin from "./routes/admin/AreaAdmin.jsx";
 import { useSessao } from "./shared/hooks/useSessao.js";
 import { BrandingProvider, useTema } from "./shared/branding/BrandingContext.jsx";
 import { FONTES_CSS } from "./shared/ui/tema.js";
 import * as db from "./shared/data/index.js";
+
+// FIX1 (OBS-RC1-006): cada área vira um chunk próprio — o usuário baixa
+// só a dele (o aluno no celular não paga pelo painel da coordenação nem
+// pelo backoffice). Mesmo padrão lazy+Suspense já usado em VisaoEstudo
+// (UX1). Login fica eager: é a primeira tela, não pode esperar chunk.
+const AreaAluno = lazy(() => import("./routes/aluno/AreaAluno.jsx"));
+const AreaEscola = lazy(() => import("./routes/escola/AreaEscola.jsx"));
+const AreaResponsavel = lazy(() => import("./routes/responsavel/AreaResponsavel.jsx"));
+const AreaAdmin = lazy(() => import("./routes/admin/AreaAdmin.jsx"));
+const RedefinirSenha = lazy(() => import("./routes/publico/RedefinirSenha.jsx"));
+
+function EsperandoArea() {
+  return (
+    <TelaNeutra>
+      <div role="status" aria-live="polite" style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 14 }}>
+        <div className="skel" style={{ width: 44, height: 44, borderRadius: 11 }} />
+        <div style={{ fontSize: 14 }}>Preparando seu painel…</div>
+      </div>
+    </TelaNeutra>
+  );
+}
 
 // Detecta fluxo de recuperação de senha via hash da URL.
 // O Supabase redireciona com #access_token=...&type=recovery após verificar o OTP.
@@ -36,7 +52,9 @@ export default function App() {
   if (detectarRecuperacao()) {
     return (
       <BrandingProvider escola={{ nome: "Rumo à Aprovação", slug: "app", logo_url: null, cor_acento: null }}>
-        <RedefinirSenha />
+        <Suspense fallback={<EsperandoArea />}>
+          <RedefinirSenha />
+        </Suspense>
       </BrandingProvider>
     );
   }
@@ -56,7 +74,11 @@ export default function App() {
   if (superAdmin) {
     return (
       <BrandingProvider escola={{ nome: "Backoffice", slug: "admin", logo_url: null, cor_acento: null }}>
-        <Casca><AreaAdmin /></Casca>
+        <Casca>
+          <Suspense fallback={<EsperandoArea />}>
+            <AreaAdmin />
+          </Suspense>
+        </Casca>
       </BrandingProvider>
     );
   }
@@ -88,7 +110,9 @@ export default function App() {
   return (
     <BrandingProvider escola={perfil.escola}>
       <Casca>
-        <Area perfil={perfil} />
+        <Suspense fallback={<EsperandoArea />}>
+          <Area perfil={perfil} />
+        </Suspense>
       </Casca>
     </BrandingProvider>
   );
