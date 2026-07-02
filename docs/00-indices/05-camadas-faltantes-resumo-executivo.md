@@ -1,5 +1,11 @@
 # 05 — Camadas Faltantes · Resumo Executivo (REG0)
 
+> ⚠️ **HISTÓRICO (REG1, 02/07):** este resumo é a fotografia de 27/06 e ficou
+> defasado — das "4 lajes" abaixo, PED1 e a fábrica de PED2 **já foram entregues**
+> (27/06), e a contagem de testes hoje é 471. A leitura atual e verificada está em
+> [`05-camadas-faltantes.md`](./05-camadas-faltantes.md) (reconciliado) e
+> [`03-status-atual.md`](./03-status-atual.md). Mantido como registro.
+
 **Data:** 2026-06-27 · Detalhe completo em [`05-camadas-faltantes.md`](./05-camadas-faltantes.md).
 
 ## Veredito
