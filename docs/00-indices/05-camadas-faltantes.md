@@ -1,194 +1,183 @@
 # 05 — Camadas Faltantes (Registro Vivo / Fonte Única de Verdade)
 
-**Fase:** REG0 · **Data:** 2026-06-27 · **Natureza:** governança (não altera produto, banco ou segurança)
-**Substitui:** a leitura defasada da auditoria multivisão (Fase 18, ~74/100), anterior a C0/B-min/Fase A/I2/HF3/SEG1/SEG2.
+**Origem:** REG0 (2026-06-27) · **Reconciliado:** REG1 (2026-07-02)
+**Natureza:** governança (não altera produto, banco ou segurança)
 
-> **O que é este documento.** O inventário verificado das 10 camadas de acabamento que faltam
-> para "fechar" o sistema, com **status conferido no código de hoje** (não em texto antigo).
-> É a base de todas as fases seguintes (RC1 → ARCH1). Cada item aponta a **fase responsável**.
->
-> **Base de versão:** construído sobre a reorganização de docs (branch `claude/docs-reorganizacao`)
-> + deploy SEG2 — ainda **não mergeados na `main`**. Os caminhos `docs/auditoria/seguranca/seg1`
-> e `.../seg2` refletem a estrutura nova (na `main` antiga ainda são `docs/auditoria/seg1|seg2`).
+> **O que é este documento.** O inventário verificado das 10 camadas de acabamento,
+> com **status conferido no código de 02/07** (`main` = `ea64142`, pós-FIX1).
+> A versão REG0 deste arquivo ficou defasada em horas: entre 27/06 e 02/07 a `main`
+> recebeu PED1, PED2 (rodada 1), ADM2, PERF1, SEC3, FE1, UX1, o fechamento-100%,
+> SDB-AUDIT/SDB-FIX1 e FIX1. A REG1 reavaliou **item por item** — nada abaixo foi
+> copiado de relatório; itens 🟢 novos têm a evidência medida ao lado.
 
 ## Legenda de status
 
 | Símbolo | Significado |
 |---|---|
-| 🟢 | **Concluído** — verificado no código/doc atual |
+| 🟢 | **Concluído** — verificado no código/banco em 02/07 |
 | 🟡 | **Parcial** — parte entregue, parte aberta (com justificativa) |
 | 🔴 | **Aberto** — não iniciado |
-| ⛔ | **Bloqueado** por julho / Pro / domínio / staging / SMTP (decisão externa, não falha de código) |
+| ⛔ | **Bloqueado** por julho / Pro / domínio / staging / SMTP (decisão externa) |
 | ⚪ | **Fora de escopo** agora (fase futura nomeada) |
 
 **Prioridade:** P1 (bloqueia produto fechado de valor) · P2 (bloqueia dado real de menor) · P3 (importante) · P4 (acabamento/plataforma).
 
 ---
 
-## Camada 1 — Motor de progresso "vivido" · fase **PED1** · lacuna de VALOR
+## Camada 1 — Motor de progresso "vivido" · fase **PED1** · ✅ entregue (27/06, PRs #48/#50)
 
-| # | Item | Status | Evidência (verificada) | Prio |
+| # | Item | Status | Evidência (verificada 02/07) | Prio |
 |---|------|:---:|---|:--:|
-|1.1| XP concedido por evento + persistido (não derivado) | 🔴 | `concederXp`/`aluno_xp_eventos` não chamados por tela; aluno vê XP derivado de `motor/jargao.js` | P1 |
-|1.2| Missões fecham por gatilho (não por texto) | 🔴 | nenhuma `carregarMissoes`/fechamento em telas | P1 |
-|1.3| Nível por matéria gravado pela escola (tela) | 🔴 | `salvarNivelAluno`/`carregarNivelAluno` dormentes; só nível calculado ao vivo | P1 |
-|1.4| Onboarding pedagógico na UI | 🔴 | `salvarOnboarding`/`aluno_onboarding` dormentes | P1 |
-|1.5| Feedback imediato de XP ("+60 XP") | 🔴 | inexistente na UI | P3 |
-|1.6| Ledger C0 visível (histórico) | 🟢 | `HistoricoProgresso.jsx:31` chama `carregarEventosProgresso({limite:50})` | — |
-|1.7| Tagueamento de recorrência com volume útil | 🔴 | amostra (~3 questões / <1%); `recorrencia_assunto` dormente na UI | P3 |
+|1.1| XP concedido por evento + persistido | 🟢 | C0 + PED1: ledger `aluno_eventos_progresso` (1002 rows remotas); `VisaoEstudo.jsx:116` lê `carregarXpPersistido` | — |
+|1.2| Missões fecham por gatilho | 🟢 | migration `0033` › `app.motor_avaliar_aluno` (volume+acurácia, idempotente); `carregarMissoesAluno` na tela | — |
+|1.3| Nível por matéria persistido | 🟢 | `0033` grava `aluno_niveis` com auditoria; nunca sobrescreve `manual` | — |
+|1.4| Onboarding pedagógico na UI | 🟢 | RPC `salvar_onboarding_aluno` + `modules/motor/Onboarding.jsx` | — |
+|1.5| Feedback imediato de XP ("+60 XP") | 🟢 | `VisaoEstudo.jsx:96` (`setFeedback({ xp: ganhouXp, … })`) | — |
+|1.6| Ledger C0 visível (histórico) | 🟢 | `HistoricoProgresso.jsx` | — |
+|1.7| Tagueamento de recorrência com volume útil | 🔴 | ainda amostra (3 questões em `questoes_prova` remoto); é trabalho pedagógico, não código | P3 |
+|1.8| **NOVO (auditoria sênior §2.1, aberto):** limpar a duplicação remanescente — `aluno_xp_eventos` (0 rows) e catálogo `patentes` mortos; UI usa régua `jargao.js`; `aluno_conquistas` gravada pelo gatilho (110 rows) mas a aba Conquistas mostra catálogo derivado no cliente | 🔴 | `grep concederXp\|listarPatentes` em routes/modules → 0 usos; `Conquistas.jsx:62` | P2 (dívida) |
 
-## Camada 2 — Conteúdo e trilhas · fase **PED2** · lacuna de ABRANGÊNCIA
+## Camada 2 — Conteúdo e trilhas · fase **PED2** · 🟡 infraestrutura pronta, conteúdo aberto
+
+**PED2 rodada 1 (27/06, PR #49) entregou a *fábrica*, não o conteúdo:** fonte única
+de maturidade (`maturidade.js`), selo/aviso honesto na UI, gates de cadastro,
+validador de build (`validar-conteudo.mjs`), coluna+view no banco (0034) e pipeline
+documentado (`docs/conteudo/fabrica-trilhas-concursos.md`). O que resta na camada
+é **produção de conteúdo** usando essa fábrica ("PED2 rodada 2").
 
 | # | Item | Status | Evidência | Prio |
 |---|------|:---:|---|:--:|
-|2.1| Trilha completa do Colégio Naval | 🟢 | único `supabase/seed/02_trilha_cn.sql` (9 semanas, 33 assuntos) | — |
-|2.2| Trilha completa EsPCEx | 🟡 | ~70% (estrutura+literatura); sem 9 semanas detalhadas | P1 |
-|2.3| Trilhas EEAr / EPCAR / ESA | 🔴 | esqueleto (2–4 assuntos) | P3 |
+|2.1| Trilha completa do Colégio Naval | 🟢 | `seed/02_trilha_cn.sql`; maturidade `completa` validada pelo build | — |
+|2.2| Trilha completa EsPCEx | 🟡 | ~70% (estrutura+literatura); maturidade honesta na UI; faltam as semanas detalhadas | P1 |
+|2.3| Trilhas EEAr / EPCAR / ESA | 🔴 | esqueleto — agora **sinalizado** como tal na UI (selo), mas segue esqueleto | P3 |
 |2.4| Config Colégio Militar | 🔴 | sem config | P3 |
-|2.5| Fábrica/pipeline versionada de conteúdo | 🔴 | inexistente; conteúdo é trabalho manual | P3 |
+|2.5| Fábrica/pipeline versionada de conteúdo | 🟢 | PED2 #49: pipeline 6 passos + seed gerado + validador como porteiro | — |
 
-## Camada 3 — Papel professor/tutor + intervenção · fase **ROLE1**
+> **Nota REG1 (hipótese testada):** recorrência-na-trilha e simulado-por-concurso,
+> ligados pelo fechamento-100% (28/06), **não** alteram os itens 2.x — consomem a
+> *estrutura de prova* (0009/0014/0015), não criam *trilha semanal* de concurso.
+> São features distintas, já entregues. O escopo remanescente de PED2 é somente
+> conteúdo: fechar EsPCEx (2.2), decidir se EEAr/EPCAR/ESA e CM entram no roadmap.
 
-| # | Item | Status | Evidência | Prio |
-|---|------|:---:|---|:--:|
-|3.1| Papel `professor`/`tutor` no schema | 🔴 | `check (papel in ('coordenacao','aluno','responsavel'))` — migration de usuários | P3 |
-|3.2| RLS por turma (menor privilégio) | 🔴 | não existe | P3 |
-|3.3| Tela de intervenção pedagógica (lista de risco) | 🔴 | não existe | P3 |
-|3.4| Anotação/acompanhamento por aluno | 🔴 | não existe | P3 |
-|3.5| Indicador "não estudou × estuda e não rende" | 🔴 | dado permite inferir; sem indicador | P3 |
-
-## Camada 4 — Escala, relatórios e carga · fase **PERF1**
+## Camada 3 — Papel professor/tutor + intervenção · fase **ROLE1** · 🔴 não iniciada
 
 | # | Item | Status | Evidência | Prio |
 |---|------|:---:|---|:--:|
-|4.1| RPC de agregação `resumo_escola()` | 🟢 | `supabase/migrations/0016_painel_agregado.sql`; usada em PainelGestao/AreaEscola | — |
-|4.2| Paginação nas listas | 🟢 | `ListaAlunos.jsx:10` (`paginar`), controles "página X de Y" | — |
-|4.3| Índices de escala da coordenação | 🟢 | `0023_indices_escala_coordenacao.sql` (`escola_id` em registros/metas/simulados/consentimentos) | — |
-|4.4| Virtualização (react-window) em listas grandes | 🔴 | ausente (paginação cobre o essencial) | P3 |
-|4.5| Índices compostos por tenant nas tabelas de gamificação | 🟡 | `aluno_xp_eventos`/`aluno_conquistas` sem prefixo `escola_id` (tabelas dormentes → baixa urgência) | P4 |
-|4.6| Exportação CSV/PDF por turma/escola | 🔴 | inexistente (só export LGPD de aluno) | P3 |
-|4.7| Comparação entre turmas / recorte por concurso | 🔴 | inexistente | P3 |
-|4.8| Teste de carga 300/10k em staging | 🔴 | nunca medido | P3 |
+|3.1–3.5| Papel no schema, RLS por turma, tela de intervenção, anotações, indicador | 🔴 | `check (papel in ('coordenacao','aluno','responsavel'))` inalterado; nenhum merge ROLE1 no histórico | P3 |
 
-## Camada 5 — Operação de produção / DevOps · fase **OPS1** · lacuna de CONFIABILIDADE
+## Camada 4 — Escala, relatórios e carga · fase **PERF1** · ✅ código entregue (27/06, PR #52); carga real pendente
 
 | # | Item | Status | Evidência | Prio |
 |---|------|:---:|---|:--:|
-|5.1| Observabilidade real (error tracking, métricas, tracing) | 🔴 | só `app/src/shared/lib/observabilidade.js` (log cliente); sem Sentry/equivalente | P2 |
-|5.2| Alerta de falha da virada (cron) + health check/uptime | 🔴 | inexistente | P2 |
-|5.3| Backup automático + restore testado (drill) | ⛔ | Pro/julho | P2 |
-|5.4| Região `sa-east-1` (LGPD dado de menor) | ⛔ | ainda `us-east-1` | P2 |
-|5.5| Rollback de migrations + gate de versão front↔banco | 🟡 | runbook (`operacao/runbook-migrations-supabase.md`, `rollback.md`); migrations reversíveis não sistemáticas; sem gate | P3 |
-|5.6| Ambiente E2E efêmero | ⛔ | ainda demo compartilhado; plano em `operacao/e2e-ambiente.md` (staging/julho) | P3 |
-|5.7| Separação formal demo × staging × prod | 🔴 | não formalizada | P3 |
+|4.1–4.3| RPC agregada, paginação, índices de escala | 🟢 | (REG0 já confirmava) | — |
+|4.4| Virtualização (react-window) | 🔴 | `grep react-window app/src` → 0 (paginação cobre o essencial) | P4 |
+|4.5| Índices compostos de gamificação | 🟡 | tabelas seguem dormentes → baixa urgência; ver item 1.8 antes | P4 |
+|4.6| Exportação CSV por turma/escola | 🟢 | `shared/lib/csv.js` + `desempenho/Relatorios.jsx` (usado em `AreaEscola.jsx:111`) | — |
+|4.7| Comparação entre turmas / recorte por concurso | 🟢 | `shared/metricas/comparativo.js` + `TabelaComparativo` + `tests/comparativo.test.mjs` | — |
+|4.8| Teste de carga 300/10k | 🟡 | plano escrito (`perf1/plano-carga-300-500-10000.md`); execução exige staging (⛔ julho) | P3 |
 
-## Camada 6 — Endurecimentos de segurança restantes · fase **SEC3**
-
-| # | Item | Status | Evidência | Prio |
-|---|------|:---:|---|:--:|
-|6.1| CORS allowlist + headers A + branch protection + CodeQL/Dependabot | 🟢 | SEG1/SEG2 (deploy 6 funções; `auditoria/seguranca/seg2/`) | — |
-|6.2| Credencial de aluno desacoplada do código (email/senha opacos) | 🔴 | `provisionar-aluno`: `email=codigo@…`, `senha=codigo` (~59 bits) | P2 |
-|6.3| Rate limiting no login por código | 🔴 | não implementado (depende do GoTrue) | P2 |
-|6.4| Leaked Password Protection | ⛔ | Pro/julho; senha endurecida ≥8+letras/díg. | P3 |
-|6.5| `timingSafeEqual` na `virar-semana` | 🔴 | `virar-semana/index.ts:25` usa `token !== …` | P4 |
-|6.6| Blindar `virar_semana()` por escola | 🔴 | escopo global (só `service_role`) | P4 |
-|6.7| Atomicidade banco+Auth na exclusão LGPD | 🔴 | log antes da RPC; sem transação distribuída | P4 |
-|6.8| `.env.production` fora do repo | 🔴 | `app/.env.production` versionado (só chaves públicas) | P4 |
-
-## Camada 7 — Qualidade de frontend · fase **FE1**
+## Camada 5 — Operação de produção / DevOps · fase **OPS1** · 🔴/⛔ inalterada
 
 | # | Item | Status | Evidência | Prio |
 |---|------|:---:|---|:--:|
-|7.1| Error Boundary global | 🟢 | `app/src/shared/ui/ErroFronteira.jsx` | — |
-|7.2| Trava de duplo envio (mutações) | 🟢 | `Registrar.jsx:49` (`!ocupado` em `podeSalvar`), botão `disabled`+"Salvando…" (142-143) | — |
-|7.3| TypeScript (ao menos no seam) | 🔴 | 0 arquivos `.ts/.tsx` em `app/src` | P4 |
-|7.4| Lógica de negócio extraída para hooks/utils | 🟡 | parte em `shared/metricas`, `conteudo/*.js`; parte inline nas telas | P4 |
-|7.5| `AbortController` nos fetches | 🔴 | só flag `vivo` de cleanup | P4 |
-|7.6| `useReducer` em AreaEscola + `React.memo` em listas | 🔴 | `useState` soltos | P4 |
+|5.1| Observabilidade real | 🔴 | gancho instalado, `VITE_ERROR_REPORT_URL` indefinida (auditoria sênior §3.2 — segue verdade em 02/07) | P2 |
+|5.2| Alerta de falha da virada + uptime | 🔴 | inexistente | P2 |
+|5.3| Backup + restore testado | ⛔ | Pro/julho (SDB-AUDIT reforça: P1 antes de aluno real) | P2 |
+|5.4| Região `sa-east-1` | ⛔ | remoto segue `us-east-1` | P2 |
+|5.5| Rollback de migrations + gate de versão | 🟡 | runbook existe; SDB-FIX1 exercitou o fluxo com rollback documentado | P3 |
+|5.6| Ambiente E2E efêmero | ⛔ | staging/julho | P3 |
+|5.7| Separação demo × staging × prod | 🔴 | projeto único; SDB-AUDIT: credenciais demo em produção (P2) | P3 |
 
-## Camada 8 — Acabamento de interface (UX/a11y) · fase **UX1**
-
-| # | Item | Status | Evidência | Prio |
-|---|------|:---:|---|:--:|
-|8.1| Acessibilidade: `htmlFor`/foco/contraste/axe | 🔴 | `htmlFor` em **0** arquivos de `app/src` | P3 |
-|8.2| Skeletons de carga | 🔴 | "Carregando…" textual | P4 |
-|8.3| Microcopy de erro/vazio humana (não `e.message`) | 🔴 | faixa vermelha técnica | P3 |
-|8.4| Redução de densidade/abas + "modo essencial" do aluno | 🔴 | 7 abas aluno / 6 coordenação | P4 |
-|8.5| Semáforo do responsável + benchmark "isso é bom?" | 🔴 | inexistente | P4 |
-|8.6| Aviso de leitura no ranking + separar "Ajustes" | 🔴 | inexistente | P4 |
-|8.7| Itens AV2: toast de sucesso ao registrar; cards de trilha "clicáveis"; dropdown "Mais" instável; login coord ~6s | 🔴 | `produto/av2/07-matriz-de-problemas.md` (MEL-P3-001..004) | P4 |
-
-## Camada 9 — QA / E2E / release gate · fase **QA3**
+## Camada 6 — Endurecimentos de segurança · fase **SEC3** · ✅ rodada entregue (27/06, PR #53); 2 itens abertos
 
 | # | Item | Status | Evidência | Prio |
 |---|------|:---:|---|:--:|
-|9.1| Isolamento multi-tenant + unitários + DB real + CI | 🟢 | ~341 testes; `isolamento.test.mjs`; gate `build-e-unitarios` | — |
-|9.2| Ambiente E2E efêmero (mata flaky do demo) | ⛔ | depende de staging (julho) | P3 |
-|9.3| Seletores estáveis (`data-testid`/`htmlFor`) | 🔴 | seletores de irmão `label+input` | P3 |
-|9.4| Teste de carga | 🔴 | inexistente (ver 4.8) | P3 |
-|9.5| Gate de release formal documentado | 🟡 | CI verde exigido; gate "unit+isolamento+E2E" não formalizado em doc | P3 |
-|9.6| Cobrir fluxos pedagógicos na UI (quando ligados) | 🔴 | depende de PED1 | P3 |
+|6.1| CORS allowlist + headers A + branch protection + CodeQL | 🟢 | SEG1/SEG2 | — |
+|6.2| Credencial de aluno desacoplada do código | 🟡 | **modelo documentado** (`sec3/modelo-credencial-opaca.md`); implementação não: `provisionar-aluno/index.ts:205` ainda `password: codigo` | P2 |
+|6.3| Rate limiting no login por código | 🔴 | não implementado (GoTrue) | P2 |
+|6.4| Leaked Password Protection | ⛔ | Pro/julho | P3 |
+|6.5| `timingSafeEqual` na `virar-semana` | 🟢 | comparação SHA-256 tempo-constante (confirmada pela auditoria sênior §6 e presente no código) | — |
+|6.6| `virar_semana()` por escola | 🟢 | migration `0035` (aplicada no remoto 29/06) | — |
+|6.7| Atomicidade banco+Auth na exclusão LGPD | 🟢 | migration `0036` (aplicada no remoto 29/06) | — |
+|6.8| `.env.production` fora do repo | 🔴 | `app/.env.production` segue versionado (só chaves públicas) | P4 |
+|6.9| **NOVO:** CSP `script-src` sem `unsafe-inline` | 🟢 | fechamento-100% (#57): `vercel.json` → `script-src 'self'` (verificado 02/07) | — |
+
+## Camada 7 — Qualidade de frontend · fase **FE1** · ✅ rodada entregue (28/06, PR #54); TS aberto
+
+| # | Item | Status | Evidência | Prio |
+|---|------|:---:|---|:--:|
+|7.1| Error Boundary global | 🟢 | `ErroFronteira.jsx` | — |
+|7.2| Trava de duplo envio | 🟢 | `useEnvioUnico` (trava síncrona por construção) usado nas mutações sensíveis | — |
+|7.3| TypeScript no seam | 🔴 | 0 arquivos `.ts/.tsx` em `app/src` (medido 02/07) | P4 |
+|7.4| Lógica extraída para hooks/utils | 🟢 | `shared/contratos/` (DTOs), `useEnvioUnico`, `useRecurso`, `shared/metricas/` | — |
+|7.5| `AbortController` nos fetches | 🟢 | `comSinal()` no seam + cancelamento no unmount | — |
+|7.6| `useReducer` + `React.memo` em listas | 🟡 | `useReducer` em 2 arquivos; `React.memo` 0 — parcial, baixo impacto com paginação | P4 |
+
+## Camada 8 — Acabamento de interface (UX/a11y) · fase **UX1** · ✅ rodada entregue (28/06, PR #55)
+
+| # | Item | Status | Evidência | Prio |
+|---|------|:---:|---|:--:|
+|8.1| Acessibilidade (`htmlFor`/foco/contraste) | 🟡 | `htmlFor` em **11** arquivos (era 0); foco visível no tema; auditoria axe/contraste completa não registrada | P3 |
+|8.2| Skeletons de carga | 🟢 | `CarregandoBloco` + classe `.skel` usados nas áreas | — |
+|8.3| Microcopy de erro humana | 🟢 | `mensagemAmigavel` + contextos específicos (FIX1 completou os órfãos) | — |
+|8.4| Modo essencial do aluno | 🟢 | `VisaoEstudo.jsx:212` ("Modo essencial ativo — …") | — |
+|8.5| Semáforo do responsável + benchmark | 🟢 | `ResumoResponsavel.jsx` (semáforo + faixa "isso é bom?") | — |
+|8.6| Aviso de leitura no ranking | 🟡 | `ClassificacaoTurma.jsx` existe; aviso motivacional não localizado — reavaliar na próxima UX | P4 |
+|8.7| Itens AV2 (toast, cards clicáveis, dropdown, login 6s) | 🟡 | não reverificados um a um na REG1 | P4 |
+
+## Camada 9 — QA / E2E / release gate · fase **QA3** · 🟡
+
+| # | Item | Status | Evidência | Prio |
+|---|------|:---:|---|:--:|
+|9.1| Unitários + RLS + CI | 🟢 | **471/471** (medido 02/07; comando no `03-status-atual.md`) | — |
+|9.2| Ambiente E2E efêmero | ⛔ | staging/julho; specs existem e são **puladas** sem secrets | P3 |
+|9.3| Seletores estáveis | 🟡 | RC1 migrou login para seletor por rótulo; `data-testid` segue 0 | P3 |
+|9.4| Teste de carga | 🟡 | plano PERF1 escrito; execução ⛔ staging | P3 |
+|9.5| Gate de release formal | 🟡 | CI obrigatório na main; gate documentado não formalizado | P3 |
+|9.6| Cobrir fluxos pedagógicos na UI | 🟡 | PED1 ligado + testes DB; E2E de UI ainda não roda | P3 |
 
 ## Camada 10 — Arquitetura B2B / plataforma · fases **ARCH1** e **ADM2**
 
 | # | Item | Status | Evidência | Prio | Fase |
 |---|------|:---:|---|:--:|:--:|
-|10.1| Backoffice de escolas (criar/editar/status/checklist) | 🟢 | D0 + HF3 (BUG-P1-001 corrigido); `/admin-interno` | — | — |
-|10.2| Onboarding sem SQL (códigos, CSV, trilhas, responsáveis) | 🟢 | I2 (`operacional/i2/`) | — | — |
-|10.3| SuperADM → centro de operação profissional (planos, saúde, limites, modalidades, demo/real, go-live) | 🔴 | backoffice funcional, não centro de operação | P4 | ADM2 |
-|10.4| Self-service progressivo de escola | 🔴 | provisão ainda operada pelo dono | P4 | ADM2/ARCH1 |
-|10.5| Contrato/DTO estável no seam (hoje PostgREST cru) | 🔴 | `shared/data/index.js` usa `supabase.from(...)` direto | P4 | ARCH1 |
-|10.6| Fronteira white-label formalizada/versionada | 🔴 | white-label leve (logo/cor/nome) sem contrato | P4 | ARCH1 |
+|10.1–10.2| Backoffice + onboarding sem SQL | 🟢 | D0/HF3/I2 | — | — |
+|10.3| SuperADM centro de operação profissional | 🟢 | **ADM2 #51** (categoria, risco, go-live, logs filtráveis; `auditoria/adm2/`) | — | — |
+|10.4| Self-service progressivo | 🔴 | provisão segue operada pelo dono | P4 | ARCH1 |
+|10.5| Contrato/DTO estável no seam | 🟡 | FE1 criou `shared/contratos/dto.js` (parcial); PostgREST cru ainda domina | P4 | ARCH1 |
+|10.6| Fronteira white-label formalizada | 🔴 | sem contrato | P4 | ARCH1 |
 
 ---
 
-## Síntese por prioridade
+## Síntese por prioridade (pós-REG1)
 
-| Categoria | Camadas/itens | Fases |
+| Categoria | Itens | Fase dona |
 |---|---|---|
-| **Bloqueia produto fechado de valor** | C1 (motor vivido) + C2.2 (EsPCEx) | PED1, PED2 |
-| **Bloqueia dado real de menor** | 5.1–5.4 (observabilidade, alertas, backup/restore, sa-east-1) + 6.2–6.3 (credencial, rate limit) | OPS1, SEC3 |
-| **Endurecimento de segurança** | 6.4–6.8 (LPP, timingSafe, virada por escola, atomicidade LGPD, .env) | SEC3 |
-| **Escala de escola média** | 4.4–4.8 (carga, exportação, comparação de turmas) | PERF1 |
-| **Acabamento** | C7 (resto), C8 (a11y/UX) | FE1, UX1 |
-| **Plataforma** | C3 (professor), C9 (release gate), C10 (operador/arquitetura) | ROLE1, QA3, ADM2, ARCH1 |
+| **P1 — produto** | Tabela fantasma `solicitacoes_acesso` (UI promete e grava no vazio) · trilha EsPCEx (2.2) | FIX2 · PED2 rodada 2 |
+| **P2 — antes de aluno real** | Observabilidade com destino (5.1) · alertas (5.2) · backup ⛔ (5.3) · sa-east-1 ⛔ (5.4) · credencial opaca (6.2) · rate limit (6.3) · separação demo/real (5.7) · limpeza motor XP duplicado (1.8) · storage + FKs sem índice (SDB-AUDIT) | OPS1 · SEC3b · DB3 |
+| **P3 — importante** | Conteúdo EEAr/EPCAR/ESA/CM · tagueamento (1.7) · a11y restante (8.1) · seletores/gate QA (9.3/9.5) · carga (4.8/9.4) | PED2 r2 · UX2 · QA3 |
+| **P4 — acabamento/plataforma** | TS no seam (7.3) · memo/reducer (7.6) · virtualização (4.4) · `.env` (6.8) · ARCH1 (10.4–10.6) | FE2 · ARCH1 |
 
----
+## Dependências (o que destrava o quê) — revisão REG1
 
-## Tabela de dependências (qual camada destrava a seguinte)
+A tabela REG0 previa RC1 → PED2 → ADM2 → … Na prática, **PED1, PED2 r1, ADM2,
+PERF1, SEC3, FE1 e UX1 já aconteceram** (27–28/06). O que resta, em ordem
+sugerida de valor:
 
-| Ordem | Fase | Depende de | Destrava | Não fazer agora |
-|---|---|---|---|---|
-| 0 | **REG0** | docs reorg + SEG2 | tudo (fonte de verdade) | corrigir bug, criar tela, migration |
-| 1 | **RC1** | REG0 | correção em massa com matriz real | corrigir antes de mapear |
-| 2 | **PED1** | RC1 | valor pedagógico (C9.6, UX do motor) | conteúdo novo antes do motor |
-| 3 | **PED2** | PED1 | abrangência (vender fora do CN) | prometer 5 concursos sem fábrica |
-| 4 | **ADM2** | PED2 | operação profissional, demo/real | self-service pleno cedo demais |
-| 5 | **ROLE1** | ADM2 | multi-tutor sem violar privilégio | dar acesso de coordenação ao tutor |
-| 6 | **PERF1** | ROLE1 | escola média + relatórios | testar carga em produção real |
-| 7 | **OPS1** | PERF1 | dado real de menor (LGPD/backup) | dado real antes de sa-east-1/backup |
-| 8 | **SEC3** | OPS1 | muitos alunos reais | enfraquecer RLS p/ passar teste |
-| 9 | **FE1** | SEC3 | refator seguro (DTO/hooks) | reescrever tudo / TS de uma vez |
-| 10 | **UX1** | FE1 | "premium" / a11y | mexer em segurança/arquitetura |
-| 11 | **QA3** | UX1 | gate de release confiável | gate sem ambiente efêmero |
-| 12 | **ARCH1** | QA3 | escalar para dezenas de escolas | B2C/modalidades sobre base instável |
+| Ordem | Fase | Escopo real remanescente | Depende de |
+|---|---|---|---|
+| 1 | **FIX2** | Tabela fantasma (criar tabela+RLS+fila da coordenação **ou** remover botão — decisão de produto) + destino de observabilidade | decisão do dono |
+| 2 | **PED2 rodada 2** | Conteúdo: fechar EsPCEx; decidir EEAr/EPCAR/ESA/CM — usando a fábrica pronta (2.5) | backlog pedagógico |
+| 3 | **DB3** | Limpeza do motor duplicado (1.8) + tabelas dormentes (inventário DB2/SDB-AUDIT) | decisão de arquitetura |
+| 4 | **PR1** | Piloto real (ver `07-pendencias-para-piloto-real.md`) | SMTP/infra do dono |
+| 5+ | ROLE1 · OPS1 · SEC3b · QA3 · FE2 · ARCH1 | como antes | julho/Pro/staging |
 
-**Itens que NÃO devem ser feitos agora:** TS em massa (7.3), virtualização (4.4) e índices de gamificação (4.5) enquanto as tabelas estão dormentes, B2C/novas modalidades (ARCH1) antes de PED1+OPS1, e qualquer mudança de RLS/Auth/branch protection para "passar teste".
-
----
-
-## Quadro de decisão (o que corrigir antes de cada marco)
-
-| Marco | Pré-requisitos (itens) |
-|---|---|
-| **Vender / mostrar demo controlada** | Nada bloqueia hoje. Higiene de dados demo + domínio próprio (opcional). Itens ⛔ de julho/Pro **não** bloqueiam demo. |
-| **Aluno real (dado de menor)** | 5.3 backup+restore, 5.4 sa-east-1, 5.1–5.2 observabilidade/alertas, 6.2–6.3 credencial+rate limit, consentimento dos pais (contrato/DPA) |
-| **Escola "Matriz" (média, ~150–300)** | + 4.6 exportação, 4.8 carga em staging, ADM2 (operação profissional), PED1+PED2.2 (valor real) |
-| **B2C (aluno paga direto)** | + ARCH1 (contrato/DTO, white-label, self-service), ROLE1, modelo de billing — **não iniciar antes de PED1+OPS1** |
-| **Novas modalidades** | + fábrica de conteúdo (2.5), ARCH1 — base estável obrigatória |
+**Não fazer agora:** TS em massa (7.3), virtualização (4.4), B2C/modalidades
+(ARCH1) — inalterado desde REG0.
 
 ---
 
 ## Nota de governança
 
-REG0 é **somente documentação**: não altera produto, banco, RLS, Auth, segurança, migrations, telas, staging, backup, domínio ou SMTP. Itens marcados 🟢 foram conferidos no código/doc atual (ver `docs/auditoria/reg0/relatorio-reg0-inventario-camadas.md`, seção de evidências). Itens ⛔ são bloqueio de **dado real**, não de demo controlada.
+REG1 é **somente documentação** (como REG0): não altera produto, banco, RLS,
+Auth ou migrations. Evidências e método em
+`docs/auditoria/reg1/relatorio-reg1-reconciliacao-pos-fechamento.md`.
