@@ -14,7 +14,7 @@
 // ============================================================
 import test from "node:test";
 import assert from "node:assert/strict";
-import { pool, IDS, ESCOLA_A, ESCOLA_B, ALUNO_LUCAS } from "./identidades.mjs";
+import { pool, IDS, ESCOLA_A, ALUNO_LUCAS } from "./identidades.mjs";
 
 test.after(async () => { await pool.end(); });
 
