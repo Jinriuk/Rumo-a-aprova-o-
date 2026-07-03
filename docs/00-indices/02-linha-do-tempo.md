@@ -94,7 +94,8 @@ SDB-AUDIT/SDB-FIX1) e por isso nunca tinham entrado nestes índices até a REG1.
 | 29/06 | **SDB-AUDIT** — auditoria completa do Supabase remoto (fora do pipeline) | #58 | `claude/sdb-audit-supabase-completo` | `auditoria/sdb-audit/` |
 | 29/06 | **SDB-FIX1** — aplica drift 0034/0035/0036; paridade 36==36 | #59 | `claude/sdb-migrations-drift-parity-4fgyvr` | `auditoria/banco/sdb-fix1-migrations-drift.md` |
 | 02/07 | **FIX1** — corrige os 5 achados da RC1 (003/004/005/006/008) | #60 | `claude/fix1-rc1-corrections-40rcya` | `auditoria/fix1/` |
-| 02/07 | **REG1** — reconciliação de estado (esta fase; reescreve os índices 02/03/05/07) | — | `claude/fix1-rc1-corrections-40rcya` (reutilizada pós-merge) | `auditoria/reg1/` |
+| 02/07 | **REG1** — reconciliação de estado (reescreve os índices 02/03/05/07) | #61 | `claude/fix1-rc1-corrections-40rcya` (reutilizada pós-merge) | `auditoria/reg1/` |
+| 02/07 | **FIX2** — fecha os achados da REG1: tabela fantasma removida do Login (P1-5), escrita de conquistas deprecada nos 2 motores (migration 0037, P2-8), PR #49 verificado | — | `claude/fix1-rc1-corrections-40rcya` (reutilizada; tag `fix2-fechamento-reg1`) | `auditoria/fix2/` |
 | 03/07 | **PED2-R2** — conteúdo/trilhas: Fase 0 de material-fonte (nenhum edital/prova no projeto → **nenhuma trilha gerada sem lastro**); espelho de maturidade carimbado no remoto (seed 18); correção 33→50 atividades do CN; gaps por concurso documentados | — | `claude/ped2-r2-content-trails-4uu8h2` | `auditoria/ped2-r2/` + `conteudo/gaps-material-fonte-concursos.md` |
 
 > **Nota de processo (REG1):** as quatro rodadas fora do pipeline produziram

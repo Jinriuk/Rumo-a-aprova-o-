@@ -35,7 +35,7 @@
 |1.5| Feedback imediato de XP ("+60 XP") | 🟢 | `VisaoEstudo.jsx:96` (`setFeedback({ xp: ganhouXp, … })`) | — |
 |1.6| Ledger C0 visível (histórico) | 🟢 | `HistoricoProgresso.jsx` | — |
 |1.7| Tagueamento de recorrência com volume útil | 🔴 | ainda amostra (3 questões em `questoes_prova` remoto); **PED2-R2 (03/07): 0 questões novas** — nenhuma prova real anexada ao projeto (a CPACN 2024 é só referência, sem documento); tagueamento exige prova+gabarito em mãos | P3 |
-|1.8| **NOVO (auditoria sênior §2.1, aberto):** limpar a duplicação remanescente — `aluno_xp_eventos` (0 rows) e catálogo `patentes` mortos; UI usa régua `jargao.js`; `aluno_conquistas` gravada pelo gatilho (110 rows) mas a aba Conquistas mostra catálogo derivado no cliente | 🔴 | `grep concederXp\|listarPatentes` em routes/modules → 0 usos; `Conquistas.jsx:62` | P2 (dívida) |
+|1.8| Duplicação do motor de gamificação (auditoria sênior §2.1) | 🟢 | **FIX2 (0037, 02/07):** escritores de conquista dos 2 motores viraram no-op; 5 funções mortas removidas do seam; 4 tabelas da 15.5 carimbadas deprecadas (dados preservados); fonte única = ledger C0 + `jargao.js`/derivação no cliente. Resta remoção física (P4, DB3) | — |
 
 ## Camada 2 — Conteúdo e trilhas · fase **PED2** · 🟡 infraestrutura pronta, conteúdo aberto
 
@@ -152,8 +152,8 @@ documentado (`docs/conteudo/fabrica-trilhas-concursos.md`). O que resta na camad
 
 | Categoria | Itens | Fase dona |
 |---|---|---|
-| **P1 — produto** | Tabela fantasma `solicitacoes_acesso` (UI promete e grava no vazio) · trilha EsPCEx (2.2) | FIX2 · PED2 rodada 2 |
-| **P2 — antes de aluno real** | Observabilidade com destino (5.1) · alertas (5.2) · backup ⛔ (5.3) · sa-east-1 ⛔ (5.4) · credencial opaca (6.2) · rate limit (6.3) · separação demo/real (5.7) · limpeza motor XP duplicado (1.8) · storage + FKs sem índice (SDB-AUDIT) | OPS1 · SEC3b · DB3 |
+| **P1 — produto** | ~~Tabela fantasma~~ ✅ (FIX2) · trilha EsPCEx (2.2) | PED2 rodada 2 |
+| **P2 — antes de aluno real** | Observabilidade com destino (5.1) · alertas (5.2) · backup ⛔ (5.3) · sa-east-1 ⛔ (5.4) · credencial opaca (6.2) · rate limit (6.3) · separação demo/real (5.7) · ~~duplicação XP (1.8)~~ ✅ (FIX2) · storage + FKs sem índice (SDB-AUDIT) | OPS1 · SEC3b · DB3 |
 | **P3 — importante** | Conteúdo EEAr/EPCAR/ESA/CM · tagueamento (1.7) · a11y restante (8.1) · seletores/gate QA (9.3/9.5) · carga (4.8/9.4) | PED2 r2 · UX2 · QA3 |
 | **P4 — acabamento/plataforma** | TS no seam (7.3) · memo/reducer (7.6) · virtualização (4.4) · `.env` (6.8) · ARCH1 (10.4–10.6) | FE2 · ARCH1 |
 
@@ -165,9 +165,9 @@ sugerida de valor:
 
 | Ordem | Fase | Escopo real remanescente | Depende de |
 |---|---|---|---|
-| 1 | **FIX2** | Tabela fantasma (criar tabela+RLS+fila da coordenação **ou** remover botão — decisão de produto) + destino de observabilidade | decisão do dono |
-| 2 | **PED2 rodada 2** | Conteúdo: fechar EsPCEx; decidir EEAr/EPCAR/ESA/CM — usando a fábrica pronta (2.5) | backlog pedagógico |
-| 3 | **DB3** | Limpeza do motor duplicado (1.8) + tabelas dormentes (inventário DB2/SDB-AUDIT) | decisão de arquitetura |
+| 1 | ~~FIX2~~ | ✅ **Feita (02/07):** tabela fantasma removida do Login; duplicação de conquistas fechada (0037). Destino de observabilidade segue aberto (P1-3 do `07`) | — |
+| 2 | ~~PED2 rodada 2~~ | ✅ **Feita (03/07):** Fase 0 mediu ausência de material-fonte para EsPCEx/EEAr/EPCAR/ESA/CM (nenhum edital/prova no projeto); espelho de maturidade carimbado no remoto; gaps exatos documentados. Produção de trilha real segue **aguardando material do dono** | material-fonte do dono |
+| 3 | **DB3** | Remoção física das 4 tabelas deprecadas (0037) + tabelas dormentes (inventário DB2/SDB-AUDIT) | decisão de arquitetura |
 | 4 | **PR1** | Piloto real (ver `07-pendencias-para-piloto-real.md`) | SMTP/infra do dono |
 | 5+ | ROLE1 · OPS1 · SEC3b · QA3 · FE2 · ARCH1 | como antes | julho/Pro/staging |
 
