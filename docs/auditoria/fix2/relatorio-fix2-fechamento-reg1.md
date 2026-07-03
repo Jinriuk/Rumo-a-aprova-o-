@@ -151,9 +151,14 @@ remoto: ledger 37 == repo 37 · funções no-op ao vivo · 110 rows preservadas
   E2E sem secrets (P2-3), credencial opaca (P2-5), rate limit (P2-6),
   storage/FKs (P2-7), remoção física das tabelas deprecadas (DB3/P4), módulo
   puro `gamificacao.js` morto (FE2).
-- **Branch preservada:** commit final marcado com a tag **`fix2-fechamento-reg1`**
-  (pushada) — mesmo que a branch seja apagada no merge, o commit fica
-  referenciado. Não apagar a branch sem confirmação do dono.
+- **Branch preservada:** a tag **`fix2-fechamento-reg1`** foi criada apontando
+  para o commit de código da FIX2 (**`5d47f12`**), mas o push de `refs/tags` é
+  **bloqueado pelo proxy deste ambiente** (HTTP 403, 3 tentativas com backoff —
+  push de branch funciona, push de tag não). Registro de preservação, portanto:
+  (1) o hash `5d47f12` fica gravado aqui e na mensagem do PR; (2) o GitHub
+  preserva o `head sha` do PR mesmo se a branch for apagada no merge; (3) o
+  dono pode criar a tag pelo GitHub (Releases → New tag `fix2-fechamento-reg1`
+  no commit `5d47f12`) em 30 segundos. **Não apagar a branch sem confirmação.**
 
 ## 7. Índices atualizados (regra REG1 cumprida)
 
