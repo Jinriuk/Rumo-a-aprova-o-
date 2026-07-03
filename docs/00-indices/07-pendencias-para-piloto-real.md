@@ -31,7 +31,7 @@ usuário), documentado desde a auditoria sênior de 28/06 e ainda sem correção
 | P1-2 | Região `sa-east-1` (LGPD — dado de menor no Brasil) | Julho / Infra |
 | P1-3 | Alertas de uptime (Supabase / Vercel) + **destino da observabilidade** (`VITE_ERROR_REPORT_URL` — o gancho existe, aponta para lugar nenhum) | Infra |
 | P1-4 | Validar RLS e responsável+revogação com dados reais (não seed) — incl. o **seletor multi-filhos do FIX1** ao vivo | QA |
-| P1-5 | **Tabela fantasma `solicitacoes_acesso`**: "recuperar código" no Login grava numa tabela que não existe (repo e remoto verificados 02/07) — o aluno vê sucesso e ninguém é notificado. Criar tabela + RLS + fila visível à coordenação **ou** remover o botão. Decisão de produto + FIX2 | Produto / FIX2 |
+| ~~P1-5~~ | ✅ **Resolvido (FIX2, 02/07):** a tela "esqueci meu código" não coleta mais e-mail nem grava na tabela inexistente — orienta honestamente a pedir novo código à coordenação (que emite pelo painel). Fila real pré-auth ficou para o ADM2, com análise de abuso própria | FIX2 |
 
 ---
 
@@ -46,7 +46,7 @@ usuário), documentado desde a auditoria sênior de 28/06 e ainda sem correção
 | P2-5 | Credencial de aluno opaca — modelo documentado (SEC3), `provisionar-aluno` ainda usa `password = codigo` | 🔲 SEC3b |
 | P2-6 | Rate limiting no login por código (GoTrue) | 🔲 SEC3b |
 | P2-7 | Restrições no bucket de storage + 13 FKs sem índice (SDB-AUDIT §7, antes de QA2) | 🔲 DB3 |
-| P2-8 | Limpeza do motor de XP duplicado (`aluno_xp_eventos`/`patentes` mortos; conquistas gravadas no banco × catálogo derivado na UI) — decidir e unificar | 🔲 DB3 |
+| ~~P2-8~~ | ✅ **Fechado (FIX2 0037, 02/07):** escritores de conquista dos DOIS motores (C0 0024 + PED1 0033) viraram no-op; 5 funções mortas do seam removidas; dados preservados; fonte única = ledger C0 + derivação no cliente. Resta só a **remoção física** das 4 tabelas deprecadas (P4, DB3) | FIX2 / DB3 |
 
 ---
 

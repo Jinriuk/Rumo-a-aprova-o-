@@ -13,7 +13,7 @@ import { pool, como, comoServidor, esperaErro, IDS, ESCOLA_A, ESCOLA_B, ALUNO_LU
 
 test.after(async () => { await pool.end(); });
 
-test("registrar estudo gera evento de progresso (xp 0) + conquista primeiro_registro", async () => {
+test("registrar estudo gera evento de progresso (xp 0) — e NÃO grava mais conquista (FIX2 0037)", async () => {
   await como(IDS.alunoA, async (c) => {
     const r = await c.query(
       `insert into registros_estudo (escola_id, aluno_id, data, disciplina_codigo, topico, questoes, acertos, minutos)
@@ -27,12 +27,14 @@ test("registrar estudo gera evento de progresso (xp 0) + conquista primeiro_regi
     );
     assert.equal(ev.rows.length, 1, "um evento por registro");
     assert.equal(ev.rows[0].xp_delta, 0, "registro não pontua (anti-grind)");
-    // a conquista 'primeiro_registro' existe para o aluno (idempotente: já existia do seed ou nasce agora)
+    // FIX2 (0037): a escrita de conquistas foi deprecada nos dois motores —
+    // o registro NÃO desbloqueia mais 'primeiro_registro' (a aba Conquistas
+    // do aluno deriva no cliente; duplicação fechada).
     const conq = await c.query(
       "select count(*)::int n from aluno_conquistas ac join conquistas q on q.id=ac.conquista_id where ac.aluno_id=$1 and q.codigo='primeiro_registro'",
       [ALUNO_LUCAS],
     );
-    assert.ok(conq.rows[0].n >= 1, "primeiro_registro desbloqueada");
+    assert.equal(conq.rows[0].n, 0, "escrita de conquista deveria estar desligada (0037)");
   });
 });
 

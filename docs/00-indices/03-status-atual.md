@@ -1,22 +1,23 @@
 # Status Atual do Projeto
 
-**Data:** 2026-07-02 (REG1 — todos os números abaixo foram **medidos nesta data**,
-não copiados de relatório anterior; o comando de verificação acompanha cada um)
-**Fase encerrada:** FIX1 (PR #60, mergeada 02/07 com CI verde) + REG1 (reconciliação)
-**Próxima fase:** decisão do dono — PED2 rodada 2 (produção de conteúdo) e/ou FIX2
-(tabela fantasma + fios soltos da auditoria sênior) e/ou PR1 (piloto real)
+**Data:** 2026-07-02 (REG1 + FIX2 — todos os números abaixo foram **medidos nesta
+data**, não copiados de relatório anterior; o comando de verificação acompanha cada um)
+**Fase encerrada:** FIX1 (PR #60) + REG1 (PR #61) + FIX2 (fecha P1-5 e P2-8)
+**Próxima fase:** decisão do dono — PED2 rodada 2 (produção de conteúdo) e/ou PR1
+(piloto real; os P0 são de operação, não de código)
 
 ---
 
 ## Resumo executivo
 
 Sistema **liberado para piloto controlado pequeno** (desde SEG2, reafirmado pela
-SDB-AUDIT). Entre 26/06 e 02/07 a `main` recebeu **14 rodadas de trabalho**
-(REG0 → FIX1 — ver `02-linha-do-tempo.md` §4), incluindo quatro fora do pipeline
-numerado. A REG1 reconciliou estes índices com o estado real. **Nenhum P0/P1 de
-segurança aberto.** O maior fio solto conhecido é a **tabela fantasma
-`solicitacoes_acesso`** (fluxo de recuperação de código promete e grava no vazio
-— P1 de produto, documentado desde a auditoria sênior, ainda sem correção).
+SDB-AUDIT). Entre 26/06 e 02/07 a `main` recebeu **15 rodadas de trabalho**
+(REG0 → FIX2 — ver `02-linha-do-tempo.md` §4), incluindo quatro fora do pipeline
+numerado. A REG1 reconciliou estes índices; a **FIX2 fechou os dois achados de
+código da REG1**: a tabela fantasma saiu do Login (tela honesta, sem coleta de
+e-mail que caía no vazio) e a escrita duplicada de conquistas foi desligada nos
+dois motores (migration 0037, dados preservados). **Nenhum P0/P1 de segurança
+aberto; nenhum P1 de produto aberto.**
 
 ---
 
@@ -24,10 +25,10 @@ segurança aberto.** O maior fio solto conhecido é a **tabela fantasma
 
 | Métrica | Valor | Comando/evidência |
 |---|---|---|
-| Testes | **471 / 471 verdes** | `cd tests && bash reset-db.sh && npm test` (Postgres 16 local, migrations + seed 2×) |
+| Testes | **475 / 475 verdes** | `cd tests && bash reset-db.sh && npm test` (Postgres 16 local, migrations + seed 2×) |
 | Build de produção | **verde**, sem warning de chunk | `cd app && npm run build` — principal 434 kB (gzip 124 kB), áreas em chunks lazy |
-| Migrations no repo | **36** | `ls supabase/migrations \| wc -l` |
-| Migrations no ledger remoto | **36** (paridade, drift 0) | `list_migrations` (MCP) — últimas: 0034/0035/0036 aplicadas 29/06 |
+| Migrations no repo | **37** | `ls supabase/migrations \| wc -l` |
+| Migrations no ledger remoto | **37** (paridade, drift 0) | `list_migrations` (MCP) — última: 0037 (FIX2) aplicada 02/07 |
 | Tabelas públicas remotas | **46, todas com RLS** | `list_tables` (MCP, projeto `bdjkgrzfzoamchdpobbl`) |
 | Edge Functions | **6/6 ACTIVE** | `list_edge_functions` (MCP) — versões abaixo |
 | TypeScript em `app/src` | 0 arquivos (dívida conhecida) | `find app/src -name '*.ts*' \| wc -l` |
@@ -72,8 +73,8 @@ seguem válidas.
 
 | Item | Severidade | Evidência |
 |---|---|---|
-| **Tabela fantasma `solicitacoes_acesso`** — Login oferece "recuperar código", grava numa tabela que não existe (nem migration, nem remoto); usuário vê sucesso, coordenação nunca sabe | **P1 (produto)** | `Login.jsx:80` → `index.js › solicitarRecuperacaoCodigo`; `grep solicitacoes_acesso supabase/migrations/` vazio; ausente do `list_tables` remoto |
-| **Motor de XP parcialmente duplicado** — `aluno_xp_eventos` (0 rows) + catálogo `patentes` mortos; a UI usa a régua hard-coded `jargao.js` (5 componentes); `aluno_conquistas` é gravada pelo gatilho PED1 (110 rows remotas) mas a aba Conquistas do aluno mostra um catálogo **derivado no cliente**, não o do banco | P2 (arquitetura/dívida) | `grep -rln concederXp\|listarPatentes app/src/routes app/src/modules` → 0; `Conquistas.jsx:62` usa `catalogoConquistas` local |
+| ~~Tabela fantasma `solicitacoes_acesso`~~ | ✅ **fechado (FIX2)** | Tela "esqueci meu código" agora é orientação estática honesta; `solicitarRecuperacaoCodigo` removida do seam |
+| ~~Motor de XP/conquistas duplicado~~ | ✅ **fechado (FIX2 0037)** | Escritores no-op nos 2 motores (provado por `tests/fix2-conquistas-deprecadas.test.mjs`); 4 tabelas deprecadas com dados preservados; remoção física = DB3 (P4) |
 | Observabilidade sem destino — captura instalada, `VITE_ERROR_REPORT_URL` indefinida em todo lugar | P2 (antes de aluno real) | `observabilidade.js:9`; ausente de `.env.production`/CI |
 | E2E nunca roda — 6 specs Playwright pulados sem secrets `E2E_SUPABASE_*` | P2 | `ci.yml` (job `e2e-guard`) |
 | Credencial do aluno = código (email/senha derivados) — modelo opaco **documentado** na SEC3, não implementado | P2 | `provisionar-aluno/index.ts:205` (`password: codigo`) |
