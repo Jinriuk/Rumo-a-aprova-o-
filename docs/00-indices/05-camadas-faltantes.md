@@ -34,7 +34,7 @@
 |1.4| Onboarding pedagógico na UI | 🟢 | RPC `salvar_onboarding_aluno` + `modules/motor/Onboarding.jsx` | — |
 |1.5| Feedback imediato de XP ("+60 XP") | 🟢 | `VisaoEstudo.jsx:96` (`setFeedback({ xp: ganhouXp, … })`) | — |
 |1.6| Ledger C0 visível (histórico) | 🟢 | `HistoricoProgresso.jsx` | — |
-|1.7| Tagueamento de recorrência com volume útil | 🔴 | ainda amostra (3 questões em `questoes_prova` remoto); é trabalho pedagógico, não código | P3 |
+|1.7| Tagueamento de recorrência com volume útil | 🔴 | ainda amostra (3 questões em `questoes_prova` remoto); **PED2-R2 (03/07): 0 questões novas** — nenhuma prova real anexada ao projeto (a CPACN 2024 é só referência, sem documento); tagueamento exige prova+gabarito em mãos | P3 |
 |1.8| Duplicação do motor de gamificação (auditoria sênior §2.1) | 🟢 | **FIX2 (0037, 02/07):** escritores de conquista dos 2 motores viraram no-op; 5 funções mortas removidas do seam; 4 tabelas da 15.5 carimbadas deprecadas (dados preservados); fonte única = ledger C0 + `jargao.js`/derivação no cliente. Resta remoção física (P4, DB3) | — |
 
 ## Camada 2 — Conteúdo e trilhas · fase **PED2** · 🟡 infraestrutura pronta, conteúdo aberto
@@ -48,10 +48,10 @@ documentado (`docs/conteudo/fabrica-trilhas-concursos.md`). O que resta na camad
 | # | Item | Status | Evidência | Prio |
 |---|------|:---:|---|:--:|
 |2.1| Trilha completa do Colégio Naval | 🟢 | `seed/02_trilha_cn.sql`; maturidade `completa` validada pelo build | — |
-|2.2| Trilha completa EsPCEx | 🟡 | ~70% (estrutura+literatura); maturidade honesta na UI; faltam as semanas detalhadas | P1 |
-|2.3| Trilhas EEAr / EPCAR / ESA | 🔴 | esqueleto — agora **sinalizado** como tal na UI (selo), mas segue esqueleto | P3 |
-|2.4| Config Colégio Militar | 🔴 | sem config | P3 |
-|2.5| Fábrica/pipeline versionada de conteúdo | 🟢 | PED2 #49: pipeline 6 passos + seed gerado + validador como porteiro | — |
+|2.2| Trilha completa EsPCEx | 🟡 | **PED2-R2 (03/07):** sem material-fonte para o calendário (decisão 16 do dono: plano é "pensado prova a prova"); medido: 3/7 matérias objetivas com assunto, 0 semanas de trilha. **Aguardando material do dono** — gap exato em `conteudo/gaps-material-fonte-concursos.md` §1. Nenhuma trilha gerada por inferência | P1 |
+|2.3| Trilhas EEAr / EPCAR / ESA | 🔴 | esqueleto; **PED2-R2:** 0 assuntos catalogados e nenhum edital no projeto — aguardando material-fonte (gaps §2–4) | P3 |
+|2.4| Config Colégio Militar | 🔴 | sem config; cada CM tem edital próprio — dono precisa escolher o(s) CM(s) e anexar edital (gaps §5) | P3 |
+|2.5| Fábrica/pipeline versionada de conteúdo | 🟢 | PED2 #49: pipeline 6 passos + seed gerado + validador como porteiro. **PED2-R2 (03/07):** espelho de maturidade finalmente carimbado no remoto (estava tudo `indisponivel`/v0); `suspeita_incoerencia=false` nos 6 | — |
 
 > **Nota REG1 (hipótese testada):** recorrência-na-trilha e simulado-por-concurso,
 > ligados pelo fechamento-100% (28/06), **não** alteram os itens 2.x — consomem a
@@ -166,7 +166,7 @@ sugerida de valor:
 | Ordem | Fase | Escopo real remanescente | Depende de |
 |---|---|---|---|
 | 1 | ~~FIX2~~ | ✅ **Feita (02/07):** tabela fantasma removida do Login; duplicação de conquistas fechada (0037). Destino de observabilidade segue aberto (P1-3 do `07`) | — |
-| 2 | **PED2 rodada 2** | Conteúdo: fechar EsPCEx; decidir EEAr/EPCAR/ESA/CM — usando a fábrica pronta (2.5) | backlog pedagógico |
+| 2 | ~~PED2 rodada 2~~ | ✅ **Feita (03/07):** Fase 0 mediu ausência de material-fonte para EsPCEx/EEAr/EPCAR/ESA/CM (nenhum edital/prova no projeto); espelho de maturidade carimbado no remoto; gaps exatos documentados. Produção de trilha real segue **aguardando material do dono** | material-fonte do dono |
 | 3 | **DB3** | Remoção física das 4 tabelas deprecadas (0037) + tabelas dormentes (inventário DB2/SDB-AUDIT) | decisão de arquitetura |
 | 4 | **PR1** | Piloto real (ver `07-pendencias-para-piloto-real.md`) | SMTP/infra do dono |
 | 5+ | ROLE1 · OPS1 · SEC3b · QA3 · FE2 · ARCH1 | como antes | julho/Pro/staging |

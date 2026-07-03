@@ -111,3 +111,19 @@ O caminho de cada subida está em
   na fonte única com maturidade `indisponivel` e segui o pipeline; nada na UI
   quebra, pois o default de concurso desconhecido já é `indisponivel`.
 - **Banco de questões oficiais**: fora de escopo (não criamos questões).
+
+---
+
+## Adendo PED2-R2 (2026-07-03) — correções medidas
+
+- **"33 atividades-modelo" do CN estava errado**: a trilha CN tem **50**
+  atividades. Medido em três fontes: `trilha-cn-v1.json` (50 tarefas somadas
+  por script), `seed/02_trilha_cn.sql` (50 linhas de prioridade F/P/X) e o
+  banco remoto (`select count(*) from atividades_modelo` → 50). A nota em
+  `maturidade.js` foi corrigida e o seed 18 regenerado.
+- **Espelho de maturidade no remoto**: o seed 18 nunca tinha sido aplicado no
+  projeto remoto (todos os concursos estavam `indisponivel`/v0 em
+  `vw_concurso_qualidade`). Carimbado em 2026-07-03 via o próprio seed
+  gerado; pós-carimbo, `suspeita_incoerencia = false` em todos os 6.
+- **Gaps de material-fonte** por concurso documentados em
+  [`docs/conteudo/gaps-material-fonte-concursos.md`](../../conteudo/gaps-material-fonte-concursos.md).
