@@ -7,7 +7,7 @@
 -- ============================================================
 
 update concursos set maturidade = 'completa', conteudo_versao = 1
-  where codigo = 'cn';  -- 9 semanas, 33 atividades-modelo, estrutura de prova oficial e missões. Testado de ponta a ponta.
+  where codigo = 'cn';  -- 9 semanas, 50 atividades-modelo, estrutura de prova oficial e missões. Testado de ponta a ponta.
 update concursos set maturidade = 'beta', conteudo_versao = 1
   where codigo = 'espcex';  -- Estrutura de prova oficial (2 dias, pesos), assuntos de Matemática/Português/Química e missões. Falta calendário semanal.
 update concursos set maturidade = 'esqueleto', conteudo_versao = 1

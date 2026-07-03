@@ -86,7 +86,7 @@ export const MATURIDADE_CONCURSOS = {
     maturidade: "completa",
     versao: 1,
     trilhaSemanalRef: "supabase/seed/02_trilha_cn.sql",
-    nota: "9 semanas, 33 atividades-modelo, estrutura de prova oficial e missões. Testado de ponta a ponta.",
+    nota: "9 semanas, 50 atividades-modelo, estrutura de prova oficial e missões. Testado de ponta a ponta.",
   },
   espcex: {
     codigo: "espcex",
