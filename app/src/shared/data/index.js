@@ -410,52 +410,21 @@ export async function salvarAjusteMissaoEscola({ missaoId, ativa, qtdQuestoes, x
   return data;
 }
 
-/* ---------- gamificação: XP, patentes, conquistas (Fase 15.5) ---------- */
-
-// Catálogos globais (só leitura).
-export async function listarPatentes() {
-  const { data, error } = await supabase.from("patentes").select("*").order("ordem");
-  if (error) throw falha("patentes", error);
-  return data;
-}
-
-export async function listarConquistas() {
-  const { data, error } = await supabase.from("conquistas").select("*").order("ordem");
-  if (error) throw falha("conquistas", error);
-  return data;
-}
-
-// Progresso do aluno (XP e conquistas), isolado por RLS no exam_tag.
-export async function carregarGamificacaoAluno(alunoId, examTag) {
-  const [xp, conq] = await Promise.all([
-    supabase.from("aluno_xp_eventos").select("*").eq("aluno_id", alunoId).eq("exam_tag", examTag).order("em"),
-    supabase.from("aluno_conquistas").select("*").eq("aluno_id", alunoId).eq("exam_tag", examTag),
-  ]);
-  for (const r of [xp, conq]) if (r.error) throw falha("gamificação do aluno", r.error);
-  return { eventos: xp.data, conquistas: conq.data };
-}
-
-// Concede um evento de XP (só coordenação/servidor; aluno não se autopontua).
-export async function concederXp({ alunoId, examTag, origem, pontos, descricao, referenciaId }) {
-  const { escola, usuario } = await meuPerfil();
-  const { data, error } = await supabase
-    .from("aluno_xp_eventos")
-    .insert({ escola_id: escola.id, aluno_id: alunoId, exam_tag: examTag, origem, pontos, descricao, referencia_id: referenciaId ?? null, concedido_por: usuario?.id ?? null })
-    .select().single();
-  if (error) throw falha("conceder XP", error);
-  return data;
-}
-
-// Desbloqueia uma conquista para o aluno (idempotente por unique).
-export async function desbloquearConquista({ alunoId, examTag, conquistaId }) {
-  const { escola } = await meuPerfil();
-  const { data, error } = await supabase
-    .from("aluno_conquistas")
-    .upsert({ escola_id: escola.id, aluno_id: alunoId, exam_tag: examTag, conquista_id: conquistaId }, { onConflict: "aluno_id,conquista_id,exam_tag" })
-    .select().single();
-  if (error) throw falha("desbloquear conquista", error);
-  return data;
-}
+/* ---------- gamificação 15.5 — DEPRECADA (FIX2, 2026-07-02) ----------
+   O subsistema aluno_xp_eventos / patentes / conquistas / aluno_conquistas
+   perdeu a disputa para o motor C0 (aluno_eventos_progresso, migration
+   0024): a auditoria sênior de 28/06 encontrou os dois vivos e a REG1
+   confirmou 0 consumidores de UI. A FIX2 fechou a duplicação:
+   • as 5 funções de leitura/escrita que viviam aqui (listarPatentes,
+     listarConquistas, carregarGamificacaoAluno, concederXp,
+     desbloquearConquista) foram REMOVIDAS — nenhuma tela as chamava;
+   • a migration 0037 transformou os escritores de servidor
+     (app.desbloquear_conquista_basica do C0 e app.motor_conquista_xp da
+     PED1) em no-ops — as tabelas não recebem mais escrita de motor;
+   • os dados existentes ficam preservados (append-only, sem drop);
+   • a régua de patente segue sendo jargao.js e as conquistas exibidas
+     são as derivadas no cliente (Conquistas.jsx) — fonte única.
+   Religar catálogo oficial na UI é decisão de produto futura (DB3). */
 
 /* ---------- motor de progresso persistido (Fase C0) ---------- */
 
@@ -981,19 +950,12 @@ export async function solicitarRecuperacaoSenha(email) {
   if (error) throw falha("solicitar recuperação de senha", error);
 }
 
-// Recuperação de código do aluno/responsável — coleta o e-mail e
-// registra a solicitação. O coordenador recebe notificação manual.
-// (Infraestrutura de e-mail para aluno é decisão de produto pendente.)
-export async function solicitarRecuperacaoCodigo(email) {
-  const emailLimpo = email.trim().toLowerCase();
-  const { error } = await supabase.from("solicitacoes_acesso").insert({
-    email: emailLimpo, tipo: "recuperacao_codigo", em: new Date().toISOString(),
-  }).select("id").maybeSingle();
-  // Tabela pode ainda não existir (D1C). Silenciosa para o usuário;
-  // a mensagem genérica é sempre exibida independentemente do resultado.
-  if (error) console.warn("solicitação de recuperação de código não gravada:", error.message);
-  return { ok: true };
-}
+// FIX2 (P1-5): a antiga `solicitarRecuperacaoCodigo` gravava em
+// `solicitacoes_acesso`, tabela que nunca existiu (nem migration, nem
+// remoto) — o pedido do usuário caía num console.warn. Removida; a tela
+// de "esqueci meu código" agora orienta a falar com a coordenação, que
+// reenvia o acesso pelo painel. Uma fila real de solicitações (escrita
+// pré-auth) é escopo futuro do ADM2, com análise própria de abuso.
 
 // Suspender / ativar / mudar status (ação reversível; nunca apaga
 // dado). O banco valida o status e registra ação específica no log.

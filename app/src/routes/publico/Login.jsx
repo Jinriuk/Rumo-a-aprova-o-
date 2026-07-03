@@ -71,20 +71,6 @@ export default function Login() {
     setTela("confirmacao");
   }
 
-  async function solicitarCodigo(e) {
-    e?.preventDefault();
-    if (!emailRecup.trim()) { setErr("Informe o e-mail."); return; }
-    if (!travaRef.current.tentar()) return;
-    setBusy(true); setErr("");
-    try {
-      await db.solicitarRecuperacaoCodigo(emailRecup.trim());
-    } catch { /* silencioso */ }
-    finally { travaRef.current.liberar(); }
-    setBusy(false);
-    setMsgConfirmacao("Se houver um acesso vinculado a este e-mail, enviaremos as instruções. Caso não receba, procure a coordenação da escola.");
-    setTela("confirmacao");
-  }
-
   const inputS = { width: "100%", background: T.bg, border: `1px solid ${err ? T.red : T.line}`, color: T.ink, borderRadius: 10, padding: "13px 14px" };
   const pronto = modo === "codigo" ? db.normalizarCodigo(codigo).length >= 12 : email && senha;
   const emailRecupValido = emailRecup.trim().length > 0 && /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(emailRecup.trim());
@@ -131,28 +117,35 @@ export default function Login() {
   }
 
   // ── Tela "Esqueci meu código de acesso" (aluno/responsável) ──
+  // FIX2 (P1-5): a versão anterior coletava um e-mail e gravava numa tabela
+  // que NÃO existe (`solicitacoes_acesso`) — o usuário via "solicitação
+  // recebida" e nada acontecia. Sem fila real e sem e-mail transacional de
+  // aluno (decisão de produto pendente), a única resposta honesta é
+  // orientar: o código é emitido e reenviado PELA ESCOLA, que já tem essa
+  // ferramenta no painel (reenvio/regeração de acesso). Nada de formulário
+  // que finge enviar.
   if (tela === "esqueciCodigo") {
     return (
       <Wrapper>
         <LogoTopo />
-        <div style={{ fontSize: 13, color: T.sub, marginBottom: 16, lineHeight: 1.5 }}>
-          Informe o e-mail cadastrado. Se houver um acesso vinculado, enviaremos instruções.<br />
-          Se não tiver e-mail cadastrado, procure a coordenação da sua escola.
+        <div style={{ textAlign: "center", padding: "4px 0 8px" }}>
+          <div style={{ fontSize: 30, marginBottom: 10 }}>🎖️</div>
+          <div className="disp" style={{ fontSize: 16.5, fontWeight: 700, color: T.ink, marginBottom: 10 }}>
+            Seu código é entregue pela escola
+          </div>
         </div>
-        <form onSubmit={solicitarCodigo}>
-          <label htmlFor={idRecup} style={lblS}>E-mail</label>
-          <input id={idRecup} type="email" value={emailRecup} onChange={(e) => { setEmailRecup(e.target.value); setErr(""); }}
-            placeholder="seu@email.com" autoFocus style={{ ...inputS, marginBottom: 12 }} />
-          {err && <div style={{ color: T.red, fontSize: 12.5, marginBottom: 8 }}>{err}</div>}
-          <button type="submit" disabled={busy || !emailRecupValido}
-            style={{ width: "100%", background: (busy || !emailRecupValido) ? T.line : T.gold, color: (busy || !emailRecupValido) ? T.sub : "#0A1622", border: "none", borderRadius: 10, padding: "14px", minHeight: 50, fontWeight: 800, fontSize: 15 }}>
-            {busy ? "Enviando…" : "Enviar instruções"}
-          </button>
-        </form>
-        <div style={{ marginTop: 14, fontSize: 12, color: T.sub, lineHeight: 1.5, textAlign: "center" }}>
-          Não tem e-mail cadastrado? Procure a coordenação da sua escola.
+        <div style={{ fontSize: 13.5, color: T.sub, lineHeight: 1.65, marginBottom: 14 }}>
+          O código de acesso do aluno e do responsável é gerado pela
+          coordenação da escola — por segurança, ele não é recuperado por
+          e-mail neste painel.
         </div>
-        <BotaoVoltar onClick={() => { setTela("login"); setEmailRecup(""); setErr(""); }} />
+        <div style={{ border: `1px solid ${T.line}`, borderRadius: 10, padding: "12px 14px", fontSize: 13, color: T.sub, lineHeight: 1.6 }}>
+          <b style={{ color: T.ink }}>Como recuperar:</b> fale com a coordenação
+          da sua escola (secretaria ou responsável pela plataforma) e peça um
+          novo código. É a coordenação que gera e entrega o acesso, pelo
+          painel da escola.
+        </div>
+        <BotaoVoltar onClick={() => { setTela("login"); setErr(""); }} />
       </Wrapper>
     );
   }
