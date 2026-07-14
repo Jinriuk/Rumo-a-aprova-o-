@@ -379,9 +379,13 @@ export async function carregarMissoesEscola(examTag) {
 // Degrada graciosamente (sem erro de console) se a tabela/join ainda não
 // existir no ambiente — as missões são complementares à tela de estudo.
 export async function carregarMissoesAluno(alunoId) {
+  // EST1-A5: traz meta_questoes/meta_acuracia (o critério REAL que o
+  // motor aplica) para a UI mostrar o mesmo alvo que fecha a missão —
+  // antes a tela exibia o criterio_conclusao aspiracional (texto), que
+  // divergia do que o motor cobra (achado PEDAGOGIA-04).
   const { data, error } = await supabase
     .from("aluno_missoes")
-    .select("*, missoes(nome, materia_codigo, objetivo, prioridade)")
+    .select("*, missoes(nome, materia_codigo, objetivo, prioridade, meta_questoes, meta_acuracia)")
     .eq("aluno_id", alunoId);
   if (error) {
     if (tabelaInexistente(error) || /relationship|foreign/i.test(error?.message ?? "")) {
