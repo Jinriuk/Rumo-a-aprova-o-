@@ -8,6 +8,7 @@
    o banco decide o que entrega.
    ============================================================ */
 import { supabase } from "../../lib/supabase.js";
+import { patchAluno } from "../contratos/dto.js";
 
 function falha(contexto, error, { esperada = false } = {}) {
   const e = new Error(`${contexto}: ${error.message}`);
@@ -581,8 +582,11 @@ export async function definirTurma(alunoId, turmaId) {
   }
 }
 
+// EST1-A3: whitelist explícita (patchAluno) — o seam não repassa campo
+// arbitrário ao banco; campo desconhecido é erro na hora, não em produção.
 export async function atualizarAluno(alunoId, campos) {
-  const { data, error } = await supabase.from("alunos").update(campos).eq("id", alunoId).select();
+  const patch = patchAluno(campos);
+  const { data, error } = await supabase.from("alunos").update(patch).eq("id", alunoId).select();
   if (error) throw falha("atualizar aluno", error);
   if (!data?.length) throw new Error("atualizar aluno: o banco recusou a alteração");
   return data[0];
