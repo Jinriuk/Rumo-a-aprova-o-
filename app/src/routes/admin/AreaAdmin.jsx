@@ -11,8 +11,8 @@ import {
 } from "../../shared/ui/componentes.jsx";
 import { useTema } from "../../shared/branding/BrandingContext.jsx";
 import { useRecurso } from "../../shared/hooks/useRecurso.js";
+import { useEnvioUnico } from "../../shared/hooks/useEnvioUnico.js";
 import { nomeValido, limparNome } from "../../shared/validacao.js";
-import { mensagemAmigavel } from "../../shared/lib/erros.js";
 import * as db from "../../shared/data/index.js";
 import {
   categoriaEscola, avisosRisco, severidadeMaxima,
@@ -285,9 +285,11 @@ function NovaEscola({ aoCriar }) {
     // Bloco C — acesso da coordenação
     opcaoCoord: "depois", coordNome: "", coordEmail: "",
   });
-  const [erro, setErro] = useState(null);
+  // EST1-A4: trava síncrona real (padrão FE1) — criar escola/provisionar
+  // coordenador são as escritas mais sensíveis do sistema; o guard por
+  // estado não segura dois disparos no mesmo tick (travaEnvio.js §doc).
+  const { ocupado, erro, setErro, enviar } = useEnvioUnico("salvar");
   const [ok, setOk] = useState(null);
-  const [ocupado, setOcupado] = useState(false);
   const set = (k, v) => setF((a) => ({ ...a, [k]: v }));
 
   const slugValido = /^[a-z0-9-]{2,40}$/.test(f.slug);
@@ -300,8 +302,10 @@ function NovaEscola({ aoCriar }) {
 
   async function criar() {
     if (!pronto) return;
-    setOcupado(true); setErro(null); setOk(null);
-    try {
+    setOk(null);
+    // enviar() é a trava: duplo clique não cria duas escolas nem dispara
+    // dois provisionamentos/e-mails de coordenador.
+    await enviar(async () => {
       const escolaId = await db.backofficeCriarEscola({
         nome: limparNome(f.nome), slug: f.slug.trim().toLowerCase(),
         cidade: f.cidade.trim() || null, uf: f.uf.trim().toUpperCase() || null,
@@ -330,8 +334,7 @@ function NovaEscola({ aoCriar }) {
              opcaoCoord: "depois", coordNome: "", coordEmail: "" });
       aoCriar?.();
       setTimeout(() => { setAberto(false); setOk(null); }, 2000);
-    } catch (e) { setErro(mensagemAmigavel(e, "salvar")); }
-    setOcupado(false);
+    });
   }
 
   const selS = { ...inputS, minHeight: 42, fontSize: 13.5, padding: "9px 10px" };
@@ -694,8 +697,8 @@ function EditarEscola({ escola, aoSalvar }) {
     emailInstitucional: escola.email_institucional ?? "", telefoneContato: escola.telefone_contato ?? "",
     contatoNome: escola.contato_nome ?? "", contatoObservacao: escola.contato_observacao ?? "",
   });
-  const [erro, setErro] = useState(null);
-  const [ocupado, setOcupado] = useState(false);
+  // EST1-A4: trava síncrona real (padrão FE1) no lugar do guard por estado.
+  const { ocupado, erro, enviar } = useEnvioUnico("salvar");
   const set = (k, v) => setF((a) => ({ ...a, [k]: v }));
 
   const corValida = f.corAcento === "" || /^#[0-9a-fA-F]{6}$/.test(f.corAcento);
@@ -705,8 +708,7 @@ function EditarEscola({ escola, aoSalvar }) {
 
   async function salvar() {
     if (!pronto) return;
-    setOcupado(true); setErro(null);
-    try {
+    await enviar(async () => {
       await db.backofficeEditarEscola(escola.id, {
         nome: limparNome(f.nome), plano: f.plano.trim() || null,
         cidade: f.cidade.trim() || null, uf: f.uf.trim().toUpperCase() || null,
@@ -719,8 +721,7 @@ function EditarEscola({ escola, aoSalvar }) {
         contatoObservacao: f.contatoObservacao.trim() || null,
       });
       aoSalvar?.();
-    } catch (ex) { setErro(mensagemAmigavel(ex, "salvar")); }
-    setOcupado(false);
+    });
   }
 
   return (
@@ -776,8 +777,8 @@ function EditarEscola({ escola, aoSalvar }) {
 function AcoesStatus({ escola, aoMudar }) {
   const T = useTema();
   const [confirma, setConfirma] = useState(null);
-  const [ocupado, setOcupado] = useState(false);
-  const [erro, setErro] = useState(null);
+  // EST1-A4: trava síncrona real (padrão FE1) no lugar do guard por estado.
+  const { ocupado, erro, setErro, enviar } = useEnvioUnico("acao");
 
   const op = operacional(escola.status);
   const acoes = [];
@@ -788,13 +789,11 @@ function AcoesStatus({ escola, aoMudar }) {
 
   async function aplicar() {
     if (!confirma) return;
-    setOcupado(true); setErro(null);
-    try {
+    await enviar(async () => {
       await db.backofficeDefinirStatus(escola.id, confirma.status);
       setConfirma(null);
       aoMudar?.();
-    } catch (ex) { setErro(mensagemAmigavel(ex, "acao")); }
-    setOcupado(false);
+    });
   }
 
   return (
@@ -976,9 +975,10 @@ function Coordenadores({ d, escolaId, aoMudar }) {
   const coords = d.coordenadores ?? [];
   const [criando, setCriando] = useState(false);
   const [f, setF] = useState({ nome: "", email: "" });
-  const [ocupado, setOcupado] = useState(false);
+  // EST1-A4: trava síncrona real — provisionar/reenviar disparam e-mail;
+  // duplo clique não pode duplicar credencial nem mensagem.
+  const { ocupado, erro, setErro, enviar } = useEnvioUnico("provisionar");
   const [ok, setOk] = useState(null);
-  const [erro, setErro] = useState(null);
   const set = (k, v) => setF((a) => ({ ...a, [k]: v }));
 
   const emailValido = f.email === "" || /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(f.email);
@@ -986,8 +986,8 @@ function Coordenadores({ d, escolaId, aoMudar }) {
 
   async function provisionar() {
     if (!pronto) return;
-    setOcupado(true); setErro(null); setOk(null);
-    try {
+    setOk(null);
+    await enviar(async () => {
       const r = await db.backofficeProvisionarCoordenador({
         escolaId, nome: f.nome.trim(), email: f.email.trim().toLowerCase(),
       });
@@ -998,17 +998,15 @@ function Coordenadores({ d, escolaId, aoMudar }) {
       setF({ nome: "", email: "" });
       setCriando(false);
       aoMudar?.();
-    } catch (ex) { setErro(mensagemAmigavel(ex, "provisionar")); }
-    setOcupado(false);
+    });
   }
 
   async function reenviar(coord) {
-    setOcupado(true); setErro(null); setOk(null);
-    try {
+    setOk(null);
+    await enviar(async () => {
       await db.backofficeReenviarAcesso({ escolaId, usuarioId: coord.id, email: coord.email });
       setOk("Link de redefinição de senha enviado (ou agendado). Verifique o SMTP no Supabase Auth.");
-    } catch (ex) { setErro(mensagemAmigavel(ex, "reenviar")); }
-    setOcupado(false);
+    }, "reenviar");
   }
 
   return (

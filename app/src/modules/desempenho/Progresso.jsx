@@ -5,12 +5,12 @@ import {
   BarChart, Bar, LineChart, Line, ComposedChart, XAxis, YAxis, CartesianGrid,
   Tooltip, ResponsiveContainer, Cell, Legend,
 } from "recharts";
-import { Card, Empty, CarregandoBloco } from "../../shared/ui/componentes.jsx";
+import { Card, Empty, CarregandoBloco, useDialogo } from "../../shared/ui/componentes.jsx";
 import { useTema } from "../../shared/branding/BrandingContext.jsx";
 import { useRecurso } from "../../shared/hooks/useRecurso.js";
+import { useEnvioUnico } from "../../shared/hooks/useEnvioUnico.js";
 import { todayISO, fmtBR } from "../../shared/regras/regras.js";
 import { resumirRegistros } from "../../shared/metricas/agregados.js";
-import { mensagemAmigavel } from "../../shared/lib/erros.js";
 import { SimuladoConcurso } from "./SimuladoConcurso.jsx";
 import * as db from "../../shared/data/index.js";
 
@@ -206,7 +206,10 @@ function SimuladoGenerico({ aluno, simulados, podeEditar, semanaAtiva, concurso,
   // próximo número livre (Simulado 1, 2, 3…) com base no histórico.
   const blank = { nome: semanaAtiva?.simulado || proximoNomeSimulado(simulados), data: todayISO(), ...Object.fromEntries(materias.map((m) => [m.k, ""])) };
   const [f, setF] = useState(blank);
-  const [erro, setErro] = useState(null);
+  // EST1-A4: trava real de duplo envio (padrão FE1, igual ao Registrar) —
+  // o estado `ocupado` é só UI; quem impede o segundo INSERT é o latch.
+  const { ocupado, erro, enviar } = useEnvioUnico("salvar");
+  const dialogo = useDialogo();
   const set = (k, v) => setF({ ...f, [k]: v });
   const uid = useId();
   const id = (k) => `${uid}-${k}`;
@@ -219,8 +222,8 @@ function SimuladoGenerico({ aluno, simulados, podeEditar, semanaAtiva, concurso,
 
   async function adicionar() {
     if (estouros.length) return;
-    setErro(null);
-    try {
+    // enviar() é a trava: segundo clique no mesmo tick é ignorado.
+    await enviar(async () => {
       await db.adicionarSimulado({
         escola_id: aluno.escola_id, aluno_id: aluno.id, nome: f.nome, data: f.data,
         acertos: Object.fromEntries(materias.map((m) => [m.k, Math.min(+f[m.k] || 0, m.max)])),
@@ -228,15 +231,24 @@ function SimuladoGenerico({ aluno, simulados, podeEditar, semanaAtiva, concurso,
       // reseta com o próximo número livre, já contando o que acabou de entrar
       setF({ ...blank, nome: semanaAtiva?.simulado || proximoNomeSimulado([...simulados, { nome: f.nome }]) });
       aoMudar?.();
-    } catch (e) { setErro(mensagemAmigavel(e, "salvar")); }
+    });
   }
 
   async function apagar(id) {
-    setErro(null);
-    try {
+    // EST1-A4: mesmo contrato do registro de estudo (Registrar.jsx) —
+    // toque acidental no × não apaga desempenho sem confirmação.
+    const ok = await dialogo.confirmar({
+      titulo: "Remover simulado",
+      mensagem: "Remover este simulado? A nota sai da evolução e do comparativo. Esta ação não pode ser desfeita.",
+      rotuloConfirmar: "Remover",
+      rotuloCancelar: "Cancelar",
+      perigo: true,
+    });
+    if (!ok) return;
+    await enviar(async () => {
       await db.removerSimulado(id);
       aoMudar?.();
-    } catch (e) { setErro(mensagemAmigavel(e, "acao")); }
+    }, "acao");
   }
 
   const chart = [...simulados]
@@ -252,6 +264,7 @@ function SimuladoGenerico({ aluno, simulados, podeEditar, semanaAtiva, concurso,
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+      {dialogo.elemento}
       {/* DESEMPENHO + OBJETIVO do último simulado */}
       {ultimo && (
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(220px,1fr))", gap: 10 }}>
@@ -322,9 +335,9 @@ function SimuladoGenerico({ aluno, simulados, podeEditar, semanaAtiva, concurso,
               ⚠ {estouros.map((m) => `${m.nome} tem no máximo ${m.max} questões`).join(" · ")}
             </div>
           )}
-          <button onClick={adicionar} disabled={estouros.length > 0}
-            style={{ background: estouros.length ? T.line : T.gold, color: estouros.length ? T.sub : "#0A1622", border: "none", borderRadius: 8, padding: "13px 20px", minHeight: 48, fontWeight: 700, fontSize: 15, width: "100%" }}>
-            + Salvar simulado
+          <button onClick={adicionar} disabled={estouros.length > 0 || ocupado}
+            style={{ background: estouros.length || ocupado ? T.line : T.gold, color: estouros.length || ocupado ? T.sub : "#0A1622", border: "none", borderRadius: 8, padding: "13px 20px", minHeight: 48, fontWeight: 700, fontSize: 15, width: "100%" }}>
+            {ocupado ? "Salvando…" : "+ Salvar simulado"}
           </button>
           {erro && <div style={{ color: T.red, fontSize: 13, marginTop: 10 }}>{erro}</div>}
         </Card>
@@ -350,7 +363,7 @@ function SimuladoGenerico({ aluno, simulados, podeEditar, semanaAtiva, concurso,
                     </div>
                   </div>
                   <div className="num disp" style={{ fontSize: 20, fontWeight: 700, color: T.gold }}>{tot}</div>
-                  {podeEditar && <button onClick={() => apagar(s.id)} aria-label="Apagar simulado" style={{ background: "transparent", border: "none", color: T.sub, fontSize: 22, width: 44, height: 44, flexShrink: 0, lineHeight: 1 }}>×</button>}
+                  {podeEditar && <button onClick={() => apagar(s.id)} disabled={ocupado} aria-label="Apagar simulado" style={{ background: "transparent", border: "none", color: T.sub, fontSize: 22, width: 44, height: 44, flexShrink: 0, lineHeight: 1 }}>×</button>}
                 </div>
               );
             })}
