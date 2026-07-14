@@ -33,11 +33,14 @@ insert into turmas (id, escola_id, nome) values
 
 -- Lucas: o primeiro aluno da escola de vitrine (migração — Doc 6, seção 6).
 -- Bruno: o aluno da escola B, dado de contraste do teste de isolamento.
-insert into alunos (id, escola_id, nome, usuario_id, trilha_id) values
+-- EST1-A2 (0039): alunos.trilha_id agora tem FK para trilhas — e a
+-- trilha CN só nasce no seed 02. Os alunos nascem SEM trilha aqui; o
+-- vínculo é feito no início do seed 03 (após o 02), idempotente.
+insert into alunos (id, escola_id, nome, usuario_id) values
   ('a0000000-0000-4000-8000-000000000001', '11111111-1111-4111-8111-111111111111', 'Lucas',
-   'aaaaaaaa-0000-4000-8000-000000000002', 'b1388388-c660-4b4b-811c-b58358689e92'),
+   'aaaaaaaa-0000-4000-8000-000000000002'),
   ('b0000000-0000-4000-8000-000000000001', '22222222-2222-4222-8222-222222222222', 'Bruno',
-   'bbbbbbbb-0000-4000-8000-000000000002', 'b1388388-c660-4b4b-811c-b58358689e92')
+   'bbbbbbbb-0000-4000-8000-000000000002')
   on conflict (id) do nothing;
 
 insert into alunos_turmas (escola_id, aluno_id, turma_id) values
