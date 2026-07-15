@@ -73,10 +73,17 @@ insert into trilha_plano_missoes (plano_id, missao_id, fase, semana_sugerida, or
 -- 4) DEMO: a escola Vitrine ajusta a missão "Domando a Crase"
 --    (mais questões que o desenho oficial) — desvio sinalizado.
 -- ------------------------------------------------------------
-insert into missoes_escola (escola_id, missao_id, ativa, qtd_questoes, criterio_conclusao, desvio_do_edital, ajustado_por) values
-  ('11111111-1111-4111-8111-111111111111', 'a1000000-0000-4000-8000-000000000002', true, 60,
-   '≥60 questões e ≥75% nas últimas 20.', true, 'aaaaaaaa-0000-4000-8000-000000000001')
-  on conflict (escola_id, missao_id) do nothing;
+-- PROD1 (2026-07): guardado por EXISTS — em produção (sem a vitrine) é
+-- no-op em vez de estourar a FK; o conteúdo global (§1–3, §5) roda sempre.
+do $$
+begin
+  if exists (select 1 from escolas where id = '11111111-1111-4111-8111-111111111111') then
+    insert into missoes_escola (escola_id, missao_id, ativa, qtd_questoes, criterio_conclusao, desvio_do_edital, ajustado_por) values
+      ('11111111-1111-4111-8111-111111111111', 'a1000000-0000-4000-8000-000000000002', true, 60,
+       '≥60 questões e ≥75% nas últimas 20.', true, 'aaaaaaaa-0000-4000-8000-000000000001')
+      on conflict (escola_id, missao_id) do nothing;
+  end if;
+end $$;
 
 -- ------------------------------------------------------------
 -- 5) CRITÉRIO ESTRUTURADO de fechamento (motor de progresso, PED1).

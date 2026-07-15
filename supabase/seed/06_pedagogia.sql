@@ -88,8 +88,16 @@ update alunos set turma_comercial_codigo = 'cn-epcar'
 
 -- A escola Vitrine ajusta o volume semanal de Matemática do CN acima
 -- do default — exemplo de override que DIVERGE da referência oficial.
-insert into config_escola (id, escola_id, exam_tag, chave, valor, desvio_do_edital, ajustado_por) values
-  ('60000000-0000-4000-8000-000000000001',
-   '11111111-1111-4111-8111-111111111111', 'cn', 'volume_semanal_mat',
-   '{"questoes": 320}'::jsonb, true, 'aaaaaaaa-0000-4000-8000-000000000001')
-  on conflict (escola_id, exam_tag, chave) do nothing;
+-- PROD1 (2026-07): guardado por EXISTS — em PRODUÇÃO (sem a escola de
+-- vitrine) o bloco vira no-op em vez de estourar a FK. O mesmo arquivo
+-- serve a qualquer ambiente; o conteúdo global (§1–3) roda sempre.
+do $$
+begin
+  if exists (select 1 from escolas where id = '11111111-1111-4111-8111-111111111111') then
+    insert into config_escola (id, escola_id, exam_tag, chave, valor, desvio_do_edital, ajustado_por) values
+      ('60000000-0000-4000-8000-000000000001',
+       '11111111-1111-4111-8111-111111111111', 'cn', 'volume_semanal_mat',
+       '{"questoes": 320}'::jsonb, true, 'aaaaaaaa-0000-4000-8000-000000000001')
+      on conflict (escola_id, exam_tag, chave) do nothing;
+  end if;
+end $$;
