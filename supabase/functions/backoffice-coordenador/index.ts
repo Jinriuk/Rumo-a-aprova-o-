@@ -85,6 +85,31 @@ function senhaAleatoria(): string {
 
 const emailValido = (e: string) => /^[^\@\s]+@[^\@\s]+\.[^\@\s]+$/.test(e);
 
+// EST1-B1: resolve o coordenador existente pelo CACHE indexado
+// usuarios.email (O(1), migration 0041) em vez de varrer a 1ª página de
+// 1000 contas do Auth — que quebrava assim que o projeto passava de 1000
+// contas (todo aluno/responsável é auth.users). Achado EST0 SEGURANCA-01/A8.
+async function acharUsuarioPorEmail(emailLower: string): Promise<string | null> {
+  const { data } = await admin
+    .from("usuarios").select("id").eq("email", emailLower).limit(1).maybeSingle();
+  return data?.id ?? null;
+}
+
+// Fallback RARO — conta Auth existe sem linha usuarios (estado parcial de
+// uma falha anterior): pagina o Auth ATÉ ACHAR, sem parar em 1000. Teto
+// defensivo de 50 páginas (50k contas) para não rodar sem fim.
+async function acharAuthPorEmail(emailLower: string): Promise<string | null> {
+  const perPage = 1000;
+  for (let page = 1; page <= 50; page++) {
+    const { data, error } = await admin.auth.admin.listUsers({ page, perPage });
+    if (error || !data) return null;
+    const u = data.users.find((x) => (x.email ?? "").toLowerCase() === emailLower);
+    if (u) return u.id;
+    if (data.users.length < perPage) break; // última página
+  }
+  return null;
+}
+
 async function gerarLinkRecuperacao(email: string): Promise<{ link: string | null; erro: string | null }> {
   try {
     const { data: gl, error: glErr } = await admin.auth.admin.generateLink({
@@ -165,19 +190,18 @@ Deno.serve(async (req) => {
 
     const meta = { escola_id, papel: "coordenacao" };
 
-    const { data: lista, error: errLista } = await admin.auth.admin.listUsers({ perPage: 1000 });
-    if (errLista) return json({ status: "erro_auth", error: "falha ao verificar usuários" }, 500);
-    const existente = lista.users.find((u) => (u.email ?? "").toLowerCase() === emailLower);
+    // EST1-B1: acha o coordenador existente pelo cache indexado (O(1)) e
+    // não pela varredura da 1ª página do Auth (que falhava > 1000 contas).
+    const atualizarAuth = (id: string) =>
+      admin.auth.admin.updateUserById(id, { app_metadata: meta, user_metadata: { nome: nomeLimpo } });
 
     let uid: string;
     let criada = false;
-    if (existente) {
-      const { error } = await admin.auth.admin.updateUserById(existente.id, {
-        app_metadata: meta,
-        user_metadata: { nome: nomeLimpo },
-      });
+    const idCache = await acharUsuarioPorEmail(emailLower);
+    if (idCache) {
+      const { error } = await atualizarAuth(idCache);
       if (error) return json({ status: "erro_auth", error: "falha ao atualizar usuário" }, 500);
-      uid = existente.id;
+      uid = idCache;
     } else {
       const { data, error } = await admin.auth.admin.createUser({
         email: emailLower,
@@ -186,9 +210,18 @@ Deno.serve(async (req) => {
         app_metadata: meta,
         user_metadata: { nome: nomeLimpo },
       });
-      if (error) return json({ status: "erro_auth", error: "falha ao criar usuário" }, 500);
-      uid = data.user.id;
-      criada = true;
+      if (error) {
+        // conta Auth já existe sem linha usuarios (estado parcial): localiza
+        // paginando ATÉ achar e atualiza — nunca devolve o 500 enganoso.
+        const idAuth = await acharAuthPorEmail(emailLower);
+        if (!idAuth) return json({ status: "erro_auth", error: "falha ao criar usuário" }, 500);
+        const { error: eUp } = await atualizarAuth(idAuth);
+        if (eUp) return json({ status: "erro_auth", error: "falha ao atualizar usuário" }, 500);
+        uid = idAuth;
+      } else {
+        uid = data.user.id;
+        criada = true;
+      }
     }
 
     const { error: errU } = await admin.from("usuarios").upsert(
