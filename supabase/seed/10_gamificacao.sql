@@ -42,19 +42,29 @@ insert into conquistas (codigo, nome, tipo, descricao, criterio, xp_bonus, ordem
 -- DEMO (dev): Lucas (escola Vitrine), alvo CN. Ledger de XP com
 -- origens variadas e uma conquista desbloqueada. Bruno: contraste.
 -- ------------------------------------------------------------
-insert into aluno_xp_eventos (id, escola_id, aluno_id, exam_tag, origem, pontos, descricao) values
-  ('a2000000-0000-4000-8000-000000000001', '11111111-1111-4111-8111-111111111111', 'a0000000-0000-4000-8000-000000000001', 'cn', 'missao',          100, 'Fechou Geometria Plana com ≥80%'),
-  ('a2000000-0000-4000-8000-000000000002', '11111111-1111-4111-8111-111111111111', 'a0000000-0000-4000-8000-000000000001', 'cn', 'semana_completa',  60, 'Semana sem furar'),
-  ('a2000000-0000-4000-8000-000000000003', '11111111-1111-4111-8111-111111111111', 'a0000000-0000-4000-8000-000000000001', 'cn', 'simulado',        150, 'Primeiro simulado completo'),
-  ('a2000000-0000-4000-8000-000000000004', '11111111-1111-4111-8111-111111111111', 'a0000000-0000-4000-8000-000000000001', 'cn', 'melhoria_materia', 40, 'Português subiu de nível')
-  on conflict (id) do nothing;
+-- PROD1 (2026-07): blocos de demo guardados por EXISTS — em produção
+-- (sem as escolas de vitrine/contraste) viram no-op em vez de estourar
+-- a FK. O catálogo global de patentes/conquistas (acima) roda sempre.
+do $$
+begin
+  if exists (select 1 from escolas where id = '11111111-1111-4111-8111-111111111111') then
+    insert into aluno_xp_eventos (id, escola_id, aluno_id, exam_tag, origem, pontos, descricao) values
+      ('a2000000-0000-4000-8000-000000000001', '11111111-1111-4111-8111-111111111111', 'a0000000-0000-4000-8000-000000000001', 'cn', 'missao',          100, 'Fechou Geometria Plana com ≥80%'),
+      ('a2000000-0000-4000-8000-000000000002', '11111111-1111-4111-8111-111111111111', 'a0000000-0000-4000-8000-000000000001', 'cn', 'semana_completa',  60, 'Semana sem furar'),
+      ('a2000000-0000-4000-8000-000000000003', '11111111-1111-4111-8111-111111111111', 'a0000000-0000-4000-8000-000000000001', 'cn', 'simulado',        150, 'Primeiro simulado completo'),
+      ('a2000000-0000-4000-8000-000000000004', '11111111-1111-4111-8111-111111111111', 'a0000000-0000-4000-8000-000000000001', 'cn', 'melhoria_materia', 40, 'Português subiu de nível')
+      on conflict (id) do nothing;
 
-insert into aluno_conquistas (id, escola_id, aluno_id, conquista_id, exam_tag) values
-  ('a3000000-0000-4000-8000-000000000001', '11111111-1111-4111-8111-111111111111', 'a0000000-0000-4000-8000-000000000001',
-   (select id from conquistas where codigo = 'veterano'), 'cn')
-  on conflict (aluno_id, conquista_id, exam_tag) do nothing;
+    insert into aluno_conquistas (id, escola_id, aluno_id, conquista_id, exam_tag) values
+      ('a3000000-0000-4000-8000-000000000001', '11111111-1111-4111-8111-111111111111', 'a0000000-0000-4000-8000-000000000001',
+       (select id from conquistas where codigo = 'veterano'), 'cn')
+      on conflict (aluno_id, conquista_id, exam_tag) do nothing;
+  end if;
 
--- Contraste na escola B (isolamento): XP do Bruno marcado como segredo.
-insert into aluno_xp_eventos (id, escola_id, aluno_id, exam_tag, origem, pontos, descricao) values
-  ('b2000000-0000-4000-8000-000000000001', '22222222-2222-4222-8222-222222222222', 'b0000000-0000-4000-8000-000000000001', 'cn', 'ajuste_manual', 999, 'SEGREDO-ESCOLA-B-XP')
-  on conflict (id) do nothing;
+  -- Contraste na escola B (isolamento): XP do Bruno marcado como segredo.
+  if exists (select 1 from escolas where id = '22222222-2222-4222-8222-222222222222') then
+    insert into aluno_xp_eventos (id, escola_id, aluno_id, exam_tag, origem, pontos, descricao) values
+      ('b2000000-0000-4000-8000-000000000001', '22222222-2222-4222-8222-222222222222', 'b0000000-0000-4000-8000-000000000001', 'cn', 'ajuste_manual', 999, 'SEGREDO-ESCOLA-B-XP')
+      on conflict (id) do nothing;
+  end if;
+end $$;

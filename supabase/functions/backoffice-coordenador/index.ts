@@ -60,7 +60,10 @@ function corsHeaders(req: Request): Record<string, string> {
   return headers;
 }
 
-const REDIRECT_URL = "https://rumo-a-aprova-o.vercel.app/redefinir-senha";
+// PROD1: o destino do link de redefinição vem do ambiente — produção tem
+// domínio próprio; o default preserva o comportamento do demo/vitrine.
+const REDIRECT_URL = Deno.env.get("PASSWORD_RESET_REDIRECT_URL") ??
+  "https://rumo-a-aprova-o.vercel.app/redefinir-senha";
 
 async function superAdmin(req: Request): Promise<{ id: string; email: string } | null> {
   const auth = req.headers.get("authorization") ?? "";
