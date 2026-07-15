@@ -236,6 +236,15 @@ Deno.serve(async (req) => {
     const estado = tipo === "aluno" ? "aluno_criado" : "responsavel_criado";
     await registrarLogAcesso(quem.escola_id, aluno_id, quem.id, quem.papel, `provisionou-${tipo}`);
 
+    // EST1-C (SEC3b): grava ADITIVAMENTE o HASH do código na fundação da
+    // credencial opaca (migration 0044). É best-effort: NUNCA aborta o
+    // provisionamento (o login atual segue por password=codigo; o corte
+    // para o proxy login-codigo é uma janela dedicada). Só prepara a base.
+    const { error: errHash } = await admin.rpc("registrar_codigo_acesso", {
+      p_usuario: usuarioId, p_escola: quem.escola_id, p_codigo: codigo,
+    });
+    if (errHash) console.error("registrar_codigo_acesso (não-fatal):", errHash.message);
+
     return json({ codigo, papel, nome: nomeUsuario, estado });
   } catch (e) {
     console.error("provisionar-aluno:", e);

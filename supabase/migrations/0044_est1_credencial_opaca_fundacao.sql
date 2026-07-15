@@ -188,7 +188,47 @@ grant select, insert, update, delete on app.login_tentativas to service_role;
 -- alcançáveis pelo cliente (defesa em profundidade além da RLS).
 
 -- ------------------------------------------------------------
+-- 9) PORTA public para o PostgREST/Edge (service_role) chamar via RPC —
+--    o PostgREST só expõe o schema public. Estas são a ÚNICA porta das
+--    peças acima, e só o service_role executa (o cliente nunca as vê).
+--    provisionar-aluno chama registrar_codigo_acesso (aditivo).
+-- ------------------------------------------------------------
+create or replace function public.registrar_codigo_acesso(p_usuario uuid, p_escola uuid, p_codigo text)
+returns void language sql security definer set search_path = public, app as $$
+  select app.registrar_codigo(p_usuario, p_escola, p_codigo)
+$$;
+
+create or replace function public.resolver_codigo_acesso(
+  p_codigo text, p_chave text, p_limite int default 10, p_janela_min int default 5
+) returns jsonb language sql security definer set search_path = public, app as $$
+  select to_jsonb(r) from app.resolver_codigo(p_codigo, p_chave, p_limite, p_janela_min) r
+$$;
+
+create or replace function public.rotacionar_codigo_acesso(p_usuario uuid, p_codigo_novo text)
+returns void language sql security definer set search_path = public, app as $$
+  select app.rotacionar_codigo(p_usuario, p_codigo_novo)
+$$;
+
+create or replace function public.revogar_codigo_acesso(p_usuario uuid)
+returns void language sql security definer set search_path = public, app as $$
+  select app.revogar_codigo(p_usuario)
+$$;
+
+revoke all on function public.registrar_codigo_acesso(uuid, uuid, text) from public, authenticated, anon;
+revoke all on function public.resolver_codigo_acesso(text, text, int, int) from public, authenticated, anon;
+revoke all on function public.rotacionar_codigo_acesso(uuid, text) from public, authenticated, anon;
+revoke all on function public.revogar_codigo_acesso(uuid) from public, authenticated, anon;
+
+grant execute on function public.registrar_codigo_acesso(uuid, uuid, text) to service_role;
+grant execute on function public.resolver_codigo_acesso(text, text, int, int) to service_role;
+grant execute on function public.rotacionar_codigo_acesso(uuid, text) to service_role;
+grant execute on function public.revogar_codigo_acesso(uuid) to service_role;
+
+-- ------------------------------------------------------------
 -- ROLLBACK (manual):
+--   drop function public.registrar_codigo_acesso(uuid,uuid,text),
+--     public.resolver_codigo_acesso(text,text,int,int),
+--     public.rotacionar_codigo_acesso(uuid,text), public.revogar_codigo_acesso(uuid);
 --   drop function app.resolver_codigo(text,text,int,int), app.revogar_codigo(uuid),
 --     app.rotacionar_codigo(uuid,text), app.registrar_codigo(uuid,uuid,text),
 --     app.hash_codigo(text);

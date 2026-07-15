@@ -114,3 +114,20 @@ test("é tudo de SERVIDOR: authenticated não executa nem lê as tabelas do sche
       "select app.registrar_codigo($1,$2,'X')", [IDS.alunoA.sub, ESCOLA_A]);
   });
 });
+
+test("porta public (a que o Edge usa via RPC): registra e resolve; authenticated é barrado", async () => {
+  await comUsuario(async (c) => {
+    // como servidor: o provisionar-aluno chama esta porta
+    await c.query("select public.registrar_codigo_acesso($1,$2,$3)", [U, ESCOLA_A, CODIGO]);
+    const j = await c.query("select public.resolver_codigo_acesso($1,$2) as r", [CODIGO, "1.2.3.4"]);
+    assert.equal(j.rows[0].r.resultado, "ok");
+    assert.equal(j.rows[0].r.usuario_id, U);
+  });
+  // o cliente autenticado não alcança a porta public das credenciais
+  await como(IDS.alunoA, async (c) => {
+    await esperaErro(c, /permission denied/i,
+      "select public.resolver_codigo_acesso('X','1.1.1.1')");
+    await esperaErro(c, /permission denied/i,
+      "select public.registrar_codigo_acesso($1,$2,'X')", [IDS.alunoA.sub, ESCOLA_A]);
+  });
+});
