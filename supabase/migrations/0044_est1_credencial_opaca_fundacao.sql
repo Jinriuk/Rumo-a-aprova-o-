@@ -64,8 +64,11 @@ create index if not exists idx_login_tentativas_chave on app.login_tentativas (c
 --    Normaliza (só alfanumérico, maiúsculo) e devolve sha256.
 --    Espelha a normalização do front/Edge (emailDoCodigo/normalizarCodigo).
 -- ------------------------------------------------------------
+-- search_path inclui `extensions`: no Supabase o pgcrypto (digest) vive em
+-- `extensions`, no Postgres vanilla local ele fica em `public`. Schema
+-- inexistente no search_path é ignorado, então funciona nos dois ambientes.
 create or replace function app.hash_codigo(p_codigo text) returns bytea
-language sql immutable strict set search_path = public, app as $$
+language sql immutable strict set search_path = public, app, extensions as $$
   select digest(upper(regexp_replace(p_codigo, '[^a-zA-Z0-9]', '', 'g')), 'sha256')
 $$;
 
