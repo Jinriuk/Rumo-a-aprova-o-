@@ -197,7 +197,7 @@ export function VisaoEstudo({ aluno, podeEditar, concurso = null, contexto = "Pl
             <FaixaAspirante nome={aluno.nome.split(" ")[0]} contexto={contexto} xp={xp} streak={m?.streak ?? 0}
               aoAbrirConquistas={() => irAba("conquistas")} />
             <MissaoAtual meta={meta} trilha={trilha} m={m} aoAvancar={podeEditar ? irAba : undefined} />
-            {!essencial && examTag && gam.missoes.length > 0 && <MissoesPersistidas missoes={gam.missoes} />}
+            {!essencial && examTag && gam.missoes.length > 0 && <MissoesPersistidas missoes={gam.missoes} disciplinas={trilha.disciplinas} />}
             <MetaSemana meta={meta} trilha={trilha} podeEditar={podeEditar} aoMudar={recarregar}
               aoAbrirDesempenho={() => irAba("desempenho")} />
             {!essencial && m && <ConquistasRecentes m={m} metas={dados.metas} simulados={dados.simulados} aoAbrir={() => irAba("conquistas")} />}

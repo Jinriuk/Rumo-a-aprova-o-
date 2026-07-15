@@ -46,6 +46,23 @@ export function responsaveisDTO(linhas) {
   return (linhas ?? []).map(responsavelDTO).filter(Boolean);
 }
 
+// EST1-A3: whitelist de escrita do aluno (cadastro). O seam NÃO repassa
+// campo arbitrário ao banco — atualizarAluno aceita só o que a tela de
+// coordenação realmente edita. Campo fora da lista é ERRO (não filtro
+// silencioso): esconder o campo mascararia bug de chamada. Espelha o
+// padrão de atualizarAlvoPedagogico (que tem a própria lista).
+export const CAMPOS_ALUNO_EDITAVEIS = ["nome", "trilha_id", "concurso_id"];
+
+export function patchAluno(campos) {
+  const entradas = Object.entries(campos ?? {});
+  if (!entradas.length) throw new Error("atualizar aluno: nada para atualizar");
+  const invalidos = entradas.filter(([k]) => !CAMPOS_ALUNO_EDITAVEIS.includes(k)).map(([k]) => k);
+  if (invalidos.length) {
+    throw new Error(`atualizar aluno: campo(s) não permitido(s): ${invalidos.join(", ")}`);
+  }
+  return Object.fromEntries(entradas);
+}
+
 // Formata uma data ISO para pt-BR de forma defensiva — não lança se a
 // data vier malformada (devolve o original). Centraliza o try/catch
 // que estava repetido nas telas.

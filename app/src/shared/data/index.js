@@ -8,6 +8,7 @@
    o banco decide o que entrega.
    ============================================================ */
 import { supabase } from "../../lib/supabase.js";
+import { patchAluno } from "../contratos/dto.js";
 
 function falha(contexto, error, { esperada = false } = {}) {
   const e = new Error(`${contexto}: ${error.message}`);
@@ -378,9 +379,13 @@ export async function carregarMissoesEscola(examTag) {
 // Degrada graciosamente (sem erro de console) se a tabela/join ainda não
 // existir no ambiente — as missões são complementares à tela de estudo.
 export async function carregarMissoesAluno(alunoId) {
+  // EST1-A5: traz meta_questoes/meta_acuracia (o critério REAL que o
+  // motor aplica) para a UI mostrar o mesmo alvo que fecha a missão —
+  // antes a tela exibia o criterio_conclusao aspiracional (texto), que
+  // divergia do que o motor cobra (achado PEDAGOGIA-04).
   const { data, error } = await supabase
     .from("aluno_missoes")
-    .select("*, missoes(nome, materia_codigo, objetivo, prioridade)")
+    .select("*, missoes(nome, materia_codigo, objetivo, prioridade, meta_questoes, meta_acuracia)")
     .eq("aluno_id", alunoId);
   if (error) {
     if (tabelaInexistente(error) || /relationship|foreign/i.test(error?.message ?? "")) {
@@ -581,8 +586,11 @@ export async function definirTurma(alunoId, turmaId) {
   }
 }
 
+// EST1-A3: whitelist explícita (patchAluno) — o seam não repassa campo
+// arbitrário ao banco; campo desconhecido é erro na hora, não em produção.
 export async function atualizarAluno(alunoId, campos) {
-  const { data, error } = await supabase.from("alunos").update(campos).eq("id", alunoId).select();
+  const patch = patchAluno(campos);
+  const { data, error } = await supabase.from("alunos").update(patch).eq("id", alunoId).select();
   if (error) throw falha("atualizar aluno", error);
   if (!data?.length) throw new Error("atualizar aluno: o banco recusou a alteração");
   return data[0];

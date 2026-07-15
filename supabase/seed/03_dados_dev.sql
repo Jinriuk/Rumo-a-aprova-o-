@@ -12,6 +12,15 @@
 -- nos seeds 08/10. O gatilho respeita este flag e não roda na semeadura.
 set app.motor_seed = 'on';
 
+-- EST1-A2 (0039): alunos.trilha_id tem FK; o seed 01 cria Lucas/Bruno
+-- ANTES da trilha (seed 02) e por isso eles nascem sem trilha. Aqui,
+-- com a trilha CN já existente, fazemos o vínculo (idempotente: o
+-- guard "is null" torna a 2ª passada um no-op).
+update alunos set trilha_id = 'b1388388-c660-4b4b-811c-b58358689e92'
+ where id in ('a0000000-0000-4000-8000-000000000001',
+              'b0000000-0000-4000-8000-000000000001')
+   and trilha_id is null;
+
 select app.gerar_meta('a0000000-0000-4000-8000-000000000001');
 select app.gerar_meta('b0000000-0000-4000-8000-000000000001');
 

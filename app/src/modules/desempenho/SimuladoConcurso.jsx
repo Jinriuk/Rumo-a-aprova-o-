@@ -12,10 +12,10 @@
    Sem formato de concurso, a VisaoEstudo mantém o simulado genérico.
    ============================================================ */
 import React, { useId, useMemo, useState } from "react";
-import { Card, Empty, StatusBadge } from "../../shared/ui/componentes.jsx";
+import { Card, Empty, StatusBadge, useDialogo } from "../../shared/ui/componentes.jsx";
 import { useTema } from "../../shared/branding/BrandingContext.jsx";
+import { useEnvioUnico } from "../../shared/hooks/useEnvioUnico.js";
 import { todayISO, fmtBR } from "../../shared/regras/regras.js";
-import { mensagemAmigavel } from "../../shared/lib/erros.js";
 import { materiasObjetivas, materiasPorDia } from "../conteudo/estruturaProva.js";
 import { avaliarSimulado } from "../conteudo/simuladoConcurso.js";
 import { rotuloRedacao, rotuloEliminacao } from "../conteudo/pedagogia.js";
@@ -58,7 +58,9 @@ export function SimuladoConcurso({ aluno, simulados, podeEditar, semanaAtiva, co
     ...Object.fromEntries(objetivas.map((m) => [m.materia_codigo, ""])),
   };
   const [f, setF] = useState(blank);
-  const [erro, setErro] = useState(null);
+  // EST1-A4: trava real de duplo envio (padrão FE1, igual ao Registrar).
+  const { ocupado, erro, enviar } = useEnvioUnico("salvar");
+  const dialogo = useDialogo();
   const set = (k, v) => setF((p) => ({ ...p, [k]: v }));
   const uid = useId();
   const id = (k) => `${uid}-${k}`;
@@ -71,8 +73,8 @@ export function SimuladoConcurso({ aluno, simulados, podeEditar, semanaAtiva, co
 
   async function adicionar() {
     if (estouros.length) return;
-    setErro(null);
-    try {
+    // enviar() é a trava: segundo clique no mesmo tick é ignorado.
+    await enviar(async () => {
       await db.adicionarSimulado({
         escola_id: aluno.escola_id, aluno_id: aluno.id, nome: f.nome, data: f.data,
         exam_tag: concurso?.codigo ?? null,
@@ -81,13 +83,23 @@ export function SimuladoConcurso({ aluno, simulados, podeEditar, semanaAtiva, co
       });
       setF({ ...blank, nome: semanaAtiva?.simulado || proximoNome([...meus, { nome: f.nome }]) });
       aoMudar?.();
-    } catch (e) { setErro(mensagemAmigavel(e, "salvar")); }
+    });
   }
 
   async function apagar(simId) {
-    setErro(null);
-    try { await db.removerSimulado(simId); aoMudar?.(); }
-    catch (e) { setErro(mensagemAmigavel(e, "acao")); }
+    // EST1-A4: mesmo contrato do registro de estudo — sem exclusão acidental.
+    const ok = await dialogo.confirmar({
+      titulo: "Remover simulado",
+      mensagem: "Remover este simulado? A nota sai do diagnóstico e do histórico. Esta ação não pode ser desfeita.",
+      rotuloConfirmar: "Remover",
+      rotuloCancelar: "Cancelar",
+      perigo: true,
+    });
+    if (!ok) return;
+    await enviar(async () => {
+      await db.removerSimulado(simId);
+      aoMudar?.();
+    }, "acao");
   }
 
   // diagnóstico do ÚLTIMO simulado do concurso, no formato real.
@@ -106,6 +118,7 @@ export function SimuladoConcurso({ aluno, simulados, podeEditar, semanaAtiva, co
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+      {dialogo.elemento}
       <div style={{ fontSize: 11.5, color: T.sub, lineHeight: 1.5 }}>
         Formato {concurso?.nome?.split(" (")[0] ?? concurso?.codigo?.toUpperCase()} ·
         eliminação: <b style={{ color: T.ink }}>{rotuloEliminacao(cfg?.elimination_model)}</b>
@@ -217,9 +230,9 @@ export function SimuladoConcurso({ aluno, simulados, podeEditar, semanaAtiva, co
               ⚠ {estouros.map((m) => `${nomeMateria(m.materia_codigo)} tem no máximo ${m.num_questoes} questões`).join(" · ")}
             </div>
           )}
-          <button onClick={adicionar} disabled={estouros.length > 0}
-            style={{ background: estouros.length ? T.line : T.gold, color: estouros.length ? T.sub : "#0A1622", border: "none", borderRadius: 8, padding: "13px 20px", minHeight: 48, fontWeight: 700, fontSize: 15, width: "100%" }}>
-            + Salvar simulado
+          <button onClick={adicionar} disabled={estouros.length > 0 || ocupado}
+            style={{ background: estouros.length || ocupado ? T.line : T.gold, color: estouros.length || ocupado ? T.sub : "#0A1622", border: "none", borderRadius: 8, padding: "13px 20px", minHeight: 48, fontWeight: 700, fontSize: 15, width: "100%" }}>
+            {ocupado ? "Salvando…" : "+ Salvar simulado"}
           </button>
           {erro && <div style={{ color: T.red, fontSize: 13, marginTop: 10 }}>{erro}</div>}
         </Card>
@@ -252,7 +265,7 @@ export function SimuladoConcurso({ aluno, simulados, podeEditar, semanaAtiva, co
                       {emRisco > 0 ? <StatusBadge tom="risco">{emRisco} risco{emRisco > 1 ? "s" : ""}</StatusBadge> : <StatusBadge tom="ok">sem risco</StatusBadge>}
                     </div>
                   </div>
-                  {podeEditar && <button onClick={() => apagar(s.id)} aria-label="Apagar simulado" style={{ background: "transparent", border: "none", color: T.sub, fontSize: 22, width: 44, height: 44, flexShrink: 0, lineHeight: 1 }}>×</button>}
+                  {podeEditar && <button onClick={() => apagar(s.id)} disabled={ocupado} aria-label="Apagar simulado" style={{ background: "transparent", border: "none", color: T.sub, fontSize: 22, width: 44, height: 44, flexShrink: 0, lineHeight: 1 }}>×</button>}
                 </div>
               );
             })}
