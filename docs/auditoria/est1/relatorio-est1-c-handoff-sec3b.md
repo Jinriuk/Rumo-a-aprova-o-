@@ -1,5 +1,11 @@
 # EST1-C (SEC3b) — Handoff de configuração e decisão da credencial opaca
 
+> **Decisão tomada (14/07): Opção A.** A fundação da credencial opaca foi
+> construída de forma aditiva e dormente (migration `0044`). O relatório de
+> execução e o passo exato do corte de produção estão em
+> [`relatorio-est1-c-credencial-opaca.md`](./relatorio-est1-c-credencial-opaca.md).
+> Este documento fica como registro da decisão e do handoff de config.
+
 **Data:** 2026-07-14 · **Base:** `main` = `0fbf951` (pós-EST1-B / PR #68)
 **Natureza:** este bloco é, em boa parte, **configuração do seu projeto Supabase**
 (não código) + **uma mudança de auth de risco alto** que precisa de janela dedicada.
