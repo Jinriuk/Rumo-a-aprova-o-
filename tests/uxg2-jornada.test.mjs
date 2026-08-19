@@ -195,10 +195,18 @@ test("R2-fix: o contexto do objetivo é aplicado uma vez e não apaga o que o al
   assert.match(src, /if \(contextoAplicadoRef\.current === contextoInicial\.chave\) return;/);
 });
 
-test("R2-fix: a sugestão de questões respeita o alvo mínimo de toque", () => {
+test("R2-fix: a sugestão de questões respeita o alvo de toque de 32px", () => {
   const css = ler("app/src/shared/ui/experiencia.css");
   const bloco = css.slice(css.indexOf(".journey-use-suggestion {"), css.indexOf(".journey-confirmation {"));
   const alvo = bloco.match(/min-height:\s*(\d+)px/);
   assert.ok(alvo, ".journey-use-suggestion precisa declarar min-height");
-  assert.ok(Number(alvo[1]) >= 24, `alvo de toque de ${alvo[1]}px é menor que os 24px do WCAG 2.5.8`);
+  assert.ok(Number(alvo[1]) >= 32, `alvo de toque de ${alvo[1]}px é menor que os 32px acordados`);
+});
+
+test("R2-fix: nenhum controle do formulário de registro fica abaixo de 32px de toque", () => {
+  const src = ler("app/src/modules/motor/Registrar.jsx");
+  const bloco = src.slice(src.indexOf("setMaisCampos((v) => !v)"), src.indexOf("Observação e data"));
+  const alvo = bloco.match(/minHeight:\s*(\d+)/);
+  assert.ok(alvo, "o alternador de campos extras precisa declarar minHeight");
+  assert.ok(Number(alvo[1]) >= 32, `alvo de toque de ${alvo[1]}px é menor que os 32px acordados`);
 });

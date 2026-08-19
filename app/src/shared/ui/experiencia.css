@@ -318,10 +318,10 @@ textarea:focus-visible,
 }
 
 .journey-use-suggestion {
-  /* alvo de toque de 24px (WCAG 2.5.8) sem virar um segundo botão
-     concorrente: a área cresce, o peso visual não. */
+  /* alvo de toque de 32px sem virar um segundo botão concorrente:
+     a área cresce, o peso visual não. */
   display: inline-flex;
-  min-height: 26px;
+  min-height: 32px;
   align-items: center;
   margin-top: 4px;
   padding: 4px 6px;

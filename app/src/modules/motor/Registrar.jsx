@@ -194,8 +194,10 @@ export function Registrar({
         {tempoInvalido && <div style={{ fontSize: 12, color: T.red, marginTop: 8 }}>Tempo não entendido — use formatos como “45min”, “1h” ou “1h30”.</div>}
         {!tempoInvalido && minutosParse > 0 && <div style={{ fontSize: 11.5, color: T.sub, marginTop: 8 }}>◷ {minutosParse} minutos {minutosSugeridos > 0 ? "— puxado do cronômetro, pode ajustar" : ""}</div>}
 
+        {/* alvo de toque de 32px: acima do mínimo de 24px do WCAG 2.5.8,
+            sem ganhar peso visual de ação concorrente. */}
         <button onClick={() => setMaisCampos((v) => !v)}
-          style={{ marginTop: 12, border: "none", background: "transparent", color: T.gold, fontSize: 12.5, fontWeight: 600, padding: "4px 0" }}>
+          style={{ marginTop: 12, border: "none", background: "transparent", color: T.gold, fontSize: 12.5, fontWeight: 600, padding: "6px 8px", minHeight: 32, marginLeft: -8 }}>
           {maisCampos ? "− Menos campos" : "+ Observação e data"}
         </button>
         {maisCampos && (
