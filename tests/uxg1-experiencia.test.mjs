@@ -20,7 +20,54 @@ test("UXG1 respeita preferência de movimento reduzido", () => {
   const css = ler("app/src/shared/ui/experiencia.css");
   assert.match(css, /@media\s*\(prefers-reduced-motion:\s*reduce\)/);
   assert.match(css, /animation-duration:\s*\.01ms\s*!important/);
-  assert.doesNotMatch(css, /animation(?:-iteration-count)?\s*:[^;]*infinite/i);
+  // Movimento contínuo é proibido em superfície de leitura. A única
+  // exceção permitida é o indicador de envio, que existe enquanto o
+  // servidor responde e some junto com a espera.
+  const blocosInfinitos = css.split("}").filter((b) => /infinite/.test(b));
+  for (const bloco of blocosInfinitos) {
+    assert.match(bloco, /login-loading/,
+      `animação contínua fora do indicador de carregamento: ${bloco.trim().slice(0, 80)}`);
+  }
+});
+
+test("a entrada responde ao usuário sem inventar dado nem quebrar o fluxo", () => {
+  const src = ler("app/src/routes/publico/Login.jsx");
+  // troca de papel deslizante, operável por teclado
+  assert.match(src, /login-role-pill/);
+  assert.match(src, /ArrowDown/);
+  assert.match(src, /role="group"/);
+  // a carga do código é a MESMA regra que libera o botão
+  assert.match(src, /const CODIGO_MIN = 12/);
+  assert.match(src, /codigoLimpo\.length >= CODIGO_MIN/);
+  assert.match(src, /length: CODIGO_MIN/);
+  // aviso de Caps Lock só quando o evento informa o modificador
+  assert.match(src, /getModifierState/);
+  assert.match(src, /typeof e\.getModifierState !== "function"\) return/);
+  // erro tem papel de alerta e sacode a superfície uma vez por recusa
+  assert.match(src, /className="login-erro" role="alert"/);
+  assert.match(src, /dataset\.tremor = "true"/);
+  // o foco de luz não roda no toque nem para quem pediu menos movimento
+  assert.match(src, /matchMedia\("\(pointer: fine\)"\)/);
+  assert.match(src, /matchMedia\("\(prefers-reduced-motion: reduce\)"\)/);
+  assert.match(src, /requestAnimationFrame/);
+  // o fluxo continua o mesmo: mesmas chamadas de entrada
+  assert.match(src, /db\.entrarComCodigo\(codigo\)/);
+  assert.match(src, /db\.entrarComEmail\(email\.trim\(\), senha\)/);
+  assert.match(src, /db\.recuperarSenha\(emailRecup\.trim\(\)\)/);
+});
+
+test("a entrada preserva os nomes acessíveis em que a suíte E2E se apoia", () => {
+  const src = ler("app/src/routes/publico/Login.jsx");
+  assert.match(src, /"Aluno \/ Responsável"/);
+  assert.match(src, /"Coordenação"/);
+  assert.match(src, />Código de acesso</);
+  assert.match(src, /busy \? "Entrando…" : "Entrar"/);
+});
+
+test("teclado enxerga todo alvo operável", () => {
+  const css = ler("app/src/shared/ui/experiencia.css");
+  assert.match(css, /button:focus-visible/);
+  assert.match(css, /outline: 2px solid var\(--ui-accent\)/);
 });
 
 test("login comunica a proposta e mantém uma ação primária", () => {
