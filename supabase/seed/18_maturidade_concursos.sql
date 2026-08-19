@@ -8,8 +8,8 @@
 
 update concursos set maturidade = 'completa', conteudo_versao = 1
   where codigo = 'cn';  -- 9 semanas, 50 atividades-modelo, estrutura de prova oficial e missões. Testado de ponta a ponta.
-update concursos set maturidade = 'beta', conteudo_versao = 1
-  where codigo = 'espcex';  -- Estrutura de prova oficial (2 dias, pesos), assuntos de Matemática/Português/Química e missões. Falta calendário semanal.
+update concursos set maturidade = 'completa', conteudo_versao = 3
+  where codigo = 'espcex';  -- Calendário próprio de 9 semanas, 24 missões, programa vigente de 2026 e 200 questões oficiais de 2024–2025 tagueadas.
 update concursos set maturidade = 'esqueleto', conteudo_versao = 1
   where codigo = 'epcar';  -- Estrutura de prova oficial e 1 missão de redação. Sem assuntos catalogados nem calendário.
 update concursos set maturidade = 'esqueleto', conteudo_versao = 1

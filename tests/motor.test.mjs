@@ -7,11 +7,14 @@
 //   - antes da 1ª semana vale a 1ª; depois da última, a última;
 //   - virada fecha a meta vencida e gera a da semana corrente;
 //   - tudo idempotente (rodar de novo não duplica).
-// As datas são da trilha CN 2026 importada (verbatim).
+// As datas vêm do BANCO (calendario-cn.mjs): o seed 02 ancora a
+// semana 3 na semana corrente, então nenhuma data de trilha pode
+// estar escrita à mão aqui.
 // ============================================================
 import test from "node:test";
 import assert from "node:assert/strict";
 import { pool, comoServidor, ALUNO_LUCAS } from "./identidades.mjs";
+import { semanaCN, diaNaSemanaCN, somarDias } from "./calendario-cn.mjs";
 
 test.after(async () => { await pool.end(); });
 
@@ -39,36 +42,43 @@ async function metaDe(c, hoje) {
 }
 
 test("limites inclusivos: 1º e último dia da semana 1 caem na semana 1; o dia seguinte cai na 2", async () => {
+  const s1 = await semanaCN(1);
+  const s2 = await semanaCN(2);
+  assert.equal(somarDias(s1.fim, 1), s2.inicio, "a semana 2 começa no dia seguinte ao fim da 1");
   await cenario(async (c) => {
-    assert.equal((await metaDe(c, "2026-05-30")).semana_numero, 1); // inicio exato
+    assert.equal((await metaDe(c, s1.inicio)).semana_numero, 1); // inicio exato
     await c.query("delete from meta_atividades where meta_id in (select id from metas where aluno_id = $1)", [ALUNO_LUCAS]);
     await c.query("delete from metas where aluno_id = $1", [ALUNO_LUCAS]);
-    assert.equal((await metaDe(c, "2026-06-07")).semana_numero, 1); // fim exato (inclusivo)
-    assert.equal((await metaDe(c, "2026-06-08")).semana_numero, 2); // vira à meia-noite local
+    assert.equal((await metaDe(c, s1.fim)).semana_numero, 1);     // fim exato (inclusivo)
+    assert.equal((await metaDe(c, s2.inicio)).semana_numero, 2);  // vira à meia-noite local
   });
 });
 
 test("antes da primeira semana vale a primeira; depois da última, a última (clamp do currentWeek)", async () => {
+  const s1 = await semanaCN(1);
+  const s9 = await semanaCN(9);
   await cenario(async (c) => {
-    assert.equal((await metaDe(c, "2026-01-15")).semana_numero, 1);
+    assert.equal((await metaDe(c, somarDias(s1.inicio, -135))).semana_numero, 1);
   });
   await cenario(async (c) => {
-    const m = await metaDe(c, "2026-12-25");
+    const m = await metaDe(c, somarDias(s9.fim, 135));
     assert.equal(m.semana_numero, 9);
     assert.equal(m.status, "fechada"); // depois da prova a meta não renasce ativa
   });
 });
 
 test("virada: fecha a meta vencida, gera a da semana corrente, e é idempotente", async () => {
+  const naSemana2 = await diaNaSemanaCN(2);
+  const naSemana3 = await diaNaSemanaCN(3);
   await cenario(async (c) => {
     // aluno está na semana 2
-    await c.query("select app.virar_semana('2026-06-10'::date)");
+    await c.query("select app.virar_semana($1::date)", [naSemana2]);
     let r = await c.query("select semana_numero, status from metas where aluno_id = $1 order by semana_numero", [ALUNO_LUCAS]);
     assert.deepEqual(r.rows, [{ semana_numero: 2, status: "ativa" }]);
 
-    // o tempo passa: dia 15/06 é a semana 3 — a virada fecha a 2 e abre a 3,
+    // o tempo passa: já é a semana 3 — a virada fecha a 2 e abre a 3,
     // sem o aluno abrir nada
-    await c.query("select app.virar_semana('2026-06-15'::date)");
+    await c.query("select app.virar_semana($1::date)", [naSemana3]);
     r = await c.query("select semana_numero, status from metas where aluno_id = $1 order by semana_numero", [ALUNO_LUCAS]);
     assert.deepEqual(r.rows, [
       { semana_numero: 2, status: "fechada" },
@@ -76,15 +86,16 @@ test("virada: fecha a meta vencida, gera a da semana corrente, e é idempotente"
     ]);
 
     // rodar a virada de novo no mesmo dia não muda nem duplica nada
-    await c.query("select app.virar_semana('2026-06-15'::date)");
+    await c.query("select app.virar_semana($1::date)", [naSemana3]);
     const r2 = await c.query("select count(*)::int as n from metas where aluno_id = $1", [ALUNO_LUCAS]);
     assert.equal(r2.rows[0].n, 2);
   });
 });
 
 test("a meta gerada carrega as atividades-modelo daquela semana da trilha, todas pendentes", async () => {
+  const s1 = await semanaCN(1);
   await cenario(async (c) => {
-    await c.query("select app.gerar_meta($1, '2026-05-30'::date)", [ALUNO_LUCAS]);
+    await c.query("select app.gerar_meta($1, $2::date)", [ALUNO_LUCAS, s1.inicio]);
     const r = await c.query(
       `select am.texto, ma.estado from meta_atividades ma
        join atividades_modelo am on am.id = ma.atividade_modelo_id
@@ -100,9 +111,10 @@ test("a meta gerada carrega as atividades-modelo daquela semana da trilha, todas
 });
 
 test("gerar_meta duas vezes na mesma semana devolve a MESMA meta (idempotência do seed também)", async () => {
+  const naSemana2 = await diaNaSemanaCN(2);
   await cenario(async (c) => {
-    const a = await c.query("select app.gerar_meta($1, '2026-06-10'::date) as id", [ALUNO_LUCAS]);
-    const b = await c.query("select app.gerar_meta($1, '2026-06-10'::date) as id", [ALUNO_LUCAS]);
+    const a = await c.query("select app.gerar_meta($1, $2::date) as id", [ALUNO_LUCAS, naSemana2]);
+    const b = await c.query("select app.gerar_meta($1, $2::date) as id", [ALUNO_LUCAS, naSemana2]);
     assert.equal(a.rows[0].id, b.rows[0].id);
   });
 });

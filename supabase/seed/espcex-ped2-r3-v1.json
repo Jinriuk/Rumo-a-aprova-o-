@@ -1,0 +1,705 @@
+{
+  "versao": 1,
+  "exam_tag": "espcex",
+  "fonte_programa": {
+    "arquivo": "EDITAL-ESPCEX.pdf",
+    "sha256": "299ff23a552808c6037e104e2e56ad2caa684b499baeffce212c2426b9e25617"
+  },
+  "fonte_programa_vigente": {
+    "arquivo": "EDITAL-ESPCEX-2026-DOU.pdf",
+    "sha256": "261c48541cdb48b1cee66dba3a802056ea619ba75ddeca3dd587609ad47e4851",
+    "edital": "Edital nº 2 S Conc Adms, de 22 de abril de 2026",
+    "concurso": "CA EsPCEx 2026/27",
+    "publicado_em": "2026-04-23",
+    "url_oficial": "https://in.gov.br/web/dou/-/edital-n-2-s-conc-adms-de-22-de-abril-de-2026-701016883",
+    "comparado_com_2022": true
+  },
+  "catalogo": [
+    {
+      "materia": "por",
+      "ordem": 0,
+      "nome": "Leitura, interpretação e análise de textos",
+      "subassuntos": ["Leitura, interpretação e análise dos significados"]
+    },
+    {
+      "materia": "por",
+      "ordem": 1,
+      "nome": "Fonética",
+      "subassuntos": ["Fonemas", "Sílaba", "Tonicidade", "Ortografia", "Acentuação gráfica"]
+    },
+    {
+      "materia": "por",
+      "ordem": 2,
+      "nome": "Morfologia",
+      "subassuntos": ["Estrutura das palavras", "Formação das palavras", "Classificação e flexão das palavras"]
+    },
+    {
+      "materia": "por",
+      "ordem": 3,
+      "nome": "Semântica",
+      "subassuntos": ["Significação das palavras"]
+    },
+    {
+      "materia": "por",
+      "ordem": 4,
+      "nome": "Sintaxe",
+      "subassuntos": [
+        "Análise sintática",
+        "Período composto",
+        "Orações subordinadas",
+        "Sintaxe de regência (verbal e nominal)",
+        "Sintaxe de colocação",
+        "Sinais de pontuação",
+        "Emprego de algumas classes de palavras",
+        "Emprego dos modos e dos tempos verbais",
+        "Emprego do infinitivo verbal",
+        "Emprego do verbo haver"
+      ]
+    },
+    {
+      "materia": "por",
+      "ordem": 5,
+      "nome": "Teoria da Linguagem",
+      "subassuntos": ["Linguagem, língua, discurso e estilo", "Níveis de linguagem", "Funções da linguagem"]
+    },
+    {
+      "materia": "por",
+      "ordem": 6,
+      "nome": "Estilística",
+      "subassuntos": ["Figuras de linguagem", "Língua e arte literária"]
+    },
+    {
+      "materia": "por",
+      "ordem": 7,
+      "nome": "Acordo Ortográfico da Língua Portuguesa",
+      "subassuntos": ["Alterações introduzidas na ortografia oficial"]
+    },
+    {
+      "materia": "por",
+      "ordem": 8,
+      "nome": "Literatura Brasileira",
+      "subassuntos": [
+        "Literatura e história da literatura",
+        "Gêneros literários",
+        "Linguagem poética",
+        "Elementos da narrativa",
+        "Trovadorismo",
+        "Humanismo",
+        "Classicismo",
+        "Quinhentismo",
+        "Barroco",
+        "Arcadismo",
+        "Romantismo - prosa e poesia",
+        "Realismo/Naturalismo",
+        "Parnasianismo",
+        "Simbolismo",
+        "Pré-Modernismo",
+        "Movimentos de vanguarda europeia no Brasil",
+        "Modernismo — 1ª geração",
+        "Modernismo — 2ª geração",
+        "Modernismo — 3ª geração",
+        "Tendências contemporâneas"
+      ]
+    },
+    {
+      "materia": "red",
+      "ordem": 0,
+      "nome": "Dissertação",
+      "subassuntos": ["Tema", "Introdução", "Desenvolvimento", "Conclusão"]
+    },
+    {
+      "materia": "red",
+      "ordem": 1,
+      "nome": "Gramática",
+      "subassuntos": ["Norma culta da língua"]
+    },
+    {
+      "materia": "red",
+      "ordem": 2,
+      "nome": "Linguagem",
+      "subassuntos": ["Coerência", "Coesão textual", "Clareza", "Concisão", "Impessoalidade"]
+    },
+    {
+      "materia": "red",
+      "ordem": 3,
+      "nome": "Apresentação",
+      "subassuntos": ["Sem rasuras", "Letra padrão da língua", "Marginação", "Capricho"]
+    },
+    {
+      "materia": "fis",
+      "ordem": 0,
+      "nome": "Mecânica",
+      "subassuntos": [
+        "Conceitos básicos de cinemática",
+        "Movimentos sob a ação da gravidade",
+        "Movimentos circulares",
+        "Composição de movimentos e cinemática vetorial",
+        "Dinâmica",
+        "Energia e trabalho",
+        "Impulso e quantidade de movimento",
+        "Estática de um ponto material e de um corpo extenso rígido",
+        "Hidrostática",
+        "Leis de Kepler e gravitação universal"
+      ]
+    },
+    {
+      "materia": "fis",
+      "ordem": 1,
+      "nome": "Termologia",
+      "subassuntos": ["Termometria", "Calorimetria", "Mudanças de fase", "Gases ideais", "Termodinâmica"]
+    },
+    {
+      "materia": "fis",
+      "ordem": 2,
+      "nome": "Óptica",
+      "subassuntos": ["Reflexão da luz", "Espelho plano", "Espelhos esféricos", "Refração luminosa", "Lentes esféricas"]
+    },
+    {
+      "materia": "fis",
+      "ordem": 3,
+      "nome": "Ondas",
+      "subassuntos": ["Movimento harmônico simples", "Reflexão", "Refração", "Difração", "Interferência", "Ondas sonoras", "Efeito Doppler"]
+    },
+    {
+      "materia": "fis",
+      "ordem": 4,
+      "nome": "Eletricidade",
+      "subassuntos": [
+        "Campo elétrico e potencial elétrico",
+        "Potência e energia na corrente elétrica",
+        "Associação de resistores",
+        "Associação de capacitores",
+        "Geradores e receptores elétricos",
+        "Leis de Kirchhoff",
+        "Força magnética",
+        "Indução eletromagnética"
+      ]
+    },
+    {
+      "materia": "qui",
+      "ordem": 0,
+      "nome": "Matéria e Substância",
+      "subassuntos": ["Estados físicos da matéria", "Misturas e tipos de misturas", "Processos de separação de misturas", "Densidade"]
+    },
+    {
+      "materia": "qui",
+      "ordem": 1,
+      "nome": "Estrutura Atômica Moderna",
+      "subassuntos": ["Configuração eletrônica", "Diagrama de Pauling", "Números quânticos"]
+    },
+    {
+      "materia": "qui",
+      "ordem": 2,
+      "nome": "Classificações Periódicas",
+      "subassuntos": ["Tabela periódica", "Propriedades periódicas"]
+    },
+    {
+      "materia": "qui",
+      "ordem": 3,
+      "nome": "Ligações Químicas",
+      "subassuntos": ["Ligações iônicas", "Ligações covalentes", "Ligações metálicas"]
+    },
+    {
+      "materia": "qui",
+      "ordem": 4,
+      "nome": "Características dos Compostos Iônicos e Moleculares",
+      "subassuntos": ["Geometria molecular", "Polaridade das moléculas", "Forças intermoleculares"]
+    },
+    {
+      "materia": "qui",
+      "ordem": 5,
+      "nome": "Funções Inorgânicas",
+      "subassuntos": ["Ácidos", "Bases", "Sais e óxidos", "Definições e conceitos teóricos"]
+    },
+    {
+      "materia": "qui",
+      "ordem": 6,
+      "nome": "Reações Químicas",
+      "subassuntos": ["Tipos de reações químicas", "Oxidorredução", "Balanceamento de equações químicas"]
+    },
+    {
+      "materia": "qui",
+      "ordem": 7,
+      "nome": "Grandezas Químicas",
+      "subassuntos": ["Massa molar", "Mol e quantidade de matéria", "Constante e número de Avogadro"]
+    },
+    {
+      "materia": "qui",
+      "ordem": 8,
+      "nome": "Estequiometria",
+      "subassuntos": ["Cálculos estequiométricos", "Reagente limitante", "Rendimento de reação"]
+    },
+    {
+      "materia": "qui",
+      "ordem": 9,
+      "nome": "Gases",
+      "subassuntos": ["Equação geral dos gases ideais e dos gases reais", "Lei de Dalton", "Densidade dos gases"]
+    },
+    {
+      "materia": "qui",
+      "ordem": 10,
+      "nome": "Termoquímica",
+      "subassuntos": ["Entalpia e tipos de entalpia", "Lei de Hess", "Energia de ligação", "Entropia", "Energia livre"]
+    },
+    {
+      "materia": "qui",
+      "ordem": 11,
+      "nome": "Cinética",
+      "subassuntos": ["Velocidade das reações", "Fatores que afetam a velocidade das reações", "Lei da velocidade de reações"]
+    },
+    {
+      "materia": "qui",
+      "ordem": 12,
+      "nome": "Soluções",
+      "subassuntos": ["Solubilidade", "Concentração molar ou molaridade", "Diluição", "Análise volumétrica (titulometria)"]
+    },
+    {
+      "materia": "qui",
+      "ordem": 13,
+      "nome": "Equilíbrio Químico",
+      "subassuntos": ["Constantes de equilíbrio", "Princípio de Le Chatelier", "pH e pOH", "Soluções-tampão"]
+    },
+    {
+      "materia": "qui",
+      "ordem": 14,
+      "nome": "Eletroquímica/Eletrólise",
+      "rotulo_oficial": "Eletroquímica",
+      "subassuntos": ["Eletrólise", "Células galvânicas: pilhas e baterias", "Equação de Nernst", "Corrosão", "Leis de Faraday"]
+    },
+    {
+      "materia": "qui",
+      "ordem": 15,
+      "nome": "Radioatividade",
+      "subassuntos": ["Leis da radioatividade", "Fissão e fusão nuclear", "Uso de isótopos radioativos"]
+    },
+    {
+      "materia": "qui",
+      "ordem": 16,
+      "nome": "Propriedades coligativas",
+      "subassuntos": ["Tonoscopia", "Ebulioscopia", "Crioscopia", "Osmose", "Pressão osmótica"]
+    },
+    {
+      "materia": "qui",
+      "ordem": 17,
+      "nome": "Princípios da química orgânica",
+      "subassuntos": [
+        "Hibridização de orbitais",
+        "Cadeias carbônicas",
+        "Funções orgânicas",
+        "Dirigência de grupos substituintes",
+        "Isomerias de compostos orgânicos",
+        "Polímeros e reações de polimerização",
+        "Biomoléculas",
+        "Petróleo e derivados",
+        "Biocombustíveis"
+      ]
+    },
+    {
+      "materia": "mat",
+      "ordem": 0,
+      "nome": "Teoria dos Conjuntos e Conjuntos Numéricos",
+      "subassuntos": ["Operações entre conjuntos", "Números naturais e inteiros", "Números racionais", "Números reais", "Números complexos"]
+    },
+    {
+      "materia": "mat",
+      "ordem": 1,
+      "nome": "Funções",
+      "subassuntos": ["Domínio, imagem e contradomínio", "Funções injetoras, sobrejetoras e bijetoras", "Funções compostas", "Função inversa e seu gráfico"]
+    },
+    {
+      "materia": "mat",
+      "ordem": 2,
+      "nome": "Função Linear, Função Afim e Função Quadrática",
+      "subassuntos": ["Gráficos, domínio e imagem", "Máximos e mínimos", "Inequação produto e inequação quociente"]
+    },
+    {
+      "materia": "mat",
+      "ordem": 3,
+      "nome": "Função Modular",
+      "subassuntos": ["Definição, gráfico, domínio e imagem da função modular", "Equações modulares", "Inequações modulares"]
+    },
+    {
+      "materia": "mat",
+      "ordem": 4,
+      "nome": "Função Exponencial",
+      "subassuntos": ["Gráficos, domínio e imagem da função exponencial", "Equações e inequações exponenciais"]
+    },
+    {
+      "materia": "mat",
+      "ordem": 5,
+      "nome": "Função Logarítmica",
+      "subassuntos": ["Definição e propriedades operatórias de logaritmo", "Gráficos, domínio e imagem da função logarítmica", "Equações e inequações logarítmicas"]
+    },
+    {
+      "materia": "mat",
+      "ordem": 6,
+      "nome": "Trigonometria",
+      "subassuntos": ["Trigonometria no triângulo", "Funções trigonométricas", "Equações e inequações trigonométricas"]
+    },
+    {
+      "materia": "mat",
+      "ordem": 7,
+      "nome": "Contagem e Análise Combinatória",
+      "subassuntos": ["Arranjos, combinações e permutações", "Binômio de Newton"]
+    },
+    {
+      "materia": "mat",
+      "ordem": 8,
+      "nome": "Probabilidade",
+      "subassuntos": ["Probabilidade em espaços amostrais equiprováveis", "Probabilidade condicional", "Probabilidade da união de dois eventos"]
+    },
+    {
+      "materia": "mat",
+      "ordem": 9,
+      "nome": "Matrizes, Determinantes e Sistemas Lineares",
+      "subassuntos": ["Operações com matrizes", "Determinante de uma matriz", "Sistemas de equações lineares"]
+    },
+    {
+      "materia": "mat",
+      "ordem": 10,
+      "nome": "Sequências Numéricas e Progressões",
+      "subassuntos": ["Progressões aritméticas", "Progressões geométricas"]
+    },
+    {
+      "materia": "mat",
+      "ordem": 11,
+      "nome": "Geometria Espacial de Posição",
+      "subassuntos": ["Posições relativas entre retas e planos", "Perpendicularidade entre retas e planos", "Projeção ortogonal"]
+    },
+    {
+      "materia": "mat",
+      "ordem": 12,
+      "nome": "Geometria Espacial Métrica",
+      "subassuntos": ["Prismas", "Pirâmides", "Cilindro", "Cone", "Esfera", "Inscrição e circunscrição de sólidos"]
+    },
+    {
+      "materia": "mat",
+      "ordem": 13,
+      "nome": "Geometria Analítica",
+      "rotulo_oficial": "Geometria Analítica Plana",
+      "subassuntos": ["Ponto no plano cartesiano", "Reta: paralelismo e perpendicularidade", "Circunferência", "Elipse", "Hipérbole", "Parábola"]
+    },
+    {
+      "materia": "mat",
+      "ordem": 14,
+      "nome": "Geometria Plana",
+      "subassuntos": ["Teorema das bissetrizes internas e externas de um triângulo", "Relações métricas nos triângulos", "Perímetro e área", "Inscrição e circunscrição"]
+    },
+    {
+      "materia": "mat",
+      "ordem": 15,
+      "nome": "Polinômios",
+      "subassuntos": ["Divisão de polinômios e Teorema do Resto", "Relação entre coeficientes e raízes", "Fatoração e multiplicidade de raízes", "Produtos notáveis"]
+    },
+    {
+      "materia": "mat",
+      "ordem": 16,
+      "nome": "Equações Polinomiais",
+      "subassuntos": ["Teorema fundamental da álgebra", "Raízes imaginárias", "Raízes racionais", "Relações de Girard", "Teorema de Bolzano"]
+    },
+    {
+      "materia": "ing",
+      "ordem": 0,
+      "nome": "Compreensão de textos",
+      "subassuntos": ["Compreensão geral de textos", "Compreensão específica de expressões, frases e palavras"]
+    },
+    {
+      "materia": "ing",
+      "ordem": 1,
+      "nome": "Estruturas gramaticais",
+      "subassuntos": ["Adjectives", "Adverbs", "Nouns", "Word formation", "Articles", "Conjunctions", "Modal auxiliaries", "Prepositions", "Pronouns", "Possessive adjectives", "Determiners", "Quantifiers", "Verb forms", "Verb tenses", "Active/passive voice", "Wh-questions"]
+    },
+    {
+      "materia": "his",
+      "ordem": 0,
+      "nome": "A Sociedade Feudal",
+      "subassuntos": ["Sociedade Feudal (séculos V ao XV)"]
+    },
+    {
+      "materia": "his",
+      "ordem": 1,
+      "nome": "O Renascimento Comercial e Urbano",
+      "subassuntos": ["Renascimento Comercial e Urbano"]
+    },
+    {
+      "materia": "his",
+      "ordem": 2,
+      "nome": "Os Estados Nacionais Europeus da Idade Moderna, o Absolutismo e o Mercantilismo",
+      "subassuntos": ["Estados Nacionais Europeus", "Absolutismo", "Mercantilismo"]
+    },
+    {
+      "materia": "his",
+      "ordem": 3,
+      "nome": "A Expansão Marítima Europeia",
+      "subassuntos": ["Expansão Marítima Europeia"]
+    },
+    {
+      "materia": "his",
+      "ordem": 4,
+      "nome": "O Renascimento Cultural, o Humanismo e as Reformas Religiosas",
+      "subassuntos": ["Renascimento Cultural", "Humanismo", "Reformas Religiosas"]
+    },
+    {
+      "materia": "his",
+      "ordem": 5,
+      "nome": "A Montagem da Colonização Europeia na América",
+      "subassuntos": ["Sistemas Coloniais Espanhol, Francês, Inglês e dos Países Baixos", "Sistema Colonial Inglês"]
+    },
+    {
+      "materia": "his",
+      "ordem": 6,
+      "nome": "O Sistema Colonial Português na América",
+      "subassuntos": ["Estrutura Político-Administrativa", "Estrutura socioeconômica", "Invasões estrangeiras", "Expansão territorial", "Rebeliões coloniais", "Conjuração Mineira e Conjuração Baiana"]
+    },
+    {
+      "materia": "his",
+      "ordem": 7,
+      "nome": "O Iluminismo e o Despotismo Esclarecido",
+      "subassuntos": ["Iluminismo", "Despotismo Esclarecido"]
+    },
+    {
+      "materia": "his",
+      "ordem": 8,
+      "nome": "As Revoluções Inglesas e a Revolução Industrial",
+      "subassuntos": ["Revoluções Inglesas", "Revolução Industrial"]
+    },
+    {
+      "materia": "his",
+      "ordem": 9,
+      "nome": "A Independência dos Estados Unidos da América",
+      "subassuntos": ["Independência dos Estados Unidos da América"]
+    },
+    {
+      "materia": "his",
+      "ordem": 10,
+      "nome": "A Revolução Francesa e a Restauração",
+      "subassuntos": ["Revolução Francesa", "Congresso de Viena", "Santa Aliança"]
+    },
+    {
+      "materia": "his",
+      "ordem": 11,
+      "nome": "O Brasil Imperial",
+      "subassuntos": ["Período Joanino", "Primeiro Reinado", "Período Regencial", "Segundo Reinado", "Crise da Monarquia e Proclamação da República"]
+    },
+    {
+      "materia": "his",
+      "ordem": 12,
+      "nome": "O Pensamento e a Ideologia no Século XIX",
+      "rotulo_oficial": "O Pensamento e a Ideologia no Século XIX e XX",
+      "subassuntos": ["Idealismo Romântico", "Socialismo Utópico e Socialismo Científico", "Liberalismo e Anarquismo", "Evolucionismo e Positivismo"]
+    },
+    {
+      "materia": "his",
+      "ordem": 13,
+      "nome": "O Mundo na Época da Primeira Guerra Mundial",
+      "subassuntos": ["Imperialismo e antecedentes da Primeira Guerra Mundial", "Primeira Guerra Mundial", "República da Espada e República Velha no Brasil", "Conflitos brasileiros durante a República Velha"]
+    },
+    {
+      "materia": "his",
+      "ordem": 14,
+      "nome": "O Mundo na Época da Segunda Guerra Mundial",
+      "subassuntos": ["Período entre-guerras", "Segunda Guerra Mundial", "Brasil na Era Vargas", "Participação do Brasil na Segunda Guerra Mundial"]
+    },
+    {
+      "materia": "his",
+      "ordem": 15,
+      "nome": "O Mundo na Guerra Fria",
+      "subassuntos": ["Surgimento do mundo bipolar", "Conflitos da Guerra Fria", "Descolonização da África e da Ásia", "República Brasileira entre 1945 e 1991"]
+    },
+    {
+      "materia": "his",
+      "ordem": 16,
+      "nome": "O Mundo no Final do Século XX e Início do Século XXI",
+      "subassuntos": ["Declínio e queda do socialismo nos países europeus", "Guerra das Malvinas (1982)", "Conflitos do final do século XX (1980–2014)", "11 de Setembro de 2001", "República Brasileira de 1985 até os dias atuais", "Crises e recessão mundial no início do século XXI", "Ascensão do neoliberalismo", "Crise do sistema socialista", "Renascimento dos movimentos nacionalistas", "Globalização na situação atual"]
+    },
+    {
+      "materia": "geo",
+      "ordem": 0,
+      "nome": "Geografia Geral — Localizando-se no Espaço",
+      "subassuntos": ["Coordenadas geográficas e fusos horários", "Cartografia", "Projeções cartográficas", "Escalas e convenções cartográficas"]
+    },
+    {
+      "materia": "geo",
+      "ordem": 1,
+      "nome": "Geografia Geral — O Espaço Natural",
+      "subassuntos": ["Estrutura e dinâmica da Terra", "Elementos e fatores do clima e os tipos climáticos", "Utilização dos recursos hídricos e situações hidroconflitivas", "Domínios naturais", "Impactos ambientais"]
+    },
+    {
+      "materia": "geo",
+      "ordem": 2,
+      "nome": "Geografia Geral — O Espaço Político e Econômico",
+      "subassuntos": ["Processo de industrialização", "Agropecuária", "Globalização e circulação", "Divisão Internacional do Trabalho", "Poder global e nova ordem mundial"]
+    },
+    {
+      "materia": "geo",
+      "ordem": 3,
+      "nome": "Geografia Geral — O Espaço Humano",
+      "subassuntos": ["Teorias demográficas", "Transição demográfica", "Migrações", "Urbanização", "Principais indicadores socioeconômicos"]
+    },
+    {
+      "materia": "geo",
+      "ordem": 4,
+      "nome": "Geografia do Brasil — O Espaço Natural",
+      "subassuntos": ["Características gerais do território brasileiro", "Geomorfologia", "Atmosfera e climas", "Domínios naturais", "Recursos hídricos"]
+    },
+    {
+      "materia": "geo",
+      "ordem": 5,
+      "nome": "Geografia do Brasil — O Espaço Econômico",
+      "subassuntos": ["Formação do território nacional", "Industrialização pós-Segunda Guerra Mundial", "Fontes de energia e meio ambiente", "Agricultura brasileira", "Comércio", "Eixos de circulação e custos de deslocamento"]
+    },
+    {
+      "materia": "geo",
+      "ordem": 6,
+      "nome": "Geografia do Brasil — O Espaço Político",
+      "subassuntos": ["Formação territorial", "Estrutura político-administrativa", "Divisão regional", "Políticas públicas"]
+    },
+    {
+      "materia": "geo",
+      "ordem": 7,
+      "nome": "Geografia do Brasil — O Espaço Humano",
+      "subassuntos": ["Transição demográfica", "Mobilidade espacial", "Mercado de trabalho", "Desenvolvimento humano", "Urbanização brasileira", "Espaço urbano e problemas urbanos"]
+    }
+  ],
+  "provas": [
+    {
+      "chave": "2025-d1-a",
+      "ano": 2025,
+      "etapa": "1º dia — Modelo A",
+      "descricao": "EsPCEx — Concurso de Admissão 2025, 1º dia, Modelo A",
+      "caderno": {
+        "arquivo": "2025-modelo-a-1-dia-de-prova.pdf",
+        "sha256": "e25ab87151a2416d42781373fc17442fa2ce692dcea1fd9b18310f884f204474"
+      },
+      "gabarito": {
+        "arquivo": "2025-gabarito-1-dia-de-prova.pdf",
+        "sha256": "06fb7be899355bf69d29ec2170e4998c24e3ecf27c277db27037a47a673c914d"
+      },
+      "observacao": "Caderno oficial com 20 questões de Português, 12 de Física, 12 de Química e proposta de Redação. O seed guarda apenas referências e tags.",
+      "questoes": [
+        { "numero": 1, "materia": "por", "assunto": "Leitura, interpretação e análise de textos", "subassunto": "Leitura, interpretação e análise dos significados", "gabarito": "C", "referencia": "compreensão global do texto Machado e Abel" },
+        { "numero": 2, "materia": "por", "assunto": "Leitura, interpretação e análise de textos", "subassunto": "Leitura, interpretação e análise dos significados", "gabarito": "ANULADA", "referencia": "interpretação de trecho; item anulado no gabarito oficial" },
+        { "numero": 3, "materia": "por", "assunto": "Estilística", "subassunto": "Figuras de linguagem", "gabarito": "A", "referencia": "efeito expressivo do polissíndeto" },
+        { "numero": 4, "materia": "por", "assunto": "Leitura, interpretação e análise de textos", "subassunto": "Leitura, interpretação e análise dos significados", "gabarito": "D", "referencia": "comparação elíptica interpretada pelo contexto" },
+        { "numero": 5, "materia": "por", "assunto": "Teoria da Linguagem", "subassunto": "Linguagem, língua, discurso e estilo", "gabarito": "C", "referencia": "identificação de discurso direto" },
+        { "numero": 6, "materia": "por", "assunto": "Fonética", "subassunto": "Fonemas", "gabarito": "E", "referencia": "ditongo e hiato na palavra principia" },
+        { "numero": 7, "materia": "por", "assunto": "Sintaxe", "subassunto": "Sintaxe de regência (verbal e nominal)", "gabarito": "A", "referencia": "substituição de pronome relativo e regência" },
+        { "numero": 8, "materia": "por", "assunto": "Sintaxe", "subassunto": "Análise sintática", "gabarito": "B", "referencia": "objeto direto preposicionado" },
+        { "numero": 9, "materia": "por", "assunto": "Sintaxe", "subassunto": "Sintaxe de regência (verbal e nominal)", "gabarito": "B", "referencia": "emprego do acento grave" },
+        { "numero": 10, "materia": "por", "assunto": "Sintaxe", "subassunto": "Período composto", "gabarito": "D", "referencia": "coordenação e subordinação no período composto" },
+        { "numero": 11, "materia": "por", "assunto": "Sintaxe", "subassunto": "Orações subordinadas", "gabarito": "C", "referencia": "classificação de orações subordinadas" },
+        { "numero": 12, "materia": "por", "assunto": "Morfologia", "subassunto": "Formação das palavras", "gabarito": "A", "referencia": "processos de formação de palavras" },
+        { "numero": 13, "materia": "por", "assunto": "Semântica", "subassunto": "Significação das palavras", "gabarito": "B", "referencia": "sentido contextual de absolutamente" },
+        { "numero": 14, "materia": "por", "assunto": "Sintaxe", "subassunto": "Análise sintática", "gabarito": "B", "referencia": "classificação sintática do vocábulo se" },
+        { "numero": 15, "materia": "por", "assunto": "Sintaxe", "subassunto": "Análise sintática", "gabarito": "D", "referencia": "função sintática de pronome oblíquo" },
+        { "numero": 16, "materia": "por", "assunto": "Sintaxe", "subassunto": "Análise sintática", "gabarito": "E", "referencia": "função sintática de expressão adverbial" },
+        { "numero": 17, "materia": "por", "assunto": "Leitura, interpretação e análise de textos", "subassunto": "Leitura, interpretação e análise dos significados", "gabarito": "E", "referencia": "característica machadiana inferida do parágrafo" },
+        { "numero": 18, "materia": "por", "assunto": "Literatura Brasileira", "subassunto": "Modernismo — 1ª geração", "gabarito": "B", "referencia": "proposta linguística da primeira geração modernista" },
+        { "numero": 19, "materia": "por", "assunto": "Literatura Brasileira", "subassunto": "Modernismo — 1ª geração", "gabarito": "C", "referencia": "Manuel Bandeira e a primeira fase modernista" },
+        { "numero": 20, "materia": "por", "assunto": "Literatura Brasileira", "subassunto": "Simbolismo", "gabarito": "C", "referencia": "identificação de Cruz e Sousa" },
+
+        { "numero": 21, "materia": "fis", "assunto": "Mecânica", "subassunto": "Estática de um ponto material e de um corpo extenso rígido", "gabarito": "D", "referencia": "equilíbrio e atrito em planos inclinados" },
+        { "numero": 22, "materia": "fis", "assunto": "Termologia", "subassunto": "Termodinâmica", "gabarito": "D", "referencia": "máquina de Carnot e mudanças de fase" },
+        { "numero": 23, "materia": "fis", "assunto": "Eletricidade", "subassunto": "Potência e energia na corrente elétrica", "gabarito": "C", "referencia": "aquecimento resistivo e potência elétrica" },
+        { "numero": 24, "materia": "fis", "assunto": "Óptica", "subassunto": "Espelhos esféricos", "gabarito": "E", "referencia": "imagem imprópria em espelho côncavo móvel" },
+        { "numero": 25, "materia": "fis", "assunto": "Eletricidade", "subassunto": "Força magnética", "gabarito": "C", "referencia": "força magnética em haste condutora em equilíbrio" },
+        { "numero": 26, "materia": "fis", "assunto": "Eletricidade", "subassunto": "Campo elétrico e potencial elétrico", "gabarito": "B", "referencia": "campo elétrico, potencial e energia potencial" },
+        { "numero": 27, "materia": "fis", "assunto": "Mecânica", "subassunto": "Composição de movimentos e cinemática vetorial", "gabarito": "B", "referencia": "lançamento oblíquo a partir de referencial móvel" },
+        { "numero": 28, "materia": "fis", "assunto": "Mecânica", "subassunto": "Dinâmica", "gabarito": "E", "referencia": "frenagem de helicóptero e força de sustentação" },
+        { "numero": 29, "materia": "fis", "assunto": "Eletricidade", "subassunto": "Associação de capacitores", "gabarito": "A", "referencia": "cargas em capacitores no regime estacionário" },
+        { "numero": 30, "materia": "fis", "assunto": "Termologia", "subassunto": "Termodinâmica", "gabarito": "B", "referencia": "entropia e degradação da energia" },
+        { "numero": 31, "materia": "fis", "assunto": "Mecânica", "subassunto": "Dinâmica", "gabarito": "C", "referencia": "primeira lei de Newton e inércia" },
+        { "numero": 32, "materia": "fis", "assunto": "Mecânica", "subassunto": "Movimentos circulares", "gabarito": "A", "referencia": "frequência, período e aceleração centrípeta" },
+
+        { "numero": 33, "materia": "qui", "assunto": "Princípios da química orgânica", "subassunto": "Funções orgânicas", "gabarito": "D", "referencia": "estrutura, hibridização e funções da gingerona" },
+        { "numero": 34, "materia": "qui", "assunto": "Princípios da química orgânica", "subassunto": "Dirigência de grupos substituintes", "gabarito": "B", "referencia": "dinitração do benzeno e dirigência" },
+        { "numero": 35, "materia": "qui", "assunto": "Funções Inorgânicas", "subassunto": "Definições e conceitos teóricos", "gabarito": "C", "referencia": "teorias ácido-base" },
+        { "numero": 36, "materia": "qui", "assunto": "Eletroquímica/Eletrólise", "subassunto": "Eletrólise", "gabarito": "E", "referencia": "eletrólise de cloreto de sódio para gerar cloro" },
+        { "numero": 37, "materia": "qui", "assunto": "Termoquímica", "subassunto": "Entalpia e tipos de entalpia", "gabarito": "C", "referencia": "entalpia de combustão do acetileno" },
+        { "numero": 38, "materia": "qui", "assunto": "Gases", "subassunto": "Equação geral dos gases ideais e dos gases reais", "gabarito": "A", "referencia": "volume de gases na decomposição de nitrato de amônio" },
+        { "numero": 39, "materia": "qui", "assunto": "Propriedades coligativas", "subassunto": "Osmose", "gabarito": "B", "referencia": "hemácias em meios hipertônico, isotônico e hipotônico" },
+        { "numero": 40, "materia": "qui", "assunto": "Reações Químicas", "subassunto": "Balanceamento de equações químicas", "gabarito": "E", "referencia": "balanceamento e classificação no tratamento de água" },
+        { "numero": 41, "materia": "qui", "assunto": "Equilíbrio Químico", "subassunto": "Princípio de Le Chatelier", "gabarito": "D", "referencia": "equilíbrio do dióxido de carbono na acidose" },
+        { "numero": 42, "materia": "qui", "assunto": "Princípios da química orgânica", "subassunto": "Polímeros e reações de polimerização", "gabarito": "C", "referencia": "estrutura e polimerização do polietileno" },
+        { "numero": 43, "materia": "qui", "assunto": "Grandezas Químicas", "subassunto": "Constante e número de Avogadro", "gabarito": "A", "referencia": "número de átomos de arsênio em limite de massa" },
+        { "numero": 44, "materia": "qui", "assunto": "Estrutura Atômica Moderna", "subassunto": "Configuração eletrônica", "gabarito": "E", "referencia": "distribuição eletrônica do bismuto" }
+      ]
+    },
+    {
+      "chave": "2025-d2-d",
+      "ano": 2025,
+      "etapa": "2º dia — Modelo D",
+      "descricao": "EsPCEx — Concurso de Admissão 2025, 2º dia, Modelo D",
+      "caderno": {
+        "arquivo": "2025-modelo-d-2-dia-de-prova.pdf",
+        "sha256": "d2a6c6c3224d7c34aab3f5703f53ea9472200114a22fad7e7b4840836696b232"
+      },
+      "gabarito": {
+        "arquivo": "2025-gabarito-2-dia-de-prova.pdf",
+        "sha256": "a0ba56dd6ea4194b9dc62a5724c0fd0a9a584adde00350e6cc78fd18727132e2"
+      },
+      "observacao": "Caderno oficial com 20 questões de Matemática e 12 de cada uma das matérias Geografia, História e Inglês. O seed guarda apenas referências e tags.",
+      "questoes": [
+        { "numero": 1, "materia": "mat", "assunto": "Teoria dos Conjuntos e Conjuntos Numéricos", "subassunto": "Operações entre conjuntos", "gabarito": "A", "referencia": "problema de três conjuntos por inclusão-exclusão" },
+        { "numero": 2, "materia": "mat", "assunto": "Função Logarítmica", "subassunto": "Gráficos, domínio e imagem da função logarítmica", "gabarito": "C", "referencia": "domínio de função logarítmica" },
+        { "numero": 3, "materia": "mat", "assunto": "Geometria Plana", "subassunto": "Teorema das bissetrizes internas e externas de um triângulo", "gabarito": "B", "referencia": "bissetrizes interna e externa de triângulo" },
+        { "numero": 4, "materia": "mat", "assunto": "Polinômios", "subassunto": "Divisão de polinômios e Teorema do Resto", "gabarito": "A", "referencia": "resto de divisão polinomial" },
+        { "numero": 5, "materia": "mat", "assunto": "Equações Polinomiais", "subassunto": "Raízes racionais", "gabarito": "D", "referencia": "raízes racionais e irracionais de equação polinomial" },
+        { "numero": 6, "materia": "mat", "assunto": "Funções", "subassunto": "Funções injetoras, sobrejetoras e bijetoras", "gabarito": "B", "referencia": "propriedades de funções e radicais" },
+        { "numero": 7, "materia": "mat", "assunto": "Trigonometria", "subassunto": "Equações e inequações trigonométricas", "gabarito": "E", "referencia": "raízes de equação trigonométrica" },
+        { "numero": 8, "materia": "mat", "assunto": "Sequências Numéricas e Progressões", "subassunto": "Progressões aritméticas", "gabarito": "D", "referencia": "lado, altura e área em progressão aritmética" },
+        { "numero": 9, "materia": "mat", "assunto": "Teoria dos Conjuntos e Conjuntos Numéricos", "subassunto": "Números complexos", "gabarito": "D", "referencia": "módulo e argumento de número complexo" },
+        { "numero": 10, "materia": "mat", "assunto": "Contagem e Análise Combinatória", "subassunto": "Arranjos, combinações e permutações", "gabarito": "D", "referencia": "permutação com restrições de adjacência" },
+        { "numero": 11, "materia": "mat", "assunto": "Probabilidade", "subassunto": "Probabilidade condicional", "gabarito": "D", "referencia": "escolha de grupo e pessoa em duas etapas" },
+        { "numero": 12, "materia": "mat", "assunto": "Matrizes, Determinantes e Sistemas Lineares", "subassunto": "Determinante de uma matriz", "gabarito": "B", "referencia": "determinante de matriz com elementos definidos por casos" },
+        { "numero": 13, "materia": "mat", "assunto": "Polinômios", "subassunto": "Produtos notáveis", "gabarito": "A", "referencia": "identidade algébrica com x e inverso de x" },
+        { "numero": 14, "materia": "mat", "assunto": "Função Linear, Função Afim e Função Quadrática", "subassunto": "Inequação produto e inequação quociente", "gabarito": "B", "referencia": "inequação racional e estudo de sinal" },
+        { "numero": 15, "materia": "mat", "assunto": "Matrizes, Determinantes e Sistemas Lineares", "subassunto": "Sistemas de equações lineares", "gabarito": "C", "referencia": "sistema formado por somas de inteiros dois a dois" },
+        { "numero": 16, "materia": "mat", "assunto": "Função Modular", "subassunto": "Definição, gráfico, domínio e imagem da função modular", "gabarito": "E", "referencia": "interseções entre função identidade e função modular" },
+        { "numero": 17, "materia": "mat", "assunto": "Geometria Plana", "subassunto": "Inscrição e circunscrição", "gabarito": "A", "referencia": "circunferência inscrita em triângulo retângulo" },
+        { "numero": 18, "materia": "mat", "assunto": "Geometria Espacial Métrica", "subassunto": "Prismas", "gabarito": "D", "referencia": "volume de prisma hexagonal regular" },
+        { "numero": 19, "materia": "mat", "assunto": "Geometria Analítica", "subassunto": "Ponto no plano cartesiano", "gabarito": "C", "referencia": "vértices de triângulo retângulo isósceles no plano" },
+        { "numero": 20, "materia": "mat", "assunto": "Geometria Analítica", "subassunto": "Reta: paralelismo e perpendicularidade", "gabarito": "E", "referencia": "retas perpendiculares e área de triângulo nos eixos" },
+
+        { "numero": 21, "materia": "geo", "assunto": "Geografia Geral — O Espaço Natural", "subassunto": "Estrutura e dinâmica da Terra", "gabarito": "E", "referencia": "agentes internos, externos e intemperismo" },
+        { "numero": 22, "materia": "geo", "assunto": "Geografia Geral — Localizando-se no Espaço", "subassunto": "Cartografia", "gabarito": "C", "referencia": "representações cartográficas e mapas temáticos" },
+        { "numero": 23, "materia": "geo", "assunto": "Geografia do Brasil — O Espaço Econômico", "subassunto": "Fontes de energia e meio ambiente", "gabarito": "A", "referencia": "identificação de rede de infraestrutura em mapa" },
+        { "numero": 24, "materia": "geo", "assunto": "Geografia do Brasil — O Espaço Econômico", "subassunto": "Formação do território nacional", "gabarito": "B", "referencia": "povoamento e desenvolvimento da Amazônia" },
+        { "numero": 25, "materia": "geo", "assunto": "Geografia do Brasil — O Espaço Econômico", "subassunto": "Industrialização pós-Segunda Guerra Mundial", "gabarito": "C", "referencia": "integração dos mercados regionais pela industrialização" },
+        { "numero": 26, "materia": "geo", "assunto": "Geografia Geral — O Espaço Natural", "subassunto": "Elementos e fatores do clima e os tipos climáticos", "gabarito": "E", "referencia": "leitura de temperatura e precipitação mensais" },
+        { "numero": 27, "materia": "geo", "assunto": "Geografia Geral — O Espaço Natural", "subassunto": "Utilização dos recursos hídricos e situações hidroconflitivas", "gabarito": "B", "referencia": "distribuição, uso e crise da água" },
+        { "numero": 28, "materia": "geo", "assunto": "Geografia do Brasil — O Espaço Humano", "subassunto": "Espaço urbano e problemas urbanos", "gabarito": "B", "referencia": "inundações urbanas e medidas de mitigação" },
+        { "numero": 29, "materia": "geo", "assunto": "Geografia Geral — Localizando-se no Espaço", "subassunto": "Coordenadas geográficas e fusos horários", "gabarito": "D", "referencia": "coordenadas, hemisférios e diferença de horário" },
+        { "numero": 30, "materia": "geo", "assunto": "Geografia Geral — O Espaço Político e Econômico", "subassunto": "Poder global e nova ordem mundial", "gabarito": "E", "referencia": "projeção de poder por bases militares" },
+        { "numero": 31, "materia": "geo", "assunto": "Geografia Geral — O Espaço Humano", "subassunto": "Transição demográfica", "gabarito": "C", "referencia": "curvas de natalidade, mortalidade e crescimento vegetativo" },
+        { "numero": 32, "materia": "geo", "assunto": "Geografia do Brasil — O Espaço Humano", "subassunto": "Urbanização brasileira", "gabarito": "E", "referencia": "urbanização, municípios e arrecadação" },
+
+        { "numero": 33, "materia": "his", "assunto": "O Mundo na Guerra Fria", "subassunto": "República Brasileira entre 1945 e 1991", "gabarito": "D", "referencia": "governo JK e Plano de Metas" },
+        { "numero": 34, "materia": "his", "assunto": "O Mundo na Época da Segunda Guerra Mundial", "subassunto": "Período entre-guerras", "gabarito": "B", "referencia": "fundamentos comuns ao nazismo e ao fascismo" },
+        { "numero": 35, "materia": "his", "assunto": "O Mundo na Guerra Fria", "subassunto": "Surgimento do mundo bipolar", "gabarito": "A", "referencia": "sucessores de Stalin na União Soviética" },
+        { "numero": 36, "materia": "his", "assunto": "As Revoluções Inglesas e a Revolução Industrial", "subassunto": "Revolução Industrial", "gabarito": "E", "referencia": "máquina a vapor na Primeira Revolução Industrial" },
+        { "numero": 37, "materia": "his", "assunto": "O Sistema Colonial Português na América", "subassunto": "Invasões estrangeiras", "gabarito": "C", "referencia": "invasões holandesas durante a União Ibérica" },
+        { "numero": 38, "materia": "his", "assunto": "Os Estados Nacionais Europeus da Idade Moderna, o Absolutismo e o Mercantilismo", "subassunto": "Absolutismo", "gabarito": "A", "referencia": "Maquiavel e a razão de Estado" },
+        { "numero": 39, "materia": "his", "assunto": "A Expansão Marítima Europeia", "subassunto": "Expansão Marítima Europeia", "gabarito": "E", "referencia": "viagens de circum-navegação" },
+        { "numero": 40, "materia": "his", "assunto": "Os Estados Nacionais Europeus da Idade Moderna, o Absolutismo e o Mercantilismo", "subassunto": "Mercantilismo", "gabarito": "E", "referencia": "práticas econômicas dos Estados modernos" },
+        { "numero": 41, "materia": "his", "assunto": "O Brasil Imperial", "subassunto": "Período Regencial", "gabarito": "C", "referencia": "Caxias e a Balaiada" },
+        { "numero": 42, "materia": "his", "assunto": "O Mundo no Final do Século XX e Início do Século XXI", "subassunto": "Guerra das Malvinas (1982)", "gabarito": "E", "referencia": "partes e objeto da Guerra das Malvinas" },
+        { "numero": 43, "materia": "his", "assunto": "A Montagem da Colonização Europeia na América", "subassunto": "Sistema Colonial Inglês", "gabarito": "A", "referencia": "colônias inglesas de exploração e povoamento" },
+        { "numero": 44, "materia": "his", "assunto": "O Mundo na Época da Primeira Guerra Mundial", "subassunto": "República da Espada e República Velha no Brasil", "gabarito": "B", "referencia": "Revolta da Vacina" },
+
+        { "numero": 45, "materia": "ing", "assunto": "Compreensão de textos", "subassunto": "Compreensão específica de expressões, frases e palavras", "gabarito": "A", "referencia": "sentido temporal de is set to by 2028" },
+        { "numero": 46, "materia": "ing", "assunto": "Compreensão de textos", "subassunto": "Compreensão específica de expressões, frases e palavras", "gabarito": "B", "referencia": "equivalência semântica de actually" },
+        { "numero": 47, "materia": "ing", "assunto": "Compreensão de textos", "subassunto": "Compreensão geral de textos", "gabarito": "E", "referencia": "usos históricos dos túneis de Londres" },
+        { "numero": 48, "materia": "ing", "assunto": "Compreensão de textos", "subassunto": "Compreensão específica de expressões, frases e palavras", "gabarito": "A", "referencia": "sentido contextual do adjetivo bold" },
+        { "numero": 49, "materia": "ing", "assunto": "Compreensão de textos", "subassunto": "Compreensão geral de textos", "gabarito": "C", "referencia": "síntese dos problemas do ensino digital" },
+        { "numero": 50, "materia": "ing", "assunto": "Estruturas gramaticais", "subassunto": "Conjunctions", "gabarito": "E", "referencia": "conjunções para completar lacunas" },
+        { "numero": 51, "materia": "ing", "assunto": "Estruturas gramaticais", "subassunto": "Pronouns", "gabarito": "D", "referencia": "referentes de where e their" },
+        { "numero": 52, "materia": "ing", "assunto": "Estruturas gramaticais", "subassunto": "Wh-questions", "gabarito": "E", "referencia": "auxiliares e concordância em perguntas" },
+        { "numero": 53, "materia": "ing", "assunto": "Compreensão de textos", "subassunto": "Compreensão geral de textos", "gabarito": "B", "referencia": "dados biométricos no texto sobre Worldcoin" },
+        { "numero": 54, "materia": "ing", "assunto": "Estruturas gramaticais", "subassunto": "Nouns", "gabarito": "D", "referencia": "classe gramatical de statelessness" },
+        { "numero": 55, "materia": "ing", "assunto": "Compreensão de textos", "subassunto": "Compreensão específica de expressões, frases e palavras", "gabarito": "C", "referencia": "sentido contextual de sitting an exam" },
+        { "numero": 56, "materia": "ing", "assunto": "Compreensão de textos", "subassunto": "Compreensão geral de textos", "gabarito": "B", "referencia": "afirmações sobre pessoas apátridas" }
+      ]
+    }
+  ]
+}

@@ -161,10 +161,20 @@ test("aluno escreve o PRÓPRIO registro e atualiza estado de atividade da PRÓPR
     );
     assert.equal(ins.rowCount, 1);
 
+    // A linha é escolhida DENTRO das metas do próprio aluno e de forma
+    // determinística. Antes vinha de um `limit 1` solto sobre a tabela
+    // toda, filtrado por meta 'ativa': isso amarrava o teste de RLS ao
+    // calendário do seed de demonstração — passado o fim da trilha, não
+    // há meta ativa e o teste falhava sem nenhuma regressão de
+    // isolamento. A RLS (0002) gateia por dono da meta, não por status.
     const upd = await c.query(
       `update meta_atividades set estado = 'concluida'
-       where meta_id in (select id from metas where aluno_id = $1 and status = 'ativa')
-         and id = (select id from meta_atividades limit 1)`,
+        where id = (
+          select ma.id from meta_atividades ma
+            join metas m on m.id = ma.meta_id
+           where m.aluno_id = $1
+           order by m.semana_numero desc, ma.id
+           limit 1)`,
       [ALUNO_LUCAS]
     );
     assert.equal(upd.rowCount, 1, "aluno deveria poder concluir atividade da própria meta");
@@ -181,8 +191,19 @@ test("aluno escreve o PRÓPRIO registro e atualiza estado de atividade da PRÓPR
 test("conteúdo global (trilha) é legível pelas duas escolas e não é gravável por nenhuma", async () => {
   for (const id of [IDS.alunoA, IDS.alunoB, IDS.coordA, IDS.coordB]) {
     await como(id, async (c) => {
-      const r = await c.query("select count(*)::int as n from trilha_semanas");
-      assert.equal(r.rows[0].n, 9, "as 9 semanas da trilha CN deveriam ser visíveis");
+      const cn = await c.query(
+        `select count(*)::int as n from trilha_semanas s
+           join trilhas t on t.id = s.trilha_id where t.nicho = 'colegio-naval'`
+      );
+      assert.equal(cn.rows[0].n, 9, "as 9 semanas da trilha CN deveriam ser visíveis");
+      // PED2-R3: a EsPCEx ganhou calendário próprio. Toda trilha é
+      // conteúdo do operador — as duas escolas enxergam as duas.
+      const nichos = await c.query(
+        `select distinct t.nicho from trilhas t
+           join trilha_semanas s on s.trilha_id = t.id order by 1`
+      );
+      assert.deepEqual(nichos.rows.map((x) => x.nicho), ["colegio-naval", "espcex"],
+        "trilha é global: nenhuma escola perde nem ganha calendário");
     });
   }
   await como(IDS.coordA, async (c) => {

@@ -80,11 +80,19 @@ test("Biologia do CN traz os 5 assuntos do programa catalogado", async () => {
   });
 });
 
-test("o status do dado é preservado: a dúvida de OCR da Química EsPCEx está como 'validar'", async () => {
+// PED2-R3: este item entrou na Fase 15.2 como 'validar' — dúvida de
+// OCR no material-fonte. O seed 19, tagueado sobre o Anexo C do edital
+// de 2026, encerrou a dúvida: o status virou 'oficial' e a observação
+// continua carregando a fonte que a encerrou. O campo status_dado segue
+// sendo o porteiro do dado, não decoração — por isso a segunda asserção.
+test("o status do dado é rastreável: a antiga dúvida de OCR da Química EsPCEx virou 'oficial' citando o edital", async () => {
   await como(IDS.alunoA, async (c) => {
     const r = await c.query("select status_dado, observacao from assuntos where exam_tag='espcex' and materia_codigo='qui' and nome like 'Eletro%'");
-    assert.equal(r.rows[0].status_dado, "validar");
+    assert.equal(r.rows[0].status_dado, "oficial");
     assert.match(r.rows[0].observacao, /OCR/i);
+    assert.match(r.rows[0].observacao, /edital/i);
+    const s = await c.query("select count(*)::int as n from assuntos where status_dado not in ('oficial','validar')");
+    assert.equal(s.rows[0].n, 0, "todo assunto declara a procedência do dado");
   });
 });
 

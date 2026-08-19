@@ -13,10 +13,13 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { pool, como, comoServidor, esperaErro, IDS, ESCOLA_A, ALUNO_LUCAS } from "./identidades.mjs";
+import { diaNaSemanaCN } from "./calendario-cn.mjs";
 
 test.after(async () => { await pool.end(); });
 
-const DIA = "2026-06-15";
+// Data dentro da trilha CN do seed, lida do banco (o seed 02 ancora a
+// semana 3 na semana corrente).
+const DIA = await diaNaSemanaCN(3);
 
 async function saude(c, janela = 26) {
   const r = await c.query("select * from app.virada_saude($1)", [janela]);

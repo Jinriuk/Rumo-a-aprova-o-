@@ -4,6 +4,8 @@
   "nome": "Colégio Naval — CPACN/2026 (9 semanas)",
   "versao": 1,
   "metaQuestoesSemana": 250,
+  "semanaAncora": 3,
+  "comentarioAncora": "As datas das semanas abaixo são a FORMA da trilha (duração e encaixe de cada uma), não um calendário fixo: o seed gerado ancora a semana indicada em semanaAncora na semana corrente de America/Sao_Paulo. Mexer nas datas muda a forma; mexer em semanaAncora muda em que ponto da trilha a demonstração começa.",
   "disciplinas": [
     { "codigo": "mat",  "nome": "Matemática",    "abrev": "Mat",  "cor": "#CDA349" },
     { "codigo": "ing",  "nome": "Inglês",        "abrev": "Ing",  "cor": "#49B6CF" },

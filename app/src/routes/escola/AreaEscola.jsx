@@ -20,7 +20,7 @@ import { mensagemAmigavel } from "../../shared/lib/erros.js";
 import { navReducer, NAV_INICIAL } from "./navegacaoEscola.js";
 import * as db from "../../shared/data/index.js";
 
-const VAZIO = { turmas: [], alunos: [], consentimentos: [], logs: [], trilha: null, concursos: [], resumo: [], simuladosEscola: [], trilhas: [] };
+const VAZIO = { turmas: [], alunos: [], consentimentos: [], logs: [], concursos: [], resumo: [], simuladosEscola: [], trilhas: [] };
 
 export default function AreaEscola({ perfil }) {
   const T = useTema();
@@ -28,17 +28,17 @@ export default function AreaEscola({ perfil }) {
   // navegacaoEscola.js. Cada transição deixa o estado coerente.
   const [nav, despacharNav] = useReducer(navReducer, NAV_INICIAL);
   const { tab, filtroStatus: filtroAlunosStatus, alunoAberto } = nav;
-  // Cancelamento (tarefa 81): a carga mais pesada do app são estas 9
+  // Cancelamento (tarefa 81): a carga mais pesada do app são estas 8
   // leituras paralelas da coordenação. O signal do useRecurso é
   // repassado a cada uma; se a coordenação sai da tela (ou recarrega)
   // no meio, as viagens em curso são abortadas em vez de só ignoradas.
   const { dados: carregado, carregando, erro, recarregar } = useRecurso(
     (signal) => Promise.all([
       db.listarTurmas({ signal }), db.listarAlunos({ signal }), db.listarConsentimentos({ signal }),
-      db.listarLogsAcesso(100, { signal }), db.trilhaPadrao({ signal }), db.listarConcursos({ signal }),
+      db.listarLogsAcesso(100, { signal }), db.listarConcursos({ signal }),
       db.resumoEscola({ signal }), db.listarSimuladosEscola({ signal }), db.listarTrilhas({ signal }),
-    ]).then(([turmas, alunos, consentimentos, logs, trilha, concursos, resumo, simuladosEscola, trilhas]) =>
-      ({ turmas, alunos, consentimentos, logs, trilha, concursos, resumo, simuladosEscola, trilhas })),
+    ]).then(([turmas, alunos, consentimentos, logs, concursos, resumo, simuladosEscola, trilhas]) =>
+      ({ turmas, alunos, consentimentos, logs, concursos, resumo, simuladosEscola, trilhas })),
     [],
   );
   const dados = carregado ?? VAZIO;
@@ -95,7 +95,7 @@ export default function AreaEscola({ perfil }) {
 
           {!carregando && !alunoAberto && tab === "alunos" && (
             <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-              <PainelCadastroAlunos turmas={dados.turmas} trilhaPadrao={dados.trilha} concursos={dados.concursos} aoMudar={recarregar} />
+              <PainelCadastroAlunos turmas={dados.turmas} trilhas={dados.trilhas} concursos={dados.concursos} aoMudar={recarregar} />
               <ListaAlunos alunos={dados.alunos} consentimentos={dados.consentimentos} concursos={dados.concursos}
                 turmas={dados.turmas} trilhas={dados.trilhas} resumoPorAluno={resumoPorAluno}
                 aoMudar={recarregar} aoGerarCredencial={setCredencial} aoVerAluno={verAluno}

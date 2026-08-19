@@ -14,11 +14,13 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { pool, como, comoServidor, esperaErro, IDS, ESCOLA_A, ALUNO_LUCAS } from "./identidades.mjs";
+import { diaNaSemanaCN } from "./calendario-cn.mjs";
 
 test.after(async () => { await pool.end(); });
 
-// Data dentro da trilha CN do seed (mesma referência do motor.test.mjs)
-const DIA = "2026-06-15";
+// Data dentro da trilha CN do seed, lida do banco (o seed 02 ancora a
+// semana 3 na semana corrente) — mesma referência do motor.test.mjs.
+const DIA = await diaNaSemanaCN(3);
 
 test("virada global: aluno com trilha vazia é pulado e reportado; os demais ganham meta", async () => {
   await comoServidor(async (c) => {

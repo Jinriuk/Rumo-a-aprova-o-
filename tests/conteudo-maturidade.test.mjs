@@ -10,6 +10,7 @@ import assert from "node:assert/strict";
 import {
   NIVEIS_MATURIDADE, MATURIDADE_CONCURSOS, APRESENTACAO_MATURIDADE,
   maturidadeDe, podeExibirComoPronto, aceitaAluno, podeAtribuirTrilhaSemanal,
+  trilhaSemanalDoConcurso,
 } from "../app/src/modules/conteudo/maturidade.js";
 import {
   validar, conteudoRealPorConcurso, integridadeTrilhaSemanal,
@@ -23,20 +24,35 @@ test("toda maturidade declarada usa um nível válido", () => {
   }
 });
 
-test("CN é a âncora completa; só ela é exibível como pronta", () => {
+test("CN e EsPCEx têm conteúdo completo e podem ser exibidos como prontos", () => {
   assert.equal(maturidadeDe("cn"), "completa");
+  assert.equal(maturidadeDe("espcex"), "completa");
   assert.equal(podeExibirComoPronto("cn"), true);
+  assert.equal(podeExibirComoPronto("espcex"), true);
   for (const cod of Object.keys(MATURIDADE_CONCURSOS)) {
-    if (cod === "cn") continue;
+    if (["cn", "espcex"].includes(cod)) continue;
     assert.equal(podeExibirComoPronto(cod), false, `${cod} não pode aparecer como pronto`);
   }
 });
 
 test("só concurso completo recebe a trilha semanal (calendário)", () => {
   assert.equal(podeAtribuirTrilhaSemanal("cn"), true);
-  for (const cod of ["espcex", "epcar", "esa", "eear", "cm"]) {
+  assert.equal(podeAtribuirTrilhaSemanal("espcex"), true);
+  for (const cod of ["epcar", "esa", "eear", "cm"]) {
     assert.equal(podeAtribuirTrilhaSemanal(cod), false, `${cod} não deve herdar calendário do CN`);
   }
+});
+
+test("cada concurso completo recebe somente a trilha do próprio nicho", () => {
+  const trilhas = [
+    { id: "cn-v1", nicho: "colegio-naval", versao: 1, publicada: true },
+    { id: "esp-v1", nicho: "espcex", versao: 1, publicada: true },
+    { id: "outra-v99", nicho: "outro", versao: 99, publicada: true },
+    { id: "esp-r", nicho: "espcex", versao: 2, publicada: false },
+  ];
+  assert.equal(trilhaSemanalDoConcurso("cn", trilhas)?.id, "cn-v1");
+  assert.equal(trilhaSemanalDoConcurso("espcex", trilhas)?.id, "esp-v1");
+  assert.equal(trilhaSemanalDoConcurso("epcar", trilhas), null);
 });
 
 test("concurso indisponível não aceita aluno; os demais aceitam", () => {
@@ -74,15 +90,17 @@ test("nenhum concurso 'completa'/'beta' está sem assuntos no seed", () => {
   }
 });
 
-test("CN tem trilha semanal real e estrutura de prova", () => {
+test("CN e EsPCEx têm trilha semanal real e estrutura de prova", () => {
   const real = conteudoRealPorConcurso();
-  assert.equal(real.cn.trilhaSemanal, true);
-  assert.equal(real.cn.provaOficial, true);
-  assert.equal(real.cn.assuntos, true);
+  for (const codigo of ["cn", "espcex"]) {
+    assert.equal(real[codigo].trilhaSemanal, true, codigo);
+    assert.equal(real[codigo].provaOficial, true, codigo);
+    assert.equal(real[codigo].assuntos, true, codigo);
+  }
 });
 
 // ---------- integridade estrutural ----------
-test("trilha semanal do CN não tem semana vazia, tarefa sem texto ou sem disciplina", () => {
+test("trilhas semanais de CN e EsPCEx têm integridade estrutural", () => {
   assert.deepEqual(integridadeTrilhaSemanal(), []);
 });
 
