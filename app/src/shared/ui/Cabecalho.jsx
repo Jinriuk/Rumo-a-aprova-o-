@@ -8,7 +8,7 @@ import * as db from "../data/index.js";
 export function Cabecalho({ titulo, subtitulo, diasProva, diasProvaMedia, nomeUsuario, rotuloPapel }) {
   const { escola, tema: T } = useBranding();
   return (
-    <header style={{ borderBottom: `1px solid ${T.line}`, background: `linear-gradient(180deg, ${T.bg2}, ${T.bg})`, position: "sticky", top: 0, zIndex: 20, paddingTop: "env(safe-area-inset-top)" }}>
+    <header className="app-header" style={{ borderBottom: `1px solid ${T.line}`, background: `linear-gradient(180deg, ${T.bg2}, ${T.bg})`, position: "sticky", top: 0, zIndex: 20, paddingTop: "env(safe-area-inset-top)" }}>
       <style>{`@media (max-width:560px){ .hdr-user{display:none !important;} .hdr-prova-num{font-size:18px !important;} }`}</style>
       <div style={{ padding: "10px max(18px, env(safe-area-inset-right)) 10px max(18px, env(safe-area-inset-left))", display: "flex", alignItems: "center", gap: 11 }}>
         <MarcaEscola tamanho={34} />

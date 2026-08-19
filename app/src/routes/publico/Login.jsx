@@ -85,7 +85,7 @@ export default function Login() {
           <div className="disp" style={{ fontSize: 17, fontWeight: 700, color: T.ink, marginBottom: 8 }}>Solicitação recebida</div>
           <div style={{ fontSize: 13.5, color: T.sub, lineHeight: 1.6 }}>{msgConfirmacao}</div>
         </div>
-        <button onClick={() => { setTela("login"); setEmailRecup(""); setErr(""); }}
+        <button className="login-primary" onClick={() => { setTela("login"); setEmailRecup(""); setErr(""); }}
           style={{ width: "100%", marginTop: 8, background: T.gold, color: "#0A1622", border: "none", borderRadius: 10, padding: "14px", minHeight: 50, fontWeight: 800, fontSize: 15 }}>
           ← Voltar ao login
         </button>
@@ -103,10 +103,10 @@ export default function Login() {
         </div>
         <form onSubmit={solicitarSenha}>
           <label htmlFor={idRecup} style={lblS}>E-mail</label>
-          <input id={idRecup} type="email" value={emailRecup} onChange={(e) => { setEmailRecup(e.target.value); setErr(""); }}
+          <input className="login-input" id={idRecup} type="email" value={emailRecup} onChange={(e) => { setEmailRecup(e.target.value); setErr(""); }}
             placeholder="coord@escola.com.br" autoFocus style={{ ...inputS, marginBottom: 12 }} />
           {err && <div style={{ color: T.red, fontSize: 12.5, marginBottom: 8 }}>{err}</div>}
-          <button type="submit" disabled={busy || !emailRecupValido}
+          <button className="login-primary" type="submit" disabled={busy || !emailRecupValido}
             style={{ width: "100%", background: (busy || !emailRecupValido) ? T.line : T.gold, color: (busy || !emailRecupValido) ? T.sub : "#0A1622", border: "none", borderRadius: 10, padding: "14px", minHeight: 50, fontWeight: 800, fontSize: 15 }}>
             {busy ? "Enviando…" : "Enviar instruções"}
           </button>
@@ -162,7 +162,8 @@ export default function Login() {
         ].map(([id, titulo, desc]) => {
           const on = modo === id;
           return (
-            <button type="button" key={id} onClick={() => { setModo(id); setErr(""); }}
+            <button className="login-role" type="button" key={id} aria-pressed={on}
+              onClick={() => { setModo(id); setErr(""); }}
               style={{ textAlign: "left", border: `1px solid ${on ? T.gold : T.line}`, background: on ? T.cardHi : T.bg, color: T.ink, borderRadius: 10, padding: "12px 14px", minHeight: 48 }}>
               <div style={{ fontWeight: 700, fontSize: 14.5 }}>{titulo}</div>
               <div style={{ fontSize: 12, color: T.sub, marginTop: 2 }}>{desc}</div>
@@ -175,7 +176,7 @@ export default function Login() {
         {modo === "codigo" ? (
           <>
             <label htmlFor={idCodigo} style={lblS}>Código de acesso</label>
-            <input id={idCodigo} value={codigo} autoComplete="off" autoCapitalize="characters"
+            <input className="login-input" id={idCodigo} value={codigo} autoComplete="off" autoCapitalize="characters"
               onChange={(e) => { setCodigo(e.target.value.toUpperCase()); setErr(""); }}
               placeholder="Ex.: LUCASDEMO2026"
               style={{ ...inputS, letterSpacing: 1.5, textAlign: "center", fontFamily: "monospace" }} />
@@ -183,12 +184,12 @@ export default function Login() {
         ) : (
           <>
             <label htmlFor={idEmail} style={lblS}>E-mail</label>
-            <input id={idEmail} type="email" value={email} placeholder="coordenacao@escola.com.br"
+            <input className="login-input" id={idEmail} type="email" value={email} placeholder="coordenacao@escola.com.br"
               onChange={(e) => { setEmail(e.target.value); setErr(""); }}
               style={{ ...inputS, marginBottom: 12 }} />
             <label htmlFor={idSenha} style={lblS}>Senha</label>
             <div style={{ position: "relative" }}>
-              <input id={idSenha} type={mostrarSenha ? "text" : "password"} value={senha}
+              <input className="login-input" id={idSenha} type={mostrarSenha ? "text" : "password"} value={senha}
                 placeholder="Senha de acesso"
                 onChange={(e) => { setSenha(e.target.value); setErr(""); }}
                 style={{ ...inputS, paddingRight: 46 }} />
@@ -203,7 +204,7 @@ export default function Login() {
 
         {err && <div style={{ color: T.red, fontSize: 12.5, marginTop: 8 }}>{err}</div>}
 
-        <button type="submit" disabled={busy || !pronto}
+        <button className="login-primary" type="submit" disabled={busy || !pronto}
           style={{ width: "100%", marginTop: 16, background: (busy || !pronto) ? T.line : T.gold, color: (busy || !pronto) ? T.sub : "#0A1622", border: "none", borderRadius: 10, padding: "14px", minHeight: 50, fontWeight: 800, fontSize: 15 }}>
           {busy ? "Entrando…" : "Entrar"}
         </button>
@@ -251,12 +252,38 @@ function LogoTopo() {
   );
 }
 
+function HistoriaLogin() {
+  return (
+    <section className="login-story" aria-label="Sua jornada de preparação">
+      <div className="login-kicker"><span aria-hidden="true">◆</span> Central de preparação</div>
+      <h1>Sua aprovação vira uma <em>missão possível.</em></h1>
+      <p>
+        Entre, veja o alvo mais importante de hoje e avance com um plano que
+        transforma constância, questões e domínio em progresso visível.
+      </p>
+      <div className="login-proof-grid" aria-label="Como a experiência funciona">
+        <div className="login-proof"><strong>01</strong><span>missão central por vez</span></div>
+        <div className="login-proof"><strong>XP</strong><span>concedido pelo progresso real</span></div>
+        <div className="login-proof"><strong>Ritmo</strong><span>semana, ofensiva e domínio</span></div>
+      </div>
+    </section>
+  );
+}
+
 function Wrapper({ children }) {
   return (
-    <div style={{ background: `repeating-linear-gradient(45deg, transparent, transparent 30px, rgba(30,58,85,0.25) 30px, rgba(30,58,85,0.25) 31px), repeating-linear-gradient(-45deg, transparent, transparent 30px, rgba(30,58,85,0.25) 30px, rgba(30,58,85,0.25) 31px), radial-gradient(1200px 600px at 50% -10%, ${T.bg2}, ${T.bg})`, minHeight: "100vh", color: T.ink, fontFamily: "Archivo, system-ui, sans-serif", display: "flex", alignItems: "center", justifyContent: "center", padding: 18 }}>
+    <div className="login-shell" style={{
+      "--ui-bg": T.bg, "--ui-bg-2": T.bg2, "--ui-card": T.card,
+      "--ui-card-hi": T.cardHi, "--ui-line": T.line, "--ui-ink": T.ink,
+      "--ui-sub": T.sub, "--ui-accent": T.gold, "--ui-green": T.green,
+      "--ui-red": T.red,
+    }}>
       <style>{FONTES_CSS}</style>
-      <div style={{ width: "100%", maxWidth: 380, background: T.card, border: `1px solid ${T.line}`, borderTop: `4px solid ${T.gold}`, borderRadius: 16, padding: 22 }}>
-        {children}
+      <div className="login-layout">
+        <HistoriaLogin />
+        <main className="login-card">
+          {children}
+        </main>
       </div>
     </div>
   );

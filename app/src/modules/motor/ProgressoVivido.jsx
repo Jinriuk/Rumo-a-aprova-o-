@@ -33,7 +33,7 @@ export function FeedbackProgresso({ feedback, aoFechar }) {
         boxShadow: "0 10px 30px rgba(0,0,0,.35)", fontWeight: 800, fontSize: 14.5,
         display: "flex", alignItems: "center", gap: 10, maxWidth: "92vw",
       }}
-      className="fade"
+      className="fade reward-island"
     >
       <span style={{ fontSize: 18 }}>★</span>
       <span>{partes.join(" · ")}</span>

@@ -1,6 +1,7 @@
 import React from "react";
 import { createRoot } from "react-dom/client";
 import App from "./App.jsx";
+import "./shared/ui/experiencia.css";
 import { ErroFronteira } from "./shared/ui/ErroFronteira.jsx";
 import { instalarCapturaGlobal } from "./shared/lib/observabilidade.js";
 
