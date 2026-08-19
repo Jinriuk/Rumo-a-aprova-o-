@@ -33,7 +33,8 @@ export function MenuPrincipal({ abas, ativo, aoTrocar, usuario }) {
   }
 
   const ItemBarra = ({ rotulo, badge, icone, on, aoClicar }) => (
-    <button onClick={aoClicar}
+    <button className="app-nav-item" onClick={aoClicar}
+      aria-current={on ? "page" : undefined}
       style={{ flex: 1, minWidth: 0, border: "none", background: "transparent", display: "flex", flexDirection: "column", alignItems: "center", gap: 4, padding: "8px 2px 7px", position: "relative", color: on ? T.gold : T.sub }}>
       <span style={{ position: "absolute", top: 0, left: "22%", right: "22%", height: 3, borderRadius: "0 0 3px 3px", background: on ? T.gold : "transparent", boxShadow: on ? `0 0 10px ${T.gold}88` : "none" }} />
       <Icone nome={icone} tam={21} grosso={on ? 2.4 : 2} />
@@ -65,7 +66,7 @@ export function MenuPrincipal({ abas, ativo, aoTrocar, usuario }) {
       `}</style>
 
       {/* ============ DESKTOP: menu lateral fixo ============ */}
-      <nav className="menu-lateral" style={{ position: "fixed", left: 0, top: 0, bottom: 0, width: LARGURA_SIDEBAR, zIndex: 10, flexDirection: "column", background: `linear-gradient(180deg, ${T.bg2} 0%, ${T.bg} 100%)`, borderRight: `1px solid ${T.line}`, padding: "86px 12px 14px", overflow: "hidden" }}>
+      <nav className="menu-lateral app-sidebar" aria-label="Navegação principal" style={{ position: "fixed", left: 0, top: 0, bottom: 0, width: LARGURA_SIDEBAR, zIndex: 10, flexDirection: "column", background: `linear-gradient(180deg, ${T.bg2} 0%, ${T.bg} 100%)`, borderRight: `1px solid ${T.line}`, padding: "86px 12px 14px", overflow: "hidden" }}>
 
         {/* perfil VERTICAL: avatar centralizado em cima, nome embaixo
             (quebra em até 2 linhas — nada de "…" em nome grande).
@@ -92,7 +93,8 @@ export function MenuPrincipal({ abas, ativo, aoTrocar, usuario }) {
           {abas.map(([k, lb, badge, icone]) => {
             const on = ativo === k;
             return (
-              <button key={k} className={on ? "" : "mi"} onClick={() => trocar(k)}
+              <button key={k} className={`app-nav-item ${on ? "" : "mi"}`.trim()} onClick={() => trocar(k)}
+                aria-current={on ? "page" : undefined}
                 style={{
                   display: "flex", alignItems: "center", gap: 12, width: "100%", textAlign: "left",
                   border: "none", borderRadius: 11, padding: "9px 10px", minHeight: 48,
@@ -137,7 +139,7 @@ export function MenuPrincipal({ abas, ativo, aoTrocar, usuario }) {
       {/* ============ CELULAR/TABLET: barra inferior fixa ============
           fundo SÓLIDO de propósito: backdrop-filter (blur) em elemento
           fixo repinta a cada pixel rolado e trava o scroll em tablet */}
-      <nav className="menu-barra" style={{ position: "fixed", left: 0, right: 0, bottom: 0, zIndex: 40, background: T.bg2, borderTop: `1px solid ${T.line}`, paddingBottom: "env(safe-area-inset-bottom)", boxShadow: "0 -4px 16px #0006" }}>
+      <nav className="menu-barra app-bottom-nav" aria-label="Navegação principal" style={{ position: "fixed", left: 0, right: 0, bottom: 0, zIndex: 40, background: T.bg2, borderTop: `1px solid ${T.line}`, paddingBottom: "env(safe-area-inset-bottom)", boxShadow: "0 -4px 16px #0006" }}>
         {naBarra.map(([k, lb, badge, icone]) => (
           <ItemBarra key={k} rotulo={lb} badge={badge} icone={icone} on={ativo === k} aoClicar={() => trocar(k)} />
         ))}

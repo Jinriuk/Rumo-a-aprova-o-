@@ -3,10 +3,12 @@
 import React from "react";
 import { useTema } from "../branding/BrandingContext.jsx";
 
-export function Card({ children, style }) {
+export function Card({ children, style, className = "", onClick }) {
   const T = useTema();
   return (
-    <div style={{ background: T.card, border: `1px solid ${T.line}`, borderRadius: 12, padding: 16, ...style }}>
+    <div className={`ui-card ${className}`.trim()} onClick={onClick}
+      data-interactive={onClick ? "true" : undefined}
+      style={{ background: T.card, border: `1px solid ${T.line}`, borderRadius: 12, padding: 16, ...style }}>
       {children}
     </div>
   );
@@ -82,7 +84,7 @@ export function Botao({ children, onClick, disabled, secundario, perigo, style, 
   const fundo = disabled ? T.line : perigo ? T.red : secundario ? T.card : T.gold;
   const cor = disabled ? T.sub : secundario ? T.ink : "#0A1622";
   return (
-    <button type={type} onClick={onClick} disabled={disabled}
+    <button className="ui-button" type={type} onClick={onClick} disabled={disabled}
       style={{ background: fundo, color: cor, border: secundario ? `1px solid ${T.line}` : "none", borderRadius: 8, padding: "13px 20px", minHeight: 48, fontWeight: 700, fontSize: 15, ...style }}>
       {children}
     </button>
@@ -287,7 +289,7 @@ export function useToast(ms = 2600) {
 export function SectionCard({ titulo, sub, acao, children, style, semPadding }) {
   const T = useTema();
   return (
-    <div style={{ background: T.card, border: `1px solid ${T.line}`, borderRadius: 14, overflow: "hidden", ...style }}>
+    <div className="ui-section-card" style={{ background: T.card, border: `1px solid ${T.line}`, borderRadius: 14, overflow: "hidden", ...style }}>
       {(titulo || acao) && (
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, padding: "13px 16px", borderBottom: `1px solid ${T.line}`, flexWrap: "wrap" }}>
           <div style={{ minWidth: 0 }}>
@@ -328,9 +330,14 @@ export function Tabs({ abas, ativo, aoTrocar }) {
 export function StatCard({ rotulo, valor, sub, icone, gradiente, tom, onClick }) {
   const T = useTema();
   const corTom = tom === "ok" ? T.green : tom === "alerta" ? T.gold : tom === "risco" ? T.red : T.ink;
+  const tecla = onClick ? (e) => {
+    if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onClick(); }
+  } : undefined;
   if (gradiente) {
     return (
-      <div onClick={onClick} style={{ background: `linear-gradient(135deg, ${gradiente}, ${gradiente}99)`, borderRadius: 13, padding: "12px 14px", position: "relative", overflow: "hidden", minHeight: 84, cursor: onClick ? "pointer" : "default" }}>
+      <div className="ui-stat-card" data-interactive={onClick ? "true" : undefined}
+        onClick={onClick} onKeyDown={tecla} role={onClick ? "button" : undefined} tabIndex={onClick ? 0 : undefined}
+        style={{ background: `linear-gradient(135deg, ${gradiente}, ${gradiente}99)`, borderRadius: 13, padding: "12px 14px", position: "relative", overflow: "hidden", minHeight: 84, cursor: onClick ? "pointer" : "default" }}>
         <div style={{ fontSize: 11, color: "#0A1622", fontWeight: 800, textTransform: "uppercase", letterSpacing: 0.3, opacity: 0.85 }}>{rotulo}</div>
         <div className="num disp" style={{ fontSize: 25, fontWeight: 800, color: "#fff", lineHeight: 1.15, marginTop: 4, textShadow: "0 1px 2px #0004" }}>{valor}</div>
         {sub && <div style={{ fontSize: 10.5, color: "#0A1622", fontWeight: 600, marginTop: 2, opacity: 0.8 }}>{sub}</div>}
@@ -339,7 +346,9 @@ export function StatCard({ rotulo, valor, sub, icone, gradiente, tom, onClick })
     );
   }
   return (
-    <div onClick={onClick} style={{ background: T.bg, border: `1px solid ${T.line}`, borderRadius: 12, padding: "12px 14px", minHeight: 78, cursor: onClick ? "pointer" : "default" }}>
+    <div className="ui-stat-card" data-interactive={onClick ? "true" : undefined}
+      onClick={onClick} onKeyDown={tecla} role={onClick ? "button" : undefined} tabIndex={onClick ? 0 : undefined}
+      style={{ background: T.bg, border: `1px solid ${T.line}`, borderRadius: 12, padding: "12px 14px", minHeight: 78, cursor: onClick ? "pointer" : "default" }}>
       <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 11, color: T.sub, textTransform: "uppercase", letterSpacing: 0.4 }}>
         {icone && <span style={{ opacity: 0.8 }}>{icone}</span>}{rotulo}
       </div>
@@ -431,8 +440,9 @@ export function BarraXP({ pct = 0, alt = 8, brilho = true, trilho }) {
   const T = useTema();
   const v = Math.max(0, Math.min(100, pct));
   return (
-    <div style={{ height: alt, background: trilho ?? T.bg, borderRadius: alt, overflow: "hidden", border: `1px solid ${T.line}` }}>
-      <div style={{ width: `${v}%`, height: "100%", background: `linear-gradient(90deg, ${T.gold}, ${T.green})`, boxShadow: brilho ? `0 0 8px ${T.gold}66` : "none", transition: "width .4s ease" }} />
+    <div role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={v}
+      style={{ height: alt, background: trilho ?? T.bg, borderRadius: alt, overflow: "hidden", border: `1px solid ${T.line}` }}>
+      <div className="mission-progress-fill" style={{ width: `${v}%`, height: "100%", background: `linear-gradient(90deg, ${T.gold}, ${T.green})`, boxShadow: brilho ? `0 0 8px ${T.gold}66` : "none", transition: "width .4s ease" }} />
     </div>
   );
 }

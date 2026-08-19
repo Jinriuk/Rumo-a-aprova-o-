@@ -12,8 +12,12 @@ import { L, patente, fmtHoras, fmtHorasCurto, xpPorPrioridade } from "./jargao.j
 export function FaixaAspirante({ nome, contexto, xp, streak, aoAbrirConquistas }) {
   const T = useTema();
   const p = patente(xp);
+  const abrirPorTeclado = aoAbrirConquistas ? (e) => {
+    if (e.key === "Enter" || e.key === " ") { e.preventDefault(); aoAbrirConquistas(); }
+  } : undefined;
   return (
-    <div onClick={aoAbrirConquistas} role={aoAbrirConquistas ? "button" : undefined}
+    <div className="player-rank" onClick={aoAbrirConquistas} onKeyDown={abrirPorTeclado}
+      role={aoAbrirConquistas ? "button" : undefined} tabIndex={aoAbrirConquistas ? 0 : undefined}
       title={aoAbrirConquistas ? "Ver patentes e conquistas" : undefined}
       style={{ background: `linear-gradient(135deg, ${T.cardHi}, ${T.card})`, border: `1px solid ${T.line}`, borderRadius: 14, padding: "12px 14px", cursor: aoAbrirConquistas ? "pointer" : "default" }}>
       <div style={{ display: "flex", alignItems: "center", gap: 11 }}>
@@ -50,7 +54,7 @@ export function MissaoAtual({ meta, trilha, m, aoAvancar }) {
   const T = useTema();
   if (!meta) {
     return (
-      <div style={{ background: T.card, border: `1px solid ${T.line}`, borderRadius: 14, padding: 18, textAlign: "center" }}>
+      <div className="mission-card" style={{ background: T.card, border: `1px solid ${T.line}`, borderRadius: 14, padding: 18, textAlign: "center" }}>
         <div className="disp" style={{ fontSize: 15, fontWeight: 700 }}>Missão sendo preparada</div>
         <div style={{ fontSize: 12.5, color: T.sub, marginTop: 6, lineHeight: 1.5 }}>
           A missão da semana nasce no servidor, na virada. Se demorar, fale com a coordenação.
@@ -82,7 +86,7 @@ export function MissaoAtual({ meta, trilha, m, aoAvancar }) {
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
       {/* MISSÃO ATUAL */}
-      <div style={{ background: `linear-gradient(160deg, ${T.cardHi}, ${T.card})`, border: `1.5px solid ${corBorda}66`, borderRadius: 14, padding: 16 }}>
+      <div className="mission-card" style={{ "--mission-accent": corBorda, background: `linear-gradient(160deg, ${T.cardHi}, ${T.card})`, border: `1.5px solid ${corBorda}66`, borderRadius: 14, padding: 16 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 9, flexWrap: "wrap", marginBottom: 8 }}>
           <span className="disp" style={{ background: corBorda, color: "#0A1622", borderRadius: 8, padding: "3px 11px", fontWeight: 800, fontSize: 14 }}>
             {L.missao.toUpperCase()} {meta.semana_numero}
@@ -100,7 +104,7 @@ export function MissaoAtual({ meta, trilha, m, aoAvancar }) {
         {/* barra com o marcador navegando */}
         <div style={{ position: "relative", height: 24, margin: "14px 0 8px" }}>
           <div style={{ position: "absolute", top: 7, left: 0, right: 0, height: 10, background: T.bg, borderRadius: 6, overflow: "hidden" }}>
-            <div style={{ width: `${pct}%`, height: "100%", background: `linear-gradient(90deg, ${corBorda}, ${pendentes === 0 ? T.green : T.green})`, transition: "width .4s" }} />
+            <div className="mission-progress-fill" style={{ width: `${pct}%`, height: "100%", background: `linear-gradient(90deg, ${corBorda}, ${pendentes === 0 ? T.green : T.green})`, transition: "width .4s" }} />
           </div>
           <div style={{ position: "absolute", top: 0, left: `calc(${pct}% - 12px)`, width: 24, height: 24, borderRadius: "50%", background: T.bg2, border: `2px solid ${corBorda}`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, transition: "left .4s", boxShadow: "0 0 8px #0008" }}>⚓</div>
         </div>
@@ -112,7 +116,7 @@ export function MissaoAtual({ meta, trilha, m, aoAvancar }) {
               ⚠ Missão atrasada — <b>{pendentes} {pendentes === 1 ? "pendência" : "pendências"}</b> em aberto. Conclua antes de avançar.
             </div>
             {aoAvancar && (
-              <button onClick={() => aoAvancar("registrar")}
+              <button className="mission-primary-action" onClick={() => aoAvancar("registrar")}
                 style={{ display: "block", width: "100%", marginTop: 12, background: T.red, color: "#fff", border: `1.5px solid ${T.red}`, borderRadius: 9, padding: "10px 16px", fontWeight: 700, fontSize: 13, cursor: "pointer", textAlign: "center" }}>
                 Concluir pendências
               </button>
@@ -125,7 +129,7 @@ export function MissaoAtual({ meta, trilha, m, aoAvancar }) {
             </div>
             {aoAvancar && (
               <div style={{ display: "flex", gap: 8, marginTop: 12, flexWrap: "wrap" }}>
-                <button onClick={() => aoAvancar("plano")}
+                <button className="mission-primary-action" onClick={() => aoAvancar("plano")}
                   style={{ flex: 1, minWidth: 140, background: T.gold, color: "#0A1622", border: `1.5px solid ${T.gold}`, borderRadius: 9, padding: "10px 12px", fontWeight: 700, fontSize: 13, cursor: "pointer" }}>
                   Ver próxima missão ›
                 </button>
@@ -142,7 +146,7 @@ export function MissaoAtual({ meta, trilha, m, aoAvancar }) {
               🎯 Sua missão: concluir <b style={{ color: T.gold }}>{pendentes} {pendentes === 1 ? "objetivo" : "objetivos"}</b> até {fmtBR(String(meta.fim))}.
             </div>
             {aoAvancar && (
-              <button onClick={() => aoAvancar("registrar")}
+              <button className="mission-primary-action" onClick={() => aoAvancar("registrar")}
                 style={{ display: "block", width: "100%", marginTop: 12, background: T.gold, color: "#0A1622", border: `1.5px solid ${T.gold}`, borderRadius: 9, padding: "10px 16px", fontWeight: 700, fontSize: 13, cursor: "pointer", textAlign: "center" }}>
                 ✎ Registrar estudo
               </button>
@@ -190,7 +194,7 @@ export function MissaoAtual({ meta, trilha, m, aoAvancar }) {
             : `Disponível em ${fmtBRDiaSemana(String(proxima.inicio))} — ${diasDesbloqueio === 1 ? "1 dia" : `${diasDesbloqueio} dias`}.`
           : "Complete os objetivos desta missão para avançar.";
         return (
-          <div style={{ display: "flex", alignItems: "center", gap: 12, background: T.card, border: `1px solid ${T.line}`, borderRadius: 12, padding: "11px 14px" }}>
+          <div className="next-mission" style={{ display: "flex", alignItems: "center", gap: 12, background: T.card, border: `1px solid ${T.line}`, borderRadius: 12, padding: "11px 14px" }}>
             <div style={{ width: 38, height: 38, borderRadius: 10, border: `1.5px solid ${T.line}`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 17, flexShrink: 0 }}>🔒</div>
             <div style={{ flex: 1, minWidth: 0 }}>
               <div style={{ fontSize: 10.5, color: T.sub, textTransform: "uppercase", letterSpacing: 0.5 }}>{L.proximaMissao}</div>
