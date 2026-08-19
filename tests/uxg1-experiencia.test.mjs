@@ -68,7 +68,13 @@ test("a entrada preserva os nomes acessíveis em que a suíte E2E se apoia", () 
   assert.match(src, /"Coordenação"/);
   assert.match(src, />Código de acesso</);
   assert.match(src, /busy \? "Abrindo sua central…" : "Entrar na missão"/);
-  assert.match(src, /aria-label=\{busy \? "Entrando" : "Entrar"\}/);
+  // WCAG 2.5.3 (Label in Name): o nome acessível precisa CONTER o
+  // rótulo visível. Um aria-label="Entrar" por cima de "Entrar na
+  // missão" quebra comando de voz — e existia só para agradar a um
+  // seletor de teste, que casa por substring de qualquer jeito.
+  const cta = /<m\.button className="login-primary"[\s\S]*?>/.exec(src)?.[0] ?? "";
+  assert.doesNotMatch(cta, /aria-label=/);
+  assert.match(cta, /aria-busy=/);
 });
 
 test("teclado enxerga todo alvo operável", () => {
@@ -83,6 +89,33 @@ test("login comunica a proposta e mantém uma ação primária", () => {
   assert.match(src, /Transforme o edital em missões/);
   assert.match(src, /aria-pressed=\{on\}/);
   assert.match(src, /className="login-primary" type="submit"/);
+});
+
+test("o pacote de features do Motion cobre tudo o que a entrada usa", () => {
+  // domAnimation = renderer + animations + gestures. NÃO inclui layout:
+  // com ele, `layout` e `layoutId` são ignorados em silêncio e a
+  // animação simplesmente não acontece. Se a tela passar a depender de
+  // layout animation, o pacote tem de virar domMax — e o custo de
+  // bundle vira uma decisão consciente, não um efeito que não roda.
+  const fontes = ["app/src/routes/publico/Login.jsx", "app/src/routes/publico/PortalLogin.jsx"]
+    .map((caminho) => ler(caminho)).join("\n");
+  const usaLayout = /\blayoutId=|\blayout\b(?==|\s*\/?>)/.test(fontes);
+  const pacote = /features=\{(\w+)\}/.exec(fontes)?.[1];
+  assert.ok(pacote, "a entrada precisa declarar o pacote de features do LazyMotion");
+  if (usaLayout) {
+    assert.equal(pacote, "domMax", "layout/layoutId exigem domMax — com domAnimation não animam");
+  } else {
+    assert.equal(pacote, "domAnimation", "sem layout animation, o pacote menor basta");
+  }
+});
+
+test("a entrada não anuncia estado que não mede", () => {
+  const fontes = ["app/src/routes/publico/Login.jsx", "app/src/routes/publico/PortalLogin.jsx"]
+    .map((caminho) => ler(caminho)).join("\n");
+  // "sistema online" seria um selo de saúde sem nenhuma verificação por
+  // trás; "continue de onde parou" é falso para quem nunca entrou.
+  assert.doesNotMatch(fontes, /SISTEMA ONLINE/i);
+  assert.doesNotMatch(fontes, /CONTINUE DE ONDE PAROU/i);
 });
 
 test("portal visual representa método sem fabricar métricas do aluno", () => {
@@ -111,7 +144,10 @@ test("efeitos vivos podem ser pausados e param fora da aba", () => {
 
 test("troca de papel e campos usam transição física sem trocar semântica", () => {
   const src = ler("app/src/routes/publico/Login.jsx");
-  assert.match(src, /layoutId="login-role-active"/);
+  // O realce viaja por transform escrito no elemento. Nem layoutId
+  // (precisa do pacote de layout, que não está carregado) nem var()
+  // em custom property não registrada interpolam — os dois teleportam.
+  assert.match(src, /className="login-role-pill"[^>]*\n?\s*style=\{\{ transform: `translateX/);
   assert.match(src, /type:\s*"spring"/);
   assert.match(src, /role="group"/);
   assert.match(src, /aria-pressed=\{on\}/);

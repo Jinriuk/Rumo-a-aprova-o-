@@ -240,8 +240,11 @@ export default function Login() {
 
         {err && <div className="login-erro" role="alert">{err}</div>}
 
+        {/* Sem aria-label por cima do texto: o nome acessível TEM de
+            conter o rótulo visível (WCAG 2.5.3), senão quem usa
+            comando de voz fala "entrar na missão" e nada acontece. */}
         <m.button className="login-primary" type="submit" disabled={busy || !pronto}
-          aria-label={busy ? "Entrando" : "Entrar"} aria-busy={busy ? true : undefined}
+          aria-busy={busy ? true : undefined}
           data-carregando={busy ? "true" : undefined}
           whileHover={busy || !pronto ? undefined : { y: -2, scale: 1.008 }}
           whileTap={busy || !pronto ? undefined : { y: 1, scale: .99 }}
@@ -327,6 +330,19 @@ function SeletorPapel({ modo, aoTrocar }) {
   return (
     <div className="login-role-switch" role="group" aria-label="Como você vai entrar"
       onKeyDown={navegar} style={{ "--papel-ativo": ativo }}>
+      {/* Um realce só, que VIAJA entre as opções.
+          Duas armadilhas resolvidas aqui:
+          1. layoutId não anima — o pacote de features carregado é o
+             domAnimation, que não inclui layout, então o realce
+             teleportava;
+          2. transform escrito no CSS a partir de var() TAMBÉM não
+             anima: custom property não registrada muda de forma
+             discreta, e a transição não interpola.
+          Por isso o transform é escrito aqui, direto no elemento: a
+          transição do CSS interpola normalmente, sem custo de motor
+          e sem depender de @property. */}
+      <span className="login-role-pill" aria-hidden="true"
+        style={{ transform: `translateX(calc(${ativo} * (100% + 8px)))` }} />
       {PAPEIS.map(([id, titulo, desc], i) => {
         const on = modo === id;
         return (
@@ -334,8 +350,6 @@ function SeletorPapel({ modo, aoTrocar }) {
             ref={(el) => { refs.current[i] = el; }}
             onClick={() => aoTrocar(id)}
             style={{ textAlign: "left", border: `1px solid ${T.line}`, background: T.bg, color: T.ink, borderRadius: 11, padding: "12px 13px", minHeight: 62 }}>
-            {on && <m.span className="login-role-pill" layoutId="login-role-active" aria-hidden="true"
-              transition={{ type: "spring", stiffness: 360, damping: 29 }} />}
             <span className="login-role-copy">
               <strong>{titulo}</strong>
               <small>{desc}</small>
@@ -371,7 +385,7 @@ function CargaCodigo({ preenchidos }) {
   );
 }
 
-function LogoTopo({ sobre = "CONTINUE DE ONDE PAROU", titulo = "Abra sua central" }) {
+function LogoTopo({ sobre = "ENTRADA DA CENTRAL", titulo = "Abra sua central" }) {
   return (
     <div className="login-card-heading">
       <div className="login-card-brand-row">
@@ -447,10 +461,12 @@ function useTremor(recusas, ref) {
 function HistoriaLogin({ efeitos }) {
   return (
     <section className="login-story" aria-label="Sua jornada de preparação">
+      {/* Sem selo de saúde do sistema aqui: esta tela não verifica
+          nada do servidor, e status inventado é a única coisa que
+          este produto não faz. */}
       <m.div className="login-hero-brand" initial={{ opacity: 0, y: -16 }} animate={{ opacity: 1, y: 0 }}
         transition={{ duration: .55, ease: [0.22, 1, 0.36, 1] }}>
         <MarcaPortal />
-        <span className="login-hero-online"><i /> SISTEMA ONLINE</span>
       </m.div>
 
       <m.div className="login-kicker" initial={{ opacity: 0, x: -24 }} animate={{ opacity: 1, x: 0 }}
@@ -544,7 +560,7 @@ function Wrapper({ children, recusas = 0 }) {
           <FundoPortal efeitos={fx.efeitos} />
           <div className="login-layout">
             <HistoriaLogin efeitos={fx.efeitos} />
-            <m.main className="login-card" ref={cartao} layout
+            <m.main className="login-card" ref={cartao}
               initial={{ opacity: 0, x: 76, scale: .94, rotateY: -7 }}
               animate={{ opacity: 1, x: 0, scale: 1, rotateY: 0 }}
               transition={{ type: "spring", stiffness: 115, damping: 18, mass: .9, delay: .28 }}>
