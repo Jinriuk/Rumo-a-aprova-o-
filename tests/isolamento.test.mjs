@@ -161,10 +161,20 @@ test("aluno escreve o PRÓPRIO registro e atualiza estado de atividade da PRÓPR
     );
     assert.equal(ins.rowCount, 1);
 
+    // A linha é escolhida DENTRO das metas do próprio aluno e de forma
+    // determinística. Antes vinha de um `limit 1` solto sobre a tabela
+    // toda, filtrado por meta 'ativa': isso amarrava o teste de RLS ao
+    // calendário do seed de demonstração — passado o fim da trilha, não
+    // há meta ativa e o teste falhava sem nenhuma regressão de
+    // isolamento. A RLS (0002) gateia por dono da meta, não por status.
     const upd = await c.query(
       `update meta_atividades set estado = 'concluida'
-       where meta_id in (select id from metas where aluno_id = $1 and status = 'ativa')
-         and id = (select id from meta_atividades limit 1)`,
+        where id = (
+          select ma.id from meta_atividades ma
+            join metas m on m.id = ma.meta_id
+           where m.aluno_id = $1
+           order by m.semana_numero desc, ma.id
+           limit 1)`,
       [ALUNO_LUCAS]
     );
     assert.equal(upd.rowCount, 1, "aluno deveria poder concluir atividade da própria meta");
