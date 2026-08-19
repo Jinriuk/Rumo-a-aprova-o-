@@ -18,9 +18,23 @@ export function contextoRegistroDaAtividade(metaAtividade, trilha) {
   };
 }
 
+/* Objetivos pendentes na MESMA ordem que a lista da tela usa
+   (`atividade.ordem`). O embed `meta_atividades(...)` do PostgREST não
+   pede ordenação, então a ordem crua do banco não é contrato: sem isto,
+   o CTA da missão e o topo da lista podem apontar para alvos
+   diferentes. Itens sem atividade na trilha ficam de fora — não há
+   contexto honesto a montar para eles. */
+export function objetivosPendentesEmOrdem(meta, trilha) {
+  return (meta?.meta_atividades ?? [])
+    .filter((item) => item?.estado === "pendente")
+    .map((item) => ({ item, atividade: trilha?.atividadesPorId?.[item.atividade_modelo_id] }))
+    .filter((par) => par.atividade)
+    .sort((a, b) => (a.atividade.ordem ?? 0) - (b.atividade.ordem ?? 0))
+    .map((par) => par.item);
+}
+
 export function primeiroContextoPendente(meta, trilha) {
-  const alvo = (meta?.meta_atividades ?? []).find((item) => item.estado === "pendente");
-  return contextoRegistroDaAtividade(alvo, trilha);
+  return contextoRegistroDaAtividade(objetivosPendentesEmOrdem(meta, trilha)[0], trilha);
 }
 
 export function resumoRegistroConfirmado(registro, porCodigo = {}) {

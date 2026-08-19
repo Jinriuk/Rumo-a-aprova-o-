@@ -151,10 +151,6 @@ textarea:focus-visible,
   animation: progress-confirm .8s .18s ease-out 1 both;
 }
 
-.reward-island {
-  animation: reward-arrive .42s cubic-bezier(.2, .85, .25, 1.15) both;
-}
-
 .app-header {
   box-shadow: 0 8px 28px rgba(0, 0, 0, .2);
 }
@@ -322,14 +318,21 @@ textarea:focus-visible,
 }
 
 .journey-use-suggestion {
-  margin-top: 6px;
-  padding: 4px 2px;
+  /* alvo de toque de 24px (WCAG 2.5.8) sem virar um segundo botão
+     concorrente: a área cresce, o peso visual não. */
+  display: inline-flex;
+  min-height: 26px;
+  align-items: center;
+  margin-top: 4px;
+  padding: 4px 6px;
   border: 0;
+  border-radius: 7px;
   color: var(--ui-accent);
   background: transparent;
   font-size: 11px;
   font-weight: 700;
 }
+.journey-use-suggestion:hover { background: color-mix(in srgb, var(--ui-accent) 10%, transparent); }
 
 .journey-confirmation {
   position: relative;
@@ -406,6 +409,35 @@ textarea:focus-visible,
 
 .journey-confirmation-engine { display: flex; align-items: center; gap: 8px; margin-top: 14px; color: var(--ui-sub); font-size: 11px; }
 .journey-confirmation-engine > span { width: 7px; height: 7px; border-radius: 50%; background: var(--ui-green); box-shadow: 0 0 11px color-mix(in srgb, var(--ui-green) 72%, transparent); }
+.journey-confirmation-objective {
+  display: flex;
+  width: min(540px, 100%);
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  margin-top: 20px;
+  padding: 14px;
+  border: 1px dashed color-mix(in srgb, var(--ui-accent) 46%, var(--ui-line));
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--ui-bg) 46%, transparent);
+}
+.journey-confirmation-objective > p { margin: 0; color: var(--ui-sub); font-size: 12px; line-height: 1.5; }
+.journey-confirmation-objective .journey-objective-done { display: flex; align-items: center; gap: 8px; color: var(--ui-green); font-size: 12.5px; font-weight: 800; }
+.journey-confirmation-objective-action {
+  min-height: 40px;
+  padding: 9px 18px;
+  border: 1px solid var(--ui-accent);
+  border-radius: 9px;
+  color: var(--ui-accent);
+  background: color-mix(in srgb, var(--ui-accent) 10%, transparent);
+  font-size: 12.5px;
+  font-weight: 800;
+  transition: background-color .16s ease, color .16s ease;
+}
+.journey-confirmation-objective-action:hover:not(:disabled) { color: #0a1622; background: var(--ui-accent); }
+.journey-confirmation-objective-action:disabled { opacity: .6; }
+.journey-confirmation-objective-error { width: 100%; }
+
 .journey-confirmation-actions { display: flex; width: min(540px, 100%); gap: 10px; margin-top: 24px; }
 .journey-confirmation-actions > button { flex: 1; }
 .journey-confirmation-secondary {
@@ -489,6 +521,7 @@ textarea:focus-visible,
   .journey-confirmation-facts > span:nth-child(2) { border-right: 0; }
   .journey-confirmation-facts > span:nth-child(-n+2) { border-bottom: 1px solid var(--ui-line); }
   .journey-confirmation-actions { flex-direction: column; }
+  .journey-confirmation-objective { padding: 12px; }
   .today-preference { flex-wrap: wrap; }
 }
 

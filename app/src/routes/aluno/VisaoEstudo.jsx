@@ -19,6 +19,7 @@ import { TrilhaConcurso } from "../../modules/conteudo/TrilhaConcurso.jsx";
 import { calcularXP, patente } from "../../modules/motor/jargao.js";
 import { InsightsDesempenho } from "../../modules/desempenho/Insights.jsx";
 import { NiveisPorMateria } from "../../modules/desempenho/Niveis.jsx";
+import { useEnvioUnico } from "../../shared/hooks/useEnvioUnico.js";
 
 // ETAPA 3 — code-splitting: os painéis de gráfico carregam o recharts
 // (a maior dependência do bundle). Importados sob demanda (só quando o
@@ -49,8 +50,10 @@ export function VisaoEstudo({ aluno, podeEditar, concurso = null, contexto = "Pl
   const [minutosSugeridos, setMinutosSugeridos] = useState(0);
   const [contextoRegistro, setContextoRegistro] = useState(null);
   const [confirmacaoRegistro, setConfirmacaoRegistro] = useState(null);
+  const [objetivoConcluido, setObjetivoConcluido] = useState(false);
   const [realceMissao, setRealceMissao] = useState(0);
   const missaoRef = useRef(null);
+  const fecharObjetivo = useEnvioUnico("acao");
   const recarregar = () => setVersao((v) => v + 1);
   const recarregarTudo = () => { recarregar(); recarregarTrilha(); };
 
@@ -121,6 +124,7 @@ export function VisaoEstudo({ aluno, podeEditar, concurso = null, contexto = "Pl
     if (k === "registrar") {
       setContextoRegistro(contexto);
       setConfirmacaoRegistro(null);
+      setObjetivoConcluido(false);
     }
     setTab(k);
     window.scrollTo({ top: 0, left: 0, behavior: "instant" });
@@ -128,12 +132,27 @@ export function VisaoEstudo({ aluno, podeEditar, concurso = null, contexto = "Pl
 
   const registroConfirmado = ({ registro, contexto }) => {
     setConfirmacaoRegistro({ registro, contexto });
+    setObjetivoConcluido(false);
     recarregar();
+  };
+
+  /* O registro não fecha o objetivo — o aluno fecha, se quiser. Só
+     marcamos como concluído depois que o banco devolve a linha; se a
+     RLS ou a rede recusarem, o erro aparece e nada muda na tela. */
+  const concluirObjetivoDaJornada = async () => {
+    const alvo = confirmacaoRegistro?.contexto?.metaAtividadeId;
+    if (!alvo) return;
+    await fecharObjetivo.enviar(async () => {
+      await db.definirEstadoAtividade(alvo, "concluida");
+      setObjetivoConcluido(true);
+      recarregar();
+    });
   };
 
   const verMissaoAtualizada = () => {
     setConfirmacaoRegistro(null);
     setContextoRegistro(null);
+    setObjetivoConcluido(false);
     setTab("hoje");
     setRealceMissao(Date.now());
   };
@@ -141,6 +160,7 @@ export function VisaoEstudo({ aluno, podeEditar, concurso = null, contexto = "Pl
   const registrarOutro = () => {
     setConfirmacaoRegistro(null);
     setContextoRegistro(null);
+    setObjetivoConcluido(false);
     window.scrollTo({ top: 0, left: 0, behavior: "instant" });
   };
 
@@ -149,6 +169,8 @@ export function VisaoEstudo({ aluno, podeEditar, concurso = null, contexto = "Pl
     const quadro = requestAnimationFrame(() => {
       const reduzido = window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches;
       missaoRef.current?.scrollIntoView({ behavior: reduzido ? "auto" : "smooth", block: "start" });
+      // rolar move a página, não o foco: sem isto o teclado volta ao <body>
+      missaoRef.current?.focus?.({ preventScroll: true });
     });
     const timer = setTimeout(() => setRealceMissao(0), 1800);
     return () => { cancelAnimationFrame(quadro); clearTimeout(timer); };
@@ -234,7 +256,8 @@ export function VisaoEstudo({ aluno, podeEditar, concurso = null, contexto = "Pl
           <div style={{ display: "flex", flexDirection: "column", gap: 16, paddingTop: 4 }}>
             <FaixaAspirante nome={aluno.nome.split(" ")[0]} contexto={contexto} xp={xp} streak={m?.streak ?? 0}
               aoAbrirConquistas={() => irAba("conquistas")} />
-            <div ref={missaoRef} className={realceMissao ? "mission-impact" : undefined} style={{ scrollMarginTop: 18 }}>
+            <div ref={missaoRef} tabIndex={-1} aria-label="Missão da semana"
+              className={realceMissao ? "mission-impact" : undefined} style={{ scrollMarginTop: 18 }}>
               <MissaoAtual meta={meta} trilha={trilha} m={m} aoAvancar={podeEditar ? irAba : undefined} />
             </div>
             {!essencial && examTag && gam.missoes.length > 0 && <MissoesPersistidas missoes={gam.missoes} disciplinas={trilha.disciplinas} />}
@@ -267,7 +290,9 @@ export function VisaoEstudo({ aluno, podeEditar, concurso = null, contexto = "Pl
             aoMudar={recarregar} minutosSugeridos={minutosSugeridos}
             contextoInicial={contextoRegistro} confirmacao={confirmacaoRegistro}
             aoConfirmar={registroConfirmado} aoVerMissao={verMissaoAtualizada}
-            aoRegistrarOutro={registrarOutro} aoSairContexto={() => setContextoRegistro(null)} />
+            aoRegistrarOutro={registrarOutro} aoSairContexto={() => setContextoRegistro(null)}
+            aoConcluirObjetivo={concluirObjetivoDaJornada} objetivoConcluido={objetivoConcluido}
+            concluindoObjetivo={fecharObjetivo.ocupado} erroObjetivo={fecharObjetivo.erro} />
         )}
         {tab === "desempenho" && (
           <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>

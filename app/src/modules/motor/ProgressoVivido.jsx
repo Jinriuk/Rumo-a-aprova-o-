@@ -4,8 +4,8 @@
    foi persistido (ledger de XP, missões fechadas, conquistas) e dá
    ao aluno o retorno no momento da ação.
    ============================================================ */
-import React from "react";
-import { SectionCard, StatusBadge, BarraXP } from "../../shared/ui/componentes.jsx";
+import React, { useEffect, useRef } from "react";
+import { SectionCard, StatusBadge, BarraXP, Erro } from "../../shared/ui/componentes.jsx";
 import { useTema } from "../../shared/branding/BrandingContext.jsx";
 import { resumoRegistroConfirmado } from "./jornada.js";
 
@@ -19,10 +19,20 @@ const tempoConfirmado = (minutos) => {
 /* Primeira camada da confirmação: usa exclusivamente a linha devolvida
    pelo insert. XP, missão e conquista não aparecem aqui — pertencem à
    ilha abaixo, que só nasce quando a recarga lê o ledger do servidor. */
-export function ConfirmacaoRegistro({ confirmacao, trilha, aoVerMissao, aoRegistrarOutro }) {
+export function ConfirmacaoRegistro({
+  confirmacao, trilha, aoVerMissao, aoRegistrarOutro,
+  aoConcluirObjetivo, objetivoConcluido = false, concluindoObjetivo = false, erroObjetivo = null,
+}) {
+  // O formulário que tinha o foco acabou de sair da árvore. Sem trazer o
+  // foco para cá, o teclado volta ao <body> e o aluno perde o lugar.
+  const tituloRef = useRef(null);
+  useEffect(() => { tituloRef.current?.focus(); }, []);
+
   if (!confirmacao?.registro) return null;
   const resumo = resumoRegistroConfirmado(confirmacao.registro, trilha?.porCodigo);
   const tempo = tempoConfirmado(resumo.minutos);
+  // Registrar estudo NÃO fecha o objetivo: quem decide isso é o aluno.
+  const podeFecharObjetivo = !!aoConcluirObjetivo && !!confirmacao.contexto?.metaAtividadeId;
 
   return (
     <section className="journey-confirmation" role="status" aria-live="polite" aria-labelledby="registro-confirmado-titulo">
@@ -30,7 +40,7 @@ export function ConfirmacaoRegistro({ confirmacao, trilha, aoVerMissao, aoRegist
         <span>✓</span>
       </div>
       <div className="journey-confirmation-kicker">Registro confirmado</div>
-      <h2 id="registro-confirmado-titulo" className="disp">Seu estudo entrou no radar.</h2>
+      <h2 id="registro-confirmado-titulo" className="disp" ref={tituloRef} tabIndex={-1}>Seu estudo entrou no radar.</h2>
       <p>
         {confirmacao.contexto?.titulo
           ? <>Você avançou em <strong>{confirmacao.contexto.titulo}</strong>.</>
@@ -48,9 +58,32 @@ export function ConfirmacaoRegistro({ confirmacao, trilha, aoVerMissao, aoRegist
         <span aria-hidden="true" />
         XP e missões aparecem separadamente quando forem confirmados no seu progresso.
       </div>
+
+      {/* Fechar o objetivo é o passo que move a missão de verdade — e é
+          uma decisão do aluno, nunca um efeito automático do registro.
+          O estado só vira "concluído" depois que o banco devolve a linha. */}
+      {podeFecharObjetivo && (
+        <div className="journey-confirmation-objective">
+          {objetivoConcluido ? (
+            <p className="journey-objective-done">
+              <span aria-hidden="true">✓</span> Objetivo concluído. A missão avançou.
+            </p>
+          ) : (
+            <>
+              <p>Este registro entrou no seu histórico. O objetivo continua em aberto até você fechá-lo.</p>
+              <button className="journey-confirmation-objective-action"
+                onClick={aoConcluirObjetivo} disabled={concluindoObjetivo}>
+                {concluindoObjetivo ? "Concluindo…" : "Concluir este objetivo"}
+              </button>
+            </>
+          )}
+          {erroObjetivo && <div className="journey-confirmation-objective-error"><Erro>{erroObjetivo}</Erro></div>}
+        </div>
+      )}
+
       <div className="journey-confirmation-actions">
         <button className="journey-confirmation-primary" onClick={aoVerMissao}>
-          Ver missão atualizada <span aria-hidden="true">→</span>
+          Voltar para a missão <span aria-hidden="true">→</span>
         </button>
         <button className="journey-confirmation-secondary" onClick={aoRegistrarOutro}>
           Registrar outro estudo

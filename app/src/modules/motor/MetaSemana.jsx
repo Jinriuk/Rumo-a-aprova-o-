@@ -85,7 +85,11 @@ export function MetaSemana({ meta, trilha, podeEditar, aoMudar, aoAbrirDesempenh
 
   const limite = compacta && !mostrarTodos ? 3 : null;
   const praticaveis = itens.filter((item) => item.estado === "pendente");
-  const visiveis = limite == null ? itens : praticaveis.slice(0, limite);
+  // A prévia da tela inicial mostra o que dá para praticar agora. Quando
+  // não há nenhum pendente (semana toda adiada, por exemplo) ela cai na
+  // lista inteira: um cartão de objetivos vazio esconderia o que existe.
+  const previa = praticaveis.length > 0 ? praticaveis : itens;
+  const visiveis = limite == null ? itens : previa.slice(0, limite);
   const ocultos = Math.max(0, itens.length - visiveis.length);
 
   return (

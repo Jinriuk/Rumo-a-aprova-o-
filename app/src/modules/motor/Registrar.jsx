@@ -2,7 +2,7 @@
    rápido com campos principais (matéria, questões, acertos, minutos) e
    secundários recolhíveis (tópico, observações, data). Resumo do dia
    no topo. Só o aluno escreve; o banco garante isso, não esta tela. */
-import React, { useEffect, useId, useMemo, useState } from "react";
+import React, { useEffect, useId, useMemo, useRef, useState } from "react";
 import { SectionCard, EmptyState, Botao, Erro, useInputStyle, StatCard, useDialogo } from "../../shared/ui/componentes.jsx";
 import { useTema } from "../../shared/branding/BrandingContext.jsx";
 import { todayISO } from "../../shared/regras/regras.js";
@@ -26,6 +26,7 @@ export function Registrar({
   aluno, trilha, registros, aoMudar, minutosSugeridos,
   contextoInicial = null, confirmacao = null, aoConfirmar,
   aoVerMissao, aoRegistrarOutro, aoSairContexto,
+  aoConcluirObjetivo, objetivoConcluido, concluindoObjetivo, erroObjetivo,
 }) {
   const T = useTema();
   const { input: inputS, label: lbl } = useInputStyle();
@@ -51,8 +52,14 @@ export function Registrar({
   // O objetivo abre o formulário com matéria e tópico coerentes. A
   // quantidade continua sendo apenas uma sugestão: só entra no campo
   // quando o aluno toca explicitamente em "Usar sugestão".
+  // Aplicado UMA vez por objetivo: se a trilha recarregar enquanto o
+  // aluno digita, o tópico que ele escreveu não pode ser sobrescrito.
+  const refQuestoes = useRef(null);
+  const contextoAplicadoRef = useRef(null);
   useEffect(() => {
-    if (!contextoInicial) return;
+    if (!contextoInicial) { contextoAplicadoRef.current = null; return; }
+    if (contextoAplicadoRef.current === contextoInicial.chave) return;
+    contextoAplicadoRef.current = contextoInicial.chave;
     const disciplinaExiste = trilha.disciplinas.some((d) => d.codigo === contextoInicial.disciplinaCodigo);
     setF((atual) => ({
       ...atual,
@@ -114,7 +121,9 @@ export function Registrar({
   if (confirmacao) {
     return (
       <ConfirmacaoRegistro confirmacao={confirmacao} trilha={trilha}
-        aoVerMissao={aoVerMissao} aoRegistrarOutro={aoRegistrarOutro} />
+        aoVerMissao={aoVerMissao} aoRegistrarOutro={aoRegistrarOutro}
+        aoConcluirObjetivo={aoConcluirObjetivo} objetivoConcluido={objetivoConcluido}
+        concluindoObjetivo={concluindoObjetivo} erroObjetivo={erroObjetivo} />
     );
   }
 
@@ -160,10 +169,10 @@ export function Registrar({
           </div>
           <div>
             <label htmlFor={id("q")} style={lbl}>Questões</label>
-            <input id={id("q")} type="number" inputMode="numeric" min="0" value={f.questoes} onChange={(e) => set("questoes", e.target.value)} placeholder="0" style={inputS} />
-            {contextoInicial?.questoesSugeridas && f.questoes === "" && (
+            <input id={id("q")} ref={refQuestoes} type="number" inputMode="numeric" min="0" value={f.questoes} onChange={(e) => set("questoes", e.target.value)} placeholder="0" style={inputS} />
+            {!!contextoInicial?.questoesSugeridas && f.questoes === "" && (
               <button type="button" className="journey-use-suggestion"
-                onClick={() => set("questoes", String(contextoInicial.questoesSugeridas))}>
+                onClick={() => { set("questoes", String(contextoInicial.questoesSugeridas)); refQuestoes.current?.focus(); }}>
                 Usar sugestão: {contextoInicial.questoesSugeridas}
               </button>
             )}

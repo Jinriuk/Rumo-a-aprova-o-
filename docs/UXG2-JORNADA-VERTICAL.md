@@ -175,3 +175,56 @@ Não é necessária migration para a primeira entrega. A relação com o objetiv
 5. refinamento visual e testes E2E.
 
 Não misturar essa entrega com o redesenho de Simulados, Conquistas ou Coordenação. Fechar primeiro esta jornada cria o padrão para todas as demais.
+
+## Auditoria de aplicação do pacote R2
+
+O pacote foi aplicado com `git apply` limpo e os doze arquivos batem byte a
+byte com os arquivos completos do ZIP (`MANIFESTO.sha256` íntegro, 23/23). Os
+nove testes do pacote passaram sem alteração. A auditoria posterior encontrou
+seis pontos que foram corrigidos nesta mesma entrega, cada um com teste que
+falha na versão original do pacote.
+
+| # | Achado | Por que importa | Correção |
+|---|---|---|---|
+| 1 | O foco do teclado caía no `<body>` ao trocar formulário → confirmação → Hoje | O gate exige foco preservado; leitor de tela e teclado perdiam o lugar | Confirmação assume o foco do formulário desmontado; a volta ao Hoje foca o bloco da missão; "Usar sugestão" devolve o foco ao campo |
+| 2 | Com todos os objetivos adiados, o cartão de objetivos ficava **vazio** | Cenário real ("objetivo adiado"): a prévia fatiava só os pendentes | A prévia cai na lista inteira quando não há pendente |
+| 3 | O alvo do CTA da missão vinha da ordem **crua** de `meta_atividades` | O embed do PostgREST não ordena: CTA e topo da lista podiam divergir | `objetivosPendentesEmOrdem()` aplica a mesma ordenação da lista |
+| 4 | Objetivo pendente sem atividade na trilha zerava o contexto do CTA | O botão abria um registro livre em silêncio | O contexto cai no próximo objetivo que resolve |
+| 5 | "Ver missão atualizada" prometia uma missão que quase nunca mudava | Registrar estudo gera `xp_delta = 0` (migration 0024): o objetivo continua pendente e o placar não anda | CTA passa a "Voltar para a missão" e a tela diz que o objetivo continua aberto |
+| 6 | `.journey-use-suggestion` tinha 21 px de altura | Abaixo dos 24 px do WCAG 2.5.8 | `min-height: 26px` sem ganhar peso visual |
+
+### O elo que faltava para a jornada ser transformadora
+
+Registrar estudo **não** move a missão: o gatilho `app.progresso_de_registro`
+(migration 0024) grava o evento com `xp_delta = 0`, e quem concede XP por
+prioridade é `app.progresso_de_missao`, na borda do objetivo para `concluida`.
+Sem fechar o objetivo, o aluno voltava ao Hoje e via o mesmo `0/6`.
+
+A entrega passa a oferecer, **na confirmação e só quando o registro nasceu de
+um objetivo**, a ação explícita `Concluir este objetivo`. Ela não é automática
+— continua sendo decisão do aluno — usa `db.definirEstadoAtividade` (mesma
+função e mesma RLS que a lista já usava), passa por `useEnvioUnico` e só marca
+a tela como concluída depois que o banco devolve a linha. É o que fecha
+`objetivo → prática → registro → consequência confirmada`.
+
+### Referências externas analisadas
+
+Nenhuma dependência nova entrou. O repositório é JSX + Vite, sem Tailwind e
+sem shadcn, e o white-label vive em variáveis CSS (`--ui-accent` e afins)
+trocadas por escola — premissa que todas as bibliotecas abaixo contrariam.
+
+| Biblioteca | Padrão avaliado | Ganho possível | Custo de bundle | Compatível com JSX/Vite/white-label | Acessibilidade | Licença | Decisão |
+|---|---|---|---|---|---|---|---|
+| Cult UI | Dynamic Island, Morph Surface, tabs direcionais | Vocabulário de superfície que muda de forma | Traz `motion` + Tailwind + utilitários shadcn | Não: exige Tailwind e shadcn; fonte em TS | Boa, mas presume tokens do shadcn | MIT | **Rejeitada** — padrão reproduzido em CSS (`.reward-island`, `.journey-context`) |
+| Skiper UI | Dynamic Island, padrões de entrada | Micro-interações prontas | Assume shadcn/ui e Next.js | Não | Não avaliada em profundidade | Não confirmada na fonte oficial | **Rejeitada** |
+| OriginKit / Origin UI | Campo com estado percebido no próprio contexto | Feedback inline no campo | ~250 componentes, fonte sob chave de API (10 buscas/dia) | Parcial: suporta Vite e CSS puro | Boa | MIT | **Rejeitada** — a dica inline já existe via contrato `validarRegistroEstudo` |
+| Aceternity UI | Realce direcional entre estados | Efeitos de destaque | Exige `framer-motion ^12` + Tailwind + `tailwind-merge` | Não | Efeitos decorativos, pouco foco em teclado | Não declarada na fonte oficial | **Rejeitada** |
+| React Bits | Transições de texto e estado | Não exige Motion; usa CSS | Puxa GSAP/Three.js/Matter.js por componente | Parcial | Variável | — | **Rejeitada** — GSAP/Three são desproporcionais |
+| Motion (já instalado) | Orquestração de entrada | Já usado na entrada; `useReducedMotion` e `MotionConfig reducedMotion="user"` | **zero** — 28,86 kB gzip, sem crescimento | Sim | Respeita `prefers-reduced-motion` | MIT | **Mantida como está** — a jornada não precisou dela |
+| Base UI | Animação por atributos de estado | Hooks CSS sem JS de animação | — | — | — | — | **Não avaliada**: `base-ui.com` bloqueado pelo proxy de egresso deste ambiente |
+
+A conclusão prática: os quatro alvos pedidos (transformação do objetivo em
+registro contextual, confirmação curta e marcante, realce direcional e campos
+com feedback no contexto) foram resolvidos com CSS e estado de navegação, ao
+custo de **+0,15 kB gzip** de CSS. Nenhuma biblioteca demonstrou benefício que
+justifique Tailwind, shadcn ou TypeScript.
