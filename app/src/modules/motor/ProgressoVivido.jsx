@@ -99,10 +99,15 @@ export function ConfirmacaoRegistro({
 export function FeedbackProgresso({ feedback, aoFechar }) {
   const T = useTema();
   if (!feedback) return null;
+  /* Missão do motor e objetivo da trilha são concessões DIFERENTES do
+     ledger (`origem` = motor_missao vs meta_atividades) e cada uma vale
+     o próprio XP. Somar as duas em "2 missões" mentiria sobre o que o
+     banco fez; por isso cada origem é nomeada pelo que ela é. */
   const partes = [];
-  if (feedback.xp > 0) partes.push(`+${feedback.xp} XP`);
-  if (feedback.missoes > 0) partes.push(`${feedback.missoes} ${feedback.missoes === 1 ? "missão concluída" : "missões concluídas"}`);
+  if (feedback.missoes > 0) partes.push(`${feedback.missoes} ${feedback.missoes === 1 ? "missão cumprida" : "missões cumpridas"}`);
+  if (feedback.objetivos > 0) partes.push(`${feedback.objetivos} ${feedback.objetivos === 1 ? "objetivo concluído" : "objetivos concluídos"}`);
   if (feedback.conquistas > 0) partes.push(`${feedback.conquistas} ${feedback.conquistas === 1 ? "conquista desbloqueada" : "conquistas desbloqueadas"}`);
+  if (feedback.xp > 0) partes.push(`+${feedback.xp} XP`);
   if (!partes.length) return null;
 
   return (

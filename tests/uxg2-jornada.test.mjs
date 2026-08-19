@@ -210,3 +210,18 @@ test("R2-fix: nenhum controle do formulário de registro fica abaixo de 32px de 
   assert.ok(alvo, "o alternador de campos extras precisa declarar minHeight");
   assert.ok(Number(alvo[1]) >= 32, `alvo de toque de ${alvo[1]}px é menor que os 32px acordados`);
 });
+
+test("R2-fix: missão do motor e objetivo da trilha não viram '2 missões'", () => {
+  const ilha = ler("app/src/modules/motor/ProgressoVivido.jsx");
+  const visao = ler("app/src/routes/aluno/VisaoEstudo.jsx");
+  const seam = ler("app/src/shared/data/index.js");
+  // a origem real do ledger precisa chegar ao cliente
+  assert.match(seam, /\.select\("xp_delta, status, tipo_evento, origem"\)/);
+  // objetivo é contado pela origem, não misturado com aluno_missoes
+  assert.match(visao, /e\.tipo_evento === "missao_concluida" && e\.origem === "meta_atividades"/);
+  assert.match(visao, /objetivos: novosObjetivos/);
+  // e a ilha nomeia cada concessão pelo que ela é
+  assert.match(ilha, /missão cumprida/);
+  assert.match(ilha, /objetivo concluído/);
+  assert.doesNotMatch(ilha, /feedback\.missoes \+ feedback\.objetivos/);
+});

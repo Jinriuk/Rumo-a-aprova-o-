@@ -98,17 +98,26 @@ export function VisaoEstudo({ aluno, podeEditar, concurso = null, contexto = "Pl
     // gate, duas respostas em velocidades diferentes podem produzir
     // duas celebrações parciais para uma única ação.
     if (dados.versao !== versao || gam.versao !== versao) return;
+    // Objetivo da trilha concluído entra no ledger como `missao_concluida`
+    // com origem `meta_atividades`; a missão do motor tem origem própria e
+    // vive em aluno_missoes. São concessões distintas, cada uma com o seu
+    // XP — contá-las juntas viraria "2 missões", que o banco não fez.
+    const objetivosNoLedger = (dados.xpPersistido?.eventos ?? []).filter(
+      (e) => e.status !== "estornado" && e.tipo_evento === "missao_concluida" && e.origem === "meta_atividades",
+    ).length;
     const snap = {
       xp: dados.xpPersistido?.total ?? 0,
       missoes: gam.missoes.filter((mi) => mi.estado === "concluida").map((mi) => mi.missao_id),
+      objetivos: objetivosNoLedger,
     };
     const prev = snapRef.current;
     snapRef.current = snap;
     if (!prev) return; // 1ª carga é a linha de base, sem festejar nada
     const ganhouXp = snap.xp - prev.xp;
     const novasMissoes = snap.missoes.filter((id) => !prev.missoes.includes(id)).length;
-    if (ganhouXp > 0 || novasMissoes > 0) {
-      setFeedback({ xp: ganhouXp, missoes: novasMissoes, conquistas: 0, em: Date.now() });
+    const novosObjetivos = Math.max(0, snap.objetivos - (prev.objetivos ?? 0));
+    if (ganhouXp > 0 || novasMissoes > 0 || novosObjetivos > 0) {
+      setFeedback({ xp: ganhouXp, missoes: novasMissoes, objetivos: novosObjetivos, conquistas: 0, em: Date.now() });
     }
   }, [gam, dados.xpPersistido, dados.versao, versao, podeEditar, examTag]);
 
