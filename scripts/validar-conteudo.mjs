@@ -24,6 +24,18 @@ import { fileURLToPath } from "node:url";
 import {
   MATURIDADE_CONCURSOS, NIVEIS_MATURIDADE, REQUISITOS_MATURIDADE,
 } from "../app/src/modules/conteudo/maturidade.js";
+import {
+  carregarFonte as carregarFonteEspcex,
+  validarFonte as validarFonteEspcex,
+  gerarSql as gerarSqlEspcex,
+  DESTINO_REL as SEED_ESPCEX_REL,
+} from "./gerar-seed-espcex-ped2-r3.mjs";
+import {
+  carregarFontes as carregarFontesTrilhaEspcex,
+  validarFonte as validarFonteTrilhaEspcex,
+  gerarSql as gerarSqlTrilhaEspcex,
+  DESTINO_REL as SEED_TRILHA_ESPCEX_REL,
+} from "./gerar-seed-trilha-espcex.mjs";
 
 export const RAIZ = join(dirname(fileURLToPath(import.meta.url)), "..");
 const lerRaw = (rel) => readFileSync(join(RAIZ, rel), "utf8");
@@ -84,14 +96,14 @@ export function conteudoRealPorConcurso() {
 }
 
 // A trilha semanal é "presente" quando a matriz aponta um ref e o
-// arquivo existe (hoje, só o CN). Liga maturidade 'completa' a um
+// arquivo existe. Liga maturidade 'completa' a um
 // calendário real — não à palavra.
 export function trilhaSemanalPresente(codigo) {
   const ref = MATURIDADE_CONCURSOS[codigo]?.trilhaSemanalRef;
   return Boolean(ref && existsSync(join(RAIZ, ref)));
 }
 
-// Integridade da trilha semanal do CN (fonte: JSON estruturado).
+// Integridade das trilhas semanais (fontes JSON estruturadas).
 export function integridadeTrilhaSemanal() {
   const erros = [];
   const t = JSON.parse(lerRaw("supabase/seed/trilha-cn-v1.json"));
@@ -107,6 +119,21 @@ export function integridadeTrilhaSemanal() {
       else if (codigosDisc.size && !codigosDisc.has(a.s)) erros.push(`trilha-cn: tarefa com disciplina '${a.s}' fora do catálogo (semana ${s.n})`);
       if (!a.t || !String(a.t).trim()) erros.push(`trilha-cn: tarefa sem texto (semana ${s.n})`);
     }
+  }
+  try {
+    const { trilha, conteudo } = carregarFontesTrilhaEspcex();
+    erros.push(...validarFonteTrilhaEspcex(trilha, conteudo).map((e) => `trilha-espcex: ${e}`));
+    if (!existsSync(join(RAIZ, SEED_TRILHA_ESPCEX_REL))) {
+      erros.push(`trilha-espcex: seed gerado ausente (${SEED_TRILHA_ESPCEX_REL})`);
+    } else {
+      const esperado = gerarSqlTrilhaEspcex(trilha, conteudo);
+      const atual = lerRaw(SEED_TRILHA_ESPCEX_REL);
+      if (atual !== esperado) {
+        erros.push("trilha-espcex: seed 20 dessincronizado — rode scripts/gerar-seed-trilha-espcex.mjs");
+      }
+    }
+  } catch (e) {
+    erros.push(`trilha-espcex: falha ao validar fonte (${e.message})`);
   }
   return erros;
 }
@@ -135,6 +162,30 @@ export function integridadeConteudo() {
   const tagsPlano = [...blocoPlanos.matchAll(/'([a-z0-9_]+)',\s*'(anual|semestral|intensiva|reta_final)'/gi)].map((m) => m[1]);
   for (const tag of new Set(tagsPlano)) {
     if (!codigos.has(tag)) erros.push(`trilha_plano com exam_tag '${tag}' sem concurso correspondente`);
+  }
+  return erros;
+}
+
+// PED2-R3: a fonte estruturada da EsPCEx deve continuar completa e o
+// seed 19 gerado deve permanecer byte a byte sincronizado. O porteiro
+// também impede faixas/matérias/gabaritos inválidos e referências a
+// assunto/subassunto inexistente antes de chegar ao banco.
+export function integridadeEspcexPed2R3() {
+  const erros = [];
+  try {
+    const dados = carregarFonteEspcex();
+    erros.push(...validarFonteEspcex(dados).map((e) => `espcex PED2-R3: ${e}`));
+    if (!existsSync(join(RAIZ, SEED_ESPCEX_REL))) {
+      erros.push(`espcex PED2-R3: seed gerado ausente (${SEED_ESPCEX_REL})`);
+    } else if (!erros.length) {
+      const esperado = gerarSqlEspcex(dados);
+      const atual = lerRaw(SEED_ESPCEX_REL);
+      if (atual !== esperado) {
+        erros.push("espcex PED2-R3: seed 19 dessincronizado — rode scripts/gerar-seed-espcex-ped2-r3.mjs");
+      }
+    }
+  } catch (e) {
+    erros.push(`espcex PED2-R3: falha ao validar fonte (${e.message})`);
   }
   return erros;
 }
@@ -188,6 +239,7 @@ export function validar() {
   // 4) Integridade de conteúdo + trilha semanal.
   erros.push(...integridadeTrilhaSemanal());
   erros.push(...integridadeConteudo());
+  erros.push(...integridadeEspcexPed2R3());
 
   // 5) Paridade do seed gerado.
   erros.push(...seedMaturidadeEmDia());

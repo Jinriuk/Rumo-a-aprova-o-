@@ -8,9 +8,9 @@
 > **Verificação automática:** `node scripts/validar-conteudo.mjs` (cruza esta
 > matriz com os seeds) e `tests/conteudo-maturidade.test.mjs`.
 
-Data do levantamento: 2026-06-27 · Método: leitura dos seeds + execução do
-schema completo em Postgres 15 (migrations + seeds), consulta à view
-`vw_concurso_qualidade`.
+Data do levantamento: 2026-06-27 · Atualização: PED2-R3, 2026-08-13 · Método:
+leitura dos seeds, validação gerada e execução do schema completo em Postgres
+(migrations + seeds), com consulta à `vw_concurso_qualidade`.
 
 ---
 
@@ -21,24 +21,24 @@ schema completo em Postgres 15 (migrations + seeds), consulta à view
 | Concursos do nicho | `concursos` | `05_concursos.sql` / migration `0007` | datas médias, nível |
 | Estrutura de prova | `provas`, `prova_dias`, `prova_materias` | `07_provas.sql` | matérias, pesos, dias — **oficial** |
 | Catálogo pedagógico | `materias`, `assuntos`, `subassuntos` | `07_provas.sql` | assuntos por `exam_tag` |
-| Trilha **semanal** (calendário real) | `trilhas`, `disciplinas`, `trilha_semanas`, `atividades_modelo` | `02_trilha_cn.sql` (de `trilha-cn-v1.json`) | só **CN** hoje |
-| Trilha por horizonte + missões | `trilha_planos`, `missoes`, `trilha_plano_missoes` | `09_trilhas_missoes.sql` | planos (anual/reta) + missões starter |
+| Trilha **semanal** (calendário real) | `trilhas`, `disciplinas`, `trilha_semanas`, `atividades_modelo` | `02_trilha_cn.sql` e `20_trilha_espcex.sql` | **CN e EsPCEx**, por nicho próprio |
+| Trilha por horizonte + missões | `trilha_planos`, `missoes`, `trilha_plano_missoes` | `09_trilhas_missoes.sql` + `20_trilha_espcex.sql` | quatro horizontes e 24 missões EsPCEx |
 | **Maturidade** (PED2) | `concursos.maturidade`, view `vw_concurso_qualidade` | `18_maturidade_concursos.sql` / migration `0034` | nível de prontidão auditável |
+| Provas anteriores e recorrência | `provas_anteriores`, `questoes_prova`, `recorrencia_assunto` | `19_espcex_ped2_r3.sql` (de `espcex-ped2-r3-v1.json`) | referências curtas, tags e incidência medida; sem enunciados completos |
 
 Há **dois conceitos de "trilha"** no sistema, e a confusão entre eles era a raiz
 do problema:
 
 1. **Trilha semanal** (`trilhas` + `trilha_semanas` + `atividades_modelo`): um
-   calendário real, datado, com tarefas por semana. **Só o CN tem.** É o que a
+   calendário real, datado, com tarefas por semana. **CN e EsPCEx têm.** É o que a
    `AreaAluno` usa para a contagem regressiva real e o plano de estudo.
 2. **Trilha por horizonte** (`trilha_planos` + `missoes`): planos anuais/reta
    final com missões soltas. Vários concursos têm um esqueleto disso, mas **sem
    calendário**.
 
-O `trilhaPadrao()` retornava sempre a trilha **semanal do CN** (a de maior
-versão) e o cadastro a atribuía a **todo** aluno, de qualquer concurso — então um
-aluno de EEAR herdava o calendário do Colégio Naval. Era a trilha incompleta
-sendo vendida como pronta.
+O cadastro agora resolve a trilha publicada pelo `trilhaNicho` do concurso.
+Assim, CN recebe `colegio-naval`, EsPCEx recebe `espcex` e um concurso sem
+calendário nunca herda a versão mais nova de outro nicho.
 
 ---
 
@@ -49,15 +49,20 @@ Saída real de `vw_concurso_qualidade` após aplicar migrations + seeds:
 | código | nome | prova | matérias | assuntos | missões | planos |
 |---|---|:--:|:--:|:--:|:--:|:--:|
 | `cn` | Colégio Naval (CPACN) | ✅ | 9 | 6 | 3 | 4 |
-| `espcex` | EsPCEx — Cadetes do Exército | ✅ | 8 | 5 | 2 | 2 |
+| `espcex` | EsPCEx — Cadetes do Exército | ✅ | 8 | **80** | **24** | **4** |
 | `esa` | ESA (EsSA) — Sargentos | ✅ | 6 | 0 | 1 | 2 |
 | `epcar` | EPCAR — Cadetes do Ar | ✅ | 4 | 0 | 1 | 2 |
 | `eear` | EEAR — Sargentos da Aeronáutica | ✅ | 4 | 0 | 1 | 2 |
 | `cm` | Colégio Militar | ❌ | 0 | 0 | 0 | 0 |
 
 Detalhe da trilha **semanal** do CN (`trilha-cn-v1.json`): **9 semanas**, 8
-disciplinas, **33 atividades-modelo**, todas com disciplina + texto + foco
+disciplinas, **50 atividades-modelo**, todas com disciplina + texto + foco
 semanal — sem semana vazia (verificado por `integridadeTrilhaSemanal`).
+
+Detalhe EsPCEx PED2-R3: **80 assuntos oficiais / 339 subassuntos**, **200
+questões** oficiais de 2024–2025 e **69 recorrências medidas**. A trilha própria
+tem **9 semanas, 109 atividades e 24 missões**. Comandos: `node
+scripts/validar-conteudo.mjs` e os testes `espcex-ped2-r3*` / `trilha-espcex*`.
 
 ---
 
@@ -68,8 +73,8 @@ produto: **só `completa` pode ser exibida/vendida como pronta.**
 
 | Concurso | Maturidade | No MVP? | Por quê |
 |---|---|---|---|
-| **Colégio Naval** (`cn`) | 🟢 **completa** | ✅ núcleo | Trilha semanal real (9 sem / 33 ativ.) + estrutura oficial + missões. Testado ponta a ponta. |
-| **EsPCEx** (`espcex`) | 🟡 **beta** | ✅ parcial | Estrutura oficial (2 dias, pesos), assuntos de Mat/Port/Quí e missões. **Falta o calendário semanal.** |
+| **Colégio Naval** (`cn`) | 🟢 **completa** | ✅ núcleo | Trilha semanal real (9 sem / 50 ativ.) + estrutura oficial + missões. Testado ponta a ponta. |
+| **EsPCEx** (`espcex`) | 🟢 **completa v3** | ✅ núcleo | Programa vigente, 9 semanas / 109 atividades, 24 missões e recorrência 2024–2025. |
 | **EPCAR** (`epcar`) | 🟠 **esqueleto** | ⚠️ parcial | Estrutura oficial + 1 missão de redação. Sem assuntos catalogados nem calendário. |
 | **ESA** (`esa`) | 🟠 **esqueleto** | ⚠️ parcial | Estrutura oficial (4 partes) + 1 missão de inglês. Sem assuntos nem calendário. |
 | **EEAR** (`eear`) | 🟠 **esqueleto** | ⚠️ parcial | Estrutura oficial (96 questões) + 1 missão de física. Sem assuntos nem calendário. |
@@ -93,7 +98,6 @@ nível acima do que o conteúdo real entrega (ex.: `beta` sem assunto).
 
 | Prioridade | Concurso | Lacuna | Para subir a |
 |---|---|---|---|
-| P1 | EsPCEx | montar calendário semanal (trilha datada) | completa |
 | P2 | EEAR | catalogar assuntos (foco em Física, matéria de piso) | beta |
 | P2 | ESA | catalogar assuntos (Inglês de alto ROI, Mat/Port) | beta |
 | P3 | EPCAR | catalogar assuntos + redação (1/4 da nota) | beta |
@@ -110,7 +114,8 @@ O caminho de cada subida está em
   (regra de escopo PED2 §7). O terreno está pronto — basta adicionar um concurso
   na fonte única com maturidade `indisponivel` e segui o pipeline; nada na UI
   quebra, pois o default de concurso desconhecido já é `indisponivel`.
-- **Banco de questões oficiais**: fora de escopo (não criamos questões).
+- **Banco de enunciados completos**: fora de escopo. O produto guarda somente
+  número, gabarito, referência curta e tags das questões oficiais.
 
 ---
 
@@ -127,3 +132,27 @@ O caminho de cada subida está em
   gerado; pós-carimbo, `suspeita_incoerencia = false` em todos os 6.
 - **Gaps de material-fonte** por concurso documentados em
   [`docs/conteudo/gaps-material-fonte-concursos.md`](../../conteudo/gaps-material-fonte-concursos.md).
+
+## Adendo PED2-R3 (2026-08-13) — EsPCEx completa
+
+- **Programa:** o Anexo C do edital foi transcrito para 80 assuntos nas 8
+  matérias. O total é reproduzível com
+  `node -e "const d=require('./supabase/seed/espcex-ped2-r3-v1.json'); console.log(d.catalogo.length)"`
+  → `80`. Os 339 subassuntos são recortes do texto e ficam honestamente em
+  `status_dado='inferencia'`; os assuntos de primeiro nível ficam `oficial`.
+- **OCR resolvido:** “Eletroquímica/Eletrólise” passa de `validar` para
+  `oficial`; o Anexo C confirma eletrólise e não contém “eletroforese”.
+- **Edital-alvo:** o programa de 2022 foi comparado com o Edital nº 2 S Conc
+  Adms, de 22/04/2026; as mudanças de História e `Word formation` foram
+  incorporadas sem quebrar chaves legadas.
+- **Tagueamento real:** quatro cadernos de 2024–2025 somam **200 questões**;
+  os quatro gabaritos são validados resposta por resposta.
+- **Recorrência:** o seed deriva **69** linhas `medida` sobre dois anos e marca
+  `config_oficial.recorrencia_status` com `[2024, 2025]`.
+- **Calendário/missões:** a EsPCEx ganha calendário próprio de 9 semanas (datas
+  oficiais 12–13/09/2026), 109 atividades, quatro horizontes e 24 missões.
+- **Maturidade:** EsPCEx sobe para **`completa` v3**. A UI seleciona a trilha
+  pelo nicho do concurso, eliminando atribuição cruzada com o CN.
+- **Rastreabilidade:** hashes dos dez PDFs usados ficam nos JSONs/seeds; os
+  PDFs não são versionados. Os geradores e o validador exigem 80/339/200,
+  datas, faixas, gabaritos e paridade byte a byte dos seeds 19 e 20.

@@ -1,10 +1,10 @@
 # 05 — Camadas Faltantes (Registro Vivo / Fonte Única de Verdade)
 
-**Origem:** REG0 (2026-06-27) · **Reconciliado:** REG1 (2026-07-02)
+**Origem:** REG0 (2026-06-27) · **Reconciliado:** PED2-R3 (2026-08-13)
 **Natureza:** governança (não altera produto, banco ou segurança)
 
 > **O que é este documento.** O inventário verificado das 10 camadas de acabamento,
-> com **status conferido no código de 02/07** (`main` = `ea64142`, pós-FIX1).
+> com **status conferido no código em 13/08** (branch PED2-R3, base `18b9f65`).
 > A versão REG0 deste arquivo ficou defasada em horas: entre 27/06 e 02/07 a `main`
 > recebeu PED1, PED2 (rodada 1), ADM2, PERF1, SEC3, FE1, UX1, o fechamento-100%,
 > SDB-AUDIT/SDB-FIX1 e FIX1. A REG1 reavaliou **item por item** — nada abaixo foi
@@ -14,7 +14,7 @@
 
 | Símbolo | Significado |
 |---|---|
-| 🟢 | **Concluído** — verificado no código/banco em 02/07 |
+| 🟢 | **Concluído** — verificado no código/banco na data indicada |
 | 🟡 | **Parcial** — parte entregue, parte aberta (com justificativa) |
 | 🔴 | **Aberto** — não iniciado |
 | ⛔ | **Bloqueado** por julho / Pro / domínio / staging / SMTP (decisão externa) |
@@ -34,7 +34,7 @@
 |1.4| Onboarding pedagógico na UI | 🟢 | RPC `salvar_onboarding_aluno` + `modules/motor/Onboarding.jsx` | — |
 |1.5| Feedback imediato de XP ("+60 XP") | 🟢 | `VisaoEstudo.jsx:96` (`setFeedback({ xp: ganhouXp, … })`) | — |
 |1.6| Ledger C0 visível (histórico) | 🟢 | `HistoricoProgresso.jsx` | — |
-|1.7| Tagueamento de recorrência com volume útil | 🔴 | ainda amostra (3 questões em `questoes_prova` remoto); **PED2-R2 (03/07): 0 questões novas** — nenhuma prova real anexada ao projeto (a CPACN 2024 é só referência, sem documento); tagueamento exige prova+gabarito em mãos | P3 |
+|1.7| Tagueamento de recorrência com volume útil | 🟢 | **PED2-R3 (13/08):** 4 cadernos oficiais EsPCEx de 2024–2025, **200 questões** tagueadas e **69 recorrências medidas**. Fontes versionadas e gabaritos exatos; a recorrência não depende mais de um único ano | — |
 |1.8| Duplicação do motor de gamificação (auditoria sênior §2.1) | 🟢 | **FIX2 (0037, 02/07):** escritores de conquista dos 2 motores viraram no-op; 5 funções mortas removidas do seam; 4 tabelas da 15.5 carimbadas deprecadas (dados preservados); fonte única = ledger C0 + `jargao.js`/derivação no cliente. Resta remoção física (P4, DB3) | — |
 
 ## Camada 2 — Conteúdo e trilhas · fase **PED2** · 🟡 infraestrutura pronta, conteúdo aberto
@@ -48,7 +48,7 @@ documentado (`docs/conteudo/fabrica-trilhas-concursos.md`). O que resta na camad
 | # | Item | Status | Evidência | Prio |
 |---|------|:---:|---|:--:|
 |2.1| Trilha completa do Colégio Naval | 🟢 | `seed/02_trilha_cn.sql`; maturidade `completa` validada pelo build | — |
-|2.2| Trilha completa EsPCEx | 🟡 | **PED2-R2 (03/07):** sem material-fonte para o calendário (decisão 16 do dono: plano é "pensado prova a prova"); medido: 3/7 matérias objetivas com assunto, 0 semanas de trilha. **Aguardando material do dono** — gap exato em `conteudo/gaps-material-fonte-concursos.md` §1. Nenhuma trilha gerada por inferência | P1 |
+|2.2| Trilha completa EsPCEx | 🟢 | **PED2-R3 (13/08):** programa vigente em **80 assuntos / 339 recortes**, calendário próprio de **9 semanas / 109 atividades**, **24 missões**, 200 tags de 2024–2025 e maturidade `completa` v3 | — |
 |2.3| Trilhas EEAr / EPCAR / ESA | 🔴 | esqueleto; **PED2-R2:** 0 assuntos catalogados e nenhum edital no projeto — aguardando material-fonte (gaps §2–4) | P3 |
 |2.4| Config Colégio Militar | 🔴 | sem config; cada CM tem edital próprio — dono precisa escolher o(s) CM(s) e anexar edital (gaps §5) | P3 |
 |2.5| Fábrica/pipeline versionada de conteúdo | 🟢 | PED2 #49: pipeline 6 passos + seed gerado + validador como porteiro. **PED2-R2 (03/07):** espelho de maturidade finalmente carimbado no remoto (estava tudo `indisponivel`/v0); `suspeita_incoerencia=false` nos 6 | — |
@@ -152,9 +152,9 @@ documentado (`docs/conteudo/fabrica-trilhas-concursos.md`). O que resta na camad
 
 | Categoria | Itens | Fase dona |
 |---|---|---|
-| **P1 — produto** | ~~Tabela fantasma~~ ✅ (FIX2) · trilha EsPCEx (2.2) | PED2 rodada 2 |
+| **P1 — produto** | ~~Tabela fantasma~~ ✅ (FIX2) · ~~trilha EsPCEx~~ ✅ (PED2-R3) | — |
 | **P2 — antes de aluno real** | Observabilidade com destino (5.1) · alertas (5.2) · backup ⛔ (5.3) · sa-east-1 ⛔ (5.4) · credencial opaca (6.2) · rate limit (6.3) · separação demo/real (5.7) · ~~duplicação XP (1.8)~~ ✅ (FIX2) · storage + FKs sem índice (SDB-AUDIT) | OPS1 · SEC3b · DB3 |
-| **P3 — importante** | Conteúdo EEAr/EPCAR/ESA/CM · tagueamento (1.7) · a11y restante (8.1) · seletores/gate QA (9.3/9.5) · carga (4.8/9.4) | PED2 r2 · UX2 · QA3 |
+| **P3 — importante** | Conteúdo EEAr/EPCAR/ESA/CM · ampliar continuamente a série EsPCEx após 2025 · a11y restante (8.1) · seletores/gate QA (9.3/9.5) · carga (4.8/9.4) | PED2 · UX2 · QA3 |
 | **P4 — acabamento/plataforma** | TS no seam (7.3) · memo/reducer (7.6) · virtualização (4.4) · `.env` (6.8) · ARCH1 (10.4–10.6) | FE2 · ARCH1 |
 
 ## Dependências (o que destrava o quê) — revisão REG1
@@ -166,7 +166,7 @@ sugerida de valor:
 | Ordem | Fase | Escopo real remanescente | Depende de |
 |---|---|---|---|
 | 1 | ~~FIX2~~ | ✅ **Feita (02/07):** tabela fantasma removida do Login; duplicação de conquistas fechada (0037). Destino de observabilidade segue aberto (P1-3 do `07`) | — |
-| 2 | ~~PED2 rodada 2~~ | ✅ **Feita (03/07):** Fase 0 mediu ausência de material-fonte para EsPCEx/EEAr/EPCAR/ESA/CM (nenhum edital/prova no projeto); espelho de maturidade carimbado no remoto; gaps exatos documentados. Produção de trilha real segue **aguardando material do dono** | material-fonte do dono |
+| 2 | ~~PED2-R3~~ | ✅ **Feita (13/08):** programa vigente conferido, calendário EsPCEx de 9 semanas, 24 missões e recorrência medida sobre 2024–2025 | — |
 | 3 | **DB3** | Remoção física das 4 tabelas deprecadas (0037) + tabelas dormentes (inventário DB2/SDB-AUDIT) | decisão de arquitetura |
 | 4 | **PR1** | Piloto real (ver `07-pendencias-para-piloto-real.md`) | SMTP/infra do dono |
 | 5+ | ROLE1 · OPS1 · SEC3b · QA3 · FE2 · ARCH1 | como antes | julho/Pro/staging |

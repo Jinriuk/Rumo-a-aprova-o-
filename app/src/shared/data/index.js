@@ -540,7 +540,7 @@ export async function listarAlunos({ signal } = {}) {
 
 export async function listarTrilhas({ signal } = {}) {
   const { data, error } = await comSinal(
-    supabase.from("trilhas").select("id, nome, versao").order("versao", { ascending: false }),
+    supabase.from("trilhas").select("id, nome, nicho, versao, publicada").order("versao", { ascending: false }),
     signal,
   );
   if (error) throw falha("trilhas", error);

@@ -9,7 +9,7 @@ import { limparNome, nomeValido } from "../../shared/validacao.js";
 import { useEnvioUnico } from "../../shared/hooks/useEnvioUnico.js";
 import { comConcorrenciaLimitada } from "../../shared/lib/concorrencia.js";
 import { AvisoMaturidade } from "../conteudo/SeloMaturidade.jsx";
-import { maturidadeDe, rotuloMaturidade, podeAtribuirTrilhaSemanal, aceitaAluno } from "../conteudo/maturidade.js";
+import { maturidadeDe, rotuloMaturidade, podeAtribuirTrilhaSemanal, aceitaAluno, trilhaSemanalDoConcurso } from "../conteudo/maturidade.js";
 import * as db from "../../shared/data/index.js";
 
 // Fase B-min, B.6: cadastro em lote pode trazer 300+ nomes de uma vez.
@@ -59,7 +59,7 @@ function validarLinhasCsv(linhas, turmas) {
 // ────────────────────────────────────────────────────────────
 // Cadastro INDIVIDUAL de aluno
 // ────────────────────────────────────────────────────────────
-export function NovoAluno({ turmas, trilhaPadrao, concursos = [], aoMudar }) {
+export function NovoAluno({ turmas, trilhas = [], concursos = [], aoMudar }) {
   const T = useTema();
   const { input: inputS, label: lbl } = useInputStyle();
   const uid = useId();
@@ -79,16 +79,18 @@ export function NovoAluno({ turmas, trilhaPadrao, concursos = [], aoMudar }) {
   const cnId = concursos.find((c) => c.codigo === "cn")?.id ?? null;
   const codigoSel = concursos.find((c) => c.id === (concursoId || cnId))?.codigo ?? null;
   const usaTrilhaSemanal = codigoSel ? podeAtribuirTrilhaSemanal(codigoSel) : false;
+  const trilhaSelecionada = codigoSel ? trilhaSemanalDoConcurso(codigoSel, trilhas) : null;
   const concursoBloqueado = codigoSel ? !aceitaAluno(codigoSel) : false;
+  const trilhaAusente = usaTrilhaSemanal && !trilhaSelecionada;
 
-  const pronto = nomeValido(nome) && !concursoBloqueado && (!consentiu || nomeValido(consentimentoNome));
+  const pronto = nomeValido(nome) && !concursoBloqueado && !trilhaAusente && (!consentiu || nomeValido(consentimentoNome));
 
   async function cadastrar() {
     if (!pronto) return;
     setFeito(null);
     await enviar(async () => {
       const concursoEscolhido = concursoId || cnId || null;
-      const trilhaEscolhida = usaTrilhaSemanal ? (trilhaPadrao?.id ?? null) : null;
+      const trilhaEscolhida = usaTrilhaSemanal ? (trilhaSelecionada?.id ?? null) : null;
       const alunos = await db.cadastrarAlunos(
         [limparNome(nome)], turmaId || null, trilhaEscolhida, concursoEscolhido,
       );
@@ -155,6 +157,11 @@ export function NovoAluno({ turmas, trilhaPadrao, concursos = [], aoMudar }) {
           Este concurso está indisponível (sem conteúdo). Escolha outro para cadastrar.
         </div>
       )}
+      {trilhaAusente && (
+        <div style={{ color: T.gold, fontSize: 12, marginBottom: 10 }}>
+          A trilha semanal deste concurso ainda não foi publicada no banco. Recarregue após aplicar os seeds.
+        </div>
+      )}
       <Botao onClick={cadastrar} disabled={!pronto || ocupado}>
         {ocupado ? "Cadastrando…" : "+ Cadastrar aluno"}
       </Botao>
@@ -167,7 +174,7 @@ export function NovoAluno({ turmas, trilhaPadrao, concursos = [], aoMudar }) {
 // ────────────────────────────────────────────────────────────
 // Importação em lote (nomes em texto OU CSV com preview)
 // ────────────────────────────────────────────────────────────
-export function NovosAlunos({ turmas, trilhaPadrao, concursos = [], aoMudar }) {
+export function NovosAlunos({ turmas, trilhas = [], concursos = [], aoMudar }) {
   const T = useTema();
   const { input: inputS, label: lbl } = useInputStyle();
   const uid = useId();
@@ -217,17 +224,19 @@ export function NovosAlunos({ turmas, trilhaPadrao, concursos = [], aoMudar }) {
   const cnId = concursos.find((c) => c.codigo === "cn")?.id ?? null;
   const codigoSel = concursos.find((c) => c.id === (concursoId || cnId))?.codigo ?? null;
   const usaTrilhaSemanal = codigoSel ? podeAtribuirTrilhaSemanal(codigoSel) : false;
+  const trilhaSelecionada = codigoSel ? trilhaSemanalDoConcurso(codigoSel, trilhas) : null;
   const concursoBloqueado = codigoSel ? !aceitaAluno(codigoSel) : false;
+  const trilhaAusente = usaTrilhaSemanal && !trilhaSelecionada;
 
-  const prontoTexto = !concursoBloqueado && listaTexto.length > 0 && (!emLoteTexto || !consentiu || nomeValido(consentimentoNome));
-  const prontoCsv = !concursoBloqueado && linhasValidas.length > 0;
+  const prontoTexto = !concursoBloqueado && !trilhaAusente && listaTexto.length > 0 && (!emLoteTexto || !consentiu || nomeValido(consentimentoNome));
+  const prontoCsv = !concursoBloqueado && !trilhaAusente && linhasValidas.length > 0;
 
   async function cadastrar() {
-    if (concursoBloqueado) return;
+    if (concursoBloqueado || trilhaAusente) return;
     setFeito(null);
     await enviar(async () => {
       const concursoEscolhido = concursoId || cnId || null;
-      const trilhaEscolhida = usaTrilhaSemanal ? (trilhaPadrao?.id ?? null) : null;
+      const trilhaEscolhida = usaTrilhaSemanal ? (trilhaSelecionada?.id ?? null) : null;
 
       if (modo === "csv") {
         const grupos = new Map();
@@ -306,7 +315,7 @@ export function NovosAlunos({ turmas, trilhaPadrao, concursos = [], aoMudar }) {
         <div style={{ flex: 1, minWidth: 160 }}>
           <label htmlFor={cid("trilha")} style={lbl}>Trilha de estudo</label>
           <input id={cid("trilha")}
-            value={usaTrilhaSemanal ? (trilhaPadrao?.nome ?? "—") : "Sem trilha semanal — usa a contagem do concurso"}
+            value={usaTrilhaSemanal ? (trilhaSelecionada?.nome ?? "Trilha ainda não publicada") : "Sem trilha semanal — usa a contagem do concurso"}
             disabled style={{ ...inputS, color: T.sub }} />
         </div>
       </div>
@@ -318,6 +327,11 @@ export function NovosAlunos({ turmas, trilhaPadrao, concursos = [], aoMudar }) {
       {concursoBloqueado && (
         <div style={{ color: T.gold, fontSize: 12, marginBottom: 10 }}>
           Este concurso está indisponível (sem conteúdo). Escolha outro para cadastrar.
+        </div>
+      )}
+      {trilhaAusente && (
+        <div style={{ color: T.gold, fontSize: 12, marginBottom: 10 }}>
+          A trilha semanal deste concurso ainda não foi publicada no banco. Recarregue após aplicar os seeds.
         </div>
       )}
 
@@ -428,7 +442,7 @@ export function NovosAlunos({ turmas, trilhaPadrao, concursos = [], aoMudar }) {
 // ────────────────────────────────────────────────────────────
 // Card wrapper para as seções de cadastro (aba "Alunos")
 // ────────────────────────────────────────────────────────────
-export function PainelCadastroAlunos({ turmas, trilhaPadrao, concursos = [], aoMudar }) {
+export function PainelCadastroAlunos({ turmas, trilhas = [], concursos = [], aoMudar }) {
   const T = useTema();
   const [aba, setAba] = useState("individual");
   // Colapsado por padrão (UX1.2): o formulário de cadastro não empurra
@@ -463,8 +477,8 @@ export function PainelCadastroAlunos({ turmas, trilhaPadrao, concursos = [], aoM
             <button style={tabS(aba === "lote")} onClick={() => setAba("lote")}>Em lote</button>
           </div>
           {aba === "individual"
-            ? <NovoAluno turmas={turmas} trilhaPadrao={trilhaPadrao} concursos={concursos} aoMudar={aoMudar} />
-            : <NovosAlunos turmas={turmas} trilhaPadrao={trilhaPadrao} concursos={concursos} aoMudar={aoMudar} />
+            ? <NovoAluno turmas={turmas} trilhas={trilhas} concursos={concursos} aoMudar={aoMudar} />
+            : <NovosAlunos turmas={turmas} trilhas={trilhas} concursos={concursos} aoMudar={aoMudar} />
           }
         </div>
       )}

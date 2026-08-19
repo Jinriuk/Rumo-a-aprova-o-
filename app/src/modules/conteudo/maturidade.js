@@ -78,7 +78,8 @@ export const REQUISITOS_MATURIDADE = {
 // A MATRIZ. `versao` é a versão do conteúdo daquele concurso (sobe
 // quando o conteúdo muda de forma relevante). `nota` justifica o
 // nível para auditoria. `trilhaSemanalRef` aponta o seed da trilha
-// semanal quando há uma (hoje, só o CN).
+// semanal quando há uma. `trilhaNicho` impede que um concurso completo
+// receba por engano a versão mais nova da trilha de outro concurso.
 // ------------------------------------------------------------
 export const MATURIDADE_CONCURSOS = {
   cn: {
@@ -86,14 +87,16 @@ export const MATURIDADE_CONCURSOS = {
     maturidade: "completa",
     versao: 1,
     trilhaSemanalRef: "supabase/seed/02_trilha_cn.sql",
+    trilhaNicho: "colegio-naval",
     nota: "9 semanas, 50 atividades-modelo, estrutura de prova oficial e missões. Testado de ponta a ponta.",
   },
   espcex: {
     codigo: "espcex",
-    maturidade: "beta",
-    versao: 1,
-    trilhaSemanalRef: null,
-    nota: "Estrutura de prova oficial (2 dias, pesos), assuntos de Matemática/Português/Química e missões. Falta calendário semanal.",
+    maturidade: "completa",
+    versao: 3,
+    trilhaSemanalRef: "supabase/seed/20_trilha_espcex.sql",
+    trilhaNicho: "espcex",
+    nota: "Calendário próprio de 9 semanas, 24 missões, programa vigente de 2026 e 200 questões oficiais de 2024–2025 tagueadas.",
   },
   epcar: {
     codigo: "epcar",
@@ -159,4 +162,16 @@ export function aceitaAluno(codigo) {
 // herdaria, por engano, o calendário de OUTRO concurso (o do CN).
 export function podeAtribuirTrilhaSemanal(codigo) {
   return APRESENTACAO_MATURIDADE[maturidadeDe(codigo)].temTrilhaSemanal;
+}
+
+// Escolhe a versão publicada mais nova DENTRO do nicho do concurso.
+// Se o banco ainda não tiver a trilha esperada, devolve null em vez de
+// atribuir silenciosamente o calendário de outro concurso.
+export function trilhaSemanalDoConcurso(codigo, trilhas = []) {
+  if (!podeAtribuirTrilhaSemanal(codigo)) return null;
+  const nicho = MATURIDADE_CONCURSOS[codigo]?.trilhaNicho;
+  if (!nicho) return null;
+  return [...trilhas]
+    .filter((trilha) => trilha.nicho === nicho && trilha.publicada !== false)
+    .sort((a, b) => (b.versao ?? 0) - (a.versao ?? 0))[0] ?? null;
 }

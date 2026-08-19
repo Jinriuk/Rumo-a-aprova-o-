@@ -30,9 +30,10 @@ test("toda missão carrega exam_tag e nível (anti-furo e nivelamento na própri
   await como(IDS.alunoA, async (c) => {
     const r = await c.query("select count(*)::int as n from missoes where exam_tag is null or nivel is null");
     assert.equal(r.rows[0].n, 0);
-    // a missão de Física é da EEAR — e não aparece para CN
-    const fis = await c.query("select exam_tag from missoes where materia_codigo='fis'");
-    assert.ok(fis.rows.every((x) => x.exam_tag === "eear"), "missão de Física é só da EEAR");
+    // Física só existe em quem cobra Física (EEAR e, desde o PED2-R3,
+    // EsPCEx) — e nunca aparece para o CN, que não cobra a matéria.
+    const fis = await c.query("select distinct exam_tag from missoes where materia_codigo='fis' order by 1");
+    assert.deepEqual(fis.rows.map((x) => x.exam_tag), ["eear", "espcex"], "missão de Física é só de quem cobra Física");
   });
 });
 

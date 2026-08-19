@@ -1,0 +1,83 @@
+{
+  "comentario": "Calendário autoral EsPCEx 2026, inferido do programa vigente, do peso das provas e da recorrência medida nos cadernos oficiais de 2024 e 2025.",
+  "nicho": "espcex",
+  "examTag": "espcex",
+  "nome": "EsPCEx — CA 2026/27 (9 semanas)",
+  "versao": 1,
+  "statusDado": "inferencia",
+  "fontePrograma": "Edital nº 2 S Conc Adms, de 22 de abril de 2026 — Anexo C",
+  "provas": {
+    "dia1": "2026-09-12",
+    "dia2": "2026-09-13"
+  },
+  "semanasConteudo": 7,
+  "disciplinas": [
+    { "codigo": "por", "nome": "Português", "abrev": "Por", "cor": "#E0788E", "deslocamentoSemana": 0 },
+    { "codigo": "red", "nome": "Redação", "abrev": "Red", "cor": "#46C6B0", "deslocamentoSemana": 1 },
+    { "codigo": "fis", "nome": "Física", "abrev": "Fís", "cor": "#9A8CF0", "deslocamentoSemana": 2 },
+    { "codigo": "qui", "nome": "Química", "abrev": "Quí", "cor": "#5FC089", "deslocamentoSemana": 3 },
+    { "codigo": "mat", "nome": "Matemática", "abrev": "Mat", "cor": "#CDA349", "deslocamentoSemana": 4 },
+    { "codigo": "geo", "nome": "Geografia", "abrev": "Geo", "cor": "#E0954A", "deslocamentoSemana": 2 },
+    { "codigo": "his", "nome": "História", "abrev": "His", "cor": "#D17C57", "deslocamentoSemana": 6 },
+    { "codigo": "ing", "nome": "Inglês", "abrev": "Ing", "cor": "#49B6CF", "deslocamentoSemana": 0 },
+    { "codigo": "prov", "nome": "Provas antigas", "abrev": "Prov", "cor": "#C77DFF", "deslocamentoSemana": 0 }
+  ],
+  "semanas": [
+    { "n": 1, "inicio": "2026-07-13", "fim": "2026-07-19", "foco": "Diagnóstico e fundação nas frentes de maior peso", "simulado": "Diagnóstico 2024 — Dia 1", "metaQuestoes": 300 },
+    { "n": 2, "inicio": "2026-07-20", "fim": "2026-07-26", "foco": "Fundação completa e primeira redação corrigida", "simulado": "Diagnóstico 2024 — Dia 2", "metaQuestoes": 320 },
+    { "n": 3, "inicio": "2026-07-27", "fim": "2026-08-02", "foco": "Consolidação multidisciplinar e correção de lacunas", "simulado": null, "metaQuestoes": 320 },
+    { "n": 4, "inicio": "2026-08-03", "fim": "2026-08-09", "foco": "Aprofundamento nas incidências medidas", "simulado": "Simulado parcial — Dia 1", "metaQuestoes": 340 },
+    { "n": 5, "inicio": "2026-08-10", "fim": "2026-08-16", "foco": "Aprofundamento nas matérias do segundo dia", "simulado": "Simulado parcial — Dia 2", "metaQuestoes": 340 },
+    { "n": 6, "inicio": "2026-08-17", "fim": "2026-08-23", "foco": "Fechamento do programa e revisão espaçada", "simulado": "Simulado completo 2025 — Dia 1", "metaQuestoes": 360 },
+    { "n": 7, "inicio": "2026-08-24", "fim": "2026-08-30", "foco": "Fechamento do programa e prova sob tempo", "simulado": "Simulado completo 2025 — Dia 2", "metaQuestoes": 360 },
+    { "n": 8, "inicio": "2026-08-31", "fim": "2026-09-06", "foco": "Reta final nos dois formatos oficiais", "simulado": "Simulado integral em dois dias", "metaQuestoes": 280 },
+    { "n": 9, "inicio": "2026-09-07", "fim": "2026-09-13", "foco": "Revisão leve, descanso e execução da prova", "simulado": "CA EsPCEx — 12 e 13 de setembro", "metaQuestoes": 160 }
+  ],
+  "rotinas": [
+    { "semanas": [1, 2, 3, 4, 5, 6, 7], "s": "ing", "p": "F", "t": "Bloco cronometrado de compreensão de texto e estruturas gramaticais" },
+    { "semanas": [2, 3, 4, 5, 6, 7], "s": "red", "p": "F", "t": "Produzir e corrigir 1 dissertação completa conforme o edital vigente" },
+    { "semanas": [1, 2, 4, 5, 6, 7], "s": "prov", "p": "F", "t": "Executar o caderno indicado sob tempo e transformar erros em revisão ativa" },
+    { "semanas": [8], "s": "prov", "p": "F", "t": "Simular os dois dias oficiais, 13h30–18h00, com intervalo real de 24 horas" },
+    { "semanas": [8], "s": "red", "p": "F", "t": "Produzir 2 redações completas; corrigir conteúdo, linguagem e apresentação" },
+    { "semanas": [8], "s": "mat", "p": "F", "t": "Refazer erros recorrentes de Matemática e fechar fórmulas de alto uso" },
+    { "semanas": [8], "s": "por", "p": "F", "t": "Refazer erros recorrentes de Português e Literatura" },
+    { "semanas": [8], "s": "fis", "p": "P", "t": "Revisar erros de Física dos quatro cadernos tagueados" },
+    { "semanas": [9], "s": "prov", "p": "P", "t": "Reler o caderno de erros; nenhuma prova completa após quarta-feira" },
+    { "semanas": [9], "s": "red", "p": "P", "t": "Revisar estrutura, conectivos e checklist de apresentação da redação" },
+    { "semanas": [9], "s": "mat", "p": "P", "t": "Revisão leve de fórmulas e questões já dominadas" },
+    { "semanas": [9], "s": "por", "p": "P", "t": "Revisão leve de interpretação, sintaxe e escolas literárias" },
+    { "semanas": [9], "s": "prov", "p": "F", "t": "Executar o Dia 1 em 12/09 e o Dia 2 em 13/09; priorizar sono e logística" }
+  ],
+  "planos": [
+    { "tipo": "anual", "nome": "EsPCEx — Trilha Anual", "descricao": "Programa completo com ciclos de fundação, consolidação e prova.", "ordem": 0 },
+    { "tipo": "semestral", "nome": "EsPCEx — Trilha Semestral", "descricao": "Programa completo comprimido, com revisão espaçada e redação semanal.", "ordem": 1 },
+    { "tipo": "intensiva", "nome": "EsPCEx — Trilha Intensiva", "descricao": "Nove semanas orientadas pelo edital vigente e pela recorrência 2024–2025.", "ordem": 2 },
+    { "tipo": "reta_final", "nome": "EsPCEx — Reta Final", "descricao": "Dois dias simulados, revisão de erros e blindagem da redação.", "ordem": 3 }
+  ],
+  "missoes": [
+    { "materia": "por", "assunto": "Leitura, interpretação e análise de textos", "nivel": "intermediario", "nome": "Leitura sem perda", "objetivo": "Sustentar interpretação precisa sob tempo.", "prioridade": "alta", "qtd": 60, "tempo": 120, "acuracia": 80 },
+    { "materia": "por", "assunto": "Sintaxe", "nivel": "intermediario", "nome": "Sintaxe aplicada", "objetivo": "Fechar análise, regência, concordância e pontuação.", "prioridade": "alta", "qtd": 50, "tempo": 110, "acuracia": 78 },
+    { "id": "a1000000-0000-4000-8000-000000000004", "materia": "por", "assunto": "Literatura Brasileira", "nivel": "intermediario", "nome": "Literatura que cai", "objetivo": "Cobrir escolas literárias e leitura de época.", "prioridade": "media", "qtd": 40, "tempo": 90, "acuracia": 75 },
+    { "materia": "red", "assunto": "Dissertação", "nivel": "intermediario", "nome": "Tese e progressão", "objetivo": "Construir dissertação com tese, argumentos e conclusão coerentes.", "prioridade": "alta", "qtd": null, "tempo": 120, "acuracia": null },
+    { "materia": "red", "assunto": "Gramática", "nivel": "intermediario", "nome": "Redação sem desvio", "objetivo": "Reduzir desvios gramaticais nas produções completas.", "prioridade": "alta", "qtd": null, "tempo": 90, "acuracia": null },
+    { "materia": "red", "assunto": "Apresentação", "nivel": "reta_final", "nome": "Entrega apta", "objetivo": "Cumprir legibilidade, margens, linhas e apresentação exigidas.", "prioridade": "alta", "qtd": null, "tempo": 60, "acuracia": null },
+    { "materia": "fis", "assunto": "Mecânica", "nivel": "avancado", "nome": "Mecânica sob tempo", "objetivo": "Integrar cinemática, dinâmica, energia e hidrostática.", "prioridade": "alta", "qtd": 60, "tempo": 140, "acuracia": 80 },
+    { "materia": "fis", "assunto": "Eletricidade", "nivel": "intermediario", "nome": "Eletricidade fechada", "objetivo": "Dominar eletrostática, circuitos e eletromagnetismo.", "prioridade": "alta", "qtd": 45, "tempo": 110, "acuracia": 78 },
+    { "materia": "fis", "assunto": "Termologia", "nivel": "intermediario", "nome": "Termologia sem surpresa", "objetivo": "Resolver calorimetria, gases e termodinâmica.", "prioridade": "media", "qtd": 40, "tempo": 100, "acuracia": 75 },
+    { "materia": "qui", "assunto": "Princípios da química orgânica", "nivel": "intermediario", "nome": "Orgânica reconhecível", "objetivo": "Identificar funções, nomenclatura, isomeria e reações.", "prioridade": "alta", "qtd": 55, "tempo": 130, "acuracia": 78 },
+    { "materia": "qui", "assunto": "Equilíbrio Químico", "nivel": "avancado", "nome": "Equilíbrio dominado", "objetivo": "Resolver equilíbrio, pH e deslocamentos com segurança.", "prioridade": "alta", "qtd": 50, "tempo": 120, "acuracia": 80 },
+    { "materia": "qui", "assunto": "Eletroquímica/Eletrólise", "nivel": "avancado", "nome": "Eletroquímica real", "objetivo": "Fechar pilhas e eletrólise sem confusão de OCR.", "prioridade": "media", "qtd": 40, "tempo": 100, "acuracia": 78 },
+    { "materia": "mat", "assunto": "Funções", "nivel": "avancado", "nome": "Funções integradas", "objetivo": "Ler domínio, imagem, gráficos e composições rapidamente.", "prioridade": "alta", "qtd": 70, "tempo": 150, "acuracia": 82 },
+    { "id": "a1000000-0000-4000-8000-000000000005", "materia": "mat", "assunto": "Geometria Analítica", "nivel": "avancado", "nome": "Geometria Analítica", "objetivo": "Dominar retas, circunferência e cônicas.", "prioridade": "alta", "qtd": 60, "tempo": 140, "acuracia": 82 },
+    { "materia": "mat", "assunto": "Geometria Plana", "nivel": "avancado", "nome": "Geometria Plana fechada", "objetivo": "Automatizar semelhança, relações métricas, áreas e círculos.", "prioridade": "alta", "qtd": 70, "tempo": 150, "acuracia": 82 },
+    { "materia": "ing", "assunto": "Compreensão de textos", "nivel": "intermediario", "nome": "Reading sob relógio", "objetivo": "Localizar ideia central, inferência e referência lexical.", "prioridade": "alta", "qtd": 60, "tempo": 100, "acuracia": 82 },
+    { "materia": "ing", "assunto": "Estruturas gramaticais", "nivel": "intermediario", "nome": "Grammar de alto retorno", "objetivo": "Fechar estruturas gramaticais cobradas diretamente.", "prioridade": "alta", "qtd": 50, "tempo": 90, "acuracia": 82 },
+    { "materia": "ing", "assunto": "Estruturas gramaticais", "nivel": "reta_final", "nome": "Word formation", "objetivo": "Reconhecer prefixos, sufixos e formação de palavras do programa vigente.", "prioridade": "media", "qtd": 30, "tempo": 60, "acuracia": 80 },
+    { "materia": "his", "assunto": "O Mundo na Guerra Fria", "nivel": "intermediario", "nome": "Guerra Fria e Brasil", "objetivo": "Conectar bipolaridade, conflitos e República até 1991.", "prioridade": "alta", "qtd": 50, "tempo": 110, "acuracia": 78 },
+    { "materia": "his", "assunto": "O Brasil Imperial", "nivel": "intermediario", "nome": "Brasil Imperial em sequência", "objetivo": "Dominar Joanino, Reinado, Regências e crise monárquica.", "prioridade": "media", "qtd": 45, "tempo": 100, "acuracia": 76 },
+    { "materia": "his", "assunto": "O Mundo na Época da Primeira Guerra Mundial", "nivel": "intermediario", "nome": "Primeira Guerra e República", "objetivo": "Integrar guerra, República da Espada e República Velha.", "prioridade": "media", "qtd": 45, "tempo": 100, "acuracia": 76 },
+    { "materia": "geo", "assunto": "Geografia Geral — O Espaço Natural", "nivel": "intermediario", "nome": "Espaço natural", "objetivo": "Resolver clima, relevo, solos, biomas e água.", "prioridade": "alta", "qtd": 55, "tempo": 120, "acuracia": 78 },
+    { "materia": "geo", "assunto": "Geografia Geral — O Espaço Político e Econômico", "nivel": "intermediario", "nome": "Geopolítica aplicada", "objetivo": "Interpretar poder global, blocos, conflitos e fluxos econômicos.", "prioridade": "alta", "qtd": 50, "tempo": 110, "acuracia": 78 },
+    { "materia": "geo", "assunto": "Geografia do Brasil — O Espaço Humano", "nivel": "intermediario", "nome": "Brasil humano", "objetivo": "Fechar população, urbanização e problemas urbanos brasileiros.", "prioridade": "media", "qtd": 45, "tempo": 100, "acuracia": 76 }
+  ]
+}
