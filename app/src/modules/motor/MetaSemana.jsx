@@ -7,13 +7,15 @@ import React, { useState } from "react";
 import { SectionCard, EmptyState, Erro, StatusBadge } from "../../shared/ui/componentes.jsx";
 import { useTema } from "../../shared/branding/BrandingContext.jsx";
 import { L, PRIORIDADE, xpPorPrioridade, questoesSugeridas } from "./jargao.js";
+import { contextoRegistroDaAtividade } from "./jornada.js";
 import { mensagemAmigavel } from "../../shared/lib/erros.js";
 import * as db from "../../shared/data/index.js";
 
-export function MetaSemana({ meta, trilha, podeEditar, aoMudar, aoAbrirDesempenho }) {
+export function MetaSemana({ meta, trilha, podeEditar, aoMudar, aoAbrirDesempenho, aoPraticar, compacta = false }) {
   const T = useTema();
   const [erro, setErro] = useState(null);
   const [ocupado, setOcupado] = useState(null);
+  const [mostrarTodos, setMostrarTodos] = useState(false);
 
   if (!meta) {
     return (
@@ -63,7 +65,7 @@ export function MetaSemana({ meta, trilha, podeEditar, aoMudar, aoAbrirDesempenh
             {itens.map((item, i) => (
               <ObjetivoItem key={item.id} item={item} trilha={trilha} podeEditar={false}
                 ocupado={false} ultimo={i === itens.length - 1}
-                aoConcluir={() => {}} aoAdiar={() => {}} />
+                aoConcluir={() => {}} aoAdiar={() => {}} aoPraticar={() => {}} />
             ))}
           </div>
         </SectionCard>
@@ -81,22 +83,35 @@ export function MetaSemana({ meta, trilha, podeEditar, aoMudar, aoAbrirDesempenh
     setOcupado(null);
   }
 
+  const limite = compacta && !mostrarTodos ? 3 : null;
+  const praticaveis = itens.filter((item) => item.estado === "pendente");
+  const visiveis = limite == null ? itens : praticaveis.slice(0, limite);
+  const ocultos = Math.max(0, itens.length - visiveis.length);
+
   return (
     <SectionCard titulo={L.objetivos} sub={`${feitas} de ${consideradas} concluídos`} semPadding>
       <div style={{ display: "flex", flexDirection: "column" }}>
-        {itens.map((item, i) => (
+        {visiveis.map((item, i) => (
           <ObjetivoItem key={item.id} item={item} trilha={trilha} podeEditar={podeEditar}
-            ocupado={ocupado === item.id} ultimo={i === itens.length - 1}
+            ocupado={ocupado === item.id} ultimo={i === visiveis.length - 1 && ocultos === 0}
+            aoPraticar={() => aoPraticar?.(contextoRegistroDaAtividade(item, trilha))}
             aoConcluir={() => mudar(item, item.estado === "concluida" ? "pendente" : "concluida")}
             aoAdiar={() => mudar(item, item.estado === "ignorada" ? "pendente" : "ignorada")} />
         ))}
       </div>
+      {ocultos > 0 && (
+        <div className="objective-list-more">
+          <button onClick={() => setMostrarTodos(true)}>
+            Ver todos os {itens.length} objetivos <span aria-hidden="true">↓</span>
+          </button>
+        </div>
+      )}
       {erro && <div style={{ padding: "0 14px 12px" }}><Erro>{erro}</Erro></div>}
     </SectionCard>
   );
 }
 
-function ObjetivoItem({ item, trilha, podeEditar, ocupado, ultimo, aoConcluir, aoAdiar }) {
+function ObjetivoItem({ item, trilha, podeEditar, ocupado, ultimo, aoPraticar, aoConcluir, aoAdiar }) {
   const T = useTema();
   const at = item.atividade;
   const disc = trilha.porCodigo[at.disciplina_codigo];
@@ -106,7 +121,8 @@ function ObjetivoItem({ item, trilha, podeEditar, ocupado, ultimo, aoConcluir, a
   const xp = xpPorPrioridade[at.prioridade] ?? 40;
 
   return (
-    <div style={{ padding: "13px 14px", borderBottom: ultimo ? "none" : `1px solid ${T.line}`, opacity: adiada ? 0.5 : 1, background: concluida ? `${T.green}0c` : "transparent" }}>
+    <div className="objective-row" data-state={item.estado}
+      style={{ padding: "13px 14px", borderBottom: ultimo ? "none" : `1px solid ${T.line}`, opacity: adiada ? 0.5 : 1, background: concluida ? `${T.green}0c` : "transparent" }}>
       <div style={{ display: "flex", gap: 11, alignItems: "flex-start" }}>
         <div style={{ flexShrink: 0, marginTop: 1, width: 22, height: 22, borderRadius: "50%", border: `2px solid ${concluida ? T.green : adiada ? T.line : T.gold}`, background: concluida ? T.green : "transparent", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, color: "#0A1622", fontWeight: 800 }}>
           {concluida ? "✓" : ""}
@@ -132,14 +148,17 @@ function ObjetivoItem({ item, trilha, podeEditar, ocupado, ultimo, aoConcluir, a
           </div>
 
           {podeEditar && (
-            <div style={{ display: "flex", gap: 8, marginTop: 10, flexWrap: "wrap" }}>
-              <button onClick={aoConcluir} disabled={ocupado}
-                style={{ border: "none", background: concluida ? "transparent" : T.gold, color: concluida ? T.sub : "#0A1622", borderRadius: 8, fontWeight: 800, fontSize: 13, padding: concluida ? "8px 0" : "9px 18px", minHeight: 38 }}>
+            <div className="objective-actions">
+              {!concluida && !adiada && aoPraticar && (
+                <button className="objective-practice" onClick={aoPraticar} disabled={ocupado}>
+                  Praticar agora <span aria-hidden="true">→</span>
+                </button>
+              )}
+              <button className="objective-secondary" onClick={aoConcluir} disabled={ocupado}>
                 {concluida ? "↺ Reabrir" : `✓ ${L.concluir}`}
               </button>
               {!concluida && (
-                <button onClick={aoAdiar} disabled={ocupado}
-                  style={{ border: `1px solid ${T.line}`, background: "transparent", color: T.sub, borderRadius: 8, fontWeight: 600, fontSize: 13, padding: "9px 16px", minHeight: 38 }}>
+                <button className="objective-secondary" onClick={aoAdiar} disabled={ocupado}>
                   {adiada ? "Retomar" : L.adiar}
                 </button>
               )}

@@ -3,7 +3,7 @@
    secundários recolhíveis (tópico, observações, data). Resumo do dia
    no topo. Só o aluno escreve; o banco garante isso, não esta tela. */
 import React, { useEffect, useId, useMemo, useState } from "react";
-import { SectionCard, EmptyState, Botao, Erro, useInputStyle, StatCard, Toast, useToast, useDialogo } from "../../shared/ui/componentes.jsx";
+import { SectionCard, EmptyState, Botao, Erro, useInputStyle, StatCard, useDialogo } from "../../shared/ui/componentes.jsx";
 import { useTema } from "../../shared/branding/BrandingContext.jsx";
 import { todayISO } from "../../shared/regras/regras.js";
 import { resumirRegistros } from "../../shared/metricas/agregados.js";
@@ -12,6 +12,7 @@ import { fmtHoras } from "./jargao.js";
 import { mensagemAmigavel } from "../../shared/lib/erros.js";
 import { useEnvioUnico } from "../../shared/hooks/useEnvioUnico.js";
 import { parseTempo, validarRegistroEstudo } from "../../shared/contratos/registroEstudo.js";
+import { ConfirmacaoRegistro } from "./ProgressoVivido.jsx";
 import * as db from "../../shared/data/index.js";
 
 // parseTempo e a validação do payload moram agora no contrato
@@ -21,18 +22,23 @@ export { parseTempo };
 
 const fmtTempoCurto = (min) => (min >= 60 ? `${Math.floor(min / 60)}h${String(min % 60).padStart(2, "0")}` : `${min}min`);
 
-export function Registrar({ aluno, trilha, registros, aoMudar, minutosSugeridos }) {
+export function Registrar({
+  aluno, trilha, registros, aoMudar, minutosSugeridos,
+  contextoInicial = null, confirmacao = null, aoConfirmar,
+  aoVerMissao, aoRegistrarOutro, aoSairContexto,
+}) {
   const T = useTema();
   const { input: inputS, label: lbl } = useInputStyle();
-  const branco = { data: todayISO(), disciplina_codigo: "mat", topico: "", questoes: "", acertos: "", tempo: "", obs: "" };
-  const [f, setF] = useState(branco);
+  const branco = useMemo(() => ({
+    data: todayISO(), disciplina_codigo: trilha.disciplinas[0]?.codigo ?? "mat",
+    topico: "", questoes: "", acertos: "", tempo: "", obs: "",
+  }), [trilha.disciplinas]);
+  const [f, setF] = useState(() => branco);
   // Envio único: trava síncrona contra duplo clique no "Adicionar"
   // (FE1, tarefa 82). `erro`/`setErro` vêm do hook (camada comum).
   const { ocupado, erro, setErro, enviar } = useEnvioUnico("salvar");
   const [maisCampos, setMaisCampos] = useState(false);
   const set = (k, v) => setF({ ...f, [k]: v });
-  // confirmação visível de que o registro foi salvo (AV2 MEL-P3-001).
-  const { toast, mostrar, fechar } = useToast();
   const dialogo = useDialogo();
   const uid = useId();
   const id = (k) => `${uid}-${k}`;
@@ -41,6 +47,19 @@ export function Registrar({ aluno, trilha, registros, aoMudar, minutosSugeridos 
   useEffect(() => {
     if (minutosSugeridos > 0) setF((atual) => ({ ...atual, tempo: fmtTempoCurto(minutosSugeridos) }));
   }, [minutosSugeridos]);
+
+  // O objetivo abre o formulário com matéria e tópico coerentes. A
+  // quantidade continua sendo apenas uma sugestão: só entra no campo
+  // quando o aluno toca explicitamente em "Usar sugestão".
+  useEffect(() => {
+    if (!contextoInicial) return;
+    const disciplinaExiste = trilha.disciplinas.some((d) => d.codigo === contextoInicial.disciplinaCodigo);
+    setF((atual) => ({
+      ...atual,
+      disciplina_codigo: disciplinaExiste ? contextoInicial.disciplinaCodigo : atual.disciplina_codigo,
+      topico: contextoInicial.titulo,
+    }));
+  }, [contextoInicial?.chave, contextoInicial?.disciplinaCodigo, contextoInicial?.titulo, trilha.disciplinas]);
 
   // Verdade da validação vem do contrato (mesma regra do payload que
   // vai ao banco). As dicas inline de borda derivam dela.
@@ -65,10 +84,10 @@ export function Registrar({ aluno, trilha, registros, aoMudar, minutosSugeridos 
     if (!v.ok) { setErro(Object.values(v.erros)[0]); return; }
     // enviar() é a trava: um segundo clique no mesmo tick é ignorado.
     await enviar(async () => {
-      await db.adicionarRegistro({ escola_id: aluno.escola_id, aluno_id: aluno.id, ...v.campos });
+      const registro = await db.adicionarRegistro({ escola_id: aluno.escola_id, aluno_id: aluno.id, ...v.campos });
       setF({ ...branco, data: f.data, disciplina_codigo: f.disciplina_codigo });
-      aoMudar?.();
-      mostrar("Registro salvo! Já entrou no seu desempenho.", "ok");
+      if (aoConfirmar) aoConfirmar({ registro, contexto: contextoInicial });
+      else aoMudar?.();
     });
   }
 
@@ -92,10 +111,30 @@ export function Registrar({ aluno, trilha, registros, aoMudar, minutosSugeridos 
   const recentes = registros.slice(0, limiteRecentes);
   const temMaisRecentes = registros.length > limiteRecentes;
 
+  if (confirmacao) {
+    return (
+      <ConfirmacaoRegistro confirmacao={confirmacao} trilha={trilha}
+        aoVerMissao={aoVerMissao} aoRegistrarOutro={aoRegistrarOutro} />
+    );
+  }
+
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
       {dialogo.elemento}
-      {toast && <Toast texto={toast.texto} tom={toast.tom} aoFechar={fechar} />}
+      {contextoInicial && (
+        <section className="journey-context" aria-labelledby="journey-context-title">
+          <div className="journey-context-marker" aria-hidden="true"><span /></div>
+          <div className="journey-context-copy">
+            <small>Você está avançando neste objetivo</small>
+            <strong id="journey-context-title" className="disp">{contextoInicial.titulo}</strong>
+            <span>
+              {trilha.porCodigo[contextoInicial.disciplinaCodigo]?.nome ?? contextoInicial.disciplinaCodigo}
+              {contextoInicial.questoesSugeridas ? ` · prática sugerida: ≈${contextoInicial.questoesSugeridas} questões` : ""}
+            </span>
+          </div>
+          <button onClick={aoSairContexto}>Usar registro livre</button>
+        </section>
+      )}
       {/* RESUMO DO DIA */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(150px,1fr))", gap: 10 }}>
         <StatCard rotulo="Questões hoje" valor={resumo.q} icone="✦" tom={resumo.q > 0 ? "neutro" : "neutro"} />
@@ -119,7 +158,16 @@ export function Registrar({ aluno, trilha, registros, aoMudar, minutosSugeridos 
             <label htmlFor={id("top")} style={lbl}>Tópico <span style={{ color: T.gold }} title="Campo obrigatório">*</span></label>
             <input id={id("top")} value={f.topico} onChange={(e) => set("topico", e.target.value)} aria-required="true" placeholder="ex: divisibilidade — MDC e MMC (obrigatório)" style={inputS} />
           </div>
-          <div><label htmlFor={id("q")} style={lbl}>Questões</label><input id={id("q")} type="number" inputMode="numeric" min="0" value={f.questoes} onChange={(e) => set("questoes", e.target.value)} placeholder="0" style={inputS} /></div>
+          <div>
+            <label htmlFor={id("q")} style={lbl}>Questões</label>
+            <input id={id("q")} type="number" inputMode="numeric" min="0" value={f.questoes} onChange={(e) => set("questoes", e.target.value)} placeholder="0" style={inputS} />
+            {contextoInicial?.questoesSugeridas && f.questoes === "" && (
+              <button type="button" className="journey-use-suggestion"
+                onClick={() => set("questoes", String(contextoInicial.questoesSugeridas))}>
+                Usar sugestão: {contextoInicial.questoesSugeridas}
+              </button>
+            )}
+          </div>
           <div>
             <label htmlFor={id("ac")} style={lbl}>Acertos</label>
             <input id={id("ac")} type="number" inputMode="numeric" min="0" value={f.acertos} onChange={(e) => set("acertos", e.target.value)} placeholder="0"
@@ -149,7 +197,7 @@ export function Registrar({ aluno, trilha, registros, aoMudar, minutosSugeridos 
         )}
 
         <Botao onClick={adicionar} disabled={!podeSalvar} style={{ marginTop: 14, width: "100%" }}>
-          {ocupado ? "Salvando…" : "✓ Adicionar registro"}
+          {ocupado ? "Confirmando no seu progresso…" : "Confirmar estudo"}
         </Botao>
         {f.questoes !== "" && +f.questoes > 0 && f.topico.trim() === "" && (
           <div style={{ fontSize: 12, color: T.sub, marginTop: 8 }}>Falta o <b style={{ color: T.gold }}>tópico</b> — ele alimenta seu histórico e o radar de desempenho.</div>

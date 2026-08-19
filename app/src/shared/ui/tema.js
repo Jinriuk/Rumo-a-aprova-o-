@@ -101,11 +101,10 @@ export const FONTES_CSS = `
   }
   .navwrap { -webkit-overflow-scrolling: touch; scrollbar-width: none; }
   .navwrap::-webkit-scrollbar { display: none; }
-  /* em telas grandes DE COMPUTADOR (mouse/trackpad: pointer fine) o
-     sistema sobe um degrau de tamanho. Tablets ficam de fora: zoom
-     re-escala a página durante a rolagem e trava o scroll no WebKit. */
-  @media (min-width: 1200px) and (pointer: fine) { body { zoom: 1.08; } }
-  @media (min-width: 1600px) and (pointer: fine) { body { zoom: 1.15; } }
+  /* A densidade é controlada pelos próprios componentes. Zoom global
+     altera a geometria do 100dvh, cria rolagem residual e distorce as
+     medidas usadas pelos testes responsivos. */
+  html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
   @media (max-width: 560px) {
     .hdr-title { font-size: 17px !important; }
     /* mobile mais compacto: menos respiro vertical, mais conteúdo na dobra */

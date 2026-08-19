@@ -1,8 +1,20 @@
 # UXG2 — jornada vertical do aluno
 
-Base da revisão: `473abe0`
+Base da implementação: `8edd69b`
 
 Escopo: Hoje → objetivo → Registrar → confirmação → Hoje atualizado.
+
+## Estado desta entrega
+
+Implementada no pacote UXG2-R2, sem migration e sem alteração de RLS:
+
+- objetivo pendente abre um registro contextual;
+- matéria e tópico vêm preenchidos, enquanto a quantidade permanece uma
+  sugestão que exige ação explícita;
+- a linha devolvida por `adicionarRegistro()` alimenta uma confirmação própria;
+- XP e missões continuam separados e só aparecem depois da leitura do ledger;
+- a volta ao Hoje rola até a missão e destaca uma vez o progresso;
+- a lista inicial mostra até três próximos objetivos e preserva acesso ao total.
 
 ## Decisão
 
@@ -127,7 +139,7 @@ Ao voltar:
 - manter a ilha de recompensa somente se houve delta persistido;
 - não repetir a celebração ao atualizar a página.
 
-## Alterações técnicas sugeridas
+## Alterações técnicas implementadas
 
 | Arquivo | Mudança |
 |---|---|
@@ -136,6 +148,7 @@ Ao voltar:
 | `MetaSemana.jsx` | `ObjetivoItem` ganha `Praticar agora` e callback contextual |
 | `Registrar.jsx` | Aceita contexto, usa retorno de `adicionarRegistro` e expõe `aoConfirmar` |
 | `ProgressoVivido.jsx` | Composição da confirmação persistida e da ilha de recompensa |
+| `jornada.js` | Contrato puro para contexto e resumo da linha confirmada |
 | `experiencia.css` | Transições de jornada, estados de envio e destaque de impacto |
 
 Não é necessária migration para a primeira entrega. A relação com o objetivo pode viver apenas no estado de navegação; persistir `meta_atividade_id` no registro deve ser uma decisão pedagógica separada, com migration e análise de RLS.
@@ -153,7 +166,7 @@ Não é necessária migration para a primeira entrega. A relação com o objetiv
 9. Responsável e coordenação continuam sem controles de escrita indevidos.
 10. RLS e a suíte PostgreSQL permanecem gates obrigatórios.
 
-## Ordem de implementação
+## Ordem usada na implementação
 
 1. contexto Objetivo → Registrar;
 2. confirmação da linha persistida;

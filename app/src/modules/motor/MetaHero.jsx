@@ -8,6 +8,7 @@ import { Insignia } from "../../shared/ui/Insignia.jsx";
 import { useTema } from "../../shared/branding/BrandingContext.jsx";
 import { fmtBR, fmtBRDiaSemana, todayISO, daysBetween } from "../../shared/regras/regras.js";
 import { L, patente, fmtHoras, fmtHorasCurto, xpPorPrioridade } from "./jargao.js";
+import { primeiroContextoPendente } from "./jornada.js";
 
 export function FaixaAspirante({ nome, contexto, xp, streak, aoAbrirConquistas }) {
   const T = useTema();
@@ -82,6 +83,7 @@ export function MissaoAtual({ meta, trilha, m, aoAvancar }) {
   const corBorda = atrasada ? T.red : T.gold;
   const labelEstado = atrasada ? "⚠ atrasada" : pendentes === 0 ? "✓ concluída" : "⊚ alvo atual";
   const corLabel = atrasada ? T.red : T.gold;
+  const contextoAlvo = primeiroContextoPendente(meta, trilha);
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
@@ -116,9 +118,9 @@ export function MissaoAtual({ meta, trilha, m, aoAvancar }) {
               ⚠ Missão atrasada — <b>{pendentes} {pendentes === 1 ? "pendência" : "pendências"}</b> em aberto. Conclua antes de avançar.
             </div>
             {aoAvancar && (
-              <button className="mission-primary-action" onClick={() => aoAvancar("registrar")}
+              <button className="mission-primary-action" onClick={() => aoAvancar("registrar", contextoAlvo)}
                 style={{ display: "block", width: "100%", marginTop: 12, background: T.red, color: "#fff", border: `1.5px solid ${T.red}`, borderRadius: 9, padding: "10px 16px", fontWeight: 700, fontSize: 13, cursor: "pointer", textAlign: "center" }}>
-                Concluir pendências
+                Continuar missão
               </button>
             )}
           </>
@@ -133,7 +135,7 @@ export function MissaoAtual({ meta, trilha, m, aoAvancar }) {
                   style={{ flex: 1, minWidth: 140, background: T.gold, color: "#0A1622", border: `1.5px solid ${T.gold}`, borderRadius: 9, padding: "10px 12px", fontWeight: 700, fontSize: 13, cursor: "pointer" }}>
                   Ver próxima missão ›
                 </button>
-                <button onClick={() => aoAvancar("registrar")}
+                <button onClick={() => aoAvancar("registrar", null)}
                   style={{ flex: 1, minWidth: 140, background: "transparent", color: T.gold, border: `1.5px solid ${T.gold}66`, borderRadius: 9, padding: "10px 12px", fontWeight: 700, fontSize: 13, cursor: "pointer" }}>
                   ✎ Revisar missão
                 </button>
@@ -146,9 +148,9 @@ export function MissaoAtual({ meta, trilha, m, aoAvancar }) {
               🎯 Sua missão: concluir <b style={{ color: T.gold }}>{pendentes} {pendentes === 1 ? "objetivo" : "objetivos"}</b> até {fmtBR(String(meta.fim))}.
             </div>
             {aoAvancar && (
-              <button className="mission-primary-action" onClick={() => aoAvancar("registrar")}
+              <button className="mission-primary-action" onClick={() => aoAvancar("registrar", contextoAlvo)}
                 style={{ display: "block", width: "100%", marginTop: 12, background: T.gold, color: "#0A1622", border: `1.5px solid ${T.gold}`, borderRadius: 9, padding: "10px 16px", fontWeight: 700, fontSize: 13, cursor: "pointer", textAlign: "center" }}>
-                ✎ Registrar estudo
+                Continuar missão <span aria-hidden="true">→</span>
               </button>
             )}
           </>
