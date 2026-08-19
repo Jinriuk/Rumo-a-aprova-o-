@@ -13,6 +13,13 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { pool, ESCOLA_A, ESCOLA_B, ALUNO_LUCAS, ALUNO_BRUNO } from "./identidades.mjs";
+import { semanaCN, diaNaSemanaCN } from "./calendario-cn.mjs";
+
+// Datas da trilha lidas do banco: o seed 02 ancora a semana 3 na
+// semana corrente (America/Sao_Paulo).
+const NA_SEMANA_2 = await diaNaSemanaCN(2);
+const NA_SEMANA_3 = await diaNaSemanaCN(3);
+const SEMANA_1 = await semanaCN(1);
 
 test.after(async () => { await pool.end(); });
 
@@ -61,7 +68,7 @@ async function metasDe(c, escolaId) {
 
 test("virar_semana(escola A) gera a meta corrente do Lucas e NÃO toca a escola B", async () => {
   await cenario(async (c) => {
-    const r = await c.query("select * from app.virar_semana($1, '2026-06-10'::date)", [ESCOLA_A]);
+    const r = await c.query("select * from app.virar_semana($1, $2::date)", [ESCOLA_A, NA_SEMANA_2]);
     assert.equal(r.rows[0].metas_geradas, 1, "deveria gerar 1 meta na escola A");
 
     const a = await metasDe(c, ESCOLA_A);
@@ -79,13 +86,13 @@ test("virar a escola A não fecha a meta vencida da escola B (escopo do UPDATE)"
     // Bruno (escola B) tem uma meta ANTIGA e ainda 'ativa' (vencida).
     await c.query(
       `insert into metas (escola_id, aluno_id, trilha_id, semana_numero, inicio, fim, status)
-       select escola_id, id, trilha_id, 1, '2026-05-30', '2026-06-07', 'ativa'
+       select escola_id, id, trilha_id, 1, $2::date, $3::date, 'ativa'
        from alunos where id = $1`,
-      [ALUNO_BRUNO],
+      [ALUNO_BRUNO, SEMANA_1.inicio, SEMANA_1.fim],
     );
 
     // virar a escola A numa data em que a meta da B já venceu
-    await c.query("select app.virar_semana($1, '2026-06-15'::date)", [ESCOLA_A]);
+    await c.query("select app.virar_semana($1, $2::date)", [ESCOLA_A, NA_SEMANA_3]);
 
     const b = await metasDe(c, ESCOLA_B);
     assert.equal(b.length, 1);
@@ -97,11 +104,11 @@ test("virar a escola B fecha a meta vencida da B — e só a dela", async () => 
   await cenario(async (c) => {
     await c.query(
       `insert into metas (escola_id, aluno_id, trilha_id, semana_numero, inicio, fim, status)
-       select escola_id, id, trilha_id, 1, '2026-05-30', '2026-06-07', 'ativa'
+       select escola_id, id, trilha_id, 1, $2::date, $3::date, 'ativa'
        from alunos where id = $1`,
-      [ALUNO_BRUNO],
+      [ALUNO_BRUNO, SEMANA_1.inicio, SEMANA_1.fim],
     );
-    const r = await c.query("select * from app.virar_semana($1, '2026-06-15'::date)", [ESCOLA_B]);
+    const r = await c.query("select * from app.virar_semana($1, $2::date)", [ESCOLA_B, NA_SEMANA_3]);
     assert.equal(r.rows[0].metas_fechadas, 1, "a meta vencida da B deve fechar");
 
     const b = await metasDe(c, ESCOLA_B);
@@ -118,8 +125,8 @@ test("virar a escola B fecha a meta vencida da B — e só a dela", async () => 
 
 test("idempotência: virar a mesma escola duas vezes no mesmo dia não duplica nem reabre", async () => {
   await cenario(async (c) => {
-    await c.query("select app.virar_semana($1, '2026-06-15'::date)", [ESCOLA_A]);
-    await c.query("select app.virar_semana($1, '2026-06-15'::date)", [ESCOLA_A]);
+    await c.query("select app.virar_semana($1, $2::date)", [ESCOLA_A, NA_SEMANA_3]);
+    await c.query("select app.virar_semana($1, $2::date)", [ESCOLA_A, NA_SEMANA_3]);
     const a = await metasDe(c, ESCOLA_A);
     assert.equal(a.length, 1, "rodar de novo no mesmo dia não cria meta nova");
   });

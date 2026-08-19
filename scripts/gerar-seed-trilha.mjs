@@ -24,7 +24,16 @@ linhas.push(`-- ============================================================
 -- SEED — TRILHA DO COLÉGIO NAVAL (conteúdo global, versionado)
 -- GERADO por scripts/gerar-seed-trilha.mjs a partir de
 -- supabase/seed/trilha-cn-v1.json — NÃO editar à mão.
--- Idempotente: on conflict do nothing em tudo.
+-- Idempotente: on conflict do nothing em tudo; as semanas, que são
+-- as únicas linhas com data, fazem do update só das datas.
+--
+-- CALENDÁRIO ROLANTE: as datas NÃO são fixas. A semana ${trilha.semanaAncora}
+-- da trilha é sempre a semana corrente em America/Sao_Paulo (a mesma
+-- regra de app.hoje_local()), e as outras oito guardam o encaixe
+-- original — semana 1 começa no sábado, 2 a 8 são de segunda a
+-- domingo, 9 termina no sábado da prova. Sem isso o seed de
+-- demonstração vence sozinho: passada a última semana não há meta
+-- ativa, e o painel da vitrine amanhece vazio.
 -- ============================================================
 `);
 
@@ -40,11 +49,34 @@ linhas.push(
     .join(",\n") + "\n  on conflict (trilha_id, codigo) do nothing;\n"
 );
 
-linhas.push(`insert into trilha_semanas (id, trilha_id, numero, inicio, fim, foco, simulado, meta_questoes) values`);
+// A trilha vira DESLOCAMENTO em dias a partir da segunda-feira da
+// semana âncora; o banco soma esse deslocamento à segunda-feira
+// corrente na hora de aplicar o seed. O JSON continua guardando as
+// datas autorais — elas é que definem a forma que se preserva.
+const ancora = trilha.semanas.find((s) => s.n === trilha.semanaAncora);
+if (!ancora) throw new Error(`semanaAncora ${trilha.semanaAncora} não existe na trilha`);
+const DIA_MS = 86400000;
+const dia = (iso) => Date.parse(`${iso}T00:00:00Z`);
+const desloc = (iso) => Math.round((dia(iso) - dia(ancora.inicio)) / DIA_MS);
+if (new Date(dia(ancora.inicio)).getUTCDay() !== 1) {
+  throw new Error(`a semana âncora precisa começar numa segunda-feira (${ancora.inicio})`);
+}
+
+linhas.push(`with ancora as (
+  -- date_trunc('week') devolve a SEGUNDA-feira; app.hoje_local() é a
+  -- data local do Brasil (0003), a mesma que a virada usa.
+  select date_trunc('week', app.hoje_local())::date as segunda
+)
+insert into trilha_semanas (id, trilha_id, numero, inicio, fim, foco, simulado, meta_questoes)
+select v.id::uuid, ${q(trilhaId)}, v.numero, a.segunda + v.ini, a.segunda + v.fim, v.foco, v.simulado, ${trilha.metaQuestoesSemana}
+  from ancora a, (values`);
 linhas.push(
   trilha.semanas
-    .map((s) => `  (${q(uid(`sem:${trilha.nicho}:v${trilha.versao}:${s.n}`))}, ${q(trilhaId)}, ${s.n}, ${q(s.inicio)}, ${q(s.fim)}, ${q(s.foco)}, ${q(s.simulado)}, ${trilha.metaQuestoesSemana})`)
-    .join(",\n") + "\n  on conflict (trilha_id, numero) do nothing;\n"
+    .map((s) => `    (${q(uid(`sem:${trilha.nicho}:v${trilha.versao}:${s.n}`))}, ${s.n}, ${desloc(s.inicio)}, ${desloc(s.fim)}, ${q(s.foco)}, ${q(s.simulado)}::text)`)
+    .join(",\n") +
+    `\n  ) as v(id, numero, ini, fim, foco, simulado)
+  on conflict (trilha_id, numero) do update
+     set inicio = excluded.inicio, fim = excluded.fim;\n`
 );
 
 linhas.push(`insert into atividades_modelo (id, trilha_id, semana_numero, disciplina_codigo, prioridade, texto, ordem) values`);

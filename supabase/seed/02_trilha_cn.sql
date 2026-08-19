@@ -2,7 +2,16 @@
 -- SEED — TRILHA DO COLÉGIO NAVAL (conteúdo global, versionado)
 -- GERADO por scripts/gerar-seed-trilha.mjs a partir de
 -- supabase/seed/trilha-cn-v1.json — NÃO editar à mão.
--- Idempotente: on conflict do nothing em tudo.
+-- Idempotente: on conflict do nothing em tudo; as semanas, que são
+-- as únicas linhas com data, fazem do update só das datas.
+--
+-- CALENDÁRIO ROLANTE: as datas NÃO são fixas. A semana 3
+-- da trilha é sempre a semana corrente em America/Sao_Paulo (a mesma
+-- regra de app.hoje_local()), e as outras oito guardam o encaixe
+-- original — semana 1 começa no sábado, 2 a 8 são de segunda a
+-- domingo, 9 termina no sábado da prova. Sem isso o seed de
+-- demonstração vence sozinho: passada a última semana não há meta
+-- ativa, e o painel da vitrine amanhece vazio.
 -- ============================================================
 
 insert into trilhas (id, nicho, nome, versao, publicada) values
@@ -20,17 +29,26 @@ insert into disciplinas (id, trilha_id, codigo, nome, abrev, cor, ordem) values
   ('30fe7f2e-fb91-41cb-8428-e7b8cf75010b', 'b1388388-c660-4b4b-811c-b58358689e92', 'prov', 'Provas antigas', 'Prov', '#C77DFF', 7)
   on conflict (trilha_id, codigo) do nothing;
 
-insert into trilha_semanas (id, trilha_id, numero, inicio, fim, foco, simulado, meta_questoes) values
-  ('a5e789d2-a0cd-4cef-8b4d-747fa7225b80', 'b1388388-c660-4b4b-811c-b58358689e92', 1, '2026-05-30', '2026-06-07', 'Diagnóstico + base crítica (fração e potenciação)', null, 250),
-  ('86d15c73-5757-4b14-8487-4e71cb8cda4e', 'b1388388-c660-4b4b-811c-b58358689e92', 2, '2026-06-08', '2026-06-14', 'Divisibilidade + fim da base', null, 250),
-  ('2f576da4-a778-45f4-8456-874c6cf9d01d', 'b1388388-c660-4b4b-811c-b58358689e92', 3, '2026-06-15', '2026-06-21', 'Início da geometria + funções', 'Simulado 1', 250),
-  ('f55d9b90-5c7a-493f-8f7d-4f03adaa63c5', 'b1388388-c660-4b4b-811c-b58358689e92', 4, '2026-06-22', '2026-06-28', 'Geometria pesada + sistemas', 'Simulado 2', 250),
-  ('0b698c14-333c-46f6-8b94-5274fa17e1d8', 'b1388388-c660-4b4b-811c-b58358689e92', 5, '2026-06-29', '2026-07-05', 'Geometria avançada + simulado semanal', 'Simulado 3', 250),
-  ('e89b4fc1-8c45-4767-89bc-969ff54e2da4', 'b1388388-c660-4b4b-811c-b58358689e92', 6, '2026-07-06', '2026-07-12', 'Consolidação + redação entra', 'Simulado 4', 250),
-  ('84340063-72e6-428f-8142-4c4eb28a30b7', 'b1388388-c660-4b4b-811c-b58358689e92', 7, '2026-07-13', '2026-07-19', 'Simulados + redação semanal', 'Simulado 5', 250),
-  ('24a9ded3-b8c5-44c1-82c8-93973aa5c647', 'b1388388-c660-4b4b-811c-b58358689e92', 8, '2026-07-20', '2026-07-26', 'Reta final — refazer as 10 provas até dominar', 'Simulados 6 e 7', 250),
-  ('c6c2e114-98ab-4e7e-8767-707e2cf48929', 'b1388388-c660-4b4b-811c-b58358689e92', 9, '2026-07-27', '2026-08-01', 'Ajuste fino e descanso estratégico', 'Simulado 8 (leve)', 250)
-  on conflict (trilha_id, numero) do nothing;
+with ancora as (
+  -- date_trunc('week') devolve a SEGUNDA-feira; app.hoje_local() é a
+  -- data local do Brasil (0003), a mesma que a virada usa.
+  select date_trunc('week', app.hoje_local())::date as segunda
+)
+insert into trilha_semanas (id, trilha_id, numero, inicio, fim, foco, simulado, meta_questoes)
+select v.id::uuid, 'b1388388-c660-4b4b-811c-b58358689e92', v.numero, a.segunda + v.ini, a.segunda + v.fim, v.foco, v.simulado, 250
+  from ancora a, (values
+    ('a5e789d2-a0cd-4cef-8b4d-747fa7225b80', 1, -16, -8, 'Diagnóstico + base crítica (fração e potenciação)', null::text),
+    ('86d15c73-5757-4b14-8487-4e71cb8cda4e', 2, -7, -1, 'Divisibilidade + fim da base', null::text),
+    ('2f576da4-a778-45f4-8456-874c6cf9d01d', 3, 0, 6, 'Início da geometria + funções', 'Simulado 1'::text),
+    ('f55d9b90-5c7a-493f-8f7d-4f03adaa63c5', 4, 7, 13, 'Geometria pesada + sistemas', 'Simulado 2'::text),
+    ('0b698c14-333c-46f6-8b94-5274fa17e1d8', 5, 14, 20, 'Geometria avançada + simulado semanal', 'Simulado 3'::text),
+    ('e89b4fc1-8c45-4767-89bc-969ff54e2da4', 6, 21, 27, 'Consolidação + redação entra', 'Simulado 4'::text),
+    ('84340063-72e6-428f-8142-4c4eb28a30b7', 7, 28, 34, 'Simulados + redação semanal', 'Simulado 5'::text),
+    ('24a9ded3-b8c5-44c1-82c8-93973aa5c647', 8, 35, 41, 'Reta final — refazer as 10 provas até dominar', 'Simulados 6 e 7'::text),
+    ('c6c2e114-98ab-4e7e-8767-707e2cf48929', 9, 42, 47, 'Ajuste fino e descanso estratégico', 'Simulado 8 (leve)'::text)
+  ) as v(id, numero, ini, fim, foco, simulado)
+  on conflict (trilha_id, numero) do update
+     set inicio = excluded.inicio, fim = excluded.fim;
 
 insert into atividades_modelo (id, trilha_id, semana_numero, disciplina_codigo, prioridade, texto, ordem) values
   ('7cb12bd2-ead5-4ba9-8020-24e336e0351d', 'b1388388-c660-4b4b-811c-b58358689e92', 1, 'mat', 'F', 'Aplicar 1 prova antiga COMPLETA cronometrada (diagnóstico)', 0),
