@@ -7,17 +7,21 @@ import { fileURLToPath } from "node:url";
 const root = resolve(fileURLToPath(new URL("..", import.meta.url)));
 const ler = (p) => readFileSync(resolve(root, p), "utf8");
 
-test("UXG1 carrega uma camada visual global sem trocar o stack", () => {
+test("UXG2 mantém JSX/Vite e isola o motor de animação", () => {
   const main = ler("app/src/main.jsx");
   const pkg = JSON.parse(ler("app/package.json"));
+  const vite = ler("app/vite.config.js");
   assert.match(main, /shared\/ui\/experiencia\.css/);
   assert.equal(pkg.dependencies?.tailwindcss, undefined);
   assert.equal(pkg.dependencies?.["framer-motion"], undefined);
-  assert.equal(pkg.dependencies?.motion, undefined);
+  assert.match(pkg.dependencies?.motion, /^\^13\./);
+  assert.match(vite, /return "motion"/);
+  assert.match(vite, /motion-dom\|motion-utils\|framer-motion/);
 });
 
 test("UXG1 respeita preferência de movimento reduzido", () => {
   const css = ler("app/src/shared/ui/experiencia.css");
+  const login = ler("app/src/routes/publico/Login.jsx");
   assert.match(css, /@media\s*\(prefers-reduced-motion:\s*reduce\)/);
   assert.match(css, /animation-duration:\s*\.01ms\s*!important/);
   // Movimento contínuo é proibido em superfície de leitura. A única
@@ -28,6 +32,8 @@ test("UXG1 respeita preferência de movimento reduzido", () => {
     assert.match(bloco, /login-loading/,
       `animação contínua fora do indicador de carregamento: ${bloco.trim().slice(0, 80)}`);
   }
+  assert.match(login, /matchMedia\("\(prefers-reduced-motion: reduce\)"\)/);
+  assert.match(login, /reducedMotion=\{fx\.ativos \? "user" : "always"\}/);
 });
 
 test("a entrada responde ao usuário sem inventar dado nem quebrar o fluxo", () => {
@@ -61,7 +67,8 @@ test("a entrada preserva os nomes acessíveis em que a suíte E2E se apoia", () 
   assert.match(src, /"Aluno \/ Responsável"/);
   assert.match(src, /"Coordenação"/);
   assert.match(src, />Código de acesso</);
-  assert.match(src, /busy \? "Entrando…" : "Entrar"/);
+  assert.match(src, /busy \? "Abrindo sua central…" : "Entrar na missão"/);
+  assert.match(src, /aria-label=\{busy \? "Entrando" : "Entrar"\}/);
 });
 
 test("teclado enxerga todo alvo operável", () => {
@@ -72,10 +79,45 @@ test("teclado enxerga todo alvo operável", () => {
 
 test("login comunica a proposta e mantém uma ação primária", () => {
   const src = ler("app/src/routes/publico/Login.jsx");
-  assert.match(src, /Sua aprovação vira uma/);
-  assert.match(src, /missão central por vez/);
+  assert.match(src, /Sua prova tem um alvo/);
+  assert.match(src, /Transforme o edital em missões/);
   assert.match(src, /aria-pressed=\{on\}/);
-  assert.match(src, /className="login-primary"\s+type="submit"/);
+  assert.match(src, /className="login-primary" type="submit"/);
+});
+
+test("portal visual representa método sem fabricar métricas do aluno", () => {
+  const src = ler("app/src/routes/publico/PortalLogin.jsx");
+  for (const conceito of ["Plano", "Prática", "Domínio", "PROGRESSO REAL"]) {
+    assert.ok(src.includes(conceito), `conceito ausente do portal: ${conceito}`);
+  }
+  assert.doesNotMatch(src, /\b\d+\s*(XP|questões|dias de ofensiva)\b/i);
+  assert.match(src, /aria-hidden="true"/);
+});
+
+test("efeitos vivos podem ser pausados e param fora da aba", () => {
+  const login = ler("app/src/routes/publico/Login.jsx");
+  const portal = ler("app/src/routes/publico/PortalLogin.jsx");
+  assert.match(login, /visibilitychange/);
+  assert.match(login, /raa:efeitos-login/);
+  assert.match(portal, /Pausar efeitos visuais/);
+  assert.match(portal, /aria-pressed=\{ativos\}/);
+  assert.match(portal, /aria-label=\{rotulo\}/);
+  for (const trecho of portal.matchAll(/repeat:\s*Infinity/g)) {
+    const antes = portal.slice(Math.max(0, trecho.index - 260), trecho.index);
+    assert.match(antes, /efeitos\s*\?/,
+      "todo loop do portal precisa depender da preferência de efeitos");
+  }
+});
+
+test("troca de papel e campos usam transição física sem trocar semântica", () => {
+  const src = ler("app/src/routes/publico/Login.jsx");
+  assert.match(src, /layoutId="login-role-active"/);
+  assert.match(src, /type:\s*"spring"/);
+  assert.match(src, /role="group"/);
+  assert.match(src, /aria-pressed=\{on\}/);
+  assert.match(src, /<label htmlFor=\{idCodigo\}/);
+  assert.match(src, /<label htmlFor=\{idEmail\}/);
+  assert.match(src, /<label htmlFor=\{idSenha\}/);
 });
 
 test("casca traduz o tema white-label para tokens CSS", () => {

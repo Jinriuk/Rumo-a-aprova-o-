@@ -2,24 +2,18 @@
    D1B: campo senha com olhinho, "Esqueci minha senha" para coordenação,
    "Esqueci meu código de acesso" para aluno/responsável.
 
-   UXG1+: esta é a única tela em que o produto se apresenta antes de
-   pedir credencial, então é a que mais muda. O que entrou aqui é
-   interação com função, nunca enfeite:
-     • a cena chega em ordem (propósito → promessa → provas → formulário);
-     • o cartão responde ao ponteiro com um foco de luz discreto;
-     • a troca de papel desliza, em vez de piscar;
-     • o código mostra a chave se completando (a MESMA regra dos 12
-       caracteres que libera o botão), e não uma barra inventada;
-     • Caps Lock avisa antes de o erro acontecer;
-     • credencial recusada sacode o cartão uma vez;
-     • enquanto o servidor verifica, a barra de envio prova que o
-       pedido está vivo.
-   Nada disso altera o fluxo: os mesmos estados, as mesmas chamadas,
-   as mesmas mensagens. Tudo desliga com prefers-reduced-motion. */
+   UXG2: a entrada é a peça de apresentação do produto. Ela ganha uma
+   cena própria — profundidade, mapa do método, tipografia cinética e
+   transições físicas — sem trocar o fluxo de autenticação. O ambiente
+   vivo pode ser pausado, para quando a aba fica oculta e respeita a
+   preferência de movimento reduzido do sistema. */
 import React, { useEffect, useId, useRef, useState } from "react";
+import { LazyMotion, MotionConfig, domAnimation } from "motion/react";
+import * as m from "motion/react-m";
 import { BASE, FONTES_CSS } from "../../shared/ui/tema.js";
 import { criarTrava } from "../../shared/lib/travaEnvio.js";
 import * as db from "../../shared/data/index.js";
+import { ControleEfeitos, FundoPortal, MapaDaMissao, MarcaPortal } from "./PortalLogin.jsx";
 
 const T = BASE;
 
@@ -113,7 +107,7 @@ export default function Login() {
   if (tela === "confirmacao") {
     return (
       <Wrapper recusas={recusas}>
-        <LogoTopo />
+        <LogoTopo sobre="RECUPERAÇÃO SOLICITADA" titulo="Confira seu e-mail" />
         <div style={{ textAlign: "center", padding: "8px 0 16px" }}>
           <div style={{ fontSize: 32, marginBottom: 10 }}>✉️</div>
           <div className="disp" style={{ fontSize: 17, fontWeight: 700, color: T.ink, marginBottom: 8 }}>Solicitação recebida</div>
@@ -131,7 +125,7 @@ export default function Login() {
   if (tela === "esqueciSenha") {
     return (
       <Wrapper recusas={recusas}>
-        <LogoTopo />
+        <LogoTopo sobre="RECUPERAÇÃO DE ACESSO" titulo="Recupere sua conta" />
         <div style={{ fontSize: 13, color: T.sub, marginBottom: 16, lineHeight: 1.5 }}>
           Informe o e-mail da sua conta de coordenação. Enviaremos instruções de recuperação.
         </div>
@@ -162,7 +156,7 @@ export default function Login() {
   if (tela === "esqueciCodigo") {
     return (
       <Wrapper recusas={recusas}>
-        <LogoTopo />
+        <LogoTopo sobre="CÓDIGO DE ACESSO" titulo="Volte para sua missão" />
         <div style={{ textAlign: "center", padding: "4px 0 8px" }}>
           <div style={{ fontSize: 30, marginBottom: 10 }}>🎖️</div>
           <div className="disp" style={{ fontSize: 16.5, fontWeight: 700, color: T.ink, marginBottom: 10 }}>
@@ -195,53 +189,67 @@ export default function Login() {
       <form onSubmit={entrar}>
         {/* A troca de papel remonta os campos (key): a transição é vista,
             e nenhum valor do outro modo fica pendurado na tela. */}
-        <div className="login-fields" key={modo}>
-          {modo === "codigo" ? (
-            <>
-              <label htmlFor={idCodigo} style={lblS}>Código de acesso</label>
-              <input className="login-input" id={idCodigo} value={codigo} autoComplete="off" autoCapitalize="characters"
-                onChange={(e) => { setCodigo(e.target.value.toUpperCase()); setErr(""); }}
-                placeholder="Ex.: LUCASDEMO2026"
-                style={{ ...inputS, letterSpacing: 1.5, textAlign: "center", fontFamily: "monospace" }} />
-              <CargaCodigo preenchidos={codigoLimpo.length} />
-            </>
-          ) : (
-            <>
-              <label htmlFor={idEmail} style={lblS}>E-mail</label>
-              <input className="login-input" id={idEmail} type="email" value={email} placeholder="coordenacao@escola.com.br"
-                onChange={(e) => { setEmail(e.target.value); setErr(""); }}
-                style={{ ...inputS, marginBottom: 12 }} />
-              <label htmlFor={idSenha} style={lblS}>Senha</label>
-              <div style={{ position: "relative" }}>
-                <input className="login-input" id={idSenha} type={mostrarSenha ? "text" : "password"} value={senha}
-                  placeholder="Senha de acesso"
-                  onChange={(e) => { setSenha(e.target.value); setErr(""); }}
-                  onKeyUp={(e) => verCapsLock(e, setCapsLigado)}
-                  onKeyDown={(e) => verCapsLock(e, setCapsLigado)}
-                  onBlur={() => setCapsLigado(false)}
-                  style={{ ...inputS, paddingRight: 46 }} />
-                <button type="button" onClick={() => setMostrarSenha((v) => !v)} tabIndex={-1}
-                  aria-label={mostrarSenha ? "Ocultar senha" : "Mostrar senha"}
-                  style={{ position: "absolute", right: 12, top: "50%", transform: "translateY(-50%)", background: "none", border: "none", color: T.sub, cursor: "pointer", padding: 4, fontSize: 18, lineHeight: 1 }}>
-                  {mostrarSenha ? "🙈" : "👁"}
-                </button>
-              </div>
-              {capsLigado && (
-                <div className="login-aviso" role="status">
-                  ⇪ Caps Lock ligado — a senha diferencia maiúsculas de minúsculas.
+        <m.div className="login-fields" key={modo}
+          initial={{ opacity: 0, x: modo === "codigo" ? -24 : 24, filter: "blur(5px)" }}
+          animate={{ opacity: 1, x: 0, filter: "blur(0px)" }}
+          transition={{ duration: .3, ease: [0.22, 1, 0.36, 1] }}>
+            {modo === "codigo" ? (
+              <>
+                <label htmlFor={idCodigo} style={lblS}>Código de acesso</label>
+                <div className="login-input-shell">
+                  <IconeCampo tipo="chave" />
+                  <input className="login-input login-input--icone" id={idCodigo} value={codigo} autoComplete="off" autoCapitalize="characters"
+                    onChange={(e) => { setCodigo(e.target.value.toUpperCase()); setErr(""); }}
+                    placeholder="Ex.: LUCASDEMO2026"
+                    style={{ ...inputS, letterSpacing: 1.5, textAlign: "center", fontFamily: "monospace" }} />
                 </div>
-              )}
-            </>
-          )}
-        </div>
+                <CargaCodigo preenchidos={codigoLimpo.length} />
+              </>
+            ) : (
+              <>
+                <label htmlFor={idEmail} style={lblS}>E-mail</label>
+                <div className="login-input-shell" style={{ marginBottom: 12 }}>
+                  <IconeCampo tipo="email" />
+                  <input className="login-input login-input--icone" id={idEmail} type="email" value={email} placeholder="coordenacao@escola.com.br"
+                    onChange={(e) => { setEmail(e.target.value); setErr(""); }}
+                    style={inputS} />
+                </div>
+                <label htmlFor={idSenha} style={lblS}>Senha</label>
+                <div className="login-input-shell">
+                  <IconeCampo tipo="cadeado" />
+                  <input className="login-input login-input--icone" id={idSenha} type={mostrarSenha ? "text" : "password"} value={senha}
+                    placeholder="Senha de acesso"
+                    onChange={(e) => { setSenha(e.target.value); setErr(""); }}
+                    onKeyUp={(e) => verCapsLock(e, setCapsLigado)}
+                    onKeyDown={(e) => verCapsLock(e, setCapsLigado)}
+                    onBlur={() => setCapsLigado(false)}
+                    style={{ ...inputS, paddingRight: 46 }} />
+                  <button className="login-password-toggle" type="button" onClick={() => setMostrarSenha((v) => !v)}
+                    aria-label={mostrarSenha ? "Ocultar senha" : "Mostrar senha"}>
+                    <IconeCampo tipo={mostrarSenha ? "olho-fechado" : "olho"} />
+                  </button>
+                </div>
+                {capsLigado && (
+                  <div className="login-aviso" role="status">
+                    ⇪ Caps Lock ligado — a senha diferencia maiúsculas de minúsculas.
+                  </div>
+                )}
+              </>
+            )}
+        </m.div>
 
         {err && <div className="login-erro" role="alert">{err}</div>}
 
-        <button className="login-primary" type="submit" disabled={busy || !pronto} data-carregando={busy ? "true" : undefined}
+        <m.button className="login-primary" type="submit" disabled={busy || !pronto}
+          aria-label={busy ? "Entrando" : "Entrar"} aria-busy={busy ? true : undefined}
+          data-carregando={busy ? "true" : undefined}
+          whileHover={busy || !pronto ? undefined : { y: -2, scale: 1.008 }}
+          whileTap={busy || !pronto ? undefined : { y: 1, scale: .99 }}
           style={{ width: "100%", marginTop: 16, background: (busy || !pronto) ? T.line : T.gold, color: (busy || !pronto) ? T.sub : "#0A1622", border: "none", borderRadius: 10, padding: "14px", minHeight: 50, fontWeight: 800, fontSize: 15 }}>
-          {busy ? "Entrando…" : "Entrar"}
+          <span>{busy ? "Abrindo sua central…" : "Entrar na missão"}</span>
+          {!busy && <span className="login-primary-arrow" aria-hidden="true">→</span>}
           {busy && <span className="login-loading-bar" aria-hidden="true" />}
-        </button>
+        </m.button>
         {demorando && (
           <div role="status" aria-live="polite" style={{ fontSize: 12, color: T.sub, marginTop: 10, textAlign: "center", lineHeight: 1.5 }}>
             Verificando suas credenciais com segurança… só um instante.
@@ -276,6 +284,21 @@ export default function Login() {
 
 const lblS = { fontSize: 12, color: T.sub, marginBottom: 6, display: "block", textTransform: "uppercase", letterSpacing: 0.4 };
 
+function IconeCampo({ tipo }) {
+  const caminhos = {
+    chave: <><circle cx="8" cy="12" r="4" /><path d="M12 12h9M18 12v3M15 12v2" /></>,
+    email: <><rect x="3" y="5" width="18" height="14" rx="3" /><path d="m4 7 8 6 8-6" /></>,
+    cadeado: <><rect x="5" y="10" width="14" height="11" rx="3" /><path d="M8 10V7a4 4 0 0 1 8 0v3M12 14v3" /></>,
+    olho: <><path d="M2.5 12s3.4-6 9.5-6 9.5 6 9.5 6-3.4 6-9.5 6-9.5-6-9.5-6Z" /><circle cx="12" cy="12" r="2.6" /></>,
+    "olho-fechado": <><path d="m3 3 18 18M10.6 6.1A10.8 10.8 0 0 1 12 6c6.1 0 9.5 6 9.5 6a16 16 0 0 1-2.1 2.8M6.3 6.3C3.8 8.1 2.5 12 2.5 12s3.4 6 9.5 6c1.4 0 2.7-.3 3.8-.8" /></>,
+  };
+  return (
+    <svg className="login-field-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+      {caminhos[tipo] ?? caminhos.chave}
+    </svg>
+  );
+}
+
 // Nem todo evento de teclado traz o estado do modificador (teclado
 // virtual, por exemplo). Sem informação, não inventamos aviso.
 function verCapsLock(e, definir) {
@@ -304,16 +327,19 @@ function SeletorPapel({ modo, aoTrocar }) {
   return (
     <div className="login-role-switch" role="group" aria-label="Como você vai entrar"
       onKeyDown={navegar} style={{ "--papel-ativo": ativo }}>
-      <span className="login-role-pill" aria-hidden="true" />
       {PAPEIS.map(([id, titulo, desc], i) => {
         const on = modo === id;
         return (
           <button className="login-role" type="button" key={id} aria-pressed={on}
             ref={(el) => { refs.current[i] = el; }}
             onClick={() => aoTrocar(id)}
-            style={{ textAlign: "left", border: `1px solid ${T.line}`, background: on ? T.cardHi : T.bg, color: T.ink, borderRadius: 10, padding: "12px 14px", minHeight: 48 }}>
-            <div style={{ fontWeight: 700, fontSize: 14.5 }}>{titulo}</div>
-            <div style={{ fontSize: 12, color: T.sub, marginTop: 2 }}>{desc}</div>
+            style={{ textAlign: "left", border: `1px solid ${T.line}`, background: T.bg, color: T.ink, borderRadius: 11, padding: "12px 13px", minHeight: 62 }}>
+            {on && <m.span className="login-role-pill" layoutId="login-role-active" aria-hidden="true"
+              transition={{ type: "spring", stiffness: 360, damping: 29 }} />}
+            <span className="login-role-copy">
+              <strong>{titulo}</strong>
+              <small>{desc}</small>
+            </span>
           </button>
         );
       })}
@@ -345,13 +371,16 @@ function CargaCodigo({ preenchidos }) {
   );
 }
 
-function LogoTopo() {
+function LogoTopo({ sobre = "CONTINUE DE ONDE PAROU", titulo = "Abra sua central" }) {
   return (
-    <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 20 }}>
-      <div className="disp" style={{ width: 42, height: 42, borderRadius: 9, background: `linear-gradient(135deg,${T.gold},#9c7d2e)`, display: "flex", alignItems: "center", justifyContent: "center", color: "#0A1622", fontWeight: 700, fontSize: 20 }}>⚓</div>
-      <div>
-        <div style={{ color: T.gold, fontWeight: 800, letterSpacing: 1, fontSize: 12 }}>PAINEL DE ESTUDOS</div>
-        <div className="disp" style={{ fontSize: 18, fontWeight: 700, lineHeight: 1.1 }}>Entrar</div>
+    <div className="login-card-heading">
+      <div className="login-card-brand-row">
+        <MarcaPortal compacta />
+        <span className="login-secure"><i /> acesso seguro</span>
+      </div>
+      <div className="login-card-title">
+        <span>{sobre}</span>
+        <h2 className="disp">{titulo}</h2>
       </div>
     </div>
   );
@@ -415,42 +444,117 @@ function useTremor(recusas, ref) {
   }, [recusas, ref]);
 }
 
-function HistoriaLogin() {
+function HistoriaLogin({ efeitos }) {
   return (
     <section className="login-story" aria-label="Sua jornada de preparação">
-      <div className="login-kicker" style={{ "--entrada": 0 }}><span aria-hidden="true">◆</span> Central de preparação</div>
-      <h1 style={{ "--entrada": 1 }}>Sua aprovação vira uma <em>missão possível.</em></h1>
-      <p style={{ "--entrada": 2 }}>
-        Entre, veja o alvo mais importante de hoje e avance com um plano que
-        transforma constância, questões e domínio em progresso visível.
-      </p>
-      <div className="login-proof-grid" style={{ "--entrada": 3 }} aria-label="Como a experiência funciona">
-        <div className="login-proof"><strong>01</strong><span>missão central por vez</span></div>
-        <div className="login-proof"><strong>XP</strong><span>concedido pelo progresso real</span></div>
-        <div className="login-proof"><strong>Ritmo</strong><span>semana, ofensiva e domínio</span></div>
-      </div>
+      <m.div className="login-hero-brand" initial={{ opacity: 0, y: -16 }} animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: .55, ease: [0.22, 1, 0.36, 1] }}>
+        <MarcaPortal />
+        <span className="login-hero-online"><i /> SISTEMA ONLINE</span>
+      </m.div>
+
+      <m.div className="login-kicker" initial={{ opacity: 0, x: -24 }} animate={{ opacity: 1, x: 0 }}
+        transition={{ duration: .55, delay: .12, ease: [0.22, 1, 0.36, 1] }}>
+        <span aria-hidden="true">◆</span> PREPARAÇÃO MILITAR COM DIREÇÃO
+      </m.div>
+
+      <h1 aria-label="Sua prova tem um alvo. Seu estudo também.">
+        <span className="login-title-line">
+          <m.span initial={{ y: "115%", rotate: 2 }} animate={{ y: 0, rotate: 0 }}
+            transition={{ duration: .72, delay: .18, ease: [0.16, 1, 0.3, 1] }}>
+            Sua prova tem um alvo.
+          </m.span>
+        </span>
+        <span className="login-title-line">
+          <m.span initial={{ y: "115%", rotate: -2 }} animate={{ y: 0, rotate: 0 }}
+            transition={{ duration: .76, delay: .28, ease: [0.16, 1, 0.3, 1] }}>
+            <em>Seu estudo também.</em>
+          </m.span>
+        </span>
+      </h1>
+
+      <m.p initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: .55, delay: .48, ease: [0.22, 1, 0.36, 1] }}>
+        Transforme o edital em missões, a prática em domínio e cada semana
+        em avanço visível até o dia da prova.
+      </m.p>
+
+      <MapaDaMissao efeitos={efeitos} />
     </section>
   );
+}
+
+function useEfeitosVisuais() {
+  const [sistemaReduzido, setSistemaReduzido] = useState(false);
+  const [pausados, setPausados] = useState(() => {
+    if (typeof window === "undefined") return false;
+    try { return window.localStorage.getItem("raa:efeitos-login") === "pausados"; }
+    catch { return false; }
+  });
+  const [paginaVisivel, setPaginaVisivel] = useState(() => typeof document === "undefined" || !document.hidden);
+
+  useEffect(() => {
+    if (typeof window === "undefined" || typeof window.matchMedia !== "function") return undefined;
+    const media = window.matchMedia("(prefers-reduced-motion: reduce)");
+    const atualizar = () => setSistemaReduzido(media.matches);
+    atualizar();
+    media.addEventListener?.("change", atualizar);
+    return () => media.removeEventListener?.("change", atualizar);
+  }, []);
+
+  useEffect(() => {
+    if (typeof document === "undefined") return undefined;
+    const atualizar = () => setPaginaVisivel(!document.hidden);
+    document.addEventListener("visibilitychange", atualizar);
+    return () => document.removeEventListener("visibilitychange", atualizar);
+  }, []);
+
+  function alternar() {
+    if (sistemaReduzido) return;
+    setPausados((valor) => {
+      const novo = !valor;
+      try { window.localStorage.setItem("raa:efeitos-login", novo ? "pausados" : "ativos"); }
+      catch { /* armazenamento é conveniência, não gate */ }
+      return novo;
+    });
+  }
+
+  return {
+    efeitos: !sistemaReduzido && !pausados && paginaVisivel,
+    ativos: !sistemaReduzido && !pausados,
+    sistemaReduzido,
+    alternar,
+  };
 }
 
 function Wrapper({ children, recusas = 0 }) {
   const cartao = useFocoDeLuz();
   useTremor(recusas, cartao);
+  const fx = useEfeitosVisuais();
   return (
-    <div className="login-shell" style={{
-      "--ui-bg": T.bg, "--ui-bg-2": T.bg2, "--ui-card": T.card,
-      "--ui-card-hi": T.cardHi, "--ui-line": T.line, "--ui-ink": T.ink,
-      "--ui-sub": T.sub, "--ui-accent": T.gold, "--ui-green": T.green,
-      "--ui-red": T.red,
-    }}>
-      <style>{FONTES_CSS}</style>
-      <div className="login-layout">
-        <HistoriaLogin />
-        <main className="login-card" ref={cartao}>
-          {children}
-        </main>
-      </div>
-    </div>
+    <LazyMotion features={domAnimation} strict>
+      <MotionConfig reducedMotion={fx.ativos ? "user" : "always"}>
+        <div className="login-shell" data-effects={fx.ativos ? "on" : "off"} style={{
+          "--ui-bg": T.bg, "--ui-bg-2": T.bg2, "--ui-card": T.card,
+          "--ui-card-hi": T.cardHi, "--ui-line": T.line, "--ui-ink": T.ink,
+          "--ui-sub": T.sub, "--ui-accent": T.gold, "--ui-green": T.green,
+          "--ui-red": T.red,
+        }}>
+          <style>{FONTES_CSS}</style>
+          <FundoPortal efeitos={fx.efeitos} />
+          <div className="login-layout">
+            <HistoriaLogin efeitos={fx.efeitos} />
+            <m.main className="login-card" ref={cartao} layout
+              initial={{ opacity: 0, x: 76, scale: .94, rotateY: -7 }}
+              animate={{ opacity: 1, x: 0, scale: 1, rotateY: 0 }}
+              transition={{ type: "spring", stiffness: 115, damping: 18, mass: .9, delay: .28 }}>
+              {children}
+            </m.main>
+          </div>
+          <ControleEfeitos ativos={fx.ativos} sistemaReduzido={fx.sistemaReduzido} aoAlternar={fx.alternar} />
+        </div>
+      </MotionConfig>
+    </LazyMotion>
   );
 }
 
