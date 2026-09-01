@@ -65,9 +65,9 @@ superadmin opera o backoffice cross-tenant.
 
 ## Plano executivo atual
 
-O plano de comando para a janela de 01/09 a 01/12/2026 integra prontidão técnica, prospecção B2B, beta B2C fechado e expansão pedagógica orientada por demanda:
+O plano mestre para a janela de 01/09 a 01/12/2026 consolida a auditoria técnica, os gates de produção, a prospecção B2B, o beta B2C fechado, a expansão pedagógica e o piloto pago:
 
-- [Plano integrado de execução — setembro a dezembro de 2026](./08-plano-execucao-set-dez-2026.md)
+- [Plano mestre final - setembro a dezembro de 2026](./08-plano-execucao-set-dez-2026.md)
 
 ---
 
