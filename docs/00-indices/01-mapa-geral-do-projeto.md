@@ -1,6 +1,6 @@
 # Mapa Geral do Projeto — Rumo à Aprovação
 
-**Atualizado em:** 2026-06-27 (pós-SEG2)
+**Atualizado em:** 2026-09-01 (plano executivo set–dez/2026)
 
 ---
 
@@ -60,6 +60,14 @@ superadmin opera o backoffice cross-tenant.
 | Escola Piloto I1 | Ambiente de testes operacionais |
 | Curso Beta Preparatório | Demo / semente (dados fictícios) |
 | Matriz Educação RM | Demo / semente (dados fictícios) |
+
+---
+
+## Plano executivo atual
+
+O plano de comando para a janela de 01/09 a 01/12/2026 integra prontidão técnica, prospecção B2B, beta B2C fechado e expansão pedagógica orientada por demanda:
+
+- [Plano integrado de execução — setembro a dezembro de 2026](./08-plano-execucao-set-dez-2026.md)
 
 ---
 
