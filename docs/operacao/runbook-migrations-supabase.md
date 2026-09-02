@@ -1,4 +1,4 @@
-# Runbook — Migrations do Supabase (Rumo à Aprovação)
+# Runbook — Migrations do Supabase (Triliva)
 
 > Objetivo: evitar que o operador use o comando errado e crie divergência
 > entre repositório e banco. Leia **antes** de aplicar qualquer migration.

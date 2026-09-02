@@ -1,12 +1,14 @@
-# Mapeamento de marca — "Rumo à Aprovação" → candidato "Triliva"
+# Mapeamento de marca — "Rumo à Aprovação" → "Triliva"
 
-**Data:** 2026-09-02 (revisão 2, pós-auditoria das inconsistências)
+**Data:** 2026-09-02 (revisão 3 — a troca foi executada)
 **Autor:** levantamento técnico (Claude Code), a pedido de Gabriel
-**Natureza deste documento:** mapeamento de ocorrências + correções de infraestrutura que
-**não** trocam a marca. Não é um PR de rename, não altera schema, não compra domínio e não
-decide o nome.
+**Natureza deste documento:** mapeamento de ocorrências + o registro da troca de nome
+executada em 02/09/2026. Não altera schema e não compra domínio.
 
-## Checklists ainda pendentes (nenhuma foi feita)
+## ⚠️ A troca foi feita com as três checagens ainda pendentes
+
+Gabriel autorizou explicitamente a troca **antes** de qualquer uma das checagens, após a
+ressalva ter sido levantada. Fica registrado que continuam abertas:
 
 - [ ] INPI — classes de software e educação, incluindo colisão fonética com **Trillia** (marca
       nova da B3, 2026) e **Trillio** (plataforma de treinamento corporativo usada por
@@ -14,7 +16,10 @@ decide o nome.
 - [ ] registro.br — disponibilidade de `triliva.com.br`.
 - [ ] Teste de pronúncia com 10 pessoas.
 
-Nada abaixo constitui aprovação do nome "Triliva".
+O risco que motivou este mapeamento (adotar nome que colide com marca de terceiro) **não foi
+eliminado, apenas transferido para o novo nome**. Se o INPI apontar colisão com Trillia/Trillio,
+a reversão é barata pelo desenho da §1.1 (uma linha em `marca.js` + os textos da §1.6), mas
+material comercial já distribuído com "Triliva" não volta atrás.
 
 ---
 
@@ -28,9 +33,10 @@ serem repetidas:
 |---|---|---|
 | "Trocar o domínio exige editar 4 arquivos de Edge Function" — criticidade ALTA | A origem de produção (`ALLOWED_ORIGINS`) e o redirect de senha (`PASSWORD_RESET_REDIRECT_URL`) **já eram** secrets, desde SEG2/PROD1 (`docs/operacao/migracao-producao-dedicada.md` §4). Só o regex de preview da Vercel estava hardcoded. | Criticidade rebaixada para BAIXA. O resíduo (regex de preview) virou secret `VERCEL_PREVIEW_PREFIX` — ver §1.5. |
 | "`MenuPrincipal.jsx:134` é bug de white-label" | O white-label é **leve por decisão** (`docs/fundacao/06-arquitetura-fechada.md` §1.2): marca da escola *por cima* de um design fixo, e o rodapé é a "assinatura discreta da plataforma" (comentário no próprio arquivo). A segunda linha é intencional. | O defeito real é menor: sem escola (ou quando a "escola" é a própria plataforma, no fluxo de recuperação), as duas linhas repetiam o mesmo texto. Corrigido — ver §1.1. |
-| "`docs/operacao/` é histórico, mesma categoria de `backlog/`/`adr/`" | `docs/README.md` diz o oposto: `fundacao/` e `operacao/` são **referência viva**; histórico é `auditoria/` (fases) e `auditoria/antigos/`. | Reclassificado em §1.6/§1.7. `operacao/` **entra** numa eventual troca de marca. |
+| "`docs/operacao/` é histórico, mesma categoria de `backlog/`/`adr/`" | `docs/README.md` diz o oposto: `fundacao/` e `operacao/` são **referência viva**; histórico é `auditoria/` (fases) e `auditoria/antigos/`. | Reclassificado em §1.7/§1.8. `operacao/` **entrou** na troca de marca. |
 | "Supabase: só o nome do projeto carrega a marca" | A org também ("Central de projetos - Rumo ao Milhão com SaaS") e o nome já planejado do projeto de produção ("Rumo à Aprovação — PRODUÇÃO"). | Adicionados em §2. |
 | "Vercel: o projeto existe em outra conta" (rev. 2) | O Vercel GitHub App comentou no PR #88 com o projeto `rumo-a-aprova-o` no time `jinriuk-s-projects` — o mesmo time que a API desta sessão lista vazio. É falta de permissão do token, não conta diferente. | Corrigido em §3. |
+| "O mapeamento cobriu tudo que carrega a marca na home" (rev. 1 e 2) | A busca procurou o **literal** "Rumo à Aprovação" e a composição visual, e por isso não pegou o **trocadilho conceitual** em texto de marketing: "PREPARAÇÃO MILITAR COM DIREÇÃO" e "o edital vira rota". Achado só quando Gabriel mandou a screenshot da home. | Nova §1.6. |
 
 ---
 
@@ -40,7 +46,11 @@ serem repetidas:
 
 **Antes:** 5 literais independentes em 4 arquivos, sem constante central.
 **Agora:** fonte única em `app/src/shared/branding/marca.js` (`NOME_PLATAFORMA`,
-`ORIGEM_PRODUCAO`); os 4 arquivos importam de lá. Valor inalterado ("Rumo à Aprovação").
+`ORIGEM_PRODUCAO`); os 4 arquivos importam de lá. `NOME_PLATAFORMA` = **"Triliva"**.
+
+`ORIGEM_PRODUCAO` **não** mudou e continua `https://rumo-a-aprova-o.vercel.app`: é o domínio
+real em produção, não a marca. Só muda quando o projeto for renomeado no painel da Vercel — e
+trocar essa string antes disso quebra o redirect de redefinição de senha.
 
 | Arquivo | O que exibe | Estado |
 |---|---|---|
@@ -55,18 +65,21 @@ em `app/index.html` já era genérico ("Painel de Estudos") e não muda.
 
 ### 1.2 `package.json` / `package-lock.json`
 
-| Arquivo:linha | Conteúdo | Criticidade |
+| Arquivo | Antes | Agora |
 |---|---|---|
-| `app/package.json:2` (+ espelho em `package-lock.json:2,8`) | `"name": "rumo-aprovacao-app"` | Baixa — identificador interno do npm; nenhum script/CI referencia pelo nome |
-| `tests/package.json:2` | `"name": "rumo-aprovacao-tests"` | Baixa, idem |
+| `app/package.json` (+ espelho em `package-lock.json`) | `rumo-aprovacao-app` | `triliva-app` |
+| `tests/package.json` (+ lockfile) | `rumo-aprovacao-tests` | `triliva-tests` |
 
-Não alterados: são identificadores, não marca visível. Entram só num rename de fato.
+Os lockfiles foram editados **só nos dois campos `name`**, não regenerados: o npm local
+(10.9.7) remove campos `libc` de pacotes opcionais do rollup, ruído sem relação com o rename
+que poderia afetar instalação em musl. `npm ci` foi rodado do zero nos dois pacotes para provar
+que `package.json` e lockfile não divergiram — é o modo que o CI usa e que falha se divergirem.
 
 ### 1.3 `README.md` (raiz — referência viva)
 
 | Linha | Conteúdo |
 |---|---|
-| 1 | `# Rumo à Aprovação — sistema multi-tenant de acompanhamento de estudos` |
+| 1 | `# Triliva — sistema multi-tenant de acompanhamento de estudos` (era "Rumo à Aprovação") |
 | 4 | menção a **"Rumo ao Naval"** — nome **anterior e distinto** (o painel de uma escola só do qual o sistema nasceu; `docs/fundacao/01-visao-geral.md:5` conta a mesma origem). Uma troca da marca atual não decide sozinha se essa referência de origem fica. Pergunta em aberto para Gabriel. |
 | 28 | `rumo_teste` — nome do banco local de testes (também em `tests/reset-db.sh`, `.github/workflows/ci.yml:52`, `.env.example:27`) |
 
@@ -108,27 +121,54 @@ redeployadas**. O comportamento sem o secret é idêntico ao anterior, então n�
 mas o código deployado fica atrás do repositório até o próximo deploy (runbook em
 `docs/operacao/rollback.md`).
 
-### 1.6 Documentação viva (entra numa eventual troca de marca)
+### 1.6 Copy conceitual — o trocadilho com "Rumo" em texto (achado tardio)
+
+As rev. 1 e 2 procuraram o **literal** "Rumo à Aprovação" e descreveram a composição visual do
+login, mas não pegaram o texto de marketing que joga com o **sentido** da palavra "rumo"
+(direção, rota). Só apareceu quando Gabriel mandou a screenshot da home:
+
+| Arquivo:linha | Texto | Onde aparece |
+|---|---|---|
+| `app/src/routes/publico/Login.jsx:474` | "PREPARAÇÃO MILITAR COM **DIREÇÃO**" | tarja acima do título da home |
+| `app/src/routes/publico/PortalLogin.jsx:12` | "Plano — o edital vira **rota**" | primeiro marco do mapa da missão |
+
+**Não foram alterados**, por dois motivos: (a) não são o nome da marca, e (b) "Triliva" evoca
+*trilha*, que é a mesma família semântica de rota/caminho — o gancho continua de pé, e o
+sistema já usa "Trilha" como termo de produto (`trilhas_missoes`, aba "Trilha"). Se a marca
+final for outra, sem sentido de percurso, essas duas linhas perdem o sentido e viram trabalho
+de copy.
+
+Lição para o método: uma busca por marca precisa cobrir o **campo semântico** do nome, não só
+o literal. Se "Triliva" for adotado em definitivo, o equivalente aqui seria procurar por
+"trilha/percurso/caminho" em texto de UI antes de qualquer nova troca.
+
+### 1.7 Documentação viva (atualizada na troca)
 
 Classificação pela regra do próprio `docs/README.md` ("`fundacao/` e `operacao/` são
 referência viva; `auditoria/` registra o que foi feito em cada fase; `antigos/` é histórico").
-Contagem = arquivos com "Rumo à Aprovação"/`rumo-a-aprova-o`/`rumo-aprovacao`:
 
-| Local | Arquivos | Observação |
+| Local | Arquivos | O que foi feito |
 |---|---|---|
-| `README.md` (raiz) | 1 | título |
-| `docs/README.md` | 1 | título do índice |
-| `docs/auditoria/README.md` | 1 | índice (vivo, embora aponte para fases históricas) |
-| `docs/00-indices/` | 3 | mapa geral, linha do tempo, plano set–dez |
-| `docs/arquitetura/` | 1 | |
-| `docs/operacao/` | 7 | runbooks/checklists vivos; inclui `ambientes-e-variaveis.md`, que agora documenta os 3 secrets do §1.5 |
-| `docs/fundacao/` | 0 | só cita "Rumo ao Naval" (origem), não a marca atual |
-| **Total vivo** | **14** | |
+| `README.md` (raiz) | 1 | título → "Triliva" |
+| `docs/README.md` | 1 | título do índice → "Triliva" |
+| `docs/auditoria/README.md` | 1 | linha de abertura → "Triliva" |
+| `docs/00-indices/` | 3 | títulos de mapa geral, linha do tempo e plano set–dez; mais 4 menções ao produto no plano |
+| `docs/arquitetura/` | 1 | menção ao produto |
+| `docs/operacao/` | 7 | 3 arquivos com menção ao produto trocados; os demais só citam a URL/`rumo_teste`, que não mudam |
+| `docs/fundacao/` | 0 | só cita "Rumo ao Naval" (origem) — intocado |
 
-Nenhum foi alterado nesta tarefa (exceto `ambientes-e-variaveis.md`, por documentação de
-secret, não por marca). São os candidatos reais a edição num rename.
+**Deliberadamente não trocados** (trocar faria o doc mentir sobre um fato):
 
-### 1.7 Registro histórico (não alterar — regra confirmada e ampliada)
+- `docs/00-indices/02-linha-do-tempo.md:93` — a branch `claude/rumo-aprovacao-100-codigo-yb1tfa`
+  existiu com esse nome; renomear no doc apontaria para uma branch inexistente.
+- `docs/operacao/migracao-producao-dedicada.md:107` — o projeto Supabase **ainda se chama**
+  "Rumo à Aprovação — Teste e Vitrine" no painel. A linha foi reescrita para dizer isso e
+  apontar o alvo ("Triliva — Teste e Vitrine" / "Triliva — PRODUÇÃO"), em vez de fingir que o
+  rename do painel já aconteceu.
+- Toda ocorrência de `rumo-a-aprova-o.vercel.app` e de `rumo_teste`: domínio real e nome de
+  banco técnico, não marca.
+
+### 1.8 Registro histórico (não alterar — regra confirmada e ampliada)
 
 | Local | Arquivos | Regra |
 |---|---|---|
@@ -228,28 +268,59 @@ Seção descritiva, não prescritiva.
 
 ---
 
-## 5. Alterações feitas nesta revisão (nenhuma troca de marca)
+## 5. Histórico de alterações
 
-| Arquivo | Mudança | Por quê |
+### Rev. 2 — preparo (sem trocar a marca)
+
+| Arquivo | Mudança |
+|---|---|
+| `app/src/shared/branding/marca.js` (novo) | `NOME_PLATAFORMA`, `ORIGEM_PRODUCAO` — fonte única |
+| `app/src/App.jsx`, `routes/publico/PortalLogin.jsx`, `shared/data/index.js` | importam de `marca.js` |
+| `app/src/shared/ui/MenuPrincipal.jsx` | importa de `marca.js`; assinatura da plataforma só quando difere do nome exibido |
+| `supabase/functions/_shared/cors.ts` + 3 cópias | regex de preview lido de `VERCEL_PREVIEW_PREFIX` |
+| `docs/operacao/ambientes-e-variaveis.md` | documenta os 3 secrets das Edge Functions |
+
+### Rev. 3 — a troca "Rumo à Aprovação" → "Triliva"
+
+| Arquivo | Mudança |
+|---|---|
+| `app/src/shared/branding/marca.js` | `NOME_PLATAFORMA` = "Triliva"; comentário travando `ORIGEM_PRODUCAO` no domínio real |
+| `app/package.json` + lockfile | `rumo-aprovacao-app` → `triliva-app` |
+| `tests/package.json` + lockfile | `rumo-aprovacao-tests` → `triliva-tests` |
+| `README.md`, `docs/README.md`, `docs/auditoria/README.md` | títulos/aberturas |
+| `docs/00-indices/` (3 arquivos) | títulos + 4 menções ao produto no plano set–dez |
+| `docs/arquitetura/frontend-servicos-dtos.md` | menção ao produto |
+| `docs/operacao/` (3 arquivos) | runbook de migrations, leaked-password, migração de produção |
+
+Por rename **não** feito e por quê: ver §1.6 (copy conceitual), §1.7 (o que ficou de propósito)
+e §6 (o que depende de painel).
+
+**Validação da rev. 3:** `npm ci` do zero nos dois pacotes (é o modo do CI e falha se
+`package.json` e lockfile divergirem) — OK; `npm run build` (Vite) — OK; suíte `tests/` completa
+contra Postgres 16 local com migrations + seeds 2× — **579/579**, 0 puladas. Nenhum teste
+dependia do literal da marca. Edge Functions **não** foram redeployadas.
+
+## 6. Pendências de painel (fora do alcance desta sessão)
+
+A troca no repositório não renomeia nada que viva em painel de terceiro. Continuam com o nome
+antigo até alguém agir manualmente:
+
+| Onde | Nome atual | Ação |
 |---|---|---|
-| `app/src/shared/branding/marca.js` (novo) | `NOME_PLATAFORMA`, `ORIGEM_PRODUCAO` | fonte única; rename futuro = 1 linha |
-| `app/src/App.jsx`, `routes/publico/PortalLogin.jsx`, `shared/data/index.js` | importam de `marca.js` | remover literais espalhados |
-| `app/src/shared/ui/MenuPrincipal.jsx` | importa de `marca.js`; assinatura da plataforma só quando difere do nome exibido | corrigir texto duplicado no fallback, preservando o white-label leve |
-| `supabase/functions/_shared/cors.ts` + 3 cópias | regex de preview lido de `VERCEL_PREVIEW_PREFIX` (validado, default inalterado) | último ponto de domínio que não era configurável |
-| `docs/operacao/ambientes-e-variaveis.md` | tabela ganha `ALLOWED_ORIGINS`, `PASSWORD_RESET_REDIRECT_URL`, `VERCEL_PREVIEW_PREFIX` + nota sobre as 4 cópias | os dois primeiros só estavam documentados num doc de fase, não na referência viva |
-
-**Validação:** `npm run build` (Vite) OK; suíte `tests/` completa contra Postgres 16 local com
-migrations + seeds 2× (mesmo fluxo do CI): **579/579** passando, 0 puladas; o regex de preview
-foi exercitado com 9 casos (default, slug novo, metacaractere, slug alheio, sufixo alheio,
-vazio). Edge Functions **não** foram redeployadas.
+| Supabase — projeto `bdjkgrzfzoamchdpobbl` | "Rumo à Aprovação — Teste e Vitrine" | Project Settings → General |
+| Supabase — organização | "Central de projetos - Rumo ao Milhão com SaaS" | opcional (é outra expressão, não a marca) |
+| Vercel — projeto e domínio | `rumo-a-aprova-o` / `rumo-a-aprova-o.vercel.app` | renomear muda a URL: exige `ALLOWED_ORIGINS`, `PASSWORD_RESET_REDIRECT_URL`, `VERCEL_PREVIEW_PREFIX` e `ORIGEM_PRODUCAO` em `marca.js` |
+| GitHub — repositório | `Jinriuk/Rumo-a-aprova-o-` | opcional; o GitHub mantém redirect do nome antigo |
+| Domínio próprio | não comprado | depende do registro.br, ainda não checado |
 
 ## Resumo de criticidade (revisado)
 
 | Sistema | Ocorrências | Centralizado? | Criticidade para trocar |
 |---|---|---|---|
-| Código-fonte (UI) | 1 literal em `marca.js` | **Sim** | Baixa |
-| `package.json`/lockfiles | 3 | não (identificadores) | Baixa, não exibido |
-| README.md + docs vivos | 14 arquivos | não | Média — edição manual, mas é texto |
+| Código-fonte (UI) | 1 literal em `marca.js` | **Sim** | Baixa — trocado |
+| `package.json`/lockfiles | 4 campos em 4 arquivos | não (identificadores) | Baixa — trocados |
+| README.md + docs vivos | 14 arquivos | não | Média — trocados, menos 2 fatos históricos (§1.7) |
+| Copy conceitual ("direção", "rota") | 2 linhas | não | Baixa hoje ("Triliva" ≈ trilha); vira trabalho de copy se a marca final não for de percurso (§1.6) |
 | CI/config (`rumo_teste`) | 3 | mesmo valor | Baixa — nome técnico |
 | Edge Functions (domínio) | 4 arquivos com defaults | defaults duplicados **por design**; operação por 3 secrets | **Baixa** (era "Alta" na rev. 1) |
 | Supabase (painel) | projeto + org + nome planejado de prod | metadados | Baixa |
@@ -257,8 +328,13 @@ vazio). Edge Functions **não** foram redeployadas.
 | Identidade visual | 5 elementos em código | — | Baixa nos 4 genéricos; média na composição "mapa da missão" |
 | Docs históricos | 70 arquivos | — | **Não tocar** |
 
-## Fora de escopo (confirmado, nada feito)
+## Fora de escopo (nada feito)
 
-- Materiais comerciais (CRM, pitch, one-pager) — não estão no repositório.
-- Nenhuma migration, nenhum PR de rename, nenhuma compra de domínio, nenhum redeploy.
-- INPI, registro.br e teste de pronúncia continuam pendentes — "Triliva" segue **não aprovado**.
+- Materiais comerciais (CRM, pitch, one-pager) — não estão no repositório. **Carregam o nome
+  antigo e não foram tocados**; a troca aqui é só do produto no repositório.
+- Nenhuma migration, nenhuma compra de domínio, nenhum redeploy de Edge Function, nenhum
+  rename em painel (Supabase/Vercel/GitHub — ver §6).
+- Identidade visual não foi redesenhada: o wordmark agora escreve "Triliva", mas o ícone de
+  mira, a âncora e a composição "mapa da missão" continuam como estavam (§4).
+- **INPI, registro.br e teste de pronúncia continuam pendentes.** "Triliva" foi adotado no
+  código por decisão de Gabriel, não por ter passado nas checagens.

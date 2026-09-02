@@ -2,7 +2,7 @@
 
 **Atualizado em:** 2026-06-27 (pós-SEG2)
 
-Auditorias e fases de evolução do **Rumo à Aprovação**, organizadas por **assunto**.
+Auditorias e fases de evolução do **Triliva**, organizadas por **assunto**.
 Cada pasta de fase guarda o relatório principal (`relatorio-*.md`) e os documentos de
 apoio numerados.
 

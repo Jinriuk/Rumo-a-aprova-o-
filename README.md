@@ -1,4 +1,4 @@
-# Rumo à Aprovação — sistema multi-tenant de acompanhamento de estudos
+# Triliva — sistema multi-tenant de acompanhamento de estudos
 
 Sistema white-label para escolas/cursinhos preparatórios (Colégio Naval, EsPCEx, EEAr, CM),
 nascido do painel "Rumo ao Naval". Multi-tenant de verdade: **o isolamento entre escolas é
