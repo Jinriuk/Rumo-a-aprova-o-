@@ -1,6 +1,6 @@
 # Backlog — Etapa 1 (Comando, foco, governança e fonte da verdade)
 
-**Atualizado em:** 02/09/2026 (revisão 4 — P2 do PR #84 resolvidos e PR #85 aberto)
+**Atualizado em:** 02/09/2026 (revisão 5 — PR #84, #85, #86 e os 3 dependabot mergeados em `main`)
 
 ---
 
@@ -10,9 +10,9 @@
 - **Responsável:** Gabriel
 - **Prioridade:** Alta
 - **Prazo:** até o merge do PR #84
-- **Estado:** revisão (aguardando merge, sem bloqueio conhecido)
+- **Estado:** concluído
 - **Critério de aceite:** decisão registrada sobre a causa da pausa; e decisão sobre a branch órfã (BKL-005) antes de fechar.
-- **Evidência:** explicado pela pausa de planejamento. Fecha quando BKL-005 fechar (PR #84 mergeado ou explicitamente descartado). Os 2 P2 que travavam o PR #84 foram corrigidos (commit `7d3fd54`) e os threads resolvidos — nada mais pendente do lado de revisão.
+- **Evidência:** explicado pela pausa de planejamento. PR #84 mergeado em `main` (commit `bf5ff2c`), depois de corrigidos os 2 P2 (`7d3fd54`). BKL-005 fechado junto — ver abaixo.
 
 ---
 
@@ -22,16 +22,20 @@
 - **Responsável:** técnico (Opus, conforme papel do plano) + Gabriel (decisão de merge)
 - **Prioridade:** Alta (trava a leitura do BKL-002)
 - **Prazo:** —
-- **Estado:** revisão
+- **Estado:** concluído
 - **Critério de aceite:** cada branch remota tem destino definido (merge, fechamento ou justificativa para continuar aberta).
 
-| Branch | Status verificado em 02/09 (atualizado) | Recomendação |
+| Branch | Destino | Situação em `main` |
 |---|---|---|
-| `claude/jornada-transformadora-uxg2-r2-806vu0` | PR #84 aberto contra `main`. 579/579 testes, sem conflito de merge. **Os 2 P2 do Codex bot foram corrigidos e os threads resolvidos** (commit `7d3fd54`: condição de corrida ao trocar de objetivo — `alvoConfirmacaoRef` valida o alvo antes de marcar concluído; erro de hook vazando entre objetivos — `fecharObjetivo.setErro(null)` nos 4 pontos de reset). CI verde. | mergear |
-| `claude/uxg2-jornada-migration-0045-nskdek` | PR #85 aberto contra `main`. Migration 0045 idêntica ao aplicado no banco de teste, idempotência confirmada, `list_migrations` remoto bate 1:1 com o repositório. | mergear |
-| `dependabot/github_actions/actions/setup-node-7` | PR #73, aberto desde 20/07, CI verde, mas com base bem antiga (`18b9f65`) — precisa reavaliar mergeabilidade contra o `main` atual antes de mergear. | mergear se ainda limpo, risco baixo |
-| `dependabot/npm_and_yarn/app/app-deps-a4a15aa221` | PR #81, aberto, CI verde. | mergear, risco baixo |
-| `dependabot/npm_and_yarn/tests/tests-deps-e4eef21ccf` | PR #76, aberto, CI verde. | mergear, risco baixo |
+| `claude/jornada-transformadora-uxg2-r2-806vu0` | mergeada | PR #84, squash `bf5ff2c`. Os 2 P2 do Codex bot corrigidos antes do merge (`7d3fd54`: condição de corrida ao trocar de objetivo — `alvoConfirmacaoRef` valida o alvo antes de marcar concluído; erro de hook vazando entre objetivos — `fecharObjetivo.setErro(null)` nos 4 pontos de reset). Branch remota pode ser apagada. |
+| `claude/uxg2-jornada-migration-0045-nskdek` | mergeada | PR #85, squash `fe2d053`. `list_migrations` remoto confirmado batendo com o repositório antes do merge. Branch remota pode ser apagada. |
+| `dependabot/github_actions/actions/setup-node-7` | mergeada | PR #73, squash `c55fad9`. Testado merge-tree contra o `main` atual antes de mergear (limpo, apesar da base antiga). GitHub já apagou a branch remota. |
+| `dependabot/npm_and_yarn/app/app-deps-a4a15aa221` | mergeada | PR #81, squash `63d27ca`. GitHub já apagou a branch remota. |
+| `dependabot/npm_and_yarn/tests/tests-deps-e4eef21ccf` | mergeada | PR #76, squash `d15a68d`. GitHub já apagou a branch remota. |
+
+Suíte completa (579/579) e `npm run build` do app confirmados no `main` combinado, depois das 6 mesclas — não só em cada PR isoladamente.
+
+**Fora do escopo desta rodada, decisão pendente com Gabriel:** `docs/plano-mestre-final-set-dez-2026` (PR #83, aberto, `mergeable_state: clean`, +1392/-484 em 2 arquivos) — plano mestre substituindo o anterior. Não tocado aqui porque não fazia parte do prompt de execução BKL-004/005 e é uma decisão de conteúdo/produto, não uma correção técnica sob o congelamento (ADR-0004).
 
 ---
 
