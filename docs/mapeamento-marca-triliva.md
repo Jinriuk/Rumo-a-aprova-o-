@@ -30,6 +30,7 @@ serem repetidas:
 | "`MenuPrincipal.jsx:134` é bug de white-label" | O white-label é **leve por decisão** (`docs/fundacao/06-arquitetura-fechada.md` §1.2): marca da escola *por cima* de um design fixo, e o rodapé é a "assinatura discreta da plataforma" (comentário no próprio arquivo). A segunda linha é intencional. | O defeito real é menor: sem escola (ou quando a "escola" é a própria plataforma, no fluxo de recuperação), as duas linhas repetiam o mesmo texto. Corrigido — ver §1.1. |
 | "`docs/operacao/` é histórico, mesma categoria de `backlog/`/`adr/`" | `docs/README.md` diz o oposto: `fundacao/` e `operacao/` são **referência viva**; histórico é `auditoria/` (fases) e `auditoria/antigos/`. | Reclassificado em §1.6/§1.7. `operacao/` **entra** numa eventual troca de marca. |
 | "Supabase: só o nome do projeto carrega a marca" | A org também ("Central de projetos - Rumo ao Milhão com SaaS") e o nome já planejado do projeto de produção ("Rumo à Aprovação — PRODUÇÃO"). | Adicionados em §2. |
+| "Vercel: o projeto existe em outra conta" (rev. 2) | O Vercel GitHub App comentou no PR #88 com o projeto `rumo-a-aprova-o` no time `jinriuk-s-projects` — o mesmo time que a API desta sessão lista vazio. É falta de permissão do token, não conta diferente. | Corrigido em §3. |
 
 ---
 
@@ -160,16 +161,27 @@ de Gabriel além disso.
 
 ---
 
-## 3. Vercel — **não verificável a partir desta sessão**
+## 3. Vercel — painel **não verificável a partir desta sessão**
 
-Tentativas feitas:
+O que foi possível confirmar (pelo comentário automático do Vercel GitHub App no PR #88, não
+pela API):
 
-- `list_projects` no único time acessível pela integração (`Jinriuk's projects`, plano hobby): **0 projetos**.
-- `get_project("rumo-a-aprova-o")` nesse time: **404**.
-- `curl https://rumo-a-aprova-o.vercel.app`: bloqueado pela política de rede do ambiente (proxy 403), não pelo site.
+- Projeto **`rumo-a-aprova-o`** (id `prj_Q7tcLOOTptRgdTrfIUoDFWJDx0oO`) no time
+  **`jinriuk-s-projects`** — o mesmo time que a integração desta sessão enxerga.
+- O preview do PR saiu como `rumo-a-aprova-o-git-claude-brand-mapp-…-jinriuk-s-projects.vercel.app`,
+  que **casa com o default** do regex de preview (§1.5) — validação real do padrão.
 
-Conclusão: o projeto Vercel **existe em outra conta** que não a conectada a esta sessão.
-Tudo que se sabe vem do repositório:
+O que **não** foi possível:
+
+- `list_projects` nesse time via API: **0 projetos**; `get_project` pelo slug **e** pelo id:
+  **404**. O token Vercel conectado a esta sessão não tem visibilidade sobre o projeto, mesmo
+  estando no time certo (a rev. 2 dizia "existe em outra conta" — estava errado; é falta de
+  permissão do token, não conta diferente).
+- `curl https://rumo-a-aprova-o.vercel.app`: bloqueado pela política de rede do ambiente (proxy
+  403), não pelo site.
+
+Logo, nome de exibição, domínios anexados e env vars do painel continuam sem verificação
+direta. Tudo que se sabe além do acima vem do repositório:
 
 - Projeto/domínio: `rumo-a-aprova-o` → `rumo-a-aprova-o.vercel.app`, sem domínio próprio
   (`docs/auditoria/seguranca/seg2/10-dominio-urls-finais.md`: compra adiada).
