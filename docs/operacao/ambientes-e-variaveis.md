@@ -37,6 +37,15 @@ e a anon key **públicas** do projeto demo — seguro por design).
 | `SUPABASE_SERVICE_ROLE_KEY` | scripts de operador, Edge Functions | **crítica — nunca no front/repo** | sim (scripts/funções) |
 | `PGHOST`/`PGPORT`/`PGUSER`/`PGPASSWORD`/`PGDATABASE` | `tests/` (suíte local) | local, sem dado real | sim (testes) |
 | `E2E_SUPABASE_URL`/`E2E_SUPABASE_ANON_KEY` | secrets do GitHub Actions (job `e2e`) | pública, mas de um projeto isolado | opcional (sem ela o E2E roda contra o demo — ver `e2e-ambiente.md`) |
+| `ALLOWED_ORIGINS` | secret das Edge Functions (CSV de origens; substitui a lista padrão) | pública (só origens) | não — sem ela vale o default (`https://rumo-a-aprova-o.vercel.app` + localhost) |
+| `PASSWORD_RESET_REDIRECT_URL` | secret da `backoffice-coordenador` (destino do link de redefinição) | pública (só URL) | não — default `https://rumo-a-aprova-o.vercel.app/redefinir-senha` |
+| `VERCEL_PREVIEW_PREFIX` | secret das Edge Functions (slug do projeto na Vercel, para liberar os previews `<slug>-*.vercel.app`) | pública (só um slug) | não — default `rumo-a-aprova-o`; valor fora de `[a-z0-9-]` é ignorado |
+
+> As três últimas existem para que uma troca de **domínio, slug ou marca** na Vercel
+> seja feita só por secret, sem editar as Edge Functions. Atenção: `_shared/cors.ts` é a
+> versão canônica, mas `backoffice-coordenador`, `revogar-responsavel` e
+> `provisionar-aluno` carregam uma **cópia própria** (deliberada, para deploy sem o
+> bundler de `_shared/`) — uma mudança nos *defaults* precisa ser espelhada nos 4 arquivos.
 
 ## Verificação feita nesta fase
 

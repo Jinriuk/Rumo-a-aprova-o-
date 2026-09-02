@@ -8,6 +8,7 @@
    Contrato: abas = [[chave, rótulo, badge?, nomeDoÍcone]]. */
 import React, { useState } from "react";
 import { useTema, useBranding } from "../branding/BrandingContext.jsx";
+import { NOME_PLATAFORMA } from "../branding/marca.js";
 import { Icone } from "./Icones.jsx";
 
 const MAX_NA_BARRA = 4;
@@ -17,6 +18,12 @@ export function MenuPrincipal({ abas, ativo, aoTrocar, usuario }) {
   const T = useTema();
   const { escola } = useBranding();
   const [maisAberto, setMaisAberto] = useState(false);
+  // Rodapé da sidebar: nome da escola (white-label leve) sobre a assinatura
+  // discreta da plataforma. Sem escola — ou quando a "escola" É a plataforma
+  // (fluxo de recuperação em App.jsx) — a assinatura repetiria o mesmo nome
+  // em duas linhas; então só aparece quando difere.
+  const nomeExibido = escola?.nome ?? NOME_PLATAFORMA;
+  const mostrarAssinatura = nomeExibido !== NOME_PLATAFORMA;
   const iniciais = (usuario?.nome ?? "")
     .split(" ").filter(Boolean).slice(0, 2).map((p) => p[0].toUpperCase()).join("");
 
@@ -130,8 +137,10 @@ export function MenuPrincipal({ abas, ativo, aoTrocar, usuario }) {
             <Icone nome="ancora" tam={15} grosso={2.4} />
           </span>
           <div style={{ minWidth: 0 }}>
-            <div className="disp" style={{ fontSize: 12, fontWeight: 700, color: T.ink, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{escola?.nome ?? "Rumo à Aprovação"}</div>
-            <div style={{ fontSize: 9.5, color: T.sub, letterSpacing: 0.4, textTransform: "uppercase" }}>Rumo à Aprovação</div>
+            <div className="disp" style={{ fontSize: 12, fontWeight: 700, color: T.ink, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{nomeExibido}</div>
+            {mostrarAssinatura && (
+              <div style={{ fontSize: 9.5, color: T.sub, letterSpacing: 0.4, textTransform: "uppercase" }}>{NOME_PLATAFORMA}</div>
+            )}
           </div>
         </div>
       </nav>

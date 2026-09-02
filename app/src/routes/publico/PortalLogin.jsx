@@ -4,6 +4,7 @@
    sistema pede movimento reduzido (controle feito por Login.jsx). */
 import React from "react";
 import * as m from "motion/react-m";
+import { NOME_PLATAFORMA } from "../../shared/branding/marca.js";
 
 const MOLAS = { type: "spring", stiffness: 155, damping: 18, mass: 0.8 };
 
@@ -58,7 +59,7 @@ export function MarcaPortal({ compacta = false }) {
         </svg>
       </span>
       <span>
-        <strong>Rumo à Aprovação</strong>
+        <strong>{NOME_PLATAFORMA}</strong>
         {!compacta && <small>Central de preparação</small>}
       </span>
     </div>

@@ -5,6 +5,7 @@ import React, { Suspense, lazy } from "react";
 import Login from "./routes/publico/Login.jsx";
 import { useSessao } from "./shared/hooks/useSessao.js";
 import { BrandingProvider, useTema } from "./shared/branding/BrandingContext.jsx";
+import { NOME_PLATAFORMA } from "./shared/branding/marca.js";
 import { FONTES_CSS } from "./shared/ui/tema.js";
 import * as db from "./shared/data/index.js";
 
@@ -51,7 +52,7 @@ export default function App() {
   // que o coordenador veja a tela de redefinição mesmo se já estiver logado.
   if (detectarRecuperacao()) {
     return (
-      <BrandingProvider escola={{ nome: "Rumo à Aprovação", slug: "app", logo_url: null, cor_acento: null }}>
+      <BrandingProvider escola={{ nome: NOME_PLATAFORMA, slug: "app", logo_url: null, cor_acento: null }}>
         <Suspense fallback={<EsperandoArea />}>
           <RedefinirSenha />
         </Suspense>
