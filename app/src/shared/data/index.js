@@ -9,6 +9,7 @@
    ============================================================ */
 import { supabase } from "../../lib/supabase.js";
 import { patchAluno } from "../contratos/dto.js";
+import { ORIGEM_PRODUCAO } from "../branding/marca.js";
 
 function falha(contexto, error, { esperada = false } = {}) {
   const e = new Error(`${contexto}: ${error.message}`);
@@ -660,7 +661,7 @@ export async function listarResponsaveisEscola() {
 // Envia e-mail de recuperação de senha para coordenação.
 // Mensagem genérica ao chamador — não revela se o e-mail existe.
 export async function recuperarSenha(email) {
-  const redirectTo = `${typeof window !== "undefined" ? window.location.origin : "https://rumo-a-aprova-o.vercel.app"}/redefinir-senha`;
+  const redirectTo = `${typeof window !== "undefined" ? window.location.origin : ORIGEM_PRODUCAO}/redefinir-senha`;
   const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo });
   if (error) throw falha("recuperar senha", error);
 }

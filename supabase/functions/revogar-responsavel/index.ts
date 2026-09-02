@@ -28,7 +28,12 @@ const DEFAULT_ORIGINS = [
   "http://localhost:3000",
 ];
 const ORIGINS = ENV_ORIGINS.length > 0 ? ENV_ORIGINS : DEFAULT_ORIGINS;
-const VERCEL_PREVIEW = /^https:\/\/rumo-a-aprova-o-[a-z0-9-]+\.vercel\.app$/i;
+// Slug do projeto na Vercel (previews): VERCEL_PREVIEW_PREFIX, só [a-z0-9-];
+// valor inválido cai no default. Espelha _shared/cors.ts.
+const PREVIEW_PREFIX_DEFAULT = "rumo-a-aprova-o";
+const PREVIEW_PREFIX_ENV = (Deno.env.get("VERCEL_PREVIEW_PREFIX") ?? "").trim();
+const PREVIEW_PREFIX = /^[a-z0-9-]{1,63}$/i.test(PREVIEW_PREFIX_ENV) ? PREVIEW_PREFIX_ENV : PREVIEW_PREFIX_DEFAULT;
+const VERCEL_PREVIEW = new RegExp(`^https://${PREVIEW_PREFIX}-[a-z0-9-]+\\.vercel\\.app$`, "i");
 
 function origemPermitida(origin: string): boolean {
   if (!origin) return false;
