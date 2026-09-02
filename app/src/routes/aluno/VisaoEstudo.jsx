@@ -54,6 +54,14 @@ export function VisaoEstudo({ aluno, podeEditar, concurso = null, contexto = "Pl
   const [realceMissao, setRealceMissao] = useState(0);
   const missaoRef = useRef(null);
   const fecharObjetivo = useEnvioUnico("acao");
+  // Alvo da confirmação em tela AGORA, lido dentro do await de
+  // concluirObjetivoDaJornada. Sem isto, concluir o objetivo A enquanto
+  // o aluno já navegou pra B e está vendo a confirmação de B faz o
+  // "true" de A vazar pra tela de B quando a resposta de A chega depois.
+  const alvoConfirmacaoRef = useRef(null);
+  useEffect(() => {
+    alvoConfirmacaoRef.current = confirmacaoRegistro?.contexto?.metaAtividadeId ?? null;
+  }, [confirmacaoRegistro]);
   const recarregar = () => setVersao((v) => v + 1);
   const recarregarTudo = () => { recarregar(); recarregarTrilha(); };
 
@@ -134,6 +142,7 @@ export function VisaoEstudo({ aluno, podeEditar, concurso = null, contexto = "Pl
       setContextoRegistro(contexto);
       setConfirmacaoRegistro(null);
       setObjetivoConcluido(false);
+      fecharObjetivo.setErro(null);
     }
     setTab(k);
     window.scrollTo({ top: 0, left: 0, behavior: "instant" });
@@ -142,6 +151,7 @@ export function VisaoEstudo({ aluno, podeEditar, concurso = null, contexto = "Pl
   const registroConfirmado = ({ registro, contexto }) => {
     setConfirmacaoRegistro({ registro, contexto });
     setObjetivoConcluido(false);
+    fecharObjetivo.setErro(null);
     recarregar();
   };
 
@@ -153,7 +163,10 @@ export function VisaoEstudo({ aluno, podeEditar, concurso = null, contexto = "Pl
     if (!alvo) return;
     await fecharObjetivo.enviar(async () => {
       await db.definirEstadoAtividade(alvo, "concluida");
-      setObjetivoConcluido(true);
+      // a confirmação em tela pode ter trocado de objetivo enquanto
+      // este pedido estava em voo — só marca concluído se ainda for a
+      // mesma que o aluno está vendo.
+      if (alvoConfirmacaoRef.current === alvo) setObjetivoConcluido(true);
       recarregar();
     });
   };
@@ -162,6 +175,7 @@ export function VisaoEstudo({ aluno, podeEditar, concurso = null, contexto = "Pl
     setConfirmacaoRegistro(null);
     setContextoRegistro(null);
     setObjetivoConcluido(false);
+    fecharObjetivo.setErro(null);
     setTab("hoje");
     setRealceMissao(Date.now());
   };
@@ -170,6 +184,7 @@ export function VisaoEstudo({ aluno, podeEditar, concurso = null, contexto = "Pl
     setConfirmacaoRegistro(null);
     setContextoRegistro(null);
     setObjetivoConcluido(false);
+    fecharObjetivo.setErro(null);
     window.scrollTo({ top: 0, left: 0, behavior: "instant" });
   };
 

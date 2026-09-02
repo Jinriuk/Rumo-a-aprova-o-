@@ -225,3 +225,29 @@ test("R2-fix: missão do motor e objetivo da trilha não viram '2 missões'", ()
   assert.match(ilha, /objetivo concluído/);
   assert.doesNotMatch(ilha, /feedback\.missoes \+ feedback\.objetivos/);
 });
+
+test("auditoria P2 (Codex, PR #84): concluir objetivo A não marca concluído o B em tela", () => {
+  const visao = ler("app/src/routes/aluno/VisaoEstudo.jsx");
+  // o alvo em voo é comparado contra o que está em tela quando a
+  // resposta chega — não contra a variável fechada no início do await
+  assert.match(visao, /alvoConfirmacaoRef\.current = confirmacaoRegistro\?\.contexto\?\.metaAtividadeId \?\? null;/);
+  const corpo = visao.slice(visao.indexOf("const concluirObjetivoDaJornada"), visao.indexOf("const verMissaoAtualizada"));
+  assert.match(corpo, /if \(alvoConfirmacaoRef\.current === alvo\) setObjetivoConcluido\(true\);/);
+  // recarregar() continua incondicional (linha seguinte, sem chaves guardando as duas):
+  // só o "concluído" na tela é que não pode vazar entre objetivos
+  assert.match(corpo, /if \(alvoConfirmacaoRef\.current === alvo\) setObjetivoConcluido\(true\);\s*\n\s*recarregar\(\);/);
+});
+
+test("auditoria P2 (Codex, PR #84): erro de concluir objetivo não vaza pro próximo", () => {
+  const visao = ler("app/src/routes/aluno/VisaoEstudo.jsx");
+  // toda vez que uma confirmação nova nasce ou o aluno abre outro registro,
+  // o erro da tentativa anterior de fechar objetivo é limpo junto
+  const irAba = visao.slice(visao.indexOf("const irAba = "), visao.indexOf("const registroConfirmado"));
+  assert.match(irAba, /fecharObjetivo\.setErro\(null\);/);
+  const registroConfirmado = visao.slice(visao.indexOf("const registroConfirmado"), visao.indexOf("const concluirObjetivoDaJornada"));
+  assert.match(registroConfirmado, /fecharObjetivo\.setErro\(null\);/);
+  const verMissaoAtualizada = visao.slice(visao.indexOf("const verMissaoAtualizada"), visao.indexOf("const registrarOutro"));
+  assert.match(verMissaoAtualizada, /fecharObjetivo\.setErro\(null\);/);
+  const registrarOutro = visao.slice(visao.indexOf("const registrarOutro ="), visao.indexOf("useEffect(() => {\n    if (!realceMissao"));
+  assert.match(registrarOutro, /fecharObjetivo\.setErro\(null\);/);
+});
