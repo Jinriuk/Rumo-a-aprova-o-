@@ -1,4 +1,4 @@
-# Linha do Tempo — Rumo à Aprovação
+# Linha do Tempo — Triliva
 
 **Atualizado em:** 2026-07-02 (REG1 — reconciliação pós-fechamento)
 

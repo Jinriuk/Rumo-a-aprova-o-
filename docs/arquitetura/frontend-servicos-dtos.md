@@ -1,6 +1,6 @@
 # Frontend — camada de serviços, contratos/DTOs e fluxo seguro
 
-> Camada **FE1**. Descreve como o front do Rumo à Aprovação separa
+> Camada **FE1**. Descreve como o front do Triliva separa
 > lógica de negócio das telas, fala com o Supabase por um seam único,
 > esconde o schema cru atrás de contratos e impede duplo envio /
 > requisições órfãs. Não é um redesenho: é a fronteira que já existia,

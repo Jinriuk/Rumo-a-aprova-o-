@@ -41,7 +41,7 @@ cadastro/reset é bloqueado.
 
 Alunos e responsáveis frequentemente reutilizam senhas de outros serviços. Se uma dessas senhas
 for vazada em outro sistema e aparecer em bancos como o HaveIBeenPwned, sem essa proteção o
-usuário poderia cadastrá-la no Rumo à Aprovação, expondo sua conta a ataques de credential stuffing.
+usuário poderia cadastrá-la no Triliva, expondo sua conta a ataques de credential stuffing.
 
 **Com a proteção ativa (após Pro):**
 - Senhas conhecidamente comprometidas são rejeitadas no cadastro e no reset

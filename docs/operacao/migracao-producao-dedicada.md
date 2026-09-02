@@ -104,7 +104,7 @@ com status honesto) · espelho de maturidade.
 | # | Ação | Onde |
 |---|------|------|
 | 1 | **Projeto de produção na org certa**: precisa estar na org "Central de projetos - Rumo ao Milhão com SaaS" (a org Pro — e a única que o acesso MCP enxerga). Região **`sa-east-1`** | Dashboard → New project |
-| 2 | **Renomear** (meu acesso não renomeia projeto): atual → "Rumo à Aprovação — Teste e Vitrine"; novo → "Rumo à Aprovação — PRODUÇÃO" | Project Settings → General |
+| 2 | **Renomear** (meu acesso não renomeia projeto): o projeto atual ainda se chama "Rumo à Aprovação — Teste e Vitrine" no painel — passar para "Triliva — Teste e Vitrine"; o novo nasce como "Triliva — PRODUÇÃO" | Project Settings → General |
 | 3 | **Secrets das Edge Functions** no prod: `ALLOWED_ORIGINS` (domínio real, CSV) e `PASSWORD_RESET_REDIRECT_URL` (`https://<domínio>/redefinir-senha`) | Edge Functions → Secrets |
 | 4 | **Os 4 toggles de Auth** (leaked password, política de senha, rate limits, TOTP) — repetir o que já está no demo | Authentication |
 | 5 | **SMTP com o domínio real** (P0-1 do piloto) | Auth → SMTP |

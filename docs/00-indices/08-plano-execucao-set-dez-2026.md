@@ -1,4 +1,4 @@
-# Plano mestre final - Rumo à Aprovação
+# Plano mestre final - Triliva
 
 **Janela executiva:** 1º de setembro a 1º de dezembro de 2026  
 **Versão:** 1.0 - consolidação final  
@@ -14,7 +14,7 @@
 
 # 1. Decisão executiva
 
-O Rumo à Aprovação deve ser tratado como uma empresa B2B em validação comercial, e não como um catálogo genérico de concursos ou um curso online concorrente de grandes plataformas.
+O Triliva deve ser tratado como uma empresa B2B em validação comercial, e não como um catálogo genérico de concursos ou um curso online concorrente de grandes plataformas.
 
 ## 1.1 O que será vendido
 
@@ -486,7 +486,7 @@ Gabriel consegue localizar um decisor, abrir conversa, realizar diagnóstico, de
 ### Após entrada ou imediatamente antes do G3
 
 - [ ] criar organização Supabase Pro oficial;
-- [ ] criar projeto “Rumo à Aprovação - Produção” em `sa-east-1`;
+- [ ] criar projeto “Triliva - Produção” em `sa-east-1`;
 - [ ] manter demo fora da organização paga, se isso reduzir custo e não prejudicar ownership;
 - [ ] usar um ambiente remoto de staging sem dado real;
 - [ ] migrar a Vercel para Pro ou hosting comercial equivalente;
@@ -1093,7 +1093,7 @@ Esses valores são hipóteses comerciais, não preço garantido. Desconto deve c
 
 **Estrutura:**
 
-- tenant “Rumo à Aprovação - Alunos Individuais”;
+- tenant “Triliva - Alunos Individuais”;
 - até 30 vagas;
 - R$ 29,90/mês como preço fundador sugerido;
 - aquisição por indicação e WhatsApp;
@@ -1615,7 +1615,7 @@ Se não houver contrato até 1º de dezembro, a decisão não será “programar
 
 ## Veredito final
 
-O Rumo à Aprovação não precisa esperar ficar “100% pronto” para ser vendido, mas precisa estar 100% honesto sobre o que está sendo vendido.
+O Triliva não precisa esperar ficar “100% pronto” para ser vendido, mas precisa estar 100% honesto sobre o que está sendo vendido.
 
 A ordem correta é:
 

@@ -1,4 +1,4 @@
-# Documentação — Rumo à Aprovação
+# Documentação — Triliva
 
 **Atualizado em:** 2026-06-27 (pós-SEG2)
 
