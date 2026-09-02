@@ -465,7 +465,10 @@ export async function carregarEventosProgresso(alunoId, { limite = 50 } = {}) {
 export async function carregarXpPersistido(alunoId) {
   const { data, error } = await supabase
     .from("aluno_eventos_progresso")
-    .select("xp_delta, status, tipo_evento")
+    // `origem` distingue concessões que somam XP por motivos diferentes
+    // (motor_missao vs meta_atividades). Leitura apenas: mesma tabela,
+    // mesma RLS — nada aqui decide o que o aluno pode ver.
+    .select("xp_delta, status, tipo_evento, origem")
     .eq("aluno_id", alunoId);
   if (error) {
     if (tabelaInexistente(error)) { console.warn("motor de progresso ainda não migrado neste ambiente"); return { eventos: [], total: 0 }; }

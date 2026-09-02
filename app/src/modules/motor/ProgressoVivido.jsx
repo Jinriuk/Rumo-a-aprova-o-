@@ -4,9 +4,94 @@
    foi persistido (ledger de XP, missões fechadas, conquistas) e dá
    ao aluno o retorno no momento da ação.
    ============================================================ */
-import React from "react";
-import { SectionCard, StatusBadge, BarraXP } from "../../shared/ui/componentes.jsx";
+import React, { useEffect, useRef } from "react";
+import { SectionCard, StatusBadge, BarraXP, Erro } from "../../shared/ui/componentes.jsx";
 import { useTema } from "../../shared/branding/BrandingContext.jsx";
+import { resumoRegistroConfirmado } from "./jornada.js";
+
+const tempoConfirmado = (minutos) => {
+  if (minutos == null) return null;
+  if (minutos < 60) return `${minutos} min`;
+  const resto = minutos % 60;
+  return `${Math.floor(minutos / 60)}h${resto ? String(resto).padStart(2, "0") : ""}`;
+};
+
+/* Primeira camada da confirmação: usa exclusivamente a linha devolvida
+   pelo insert. XP, missão e conquista não aparecem aqui — pertencem à
+   ilha abaixo, que só nasce quando a recarga lê o ledger do servidor. */
+export function ConfirmacaoRegistro({
+  confirmacao, trilha, aoVerMissao, aoRegistrarOutro,
+  aoConcluirObjetivo, objetivoConcluido = false, concluindoObjetivo = false, erroObjetivo = null,
+}) {
+  // O formulário que tinha o foco acabou de sair da árvore. Sem trazer o
+  // foco para cá, o teclado volta ao <body> e o aluno perde o lugar.
+  const tituloRef = useRef(null);
+  useEffect(() => { tituloRef.current?.focus(); }, []);
+
+  if (!confirmacao?.registro) return null;
+  const resumo = resumoRegistroConfirmado(confirmacao.registro, trilha?.porCodigo);
+  const tempo = tempoConfirmado(resumo.minutos);
+  // Registrar estudo NÃO fecha o objetivo: quem decide isso é o aluno.
+  const podeFecharObjetivo = !!aoConcluirObjetivo && !!confirmacao.contexto?.metaAtividadeId;
+
+  return (
+    <section className="journey-confirmation" role="status" aria-live="polite" aria-labelledby="registro-confirmado-titulo">
+      <div className="journey-confirmation-orbit" aria-hidden="true">
+        <span>✓</span>
+      </div>
+      <div className="journey-confirmation-kicker">Registro confirmado</div>
+      <h2 id="registro-confirmado-titulo" className="disp" ref={tituloRef} tabIndex={-1}>Seu estudo entrou no radar.</h2>
+      <p>
+        {confirmacao.contexto?.titulo
+          ? <>Você avançou em <strong>{confirmacao.contexto.titulo}</strong>.</>
+          : <>A atividade já está salva no seu histórico.</>}
+      </p>
+
+      <div className="journey-confirmation-facts" aria-label="Dados gravados">
+        <span><small>Matéria</small><strong>{resumo.materia}</strong></span>
+        <span><small>Questões</small><strong>{resumo.questoes}</strong></span>
+        {resumo.acuracia != null && <span><small>Acerto</small><strong>{resumo.acuracia}%</strong></span>}
+        {tempo && <span><small>Tempo</small><strong>{tempo}</strong></span>}
+      </div>
+
+      <div className="journey-confirmation-engine">
+        <span aria-hidden="true" />
+        XP e missões aparecem separadamente quando forem confirmados no seu progresso.
+      </div>
+
+      {/* Fechar o objetivo é o passo que move a missão de verdade — e é
+          uma decisão do aluno, nunca um efeito automático do registro.
+          O estado só vira "concluído" depois que o banco devolve a linha. */}
+      {podeFecharObjetivo && (
+        <div className="journey-confirmation-objective">
+          {objetivoConcluido ? (
+            <p className="journey-objective-done">
+              <span aria-hidden="true">✓</span> Objetivo concluído. A missão avançou.
+            </p>
+          ) : (
+            <>
+              <p>Este registro entrou no seu histórico. O objetivo continua em aberto até você fechá-lo.</p>
+              <button className="journey-confirmation-objective-action"
+                onClick={aoConcluirObjetivo} disabled={concluindoObjetivo}>
+                {concluindoObjetivo ? "Concluindo…" : "Concluir este objetivo"}
+              </button>
+            </>
+          )}
+          {erroObjetivo && <div className="journey-confirmation-objective-error"><Erro>{erroObjetivo}</Erro></div>}
+        </div>
+      )}
+
+      <div className="journey-confirmation-actions">
+        <button className="journey-confirmation-primary" onClick={aoVerMissao}>
+          Voltar para a missão <span aria-hidden="true">→</span>
+        </button>
+        <button className="journey-confirmation-secondary" onClick={aoRegistrarOutro}>
+          Registrar outro estudo
+        </button>
+      </div>
+    </section>
+  );
+}
 
 /* Toast de retorno imediato: aparece quando uma recarga revela que o
    banco concedeu algo (XP, missão fechada, conquista). É honesto — só
@@ -14,29 +99,27 @@ import { useTema } from "../../shared/branding/BrandingContext.jsx";
 export function FeedbackProgresso({ feedback, aoFechar }) {
   const T = useTema();
   if (!feedback) return null;
+  /* Missão do motor e objetivo da trilha são concessões DIFERENTES do
+     ledger (`origem` = motor_missao vs meta_atividades) e cada uma vale
+     o próprio XP. Somar as duas em "2 missões" mentiria sobre o que o
+     banco fez; por isso cada origem é nomeada pelo que ela é. */
   const partes = [];
-  if (feedback.xp > 0) partes.push(`+${feedback.xp} XP`);
-  if (feedback.missoes > 0) partes.push(`${feedback.missoes} ${feedback.missoes === 1 ? "missão concluída" : "missões concluídas"}`);
+  if (feedback.missoes > 0) partes.push(`${feedback.missoes} ${feedback.missoes === 1 ? "missão cumprida" : "missões cumpridas"}`);
+  if (feedback.objetivos > 0) partes.push(`${feedback.objetivos} ${feedback.objetivos === 1 ? "objetivo concluído" : "objetivos concluídos"}`);
   if (feedback.conquistas > 0) partes.push(`${feedback.conquistas} ${feedback.conquistas === 1 ? "conquista desbloqueada" : "conquistas desbloqueadas"}`);
+  if (feedback.xp > 0) partes.push(`+${feedback.xp} XP`);
   if (!partes.length) return null;
 
   return (
     <div
       role="status"
       aria-live="polite"
-      onClick={aoFechar}
-      style={{
-        position: "fixed", left: "50%", transform: "translateX(-50%)",
-        top: "max(14px, env(safe-area-inset-top))", zIndex: 60, cursor: "pointer",
-        background: `linear-gradient(135deg, ${T.gold}, ${T.gold}cc)`, color: "#0A1622",
-        border: `1px solid ${T.gold}`, borderRadius: 12, padding: "12px 18px",
-        boxShadow: "0 10px 30px rgba(0,0,0,.35)", fontWeight: 800, fontSize: 14.5,
-        display: "flex", alignItems: "center", gap: 10, maxWidth: "92vw",
-      }}
+      style={{ "--reward-accent": T.gold }}
       className="fade reward-island"
     >
-      <span style={{ fontSize: 18 }}>★</span>
-      <span>{partes.join(" · ")}</span>
+      <span className="reward-island-signal" aria-hidden="true">★</span>
+      <span><small>Progresso confirmado</small>{partes.join(" · ")}</span>
+      <button className="reward-island-close" onClick={aoFechar} aria-label="Fechar confirmação de progresso">×</button>
     </div>
   );
 }

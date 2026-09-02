@@ -19,6 +19,7 @@ import { TrilhaConcurso } from "../../modules/conteudo/TrilhaConcurso.jsx";
 import { calcularXP, patente } from "../../modules/motor/jargao.js";
 import { InsightsDesempenho } from "../../modules/desempenho/Insights.jsx";
 import { NiveisPorMateria } from "../../modules/desempenho/Niveis.jsx";
+import { useEnvioUnico } from "../../shared/hooks/useEnvioUnico.js";
 
 // ETAPA 3 — code-splitting: os painéis de gráfico carregam o recharts
 // (a maior dependência do bundle). Importados sob demanda (só quando o
@@ -43,10 +44,24 @@ function SecaoDesempenho({ rotulo }) {
 export function VisaoEstudo({ aluno, podeEditar, concurso = null, contexto = "Plano de estudos" }) {
   const T = useTema();
   const [tab, setTab] = useState("hoje");
-  const [dados, setDados] = useState({ carregando: true, metas: [], registros: [], simulados: [], xpPersistido: null, erro: null });
+  const [dados, setDados] = useState({ carregando: true, metas: [], registros: [], simulados: [], xpPersistido: null, erro: null, versao: -1 });
   const { trilha, carregando: carregandoTrilha, erro: erroTrilha, recarregar: recarregarTrilha } = useTrilha(aluno?.trilha_id);
   const [versao, setVersao] = useState(0);
   const [minutosSugeridos, setMinutosSugeridos] = useState(0);
+  const [contextoRegistro, setContextoRegistro] = useState(null);
+  const [confirmacaoRegistro, setConfirmacaoRegistro] = useState(null);
+  const [objetivoConcluido, setObjetivoConcluido] = useState(false);
+  const [realceMissao, setRealceMissao] = useState(0);
+  const missaoRef = useRef(null);
+  const fecharObjetivo = useEnvioUnico("acao");
+  // Alvo da confirmação em tela AGORA, lido dentro do await de
+  // concluirObjetivoDaJornada. Sem isto, concluir o objetivo A enquanto
+  // o aluno já navegou pra B e está vendo a confirmação de B faz o
+  // "true" de A vazar pra tela de B quando a resposta de A chega depois.
+  const alvoConfirmacaoRef = useRef(null);
+  useEffect(() => {
+    alvoConfirmacaoRef.current = confirmacaoRegistro?.contexto?.metaAtividadeId ?? null;
+  }, [confirmacaoRegistro]);
   const recarregar = () => setVersao((v) => v + 1);
   const recarregarTudo = () => { recarregar(); recarregarTrilha(); };
 
@@ -65,16 +80,20 @@ export function VisaoEstudo({ aluno, podeEditar, concurso = null, contexto = "Pl
   // ---- missões PERSISTIDAS (PED1): fecham sozinhas quando o aluno bate
   // volume + acurácia. Lê a tabela aluno_missoes (motor no banco).
   const examTag = concurso?.codigo ?? null;
-  const [gam, setGam] = useState({ missoes: [] });
+  const [gam, setGam] = useState({ missoes: [], versao: -1 });
   const [feedback, setFeedback] = useState(null);
   const snapRef = useRef(null);
 
   useEffect(() => {
-    if (!aluno?.id || !examTag) { setGam({ missoes: [] }); snapRef.current = null; return; }
+    if (!aluno?.id || !examTag) { setGam({ missoes: [], versao }); snapRef.current = null; return; }
     let vivo = true;
     db.carregarMissoesAluno(aluno.id)
-      .then((missoes) => { if (vivo) setGam({ missoes: missoes ?? [] }); })
-      .catch(() => { /* missões são complementares: nunca derrubam a tela de estudo */ });
+      .then((missoes) => { if (vivo) setGam({ missoes: missoes ?? [], versao }); })
+      .catch(() => {
+        // Missões são complementares: não derrubam a tela, mas marcam
+        // esta versão como lida para não deixar a reconciliação presa.
+        if (vivo) setGam((atual) => ({ ...atual, versao }));
+      });
     return () => { vivo = false; };
   }, [aluno?.id, examTag, versao]);
 
@@ -83,27 +102,103 @@ export function VisaoEstudo({ aluno, podeEditar, concurso = null, contexto = "Pl
   // quem registrou — o aluno).
   useEffect(() => {
     if (!podeEditar || !examTag) return;
+    // Dados, XP e missões precisam pertencer à MESMA recarga. Sem este
+    // gate, duas respostas em velocidades diferentes podem produzir
+    // duas celebrações parciais para uma única ação.
+    if (dados.versao !== versao || gam.versao !== versao) return;
+    // Objetivo da trilha concluído entra no ledger como `missao_concluida`
+    // com origem `meta_atividades`; a missão do motor tem origem própria e
+    // vive em aluno_missoes. São concessões distintas, cada uma com o seu
+    // XP — contá-las juntas viraria "2 missões", que o banco não fez.
+    const objetivosNoLedger = (dados.xpPersistido?.eventos ?? []).filter(
+      (e) => e.status !== "estornado" && e.tipo_evento === "missao_concluida" && e.origem === "meta_atividades",
+    ).length;
     const snap = {
       xp: dados.xpPersistido?.total ?? 0,
       missoes: gam.missoes.filter((mi) => mi.estado === "concluida").map((mi) => mi.missao_id),
+      objetivos: objetivosNoLedger,
     };
     const prev = snapRef.current;
     snapRef.current = snap;
     if (!prev) return; // 1ª carga é a linha de base, sem festejar nada
     const ganhouXp = snap.xp - prev.xp;
     const novasMissoes = snap.missoes.filter((id) => !prev.missoes.includes(id)).length;
-    if (ganhouXp > 0 || novasMissoes > 0) {
-      setFeedback({ xp: ganhouXp, missoes: novasMissoes, conquistas: 0, em: Date.now() });
+    const novosObjetivos = Math.max(0, snap.objetivos - (prev.objetivos ?? 0));
+    if (ganhouXp > 0 || novasMissoes > 0 || novosObjetivos > 0) {
+      setFeedback({ xp: ganhouXp, missoes: novasMissoes, objetivos: novosObjetivos, conquistas: 0, em: Date.now() });
     }
-  }, [gam, dados.xpPersistido, podeEditar, examTag]);
+  }, [gam, dados.xpPersistido, dados.versao, versao, podeEditar, examTag]);
 
   useEffect(() => {
     if (!feedback) return;
     const t = setTimeout(() => setFeedback(null), 6000);
     return () => clearTimeout(t);
   }, [feedback]);
-  // toda troca de aba (menu OU botões internos) nasce no topo da página
-  const irAba = (k) => { setTab(k); window.scrollTo({ top: 0, left: 0, behavior: "instant" }); };
+  // Toda troca de aba nasce no topo. Quando a origem é um objetivo, o
+  // contexto acompanha a navegação; entradas genéricas em Registrar
+  // continuam abrindo um formulário livre.
+  const irAba = (k, contexto = null) => {
+    if (k === "registrar") {
+      setContextoRegistro(contexto);
+      setConfirmacaoRegistro(null);
+      setObjetivoConcluido(false);
+      fecharObjetivo.setErro(null);
+    }
+    setTab(k);
+    window.scrollTo({ top: 0, left: 0, behavior: "instant" });
+  };
+
+  const registroConfirmado = ({ registro, contexto }) => {
+    setConfirmacaoRegistro({ registro, contexto });
+    setObjetivoConcluido(false);
+    fecharObjetivo.setErro(null);
+    recarregar();
+  };
+
+  /* O registro não fecha o objetivo — o aluno fecha, se quiser. Só
+     marcamos como concluído depois que o banco devolve a linha; se a
+     RLS ou a rede recusarem, o erro aparece e nada muda na tela. */
+  const concluirObjetivoDaJornada = async () => {
+    const alvo = confirmacaoRegistro?.contexto?.metaAtividadeId;
+    if (!alvo) return;
+    await fecharObjetivo.enviar(async () => {
+      await db.definirEstadoAtividade(alvo, "concluida");
+      // a confirmação em tela pode ter trocado de objetivo enquanto
+      // este pedido estava em voo — só marca concluído se ainda for a
+      // mesma que o aluno está vendo.
+      if (alvoConfirmacaoRef.current === alvo) setObjetivoConcluido(true);
+      recarregar();
+    });
+  };
+
+  const verMissaoAtualizada = () => {
+    setConfirmacaoRegistro(null);
+    setContextoRegistro(null);
+    setObjetivoConcluido(false);
+    fecharObjetivo.setErro(null);
+    setTab("hoje");
+    setRealceMissao(Date.now());
+  };
+
+  const registrarOutro = () => {
+    setConfirmacaoRegistro(null);
+    setContextoRegistro(null);
+    setObjetivoConcluido(false);
+    fecharObjetivo.setErro(null);
+    window.scrollTo({ top: 0, left: 0, behavior: "instant" });
+  };
+
+  useEffect(() => {
+    if (!realceMissao || tab !== "hoje") return undefined;
+    const quadro = requestAnimationFrame(() => {
+      const reduzido = window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches;
+      missaoRef.current?.scrollIntoView({ behavior: reduzido ? "auto" : "smooth", block: "start" });
+      // rolar move a página, não o foco: sem isto o teclado volta ao <body>
+      missaoRef.current?.focus?.({ preventScroll: true });
+    });
+    const timer = setTimeout(() => setRealceMissao(0), 1800);
+    return () => { cancelAnimationFrame(quadro); clearTimeout(timer); };
+  }, [realceMissao, tab]);
 
   // índice de navegação da aba Desempenho (rola até a seção) — reduz a
   // sensação de "parede de blocos" sem esconder conteúdo (UX1.2).
@@ -114,8 +209,8 @@ export function VisaoEstudo({ aluno, podeEditar, concurso = null, contexto = "Pl
     if (!aluno) return;
     let vivo = true;
     Promise.all([db.listarMetas(aluno.id), db.listarRegistros(aluno.id), db.listarSimulados(aluno.id), db.carregarXpPersistido(aluno.id)])
-      .then(([metas, registros, simulados, xpPersistido]) => vivo && setDados({ carregando: false, metas, registros, simulados, xpPersistido, erro: null }))
-      .catch((e) => vivo && setDados((d) => ({ ...d, carregando: false, erro: mensagemAmigavel(e, "carregar") })));
+      .then(([metas, registros, simulados, xpPersistido]) => vivo && setDados({ carregando: false, metas, registros, simulados, xpPersistido, erro: null, versao }))
+      .catch((e) => vivo && setDados((d) => ({ ...d, carregando: false, erro: mensagemAmigavel(e, "carregar"), versao })));
     return () => { vivo = false; };
   }, [aluno?.id, versao]);
 
@@ -176,40 +271,37 @@ export function VisaoEstudo({ aluno, podeEditar, concurso = null, contexto = "Pl
         </div>
       )}
 
-      <MenuPrincipal abas={ABAS} ativo={tab} aoTrocar={setTab}
+      <MenuPrincipal abas={ABAS} ativo={tab} aoTrocar={irAba}
         usuario={{ nome: aluno.nome, sub: `${patente(xp).nome} · ${xp.toLocaleString("pt-BR")} XP` }} />
 
       <Suspense fallback={<CarregandoBloco titulo="Carregando o painel…" cartoes={2} linhas={3} />}>
       <div className="fade" key={tab}>
         {tab === "hoje" && (
           <div style={{ display: "flex", flexDirection: "column", gap: 16, paddingTop: 4 }}>
-            {podeEditar && (
-              <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: -6 }}>
-                <button onClick={alternarEssencial}
-                  aria-pressed={essencial}
-                  title={essencial ? "Mostrar tudo na tela inicial" : "Reduzir a tela inicial ao essencial"}
-                  style={{ display: "inline-flex", alignItems: "center", gap: 7, border: `1px solid ${essencial ? T.gold : T.line}`, background: essencial ? `${T.gold}14` : "transparent", color: essencial ? T.gold : T.sub, borderRadius: 999, fontSize: 12, fontWeight: 700, padding: "6px 13px", minHeight: 34 }}>
-                  <span style={{ width: 7, height: 7, borderRadius: "50%", background: essencial ? T.gold : T.sub }} />
-                  {essencial ? "Modo essencial" : "Modo completo"}
-                </button>
-              </div>
-            )}
             <FaixaAspirante nome={aluno.nome.split(" ")[0]} contexto={contexto} xp={xp} streak={m?.streak ?? 0}
               aoAbrirConquistas={() => irAba("conquistas")} />
-            <MissaoAtual meta={meta} trilha={trilha} m={m} aoAvancar={podeEditar ? irAba : undefined} />
+            <div ref={missaoRef} tabIndex={-1} aria-label="Missão da semana"
+              className={realceMissao ? "mission-impact" : undefined} style={{ scrollMarginTop: 18 }}>
+              <MissaoAtual meta={meta} trilha={trilha} m={m} aoAvancar={podeEditar ? irAba : undefined} />
+            </div>
             {!essencial && examTag && gam.missoes.length > 0 && <MissoesPersistidas missoes={gam.missoes} disciplinas={trilha.disciplinas} />}
             <MetaSemana meta={meta} trilha={trilha} podeEditar={podeEditar} aoMudar={recarregar}
+              compacta aoPraticar={(alvo) => irAba("registrar", alvo)}
               aoAbrirDesempenho={() => irAba("desempenho")} />
             {!essencial && m && <ConquistasRecentes m={m} metas={dados.metas} simulados={dados.simulados} aoAbrir={() => irAba("conquistas")} />}
-            {podeEditar && (
-              <button onClick={() => irAba("registrar")}
-                style={{ border: `1px dashed ${T.gold}66`, background: `${T.gold}0c`, color: T.gold, borderRadius: 12, fontWeight: 700, fontSize: 14, padding: "16px", minHeight: 52, marginTop: 2 }}>
-                ✎ Registrar estudo de hoje
-              </button>
-            )}
             {essencial && (
               <div style={{ fontSize: 11.5, color: T.sub, textAlign: "center", lineHeight: 1.5 }}>
-                Modo essencial ativo — conquistas e missões extras estão recolhidas. Toque em “Modo essencial” acima para ver tudo.
+                Modo essencial ativo — missões extras e conquistas estão recolhidas. A preferência pode ser alterada logo abaixo.
+              </div>
+            )}
+            {podeEditar && (
+              <div className="today-preference">
+                <span>Preferência desta tela</span>
+                <button onClick={alternarEssencial} aria-pressed={essencial}
+                  title={essencial ? "Mostrar missões extras e conquistas" : "Recolher missões extras e conquistas"}>
+                  <i aria-hidden="true" />
+                  {essencial ? "Modo essencial" : "Modo completo"}
+                </button>
               </div>
             )}
           </div>
@@ -219,7 +311,12 @@ export function VisaoEstudo({ aluno, podeEditar, concurso = null, contexto = "Pl
         )}
         {tab === "registrar" && podeEditar && (
           <Registrar aluno={aluno} trilha={trilha} registros={dados.registros}
-            aoMudar={recarregar} minutosSugeridos={minutosSugeridos} />
+            aoMudar={recarregar} minutosSugeridos={minutosSugeridos}
+            contextoInicial={contextoRegistro} confirmacao={confirmacaoRegistro}
+            aoConfirmar={registroConfirmado} aoVerMissao={verMissaoAtualizada}
+            aoRegistrarOutro={registrarOutro} aoSairContexto={() => setContextoRegistro(null)}
+            aoConcluirObjetivo={concluirObjetivoDaJornada} objetivoConcluido={objetivoConcluido}
+            concluindoObjetivo={fecharObjetivo.ocupado} erroObjetivo={fecharObjetivo.erro} />
         )}
         {tab === "desempenho" && (
           <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>

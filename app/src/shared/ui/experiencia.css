@@ -151,10 +151,6 @@ textarea:focus-visible,
   animation: progress-confirm .8s .18s ease-out 1 both;
 }
 
-.reward-island {
-  animation: reward-arrive .42s cubic-bezier(.2, .85, .25, 1.15) both;
-}
-
 .app-header {
   box-shadow: 0 8px 28px rgba(0, 0, 0, .2);
 }
@@ -164,6 +160,370 @@ textarea:focus-visible,
 
 .app-nav-item { transition: transform .15s ease, color .15s ease, background-color .15s ease; }
 .app-nav-item:active { transform: scale(.97); }
+
+/* ============================================================
+   UXG2 — JORNADA VERTICAL DO ALUNO
+   ------------------------------------------------------------
+   A energia do portal continua dentro do produto como direção e
+   consequência: objetivo acionável, registro contextual, confirmação
+   persistida e impacto lido do servidor. Nenhum efeito calcula XP.
+   ============================================================ */
+
+.objective-row {
+  position: relative;
+  transition: background-color .18s ease, opacity .18s ease;
+}
+
+.objective-row[data-state="pendente"]:hover {
+  background: color-mix(in srgb, var(--ui-accent) 4%, transparent) !important;
+}
+
+.objective-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 11px;
+  flex-wrap: wrap;
+}
+
+.objective-practice,
+.journey-confirmation-primary {
+  min-height: 40px;
+  border: 1px solid var(--ui-accent);
+  border-radius: 9px;
+  color: #0a1622;
+  background: linear-gradient(105deg, color-mix(in srgb, var(--ui-accent) 90%, #fff), var(--ui-accent));
+  box-shadow: 0 9px 22px color-mix(in srgb, var(--ui-accent) 16%, transparent);
+  font-size: 13px;
+  font-weight: 800;
+  padding: 9px 16px;
+  transition: transform .16s ease, filter .16s ease, box-shadow .16s ease;
+}
+
+.objective-practice:hover,
+.journey-confirmation-primary:hover {
+  filter: brightness(1.07);
+  transform: translateY(-1px);
+  box-shadow: 0 12px 26px color-mix(in srgb, var(--ui-accent) 24%, transparent);
+}
+
+.objective-practice:active,
+.journey-confirmation-primary:active { transform: translateY(1px); }
+
+.objective-secondary {
+  min-height: 38px;
+  padding: 8px 9px;
+  border: 0;
+  border-radius: 8px;
+  color: var(--ui-sub);
+  background: transparent;
+  font-size: 12.5px;
+  font-weight: 700;
+}
+
+.objective-secondary:hover {
+  color: var(--ui-ink);
+  background: color-mix(in srgb, var(--ui-line) 42%, transparent);
+}
+
+.objective-list-more {
+  padding: 11px 14px;
+  border-top: 1px solid var(--ui-line);
+  text-align: center;
+  background: color-mix(in srgb, var(--ui-bg) 28%, transparent);
+}
+
+.objective-list-more button {
+  min-height: 38px;
+  padding: 7px 13px;
+  border: 0;
+  border-radius: 8px;
+  color: var(--ui-accent);
+  background: transparent;
+  font-size: 12.5px;
+  font-weight: 800;
+}
+
+.journey-context {
+  position: relative;
+  display: grid;
+  grid-template-columns: 48px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 13px;
+  min-height: 92px;
+  padding: 14px 15px;
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--ui-accent) 52%, var(--ui-line));
+  border-radius: 14px;
+  background:
+    radial-gradient(380px circle at 8% 20%, color-mix(in srgb, var(--ui-accent) 14%, transparent), transparent 64%),
+    linear-gradient(135deg, var(--ui-card-hi), var(--ui-card));
+  box-shadow: 0 18px 46px rgba(0,0,0,.22), inset 3px 0 var(--ui-accent);
+  animation: journey-context-enter .58s cubic-bezier(.16, 1, .3, 1) both;
+}
+
+.journey-context::after {
+  position: absolute;
+  inset: 0;
+  content: "";
+  pointer-events: none;
+  background: linear-gradient(105deg, transparent 38%, rgba(255,255,255,.08) 50%, transparent 62%);
+  transform: translateX(-120%);
+  animation: journey-context-scan .9s .18s cubic-bezier(.2,.7,.2,1) 1 both;
+}
+
+.journey-context-marker {
+  position: relative;
+  display: grid;
+  width: 44px;
+  height: 44px;
+  place-items: center;
+  border: 1px solid color-mix(in srgb, var(--ui-accent) 72%, transparent);
+  border-radius: 50%;
+  box-shadow: 0 0 0 6px color-mix(in srgb, var(--ui-accent) 7%, transparent);
+}
+
+.journey-context-marker::before,
+.journey-context-marker::after {
+  position: absolute;
+  content: "";
+  border-radius: 50%;
+}
+.journey-context-marker::before { inset: 7px; border: 1px dashed color-mix(in srgb, var(--ui-accent) 68%, transparent); }
+.journey-context-marker::after { width: 8px; height: 8px; background: var(--ui-accent); box-shadow: 0 0 14px var(--ui-accent); }
+.journey-context-marker > span { width: 1px; height: 58px; opacity: .28; background: var(--ui-accent); }
+
+.journey-context-copy { position: relative; z-index: 1; min-width: 0; }
+.journey-context-copy small {
+  display: block;
+  color: var(--ui-accent);
+  font-size: 9.5px;
+  font-weight: 800;
+  letter-spacing: .09em;
+  text-transform: uppercase;
+}
+.journey-context-copy strong { display: block; margin-top: 3px; font-size: 15px; line-height: 1.28; }
+.journey-context-copy > span { display: block; margin-top: 4px; color: var(--ui-sub); font-size: 11.5px; }
+.journey-context > button {
+  position: relative;
+  z-index: 1;
+  min-height: 38px;
+  padding: 8px 11px;
+  border: 1px solid var(--ui-line);
+  border-radius: 9px;
+  color: var(--ui-sub);
+  background: color-mix(in srgb, var(--ui-bg) 58%, transparent);
+  font-size: 11.5px;
+  font-weight: 700;
+}
+
+.journey-use-suggestion {
+  /* alvo de toque de 32px sem virar um segundo botão concorrente:
+     a área cresce, o peso visual não. */
+  display: inline-flex;
+  min-height: 32px;
+  align-items: center;
+  margin-top: 4px;
+  padding: 4px 6px;
+  border: 0;
+  border-radius: 7px;
+  color: var(--ui-accent);
+  background: transparent;
+  font-size: 11px;
+  font-weight: 700;
+}
+.journey-use-suggestion:hover { background: color-mix(in srgb, var(--ui-accent) 10%, transparent); }
+
+.journey-confirmation {
+  position: relative;
+  min-height: 430px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: clamp(28px, 6vw, 56px) clamp(18px, 5vw, 48px);
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--ui-green) 58%, var(--ui-line));
+  border-top-color: color-mix(in srgb, var(--ui-accent) 72%, var(--ui-line));
+  border-radius: 18px;
+  text-align: center;
+  background:
+    radial-gradient(420px circle at 50% 8%, color-mix(in srgb, var(--ui-green) 14%, transparent), transparent 68%),
+    radial-gradient(520px circle at 50% 115%, color-mix(in srgb, var(--ui-accent) 10%, transparent), transparent 65%),
+    linear-gradient(155deg, var(--ui-card-hi), var(--ui-card) 58%, var(--ui-bg-2));
+  box-shadow: 0 34px 80px rgba(0,0,0,.34);
+  animation: journey-confirmation-enter .64s cubic-bezier(.16,1,.3,1) both;
+}
+
+.journey-confirmation::before {
+  position: absolute;
+  inset: 14px;
+  content: "";
+  pointer-events: none;
+  border: 1px solid color-mix(in srgb, var(--ui-green) 18%, transparent);
+  border-radius: 12px;
+}
+
+.journey-confirmation-orbit {
+  position: relative;
+  display: grid;
+  width: 82px;
+  height: 82px;
+  margin-bottom: 21px;
+  place-items: center;
+  border: 1px solid color-mix(in srgb, var(--ui-green) 78%, transparent);
+  border-radius: 50%;
+  color: #07151f;
+  background: radial-gradient(circle, color-mix(in srgb, var(--ui-green) 92%, #fff), var(--ui-green));
+  box-shadow: 0 0 0 12px color-mix(in srgb, var(--ui-green) 7%, transparent), 0 0 44px color-mix(in srgb, var(--ui-green) 34%, transparent);
+}
+
+.journey-confirmation-orbit::before {
+  position: absolute;
+  inset: -13px;
+  content: "";
+  border: 1px dashed color-mix(in srgb, var(--ui-accent) 60%, transparent);
+  border-radius: 50%;
+  animation: journey-orbit-lock .75s cubic-bezier(.2,.75,.25,1) 1 both;
+}
+.journey-confirmation-orbit span { font-size: 31px; font-weight: 900; animation: journey-check .46s .18s cubic-bezier(.2,.9,.25,1.35) both; }
+.journey-confirmation-kicker { color: var(--ui-green); font-size: 9.5px; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; }
+.journey-confirmation h2 { margin: 7px 0 0; color: var(--ui-ink); font-size: clamp(25px, 5vw, 38px); line-height: 1.05; }
+.journey-confirmation > p { max-width: 570px; margin: 12px 0 0; color: var(--ui-sub); font-size: 13.5px; line-height: 1.55; }
+.journey-confirmation > p strong { color: var(--ui-ink); }
+
+.journey-confirmation-facts {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(90px, 1fr));
+  width: min(620px, 100%);
+  margin-top: 23px;
+  overflow: hidden;
+  border: 1px solid var(--ui-line);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--ui-bg) 62%, transparent);
+}
+.journey-confirmation-facts > span { display: flex; min-height: 66px; flex-direction: column; justify-content: center; padding: 10px; border-right: 1px solid var(--ui-line); }
+.journey-confirmation-facts > span:last-child { border-right: 0; }
+.journey-confirmation-facts small { color: var(--ui-sub); font-size: 9px; font-weight: 700; letter-spacing: .07em; text-transform: uppercase; }
+.journey-confirmation-facts strong { margin-top: 4px; overflow: hidden; color: var(--ui-ink); font-size: 13px; text-overflow: ellipsis; white-space: nowrap; }
+
+.journey-confirmation-engine { display: flex; align-items: center; gap: 8px; margin-top: 14px; color: var(--ui-sub); font-size: 11px; }
+.journey-confirmation-engine > span { width: 7px; height: 7px; border-radius: 50%; background: var(--ui-green); box-shadow: 0 0 11px color-mix(in srgb, var(--ui-green) 72%, transparent); }
+.journey-confirmation-objective {
+  display: flex;
+  width: min(540px, 100%);
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  margin-top: 20px;
+  padding: 14px;
+  border: 1px dashed color-mix(in srgb, var(--ui-accent) 46%, var(--ui-line));
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--ui-bg) 46%, transparent);
+}
+.journey-confirmation-objective > p { margin: 0; color: var(--ui-sub); font-size: 12px; line-height: 1.5; }
+.journey-confirmation-objective .journey-objective-done { display: flex; align-items: center; gap: 8px; color: var(--ui-green); font-size: 12.5px; font-weight: 800; }
+.journey-confirmation-objective-action {
+  min-height: 40px;
+  padding: 9px 18px;
+  border: 1px solid var(--ui-accent);
+  border-radius: 9px;
+  color: var(--ui-accent);
+  background: color-mix(in srgb, var(--ui-accent) 10%, transparent);
+  font-size: 12.5px;
+  font-weight: 800;
+  transition: background-color .16s ease, color .16s ease;
+}
+.journey-confirmation-objective-action:hover:not(:disabled) { color: #0a1622; background: var(--ui-accent); }
+.journey-confirmation-objective-action:disabled { opacity: .6; }
+.journey-confirmation-objective-error { width: 100%; }
+
+.journey-confirmation-actions { display: flex; width: min(540px, 100%); gap: 10px; margin-top: 24px; }
+.journey-confirmation-actions > button { flex: 1; }
+.journey-confirmation-secondary {
+  min-height: 42px;
+  padding: 9px 14px;
+  border: 1px solid var(--ui-line);
+  border-radius: 9px;
+  color: var(--ui-sub);
+  background: transparent;
+  font-size: 12.5px;
+  font-weight: 700;
+}
+.journey-confirmation-secondary:hover { color: var(--ui-ink); border-color: color-mix(in srgb, var(--ui-accent) 42%, var(--ui-line)); }
+
+.reward-island {
+  position: fixed;
+  z-index: 60;
+  top: max(14px, env(safe-area-inset-top));
+  left: 50%;
+  display: flex;
+  width: max-content;
+  max-width: 92vw;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 15px 10px 10px;
+  border: 1px solid var(--reward-accent, var(--ui-accent));
+  border-radius: 999px;
+  color: var(--ui-ink);
+  background: color-mix(in srgb, var(--ui-bg-2) 92%, transparent);
+  box-shadow: 0 18px 48px rgba(0,0,0,.42), 0 0 32px color-mix(in srgb, var(--reward-accent, var(--ui-accent)) 18%, transparent);
+  backdrop-filter: blur(16px);
+  font-size: 13px;
+  font-weight: 800;
+  animation: reward-arrive .42s cubic-bezier(.2, .85, .25, 1.15) both;
+}
+.reward-island-signal { display: grid; width: 34px; height: 34px; place-items: center; border-radius: 50%; color: #0a1622; background: var(--reward-accent, var(--ui-accent)); box-shadow: 0 0 18px color-mix(in srgb, var(--reward-accent, var(--ui-accent)) 45%, transparent); }
+.reward-island > span:nth-child(2) { display: flex; flex-direction: column; gap: 2px; }
+.reward-island small { color: var(--ui-sub); font-size: 8px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; }
+.reward-island-close { display: grid; width: 32px; height: 32px; margin-left: 2px; place-items: center; border: 0; border-radius: 50%; color: var(--ui-sub); background: transparent; font-size: 19px; line-height: 1; }
+.reward-island-close:hover { color: var(--ui-ink); background: color-mix(in srgb, var(--ui-line) 42%, transparent); }
+
+.mission-impact .mission-card {
+  animation: mission-impact 1.35s cubic-bezier(.2,.75,.2,1) 1 both;
+}
+
+.today-preference {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding-top: 2px;
+  color: var(--ui-sub);
+  font-size: 10.5px;
+}
+.today-preference > button { display: inline-flex; min-height: 34px; align-items: center; gap: 7px; padding: 6px 11px; border: 1px solid var(--ui-line); border-radius: 999px; color: var(--ui-sub); background: transparent; font-size: 11px; font-weight: 700; }
+.today-preference > button[aria-pressed="true"] { color: var(--ui-accent); border-color: var(--ui-accent); background: color-mix(in srgb, var(--ui-accent) 7%, transparent); }
+.today-preference i { width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
+
+@keyframes journey-context-enter {
+  from { opacity: 0; transform: translateY(-12px) scale(.975); clip-path: inset(42% 5% 42% 5% round 14px); }
+  to { opacity: 1; transform: none; clip-path: inset(0 round 14px); }
+}
+@keyframes journey-context-scan { to { transform: translateX(120%); } }
+@keyframes journey-confirmation-enter { from { opacity: 0; transform: translateY(18px) scale(.97); } to { opacity: 1; transform: none; } }
+@keyframes journey-orbit-lock { from { opacity: 0; transform: rotate(-120deg) scale(.72); } to { opacity: 1; transform: rotate(0) scale(1); } }
+@keyframes journey-check { from { opacity: 0; transform: scale(.3) rotate(-18deg); } to { opacity: 1; transform: scale(1) rotate(0); } }
+@keyframes mission-impact {
+  0% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--ui-accent) 0%, transparent); }
+  28% { box-shadow: 0 0 0 4px color-mix(in srgb, var(--ui-accent) 38%, transparent), 0 0 48px color-mix(in srgb, var(--ui-accent) 25%, transparent); }
+  100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--ui-accent) 0%, transparent); }
+}
+
+@media (max-width: 600px) {
+  .objective-actions { gap: 5px; }
+  .objective-practice { flex-basis: 100%; }
+  .journey-context { grid-template-columns: 42px minmax(0, 1fr); padding: 13px; }
+  .journey-context-marker { width: 38px; height: 38px; }
+  .journey-context > button { grid-column: 2; justify-self: start; min-height: 32px; padding: 5px 8px; }
+  .journey-confirmation { min-height: 480px; padding-inline: 18px; }
+  .journey-confirmation-facts { grid-template-columns: repeat(2, 1fr); }
+  .journey-confirmation-facts > span:nth-child(2) { border-right: 0; }
+  .journey-confirmation-facts > span:nth-child(-n+2) { border-bottom: 1px solid var(--ui-line); }
+  .journey-confirmation-actions { flex-direction: column; }
+  .journey-confirmation-objective { padding: 12px; }
+  .today-preference { flex-wrap: wrap; }
+}
 
 /* ============================================================
    ENTRADA UXG1 — fallback estrutural
@@ -1185,7 +1545,7 @@ textarea:focus-visible,
 @media (max-width: 430px) {
   .login-shell { padding: 13px 13px 24px; }
   .login-layout { gap: 12px; }
-  .login-story { min-height: 205px; padding-top: 2px; }
+  .login-story { min-height: 218px; padding-top: 2px; }
   .login-hero-brand { margin-bottom: 21px; padding-right: 104px; }
   .portal-brand-mark { width: 36px; height: 36px; border-radius: 10px; }
   .portal-brand-mark svg { width: 24px; height: 24px; }
@@ -1202,8 +1562,8 @@ textarea:focus-visible,
     font-size: 11.5px;
     line-height: 1.42;
     -webkit-box-orient: vertical;
-    -webkit-line-clamp: 2;
-    line-clamp: 2;
+    -webkit-line-clamp: 3;
+    line-clamp: 3;
   }
   .mission-map { right: -56px; top: 13px; width: 190px; height: 190px; opacity: .54; }
   .mission-core { left: 58%; top: 50%; width: 104px; height: 104px; }

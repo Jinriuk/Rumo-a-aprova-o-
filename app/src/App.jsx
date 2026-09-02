@@ -144,7 +144,7 @@ function Casca({ children }) {
   const T = useTema();
   return (
     <div className="experience-shell" style={{
-      background: T.bg, minHeight: "100vh", color: T.ink, fontFamily: "Archivo, system-ui, sans-serif",
+      background: T.bg, minHeight: "100dvh", color: T.ink, fontFamily: "Archivo, system-ui, sans-serif",
       "--ui-bg": T.bg, "--ui-bg-2": T.bg2, "--ui-card": T.card,
       "--ui-card-hi": T.cardHi, "--ui-line": T.line, "--ui-ink": T.ink,
       "--ui-sub": T.sub, "--ui-accent": T.gold, "--ui-green": T.green,
@@ -163,7 +163,7 @@ function Casca({ children }) {
 
 function TelaNeutra({ children }) {
   return (
-    <div className="experience-shell" style={{ background: "#0A1622", color: "#8AA4BC", minHeight: "100vh", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", fontFamily: "Archivo, sans-serif", padding: 24, textAlign: "center" }}>
+    <div className="experience-shell" style={{ background: "#0A1622", color: "#8AA4BC", minHeight: "100dvh", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", fontFamily: "Archivo, sans-serif", padding: 24, textAlign: "center" }}>
       <style>{FONTES_CSS}</style>
       {children}
     </div>

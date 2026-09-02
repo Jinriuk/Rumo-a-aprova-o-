@@ -223,9 +223,16 @@ export function ConquistasRecentes({ m, metas, simulados, aoAbrir }) {
     .filter((c) => c.atual < c.alvo)
     .sort((a, b) => b.atual / b.alvo - a.atual / a.alvo)[0];
   const mostrar = desbloqueadas.slice(-3).reverse();
+  const abrirPorTeclado = aoAbrir ? (evento) => {
+    if (evento.key === "Enter" || evento.key === " ") {
+      evento.preventDefault();
+      aoAbrir();
+    }
+  } : undefined;
 
   return (
-    <div onClick={aoAbrir} role={aoAbrir ? "button" : undefined}
+    <div onClick={aoAbrir} onKeyDown={abrirPorTeclado}
+      role={aoAbrir ? "button" : undefined} tabIndex={aoAbrir ? 0 : undefined}
       title={aoAbrir ? "Ver todas as conquistas" : undefined}
       style={{ background: T.card, border: `1px solid ${T.line}`, borderRadius: 12, padding: "12px 14px", cursor: aoAbrir ? "pointer" : "default" }}>
       <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
