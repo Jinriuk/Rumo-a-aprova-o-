@@ -11,8 +11,11 @@
 //   - senha aleatória descartável — coordenação define a própria pelo link
 //   - registra admin_logs (ação sensível)
 //   - service_role só aqui (nunca no navegador)
-//   - link é retornado para fallback manual (SMTP pode não estar configurado)
-//     mas NUNCA logado em console
+//   - Tarefa 1: o link de redefinição (action_link) é gerado no servidor e
+//     disparado por e-mail de verdade via Resend (RESEND_API_KEY) — nunca
+//     volta na resposta da API (nem para a interface do backoffice) e nunca
+//     é logado em console. "enviado" só depois que o Resend CONFIRMA (2xx);
+//     falha na entrega vira "_pendente" (a coordenação usa "Reenviar").
 //
 // Estados retornados:
 //   coordenador_criado_email_enviado
@@ -40,12 +43,22 @@ const DEFAULT_ORIGINS = [
   "http://localhost:3000",
 ];
 const ORIGINS = ENV_ORIGINS.length > 0 ? ENV_ORIGINS : DEFAULT_ORIGINS;
-// Slug do projeto na Vercel (previews): VERCEL_PREVIEW_PREFIX, só [a-z0-9-];
-// valor inválido cai no default. Espelha _shared/cors.ts.
-const PREVIEW_PREFIX_DEFAULT = "rumo-a-aprova-o";
-const PREVIEW_PREFIX_ENV = (Deno.env.get("VERCEL_PREVIEW_PREFIX") ?? "").trim();
-const PREVIEW_PREFIX = /^[a-z0-9-]{1,63}$/i.test(PREVIEW_PREFIX_ENV) ? PREVIEW_PREFIX_ENV : PREVIEW_PREFIX_DEFAULT;
-const VERCEL_PREVIEW = new RegExp(`^https://${PREVIEW_PREFIX}-[a-z0-9-]+\\.vercel\\.app$`, "i");
+// Slugs do(s) projeto(s) na Vercel (previews): VERCEL_PREVIEW_PREFIXES
+// (CSV, só [a-z0-9-] por item); sem ela cai no singular
+// VERCEL_PREVIEW_PREFIX (compat) e por fim no default. Espelha _shared/cors.ts.
+const PREVIEW_PREFIX_DEFAULTS = ["rumo-a-aprova-o"];
+const PREVIEW_PREFIX_RE = /^[a-z0-9-]{1,63}$/i;
+function previewPrefixes(): string[] {
+  const csv = (Deno.env.get("VERCEL_PREVIEW_PREFIXES") ?? "")
+    .split(",").map((p) => p.trim()).filter((p) => PREVIEW_PREFIX_RE.test(p));
+  if (csv.length > 0) return csv;
+  const single = (Deno.env.get("VERCEL_PREVIEW_PREFIX") ?? "").trim();
+  if (PREVIEW_PREFIX_RE.test(single)) return [single];
+  return PREVIEW_PREFIX_DEFAULTS;
+}
+const VERCEL_PREVIEW = new RegExp(
+  `^https://(?:${previewPrefixes().join("|")})-[a-z0-9-]+\\.vercel\\.app$`, "i",
+);
 
 function origemPermitida(origin: string): boolean {
   if (!origin) return false;
@@ -140,6 +153,75 @@ async function gerarLinkRecuperacao(email: string): Promise<{ link: string | nul
   }
 }
 
+// Tarefa 1: auth.admin.generateLink() acima NUNCA envia e-mail — só gera o
+// action_link. Quem envia de verdade é o Resend, chamado diretamente aqui
+// (sem depender do SMTP do Supabase). Sem domínio próprio ainda configurado
+// no Resend, RESEND_FROM_EMAIL cai no remetente de teste do próprio Resend
+// (funciona sem verificação de domínio; troque por secret assim que houver
+// domínio verificado — a entregabilidade do remetente de teste é limitada).
+const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY") ?? "";
+const RESEND_FROM = Deno.env.get("RESEND_FROM_EMAIL")?.trim() || "Triliva <onboarding@resend.dev>";
+
+const escapeHtml = (s: string) =>
+  s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+
+function corpoEmailAcesso(nome: string, link: string): string {
+  const saudacao = nome ? `Olá, ${escapeHtml(nome)}.` : "Olá.";
+  return `<p>${saudacao}</p>` +
+    `<p>Use o link abaixo para definir sua senha de acesso à coordenação na Triliva:</p>` +
+    `<p><a href="${link}">${link}</a></p>` +
+    `<p>Se você não esperava este e-mail, pode ignorá-lo com segurança.</p>`;
+}
+
+// Dispara via Resend e só devolve true quando a API CONFIRMA o envio
+// (2xx). Nunca lança — falha de rede ou recusa do Resend vira false, e o
+// chamador trata como "_pendente" (fallback: reenviar depois).
+async function enviarEmailAcesso(destino: string, nome: string, link: string): Promise<boolean> {
+  if (!RESEND_API_KEY) {
+    console.error("backoffice-coordenador: RESEND_API_KEY ausente — e-mail não enviado");
+    return false;
+  }
+  try {
+    const resp = await fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: {
+        "authorization": `Bearer ${RESEND_API_KEY}`,
+        "content-type": "application/json",
+      },
+      body: JSON.stringify({
+        from: RESEND_FROM,
+        to: destino,
+        subject: "Seu acesso à coordenação — Triliva",
+        html: corpoEmailAcesso(nome, link),
+      }),
+    });
+    if (!resp.ok) {
+      console.error("backoffice-coordenador: Resend recusou o envio", resp.status, await resp.text().catch(() => ""));
+      return false;
+    }
+    return true;
+  } catch (e) {
+    console.error("backoffice-coordenador: falha de rede ao chamar o Resend", (e as Error)?.message);
+    return false;
+  }
+}
+
+// Gera o link e só então tenta enviá-lo — o retorno NUNCA carrega o link
+// (regra do plano, princípio 6/7): quem chamou só sabe se foi "enviado" ou
+// não. `geracaoFalhou` distingue "não deu nem pra gerar o link" (erro real,
+// 500) de "gerou mas o Resend não confirmou a entrega" (estado pendente,
+// a coordenação usa "reenviar" depois).
+async function gerarEEnviarLink(
+  email: string, nome: string,
+): Promise<{ enviado: boolean; erro: string | null; geracaoFalhou: boolean }> {
+  const { link, erro: erroGeracao } = await gerarLinkRecuperacao(email);
+  if (erroGeracao || !link) {
+    return { enviado: false, erro: erroGeracao ?? "erro_auth", geracaoFalhou: true };
+  }
+  const enviado = await enviarEmailAcesso(email, nome, link);
+  return { enviado, erro: enviado ? null : "erro_smtp", geracaoFalhou: false };
+}
+
 Deno.serve(async (req) => {
   const cors = corsHeaders(req);
   const json = (body: unknown, status = 200) =>
@@ -165,21 +247,24 @@ Deno.serve(async (req) => {
       if (!emailValido(String(email))) return json({ status: "erro_auth", error: "e-mail inválido" }, 400);
       const emailLower = String(email).trim().toLowerCase();
 
-      const { link, erro } = await gerarLinkRecuperacao(emailLower);
+      const { data: existente } = await admin
+        .from("usuarios").select("nome").eq("email", emailLower).maybeSingle();
 
-      if (erro) return json({ status: erro, error: "falha ao gerar link de recuperação" }, 500);
+      const { enviado, erro, geracaoFalhou } = await gerarEEnviarLink(emailLower, existente?.nome ?? "");
 
-      const statusReenvio = link
+      if (geracaoFalhou) return json({ status: erro, error: "falha ao gerar link de recuperação" }, 500);
+
+      const statusReenvio = enviado
         ? "coordenador_existente_reenvio_enviado"
         : "coordenador_existente_reenvio_pendente";
 
       await admin.from("admin_logs").insert({
         super_admin_id: quem.id,
         acao: "reenviar-acesso-coordenador",
-        detalhe: { email: emailLower, status: statusReenvio },
+        detalhe: { email: emailLower, status: statusReenvio, ...(erro ? { erro_link: erro } : {}) },
       });
 
-      return json({ ok: true, status: statusReenvio, email: emailLower, link });
+      return json({ ok: true, status: statusReenvio, email: emailLower, ...(erro ? { erro_link: erro } : {}) });
     }
 
     // ── Modo CRIAR (default) ──
@@ -241,30 +326,18 @@ Deno.serve(async (req) => {
       return json({ status: "erro_auth", error: "falha ao vincular usuário à escola" }, 500);
     }
 
-    const { link, erro: erroLink } = await gerarLinkRecuperacao(emailLower);
+    const { enviado, erro: erroLink } = await gerarEEnviarLink(emailLower, nomeLimpo);
 
     const statusFinal = criada
-      ? (link ? "coordenador_criado_email_enviado" : "coordenador_criado_email_pendente")
-      : (link ? "coordenador_existente_reenvio_enviado" : "coordenador_existente_reenvio_pendente");
+      ? (enviado ? "coordenador_criado_email_enviado" : "coordenador_criado_email_pendente")
+      : (enviado ? "coordenador_existente_reenvio_enviado" : "coordenador_existente_reenvio_pendente");
 
     await admin.from("admin_logs").insert({
       super_admin_id: quem.id,
       acao: "vincular-coordenador",
       escola_id,
-      detalhe: { nome: nomeLimpo, email: emailLower, conta_nova: criada, status: statusFinal },
+      detalhe: { nome: nomeLimpo, email: emailLower, conta_nova: criada, status: statusFinal, ...(erroLink ? { erro_link: erroLink } : {}) },
     });
-
-    if (erroLink) {
-      return json({
-        ok: true,
-        status: criada ? "coordenador_criado_email_pendente" : "coordenador_existente_reenvio_pendente",
-        email: emailLower,
-        nome: nomeLimpo,
-        conta_nova: criada,
-        link: null,
-        erro_link: erroLink,
-      });
-    }
 
     return json({
       ok: true,
@@ -272,7 +345,7 @@ Deno.serve(async (req) => {
       email: emailLower,
       nome: nomeLimpo,
       conta_nova: criada,
-      link,
+      ...(erroLink ? { erro_link: erroLink } : {}),
     });
   } catch (e) {
     console.error("backoffice-coordenador:", (e as Error)?.message ?? "erro desconhecido");

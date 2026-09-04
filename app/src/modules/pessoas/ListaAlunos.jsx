@@ -42,6 +42,10 @@ export function ListaAlunos({ alunos, consentimentos, concursos = [], turmas = [
   }
 
   const credencialAluno = (a) => comAcao(a, async () => aoGerarCredencial(await db.provisionarAluno(a.id)));
+  // Tarefa 2: reprocessar é só chamar gerar-meta de novo — é idempotente
+  // (0046/motor_gerar_meta_segura) e, se der certo, o próprio gerar-meta
+  // limpa o pendente_configuracao no banco.
+  const reprocessarMeta = (a) => comAcao(a, () => db.gerarMeta(a.id));
   // Diálogos do design system (UX1.2) no lugar de window.prompt/confirm.
   const pedirNome = (titulo, mensagem, atual = "") => dialogo.prompt({
     titulo, mensagem, rotulo: "Nome", valorInicial: atual, placeholder: "Nome completo",
@@ -103,6 +107,7 @@ export function ListaAlunos({ alunos, consentimentos, concursos = [], turmas = [
         if (fStatus === "sem-consentimento") return !comConsentimento.has(a.id);
         if (fStatus === "sem-atividade") return r ? r.semAtividade : true;
         if (fStatus === "meta-atrasada") return r?.metaIncompleta;
+        if (fStatus === "meta-pendente") return a.status_provisionamento === "pendente_configuracao";
         return true;
       });
   }, [alunos, busca, fTurma, fStatus, resumoPorAluno, comConsentimento]);
@@ -138,6 +143,7 @@ export function ListaAlunos({ alunos, consentimentos, concursos = [], turmas = [
             <option value="sem-consentimento" style={{ background: T.bg2 }}>Sem consentimento</option>
             <option value="sem-atividade" style={{ background: T.bg2 }}>Sem atividade (7d)</option>
             <option value="meta-atrasada" style={{ background: T.bg2 }}>Pendências da semana</option>
+            <option value="meta-pendente" style={{ background: T.bg2 }}>Meta pendente (config.)</option>
           </select>
         </div>
       }>
@@ -149,6 +155,7 @@ export function ListaAlunos({ alunos, consentimentos, concursos = [], turmas = [
           {pagina_itens.map((a, i) => {
             const turmaAtual = (a.alunos_turmas ?? [])[0]?.turma_id ?? "";
             const temCred = !!a.usuario_id;
+            const pendenteConfig = a.status_provisionamento === "pendente_configuracao";
             const temCons = comConsentimento.has(a.id);
             const trabalhando = ocupado === a.id;
             const r = resumoPorAluno[a.id];
@@ -170,6 +177,7 @@ export function ListaAlunos({ alunos, consentimentos, concursos = [], turmas = [
                     <div style={{ display: "flex", gap: 6, marginTop: 7, flexWrap: "wrap" }}>
                       <StatusBadge tom={temCred ? "ok" : "alerta"}>{temCred ? "com credencial" : "sem credencial"}</StatusBadge>
                       <StatusBadge tom={temCons ? "ok" : "risco"}>{temCons ? "consentimento ok" : "sem consentimento"}</StatusBadge>
+                      {pendenteConfig && <StatusBadge tom="risco">meta pendente</StatusBadge>}
                       {r?.semAtividade && <StatusBadge tom="risco">sem atividade 7d</StatusBadge>}
                     </div>
                     <div style={{ display: "flex", gap: 7, marginTop: 8, flexWrap: "wrap" }}>
@@ -195,7 +203,9 @@ export function ListaAlunos({ alunos, consentimentos, concursos = [], turmas = [
                   </div>
                   <div style={{ display: "flex", gap: 7, alignItems: "center", flexWrap: "wrap", justifyContent: "flex-end" }}>
                     <BotaoMini destaque onClick={() => aoVerAluno(a)}>Ver desempenho</BotaoMini>
-                    {!temCred && <BotaoMini destaque disabled={trabalhando} onClick={() => credencialAluno(a)}>{trabalhando ? "…" : "Gerar credencial"}</BotaoMini>}
+                    {pendenteConfig
+                      ? <BotaoMini destaque disabled={trabalhando} onClick={() => reprocessarMeta(a)}>{trabalhando ? "…" : "Reprocessar meta"}</BotaoMini>
+                      : !temCred && <BotaoMini destaque disabled={trabalhando} onClick={() => credencialAluno(a)}>{trabalhando ? "…" : "Gerar credencial"}</BotaoMini>}
                     <MaisAcoes acoes={[
                       { rotulo: "✎ Renomear aluno", aoClicar: () => renomear(a) },
                       { rotulo: "+ Adicionar responsável", aoClicar: () => credencialResp(a) },

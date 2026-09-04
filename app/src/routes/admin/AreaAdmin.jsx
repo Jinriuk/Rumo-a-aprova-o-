@@ -322,9 +322,9 @@ function NovaEscola({ aoCriar }) {
         const r = await db.backofficeProvisionarCoordenador({
           escolaId, nome: f.coordNome.trim(), email: f.coordEmail.trim().toLowerCase(),
         });
-        msgCoord = r.link
-          ? " Coordenador criado e link de acesso gerado."
-          : " Coordenador criado. Configure o SMTP no Supabase para envio automático.";
+        msgCoord = db.emailDeAcessoEnviado(r)
+          ? " Coordenador criado e e-mail de acesso enviado."
+          : " Coordenador criado, mas o e-mail de acesso não foi confirmado — use \"Reenviar\" na lista de coordenadores.";
       }
 
       setOk(`Escola "${limparNome(f.nome)}" criada com sucesso.${msgCoord}`);
@@ -991,9 +991,9 @@ function Coordenadores({ d, escolaId, aoMudar }) {
       const r = await db.backofficeProvisionarCoordenador({
         escolaId, nome: f.nome.trim(), email: f.email.trim().toLowerCase(),
       });
-      const msg = r.link
-        ? "Coordenador criado. Um link de acesso/redefinição de senha foi enviado para o e-mail cadastrado."
-        : "Coordenador criado. Configure o envio de e-mail no Supabase Auth para envio automático.";
+      const msg = db.emailDeAcessoEnviado(r)
+        ? "Coordenador criado. Um e-mail de acesso/redefinição de senha foi enviado para o endereço cadastrado."
+        : "Coordenador criado, mas o e-mail de acesso não foi confirmado — use \"Reenviar\" na lista de coordenadores.";
       setOk(msg);
       setF({ nome: "", email: "" });
       setCriando(false);
@@ -1004,8 +1004,10 @@ function Coordenadores({ d, escolaId, aoMudar }) {
   async function reenviar(coord) {
     setOk(null);
     await enviar(async () => {
-      await db.backofficeReenviarAcesso({ escolaId, usuarioId: coord.id, email: coord.email });
-      setOk("Link de redefinição de senha enviado (ou agendado). Verifique o SMTP no Supabase Auth.");
+      const r = await db.backofficeReenviarAcesso({ escolaId, usuarioId: coord.id, email: coord.email });
+      setOk(db.emailDeAcessoEnviado(r)
+        ? "E-mail de acesso/redefinição de senha reenviado."
+        : "Não foi possível confirmar o envio do e-mail — tente novamente em instantes.");
     }, "reenviar");
   }
 

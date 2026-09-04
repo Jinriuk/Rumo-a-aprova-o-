@@ -19,6 +19,26 @@ import * as db from "../../shared/data/index.js";
 // quanto sobrecarregar a função com 300+ chamadas simultâneas.
 const CONCORRENCIA_GERAR_META = 10;
 
+// Tarefa 2: dispara gerar-meta pra cada aluno e devolve os NOMES dos que
+// ficaram com meta pendente (gerar-meta marcou status_provisionamento =
+// 'pendente_configuracao' no banco — 0046). "sem trilha atribuída" não
+// entra na lista: é um estado válido (concurso sem trilha semanal), não
+// uma falha. Usa comConcorrenciaLimitada mesmo pro caso de 1 aluno, pra
+// não duplicar o try/catch nos três pontos de cadastro.
+async function gerarMetasEmLote(alunos) {
+  const pendentes = [];
+  await comConcorrenciaLimitada(alunos, CONCORRENCIA_GERAR_META, async (a) => {
+    try {
+      await db.gerarMeta(a.id);
+    } catch (e) {
+      if (e.estado === "sem_trilha") return;
+      console.error(`gerar meta (aluno ${a.id}):`, e.message);
+      pendentes.push(a.nome);
+    }
+  });
+  return pendentes;
+}
+
 // ────────────────────────────────────────────────────────────
 // Parsing de CSV/TSV — sem dependência externa
 // ────────────────────────────────────────────────────────────
@@ -97,8 +117,10 @@ export function NovoAluno({ turmas, trilhas = [], concursos = [], aoMudar }) {
       if (consentiu && nomeValido(consentimentoNome)) {
         await db.registrarConsentimento(alunos[0].id, limparNome(consentimentoNome));
       }
-      await db.gerarMeta(alunos[0].id).catch((e) => console.error("gerar meta:", e.message));
-      setFeito(`${limparNome(nome)} cadastrado. Gere a credencial na lista abaixo.`);
+      const pendentes = await gerarMetasEmLote(alunos);
+      setFeito(pendentes.length
+        ? `${limparNome(nome)} cadastrado, mas a meta ficou pendente — reprocesse na lista abaixo antes de gerar a credencial.`
+        : `${limparNome(nome)} cadastrado. Gere a credencial na lista abaixo.`);
       setNome(""); setConsentiu(false); setConsentimentoNome("");
       aoMudar?.();
     });
@@ -247,15 +269,17 @@ export function NovosAlunos({ turmas, trilhas = [], concursos = [], aoMudar }) {
           grupos.get(k).nomes.push(l.nome);
         }
         let total = 0;
+        const pendentes = [];
         for (const { turmaId: tid, nomes: ns } of grupos.values()) {
           const alunos = await db.cadastrarAlunos(ns, tid, trilhaEscolhida, concursoEscolhido);
-          await comConcorrenciaLimitada(alunos, CONCORRENCIA_GERAR_META, (a) =>
-            db.gerarMeta(a.id).catch((e) => console.error(`gerar meta (aluno ${a.id}):`, e.message)),
-          );
+          pendentes.push(...await gerarMetasEmLote(alunos));
           total += alunos.length;
         }
         const avisoInvalidos = linhasInvalidas.length ? ` (${linhasInvalidas.length} linha(s) ignorada(s) por nome inválido)` : "";
-        setFeito(`${total} aluno(s) importado(s) do CSV.${avisoInvalidos}`);
+        const avisoPendentes = pendentes.length
+          ? ` ${pendentes.length} com meta pendente — reprocesse na lista antes de gerar a credencial: ${pendentes.join(", ")}.`
+          : "";
+        setFeito(`${total} aluno(s) importado(s) do CSV.${avisoPendentes}${avisoInvalidos}`);
         limparCsv();
       } else {
         const alunos = await db.cadastrarAlunos(
@@ -264,10 +288,11 @@ export function NovosAlunos({ turmas, trilhas = [], concursos = [], aoMudar }) {
         if (!emLoteTexto && consentiu && nomeValido(consentimentoNome)) {
           await db.registrarConsentimento(alunos[0].id, limparNome(consentimentoNome));
         }
-        await comConcorrenciaLimitada(alunos, CONCORRENCIA_GERAR_META, (a) =>
-          db.gerarMeta(a.id).catch((e) => console.error(`gerar meta (aluno ${a.id}):`, e.message)),
-        );
-        setFeito(`${alunos.length} aluno(s) cadastrado(s). Gere as credenciais na lista abaixo.`);
+        const pendentes = await gerarMetasEmLote(alunos);
+        const avisoPendentes = pendentes.length
+          ? ` ${pendentes.length} com meta pendente — reprocesse na lista antes de gerar a credencial: ${pendentes.join(", ")}.`
+          : "";
+        setFeito(`${alunos.length} aluno(s) cadastrado(s).${avisoPendentes} Gere as credenciais na lista abaixo.`);
         setNomes(""); setConsentimentoNome(""); setConsentiu(false);
       }
       aoMudar?.();
