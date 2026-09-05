@@ -6,6 +6,8 @@ import Login from "./routes/publico/Login.jsx";
 import { useSessao } from "./shared/hooks/useSessao.js";
 import { BrandingProvider, useTema } from "./shared/branding/BrandingContext.jsx";
 import { NOME_PLATAFORMA } from "./shared/branding/marca.js";
+import { EH_DEMO } from "./shared/branding/ambiente.js";
+import { FaixaDemo } from "./shared/branding/FaixaDemo.jsx";
 import { FONTES_CSS } from "./shared/ui/tema.js";
 import * as db from "./shared/data/index.js";
 
@@ -44,7 +46,20 @@ const AREAS = {
   responsavel: AreaResponsavel,
 };
 
+// Ponto comum de layout (Tarefa 3): a faixa aparece em toda a árvore de
+// telas de App — recuperação de senha, carregando, login, backoffice,
+// escola suspensa e o painel normal — sem repetir a checagem em cada
+// retorno antecipado abaixo.
 export default function App() {
+  return (
+    <>
+      {EH_DEMO && <FaixaDemo />}
+      <AppRoteado />
+    </>
+  );
+}
+
+function AppRoteado() {
   const { carregando, sessao, perfil, superAdmin, erro } = useSessao();
 
   // Fluxo de recuperação detectado antes de qualquer roteamento por papel.

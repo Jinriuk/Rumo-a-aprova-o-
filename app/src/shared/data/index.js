@@ -627,13 +627,21 @@ async function invocar(fn, body) {
   const { data, error } = await supabase.functions.invoke(fn, { body });
   if (error) {
     let detalhe = error.message;
+    let estado;
     try {
       const ctx = await error.context?.json?.();
       if (ctx?.error) detalhe = ctx.error;
+      estado = ctx?.estado;
     } catch { /* corpo não-JSON: fica a mensagem original */ }
-    throw falha(fn, new Error(detalhe));
+    const e = falha(fn, new Error(detalhe));
+    if (estado) e.estado = estado;
+    throw e;
   }
-  if (data?.error) throw falha(fn, new Error(data.error));
+  if (data?.error) {
+    const e = falha(fn, new Error(data.error));
+    if (data.estado) e.estado = data.estado;
+    throw e;
+  }
   return data;
 }
 
@@ -643,6 +651,10 @@ export const provisionarResponsavel = (alunoId, nome) =>
 export const vincularResponsavelExistente = (alunoId, responsavelId) =>
   invocar("provisionar-aluno", { tipo: "vincular-responsavel", aluno_id: alunoId, responsavel_id: responsavelId });
 export const gerarMeta = (alunoId) => invocar("gerar-meta", { aluno_id: alunoId });
+// Tarefa 1: a Edge Function nunca devolve o link de acesso — só o status
+// (…_enviado | …_pendente). A UI do backoffice lê por aqui, não por `.link`
+// (que não existe mais na resposta).
+export const emailDeAcessoEnviado = (resultado) => !!resultado?.status?.endsWith("_enviado");
 export const lgpdTitular = (acao, alunoId) => invocar("lgpd-titular", { acao, aluno_id: alunoId });
 export const revogarResponsavel = (vinculoId) => invocar("revogar-responsavel", { vinculo_id: vinculoId });
 

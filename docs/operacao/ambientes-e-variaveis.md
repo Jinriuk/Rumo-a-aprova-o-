@@ -33,15 +33,19 @@ e a anon key **públicas** do projeto demo — seguro por design).
 | `VITE_SUPABASE_URL` | front (`app/.env`, `app/.env.production`) | pública | sim |
 | `VITE_SUPABASE_ANON_KEY` | front | pública (a RLS protege os dados) | sim |
 | `VITE_ERROR_REPORT_URL` | front (`shared/lib/observabilidade.js`) | endpoint próprio, não é segredo do Supabase | não — sem ela o sistema só loga no console (Fase A.4) |
+| `VITE_APP_ENV` | front (`shared/branding/ambiente.js`) — liga a faixa "AMBIENTE DE DEMONSTRAÇÃO" quando vale `demo` | pública | não — só no projeto Vercel de demo/vitrine (Production e Preview); ausência no projeto de produção real = produção, sem faixa |
 | `SUPABASE_URL` | scripts de operador (`scripts/*.mjs`) | pública | sim (scripts) |
 | `SUPABASE_SERVICE_ROLE_KEY` | scripts de operador, Edge Functions | **crítica — nunca no front/repo** | sim (scripts/funções) |
 | `PGHOST`/`PGPORT`/`PGUSER`/`PGPASSWORD`/`PGDATABASE` | `tests/` (suíte local) | local, sem dado real | sim (testes) |
 | `E2E_SUPABASE_URL`/`E2E_SUPABASE_ANON_KEY` | secrets do GitHub Actions (job `e2e`) | pública, mas de um projeto isolado | opcional (sem ela o E2E roda contra o demo — ver `e2e-ambiente.md`) |
 | `ALLOWED_ORIGINS` | secret das Edge Functions (CSV de origens; substitui a lista padrão) | pública (só origens) | não — sem ela vale o default (`https://rumo-a-aprova-o.vercel.app` + localhost) |
 | `PASSWORD_RESET_REDIRECT_URL` | secret da `backoffice-coordenador` (destino do link de redefinição) | pública (só URL) | não — default `https://rumo-a-aprova-o.vercel.app/redefinir-senha` |
-| `VERCEL_PREVIEW_PREFIX` | secret das Edge Functions (slug do projeto na Vercel, para liberar os previews `<slug>-*.vercel.app`) | pública (só um slug) | não — default `rumo-a-aprova-o`; valor fora de `[a-z0-9-]` é ignorado |
+| `RESEND_API_KEY` | secret da `backoffice-coordenador` (Tarefa 1 — dispara o e-mail de acesso via API do Resend; `auth.admin.generateLink` só gera o link, nunca envia) | **crítica — nunca no front/repo** | sim (sem ela, o e-mail não sai; a função loga o erro e devolve estado `_pendente`) |
+| `RESEND_FROM_EMAIL` | secret da `backoffice-coordenador` (remetente do e-mail, formato `"Nome <endereco@dominio>"`, verificado no Resend) | pública (só um remetente) | sim (achado do Codex na PR: o remetente de teste `onboarding@resend.dev` só entrega pro dono da conta Resend — sem esta secret configurada com domínio verificado, a função nem tenta enviar e loga o motivo; devolve `_pendente`) |
+| `VERCEL_PREVIEW_PREFIXES` | secret das Edge Functions (CSV de slugs de projeto na Vercel, para liberar os previews `<slug>-*.vercel.app` de cada um) | pública (só slugs) | não — sem ela cai no singular `VERCEL_PREVIEW_PREFIX` e depois no default `rumo-a-aprova-o`; item fora de `[a-z0-9-]` é descartado |
+| `VERCEL_PREVIEW_PREFIX` | secret das Edge Functions (compat — um único slug; ver `VERCEL_PREVIEW_PREFIXES` acima para mais de um projeto) | pública (só um slug) | não — default `rumo-a-aprova-o`; valor fora de `[a-z0-9-]` é ignorado |
 
-> As três últimas existem para que uma troca de **domínio, slug ou marca** na Vercel
+> As quatro últimas existem para que uma troca de **domínio, slug ou marca** na Vercel
 > seja feita só por secret, sem editar as Edge Functions. Atenção: `_shared/cors.ts` é a
 > versão canônica, mas `backoffice-coordenador`, `revogar-responsavel` e
 > `provisionar-aluno` carregam uma **cópia própria** (deliberada, para deploy sem o

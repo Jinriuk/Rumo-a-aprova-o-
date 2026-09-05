@@ -31,12 +31,22 @@ const DEFAULT_ORIGINS = [
   "http://localhost:3000",
 ];
 const ORIGINS = ENV_ORIGINS.length > 0 ? ENV_ORIGINS : DEFAULT_ORIGINS;
-// Slug do projeto na Vercel (previews): VERCEL_PREVIEW_PREFIX, só [a-z0-9-];
-// valor inválido cai no default. Espelha _shared/cors.ts.
-const PREVIEW_PREFIX_DEFAULT = "rumo-a-aprova-o";
-const PREVIEW_PREFIX_ENV = (Deno.env.get("VERCEL_PREVIEW_PREFIX") ?? "").trim();
-const PREVIEW_PREFIX = /^[a-z0-9-]{1,63}$/i.test(PREVIEW_PREFIX_ENV) ? PREVIEW_PREFIX_ENV : PREVIEW_PREFIX_DEFAULT;
-const VERCEL_PREVIEW = new RegExp(`^https://${PREVIEW_PREFIX}-[a-z0-9-]+\\.vercel\\.app$`, "i");
+// Slugs do(s) projeto(s) na Vercel (previews): VERCEL_PREVIEW_PREFIXES
+// (CSV, só [a-z0-9-] por item); sem ela cai no singular
+// VERCEL_PREVIEW_PREFIX (compat) e por fim no default. Espelha _shared/cors.ts.
+const PREVIEW_PREFIX_DEFAULTS = ["rumo-a-aprova-o"];
+const PREVIEW_PREFIX_RE = /^[a-z0-9-]{1,63}$/i;
+function previewPrefixes(): string[] {
+  const csv = (Deno.env.get("VERCEL_PREVIEW_PREFIXES") ?? "")
+    .split(",").map((p) => p.trim()).filter((p) => PREVIEW_PREFIX_RE.test(p));
+  if (csv.length > 0) return csv;
+  const single = (Deno.env.get("VERCEL_PREVIEW_PREFIX") ?? "").trim();
+  if (PREVIEW_PREFIX_RE.test(single)) return [single];
+  return PREVIEW_PREFIX_DEFAULTS;
+}
+const VERCEL_PREVIEW = new RegExp(
+  `^https://(?:${previewPrefixes().join("|")})-[a-z0-9-]+\\.vercel\\.app$`, "i",
+);
 
 function origemPermitida(origin: string): boolean {
   if (!origin) return false;
@@ -82,7 +92,7 @@ async function chamador(req: Request) {
 async function alunoDaEscola(alunoId: string, escolaId: string) {
   const { data, error } = await admin
     .from("alunos")
-    .select("id, escola_id, nome, usuario_id, trilha_id")
+    .select("id, escola_id, nome, usuario_id, trilha_id, status_provisionamento")
     .eq("id", alunoId)
     .eq("escola_id", escolaId)
     .maybeSingle();
@@ -195,6 +205,16 @@ Deno.serve(async (req) => {
       return json({
         error: "este aluno já tem credencial; revogue antes de gerar outra",
         estado: "erro_validacao",
+      }, 409);
+    }
+    // Tarefa 2: aluno sem meta (gerar-meta falhou) não recebe login — a
+    // credencial destrava a trilha, e sem meta o aluno cairia numa trilha
+    // vazia. Reprocessar (chamar gerar-meta de novo) limpa o pendente
+    // (0046) e libera a geração de credencial normalmente.
+    if (tipo === "aluno" && aluno.status_provisionamento === "pendente_configuracao") {
+      return json({
+        error: "aluno com configuração pendente (meta não gerada) — reprocesse a meta antes de gerar a credencial",
+        estado: "pendente_configuracao",
       }, 409);
     }
     if (tipo === "responsavel" && !nome) {

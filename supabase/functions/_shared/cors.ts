@@ -30,16 +30,29 @@ const DEFAULT_ORIGINS = [
 const ORIGINS = ENV_ORIGINS.length > 0 ? ENV_ORIGINS : DEFAULT_ORIGINS;
 
 // Previews do PRÓPRIO projeto na Vercel: <slug>-<hash/branch>-<scope>.vercel.app
-// (NÃO libera qualquer *.vercel.app — só previews deste projeto). O slug
-// vem de VERCEL_PREVIEW_PREFIX (só [a-z0-9-]; valor inválido cai no
-// default) — assim uma troca de slug/marca na Vercel não exige editar
-// código, como já vale para ALLOWED_ORIGINS. Para desligar previews por
-// completo, defina ALLOWED_ORIGINS sem eles; o regex segue só validando o
-// prefixo do projeto.
-const PREVIEW_PREFIX_DEFAULT = "rumo-a-aprova-o";
-const PREVIEW_PREFIX_ENV = (Deno.env.get("VERCEL_PREVIEW_PREFIX") ?? "").trim();
-const PREVIEW_PREFIX = /^[a-z0-9-]{1,63}$/i.test(PREVIEW_PREFIX_ENV) ? PREVIEW_PREFIX_ENV : PREVIEW_PREFIX_DEFAULT;
-const VERCEL_PREVIEW = new RegExp(`^https://${PREVIEW_PREFIX}-[a-z0-9-]+\\.vercel\\.app$`, "i");
+// (NÃO libera qualquer *.vercel.app — só previews destes projetos). A
+// lista de slugs vem de VERCEL_PREVIEW_PREFIXES (CSV; cada item só
+// [a-z0-9-], item inválido é descartado) — assim uma troca de slug/marca
+// na Vercel, ou a convivência de mais de um projeto (ex.: rename em
+// andamento), não exige editar código, como já vale para ALLOWED_ORIGINS.
+// Compat: sem PREFIXES, cai para o singular VERCEL_PREVIEW_PREFIX (nome
+// de secret já existente, lido desde a troca de marca — não é órfão).
+// Sem nenhuma das duas, usa o default. Para desligar previews por
+// completo, defina ALLOWED_ORIGINS sem eles; o regex segue só validando
+// os prefixos configurados.
+const PREVIEW_PREFIX_DEFAULTS = ["rumo-a-aprova-o"];
+const PREVIEW_PREFIX_RE = /^[a-z0-9-]{1,63}$/i;
+function previewPrefixes(): string[] {
+  const csv = (Deno.env.get("VERCEL_PREVIEW_PREFIXES") ?? "")
+    .split(",").map((p) => p.trim()).filter((p) => PREVIEW_PREFIX_RE.test(p));
+  if (csv.length > 0) return csv;
+  const single = (Deno.env.get("VERCEL_PREVIEW_PREFIX") ?? "").trim();
+  if (PREVIEW_PREFIX_RE.test(single)) return [single];
+  return PREVIEW_PREFIX_DEFAULTS;
+}
+const VERCEL_PREVIEW = new RegExp(
+  `^https://(?:${previewPrefixes().join("|")})-[a-z0-9-]+\\.vercel\\.app$`, "i",
+);
 
 export function origemPermitida(origin: string): boolean {
   if (!origin) return false;
