@@ -155,12 +155,17 @@ async function gerarLinkRecuperacao(email: string): Promise<{ link: string | nul
 
 // Tarefa 1: auth.admin.generateLink() acima NUNCA envia e-mail — só gera o
 // action_link. Quem envia de verdade é o Resend, chamado diretamente aqui
-// (sem depender do SMTP do Supabase). Sem domínio próprio ainda configurado
-// no Resend, RESEND_FROM_EMAIL cai no remetente de teste do próprio Resend
-// (funciona sem verificação de domínio; troque por secret assim que houver
-// domínio verificado — a entregabilidade do remetente de teste é limitada).
+// (sem depender do SMTP do Supabase).
+//
+// Achado do Codex (P1) na revisão desta PR: o remetente de teste do
+// próprio Resend (onboarding@resend.dev) só entrega pro e-mail do DONO da
+// conta Resend — pra qualquer coordenador de verdade, o envio é recusado
+// e o estado vira "_pendente" sempre, mesmo com RESEND_API_KEY correta.
+// Por isso RESEND_FROM_EMAIL agora é OBRIGATÓRIA (remetente verificado no
+// Resend): sem ela, nem tenta enviar — mesmo tratamento de "não
+// configurado" que RESEND_API_KEY ausente já tinha.
 const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY") ?? "";
-const RESEND_FROM = Deno.env.get("RESEND_FROM_EMAIL")?.trim() || "Triliva <onboarding@resend.dev>";
+const RESEND_FROM = Deno.env.get("RESEND_FROM_EMAIL")?.trim() ?? "";
 
 const escapeHtml = (s: string) =>
   s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
@@ -179,6 +184,10 @@ function corpoEmailAcesso(nome: string, link: string): string {
 async function enviarEmailAcesso(destino: string, nome: string, link: string): Promise<boolean> {
   if (!RESEND_API_KEY) {
     console.error("backoffice-coordenador: RESEND_API_KEY ausente — e-mail não enviado");
+    return false;
+  }
+  if (!RESEND_FROM) {
+    console.error("backoffice-coordenador: RESEND_FROM_EMAIL ausente — configure um remetente verificado no Resend antes de confiar no envio (sem ela, o remetente de teste do Resend rejeitaria o envio pra qualquer coordenador real)");
     return false;
   }
   try {
