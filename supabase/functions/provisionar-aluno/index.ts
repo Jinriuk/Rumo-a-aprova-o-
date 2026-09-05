@@ -75,8 +75,14 @@ function novoCodigo(): string {
   return `${s.slice(0, 4)}-${s.slice(4, 8)}-${s.slice(8, 12)}`;
 }
 
+// Espelha normalizarCodigo() do frontend (shared/data/index.js): mesma
+// canonicalização nos dois lados da fronteira login-por-código, pra
+// e-mail e senha nunca divergirem de novo (0093 — bug de login raiz).
+const normalizarCodigo = (codigo: string) =>
+  codigo.replace(/[^a-zA-Z0-9]/g, "").toUpperCase();
+
 const emailDoCodigo = (codigo: string) =>
-  `${codigo.replace(/-/g, "").toLowerCase()}@codigo.acesso.local`;
+  `${normalizarCodigo(codigo).toLowerCase()}@codigo.acesso.local`;
 
 async function chamador(req: Request) {
   const auth = req.headers.get("authorization") ?? "";
@@ -227,7 +233,7 @@ Deno.serve(async (req) => {
 
     const { data: criado, error: errAuth } = await admin.auth.admin.createUser({
       email: emailDoCodigo(codigo),
-      password: codigo,
+      password: normalizarCodigo(codigo),
       email_confirm: true,
       app_metadata: { escola_id: quem.escola_id, papel },
       user_metadata: { nome: nomeUsuario, provisionado_por: quem.id },
@@ -263,8 +269,8 @@ Deno.serve(async (req) => {
 
     // EST1-C (SEC3b): grava ADITIVAMENTE o HASH do código na fundação da
     // credencial opaca (migration 0044). É best-effort: NUNCA aborta o
-    // provisionamento (o login atual segue por password=codigo; o corte
-    // para o proxy login-codigo é uma janela dedicada). Só prepara a base.
+    // provisionamento (o login atual segue por password=normalizarCodigo(codigo);
+    // o corte para o proxy login-codigo é uma janela dedicada). Só prepara a base.
     const { error: errHash } = await admin.rpc("registrar_codigo_acesso", {
       p_usuario: usuarioId, p_escola: quem.escola_id, p_codigo: codigo,
     });

@@ -3,9 +3,14 @@
 // ------------------------------------------------------------
 // O provisionamento passa a registrar o hash do código na fundação da
 // credencial opaca (0044), de forma ADITIVA e NÃO-FATAL: o login atual
-// não muda (password=codigo segue) e uma falha ao gravar o hash não
-// aborta o provisionamento. Sem runner de Deno no repo, travamos a
-// propriedade por inspeção de fonte (padrão sec3/d1c).
+// não muda de mecanismo (segue senha no GoTrue, não o proxy
+// resolver_codigo_acesso — esse corte é janela dedicada) e uma falha ao
+// gravar o hash não aborta o provisionamento. Sem runner de Deno no
+// repo, travamos a propriedade por inspeção de fonte (padrão sec3/d1c).
+//
+// 0093: password passou de `codigo` (cru, com traço) para
+// `normalizarCodigo(codigo)` — bug de raiz do login por código (o
+// front sempre logou com o código sem traço). Ver login-codigo-fronteira.
 // ============================================================
 import test from "node:test";
 import assert from "node:assert/strict";
@@ -28,6 +33,8 @@ test("C2: chama a porta public registrar_codigo_acesso com o código gerado", ()
 test("C2: é NÃO-FATAL — não aborta o provisionamento se o hash falhar", () => {
   // o erro do rpc vira console.error (não throw), como os logs de acesso
   assert.match(src, /registrar_codigo_acesso[\s\S]{0,220}?console\.error/, "erro do hash é logado, não propagado");
-  // o login atual não foi trocado: password ainda é o código (corte é janela dedicada)
-  assert.match(src, /password:\s*codigo/, "login direto preservado (dormente até o corte)");
+  // o mecanismo de login não foi trocado (ainda é senha no GoTrue, não o
+  // proxy resolver_codigo_acesso — esse corte é janela dedicada); só a
+  // derivação da senha foi corrigida (0093) para usar normalizarCodigo
+  assert.match(src, /password:\s*normalizarCodigo\(codigo\)/, "login direto preservado (dormente até o corte do proxy)");
 });
