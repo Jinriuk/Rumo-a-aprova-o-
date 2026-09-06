@@ -9,6 +9,7 @@ import { NOME_PLATAFORMA } from "./shared/branding/marca.js";
 import { EH_DEMO } from "./shared/branding/ambiente.js";
 import { FaixaDemo } from "./shared/branding/FaixaDemo.jsx";
 import { FONTES_CSS } from "./shared/ui/tema.js";
+import { ehRotaRecuperacao } from "./shared/lib/recuperacao.js";
 import * as db from "./shared/data/index.js";
 
 // FIX1 (OBS-RC1-006): cada área vira um chunk próprio — o usuário baixa
@@ -33,11 +34,17 @@ function EsperandoArea() {
 }
 
 // Detecta fluxo de recuperação de senha via hash da URL.
-// O Supabase redireciona com #access_token=...&type=recovery após verificar o OTP.
+// O Supabase redireciona com #access_token=...&type=recovery após verificar
+// o OTP, e com #error=...&error_code=otp_expired quando o link já venceu ou
+// já foi usado. Os DOIS casos vão para RedefinirSenha: o segundo é onde o
+// usuário lê que o link expirou, em vez de cair no login sem explicação.
+// O próprio caminho /redefinir-senha também entra, para o caso do e-mail
+// entregar a URL sem o fragmento — a tela explica em vez de sumir.
+// A leitura do hash é do módulo puro shared/lib/recuperacao.js — nada aqui
+// toca o cliente Supabase, que é justamente o que trocava a sessão ativa.
 function detectarRecuperacao() {
   if (typeof window === "undefined") return false;
-  const hash = new URLSearchParams(window.location.hash.slice(1));
-  return hash.get("type") === "recovery" && !!hash.get("access_token");
+  return ehRotaRecuperacao(window.location.hash, window.location.pathname);
 }
 
 const AREAS = {

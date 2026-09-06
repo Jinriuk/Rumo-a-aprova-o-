@@ -7,7 +7,7 @@
    A segurança não está aqui: está na RLS. Este arquivo só pede;
    o banco decide o que entrega.
    ============================================================ */
-import { supabase } from "../../lib/supabase.js";
+import { supabase, SUPABASE_URL, SUPABASE_ANON_KEY } from "../../lib/supabase.js";
 import { patchAluno } from "../contratos/dto.js";
 import { ORIGEM_PRODUCAO } from "../branding/marca.js";
 
@@ -678,13 +678,59 @@ export async function recuperarSenha(email) {
   if (error) throw falha("recuperar senha", error);
 }
 
-// Redefine a senha do usuário com sessão de recuperação ativa.
-// Chamado apenas a partir da rota /redefinir-senha após o Supabase
-// processar o hash de recuperação e criar a sessão.
-export async function redefinirSenha(novaSenha) {
-  const { data, error } = await supabase.auth.updateUser({ password: novaSenha });
-  if (error) throw falha("redefinir senha", error);
-  return data;
+// Redefine a senha usando o token do LINK de recuperação — de propósito
+// SEM passar pelo cliente compartilhado.
+//
+// Por que não `supabase.auth.updateUser()`: para ele funcionar, a sessão
+// do link precisa estar carregada no cliente, e o cliente é um singleton
+// que persiste na MESMA chave de localStorage da sessão normal. Era isso
+// que derrubava quem já estava logado no navegador (o SuperADM virava o
+// coordenador do link, em todas as abas da origem).
+//
+// Aqui o `access_token` do link vai direto no header, num `fetch` avulso:
+// o GoTrue troca a senha e NADA é escrito na sessão compartilhada. Quem
+// estava logado continua logado; quem redefiniu entra depois pelo login
+// normal, com a senha nova.
+export async function redefinirSenha(accessToken, novaSenha) {
+  if (!accessToken) throw falha("redefinir senha", new Error("link sem token de recuperação"));
+
+  let resposta;
+  try {
+    resposta = await fetch(`${SUPABASE_URL}/auth/v1/user`, {
+      method: "PATCH",
+      headers: {
+        apikey: SUPABASE_ANON_KEY,
+        Authorization: `Bearer ${accessToken}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ password: novaSenha }),
+    });
+  } catch (e) {
+    // rede caiu / CORS: erro de sistema, não do usuário
+    throw falha("redefinir senha", e);
+  }
+
+  if (!resposta.ok) {
+    // O corpo do GoTrue traz o motivo em `msg`/`error_description`; nunca
+    // traz o token de volta, então é seguro entrar na mensagem de erro.
+    let detalhe = `HTTP ${resposta.status}`;
+    let codigo = null;
+    try {
+      const corpo = await resposta.json();
+      detalhe = corpo?.msg ?? corpo?.error_description ?? corpo?.message ?? corpo?.error ?? detalhe;
+      codigo = corpo?.error_code ?? corpo?.code ?? null;
+    } catch { /* corpo não-JSON: fica o HTTP nnn */ }
+    // Link vencido (401/403) e senha recusada (422) são falhas PREVISÍVEIS
+    // do usuário, não do sistema — mesmo rebaixamento de log já usado em
+    // `credencialInvalida` no login.
+    const esperada = [401, 403, 422].includes(resposta.status);
+    const e = falha("redefinir senha", new Error(detalhe), { esperada });
+    e.status = resposta.status;
+    e.codigoGoTrue = typeof codigo === "string" ? codigo : null;
+    throw e;
+  }
+
+  return resposta.json().catch(() => ({}));
 }
 
 /* ---------- motor (meta + registro) ---------- */
