@@ -32,14 +32,6 @@ function EsperandoArea() {
   );
 }
 
-// Detecta fluxo de recuperação de senha via hash da URL.
-// O Supabase redireciona com #access_token=...&type=recovery após verificar o OTP.
-function detectarRecuperacao() {
-  if (typeof window === "undefined") return false;
-  const hash = new URLSearchParams(window.location.hash.slice(1));
-  return hash.get("type") === "recovery" && !!hash.get("access_token");
-}
-
 const AREAS = {
   coordenacao: AreaEscola,
   aluno: AreaAluno,
@@ -60,12 +52,17 @@ export default function App() {
 }
 
 function AppRoteado() {
-  const { carregando, sessao, perfil, superAdmin, erro } = useSessao();
+  const { carregando, sessao, perfil, superAdmin, erro, recuperacaoSenha } = useSessao();
 
-  // Fluxo de recuperação detectado antes de qualquer roteamento por papel.
-  // Verifica o hash da URL na renderização inicial (síncrono) para garantir
-  // que o coordenador veja a tela de redefinição mesmo se já estiver logado.
-  if (detectarRecuperacao()) {
+  // Fluxo de recuperação (Tarefa 3 — bug de redefinição de senha) tem prioridade sobre
+  // qualquer roteamento por papel — inclusive sobre uma sessão já
+  // autenticada (o link de recuperação troca a sessão ativa pela do
+  // dono do link; ver useSessao/aoEntrarEmRecuperacao). `recuperacaoSenha`
+  // vem do evento PASSWORD_RECOVERY do Supabase, não de uma leitura
+  // própria do hash da URL — funciona tanto com o formato antigo
+  // (#access_token=...&type=recovery) quanto com ?code= (PKCE), e não
+  // depende de vencer a corrida com o supabase-js pra ler o hash a tempo.
+  if (recuperacaoSenha) {
     return (
       <BrandingProvider escola={{ nome: NOME_PLATAFORMA, slug: "app", logo_url: null, cor_acento: null }}>
         <Suspense fallback={<EsperandoArea />}>

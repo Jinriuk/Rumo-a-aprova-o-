@@ -196,10 +196,53 @@ describe("D1C — rota /redefinir-senha existe no frontend", () => {
     assert.ok(conteudo.includes("RedefinirSenha"), "App.jsx não importa RedefinirSenha");
   });
 
-  it("App.jsx detecta type=recovery no hash", () => {
+  it("App.jsx prioriza a tela de redefinição via recuperacaoSenha (useSessao)", () => {
     const conteudo = readFileSync(resolve(root, "app/src/App.jsx"), "utf8");
-    assert.ok(conteudo.includes("recovery"), "Detecção de recovery ausente em App.jsx");
-    assert.ok(conteudo.includes("hash"), "Leitura do hash ausente em App.jsx");
+    assert.ok(conteudo.includes("recuperacaoSenha"), "App.jsx não lê recuperacaoSenha de useSessao");
+    assert.ok(conteudo.includes("RedefinirSenha"), "App.jsx não renderiza RedefinirSenha");
+  });
+});
+
+describe("D1C — captura de PASSWORD_RECOVERY não depende de useEffect (bug de redefinição de senha)", () => {
+  let dbSrc, hookSrc;
+  before(() => {
+    dbSrc = readFileSync(resolve(root, "app/src/shared/data/index.js"), "utf8");
+    hookSrc = readFileSync(resolve(root, "app/src/shared/hooks/useSessao.js"), "utf8");
+  });
+
+  it("aoMudarSessao repassa o evento do onAuthStateChange (não descarta)", () => {
+    assert.match(
+      dbSrc,
+      /onAuthStateChange\(\(evento, sessao\) => fn\(sessao, evento\)\)/,
+      "aoMudarSessao ainda descarta o nome do evento — regressão do bug de redefinição de senha",
+    );
+  });
+
+  it("PASSWORD_RECOVERY é capturado por uma inscrição no escopo do módulo, não dentro de uma função", () => {
+    // A inscrição precisa rodar no mesmo tick síncrono da criação do client
+    // (GoTrue dispara PASSWORD_RECOVERY via setTimeout(0) na inicialização,
+    // antes de qualquer useEffect ter chance de se inscrever). Checar que a
+    // chamada está no topo do módulo (sem indentação) é o jeito simples de
+    // garantir que não está aninhada dentro de nenhuma função/hook — se
+    // estivesse, herdaria a mesma corrida do bug original.
+    assert.match(
+      dbSrc,
+      /^supabase\.auth\.onAuthStateChange\(\(evento\) => \{$/m,
+      "Captura de PASSWORD_RECOVERY não está no escopo do módulo (linha indentada) — sujeita à mesma corrida do bug original",
+    );
+  });
+
+  it("recuperacaoDeSenhaAtiva e aoEntrarEmRecuperacao estão exportadas", () => {
+    assert.ok(dbSrc.includes("export function recuperacaoDeSenhaAtiva"), "recuperacaoDeSenhaAtiva ausente");
+    assert.ok(dbSrc.includes("export function aoEntrarEmRecuperacao"), "aoEntrarEmRecuperacao ausente");
+  });
+
+  it("useSessao lê o snapshot de recuperação com useSyncExternalStore (sem janela de corrida no primeiro render)", () => {
+    assert.match(
+      hookSrc,
+      /useSyncExternalStore\(db\.aoEntrarEmRecuperacao,\s*db\.recuperacaoDeSenhaAtiva\)/,
+      "useSessao não usa useSyncExternalStore para recuperacaoSenha",
+    );
   });
 });
 

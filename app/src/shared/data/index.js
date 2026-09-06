@@ -72,8 +72,36 @@ export async function sair() {
 }
 
 export function aoMudarSessao(fn) {
-  const { data } = supabase.auth.onAuthStateChange((_evento, sessao) => fn(sessao));
+  const { data } = supabase.auth.onAuthStateChange((evento, sessao) => fn(sessao, evento));
   return () => data.subscription.unsubscribe();
+}
+
+// Tarefa 3 (bug de redefinição de senha): o supabase-js dispara PASSWORD_RECOVERY
+// via setTimeout(0) dentro da própria inicialização do client (ao processar
+// o hash #access_token=...&type=recovery da URL) — ANTES que o useEffect de
+// useSessao tenha rodado e se inscrito em onAuthStateChange. Um listener
+// registrado só dentro de um efeito React chega tarde: o evento já disparou
+// para zero ouvintes e não há fila que o repita depois (a sessão de
+// recuperação já fica salva; só o EVENTO que a distingue de um login normal
+// se perde). A inscrição abaixo roda no escopo do módulo — no mesmo tick
+// síncrono em que `supabase` é criado, antes de qualquer macrotask — então
+// nunca perde o evento, independente da ordem de agendamento do React.
+let recuperacaoAtiva = false;
+const ouvintesRecuperacao = new Set();
+supabase.auth.onAuthStateChange((evento) => {
+  if (evento === "PASSWORD_RECOVERY") {
+    recuperacaoAtiva = true;
+    ouvintesRecuperacao.forEach((fn) => fn());
+  }
+});
+
+export function recuperacaoDeSenhaAtiva() {
+  return recuperacaoAtiva;
+}
+
+export function aoEntrarEmRecuperacao(fn) {
+  ouvintesRecuperacao.add(fn);
+  return () => ouvintesRecuperacao.delete(fn);
 }
 
 export async function sessaoAtual() {
