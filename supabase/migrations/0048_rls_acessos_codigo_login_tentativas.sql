@@ -1,0 +1,46 @@
+-- ============================================================
+-- 0048 — captura a divergência de RLS em app.acessos_codigo e
+--         app.login_tentativas (BKL-016)
+-- ------------------------------------------------------------
+-- Achado de 07/09/2026 com scripts/fingerprint-schema.sql: 1091 objetos
+-- comparados entre produção (zckyhihxjjbnqjqilymn) e teste
+-- (bdjkgrzfzoamchdpobbl), e UMA única divergência de schema. Produção
+-- tem `relrowsecurity = true` nas duas tabelas; teste tem `false`.
+-- Ambas com zero policies nos dois bancos.
+--
+-- Nenhuma migration liga RLS nessas tabelas: a 0044 cria as duas sem
+-- uma linha disso, e o filtro do `rls_auto_enable` é
+-- `schema_name IN ('public')`, então o event trigger nunca tocaria em
+-- `app.*`. Só a 0044 e a 0047 sequer as citam. A alteração existe em
+-- produção e em migration nenhuma.
+--
+-- ORIGEM NÃO CONFIRMADA. Hipótese mais provável é ação fora do fluxo de
+-- migrations. Candidato específico a checar antes de cravar causa: o
+-- painel do Supabase oferece um botão "Enable RLS" ao lado exatamente
+-- desse lint, e um clique respondendo ao aviso fecharia o círculo.
+--
+-- DIREÇÃO ESCOLHIDA: capturar o estado de PRODUÇÃO, ou seja, ligar RLS
+-- também em teste. Os dois estados são funcionalmente idênticos hoje —
+-- o schema `app` não é exposto via PostgREST e só `service_role` tem
+-- grant nessas tabelas, e `service_role` ignora RLS. Entre dois estados
+-- equivalentes, fica o mais defensivo. Zero policy é deliberado: com
+-- RLS ligada e nenhuma policy, nenhum papel além de `service_role` lê
+-- ou escreve.
+--
+-- EFEITO COLATERAL ESPERADO (não é regressão): o lint INFO
+-- `rls_enabled_no_policy` passa a aparecer também em teste, para as
+-- duas tabelas. Em produção ele já aparece hoje.
+--
+-- Em produção esta migration é NO-OP: a RLS já está ligada lá.
+-- Aditiva. Idempotente (`enable row level security` repetido é no-op).
+-- Não altera 0001–0047.
+-- ============================================================
+
+alter table app.acessos_codigo   enable row level security;
+alter table app.login_tentativas enable row level security;
+
+-- ------------------------------------------------------------
+-- ROLLBACK (manual, se necessário):
+--   alter table app.acessos_codigo   disable row level security;
+--   alter table app.login_tentativas disable row level security;
+-- ------------------------------------------------------------
