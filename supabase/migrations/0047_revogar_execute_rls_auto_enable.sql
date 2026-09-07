@@ -1,0 +1,44 @@
+-- ============================================================
+-- 0047 — EST1: REVOGA EXECUTE de rls_auto_enable() na API pública
+-- ------------------------------------------------------------
+-- Achado dos advisors (07/09/2026), nos DOIS projetos: a função
+-- `public.rls_auto_enable()` — registrada na 0045 como função do event
+-- trigger `ensure_rls` — está chamável via `POST /rest/v1/rpc/
+-- rls_auto_enable` pelos roles `anon` E `authenticated`. Ela herdou o
+-- `EXECUTE` que o Postgres concede a `public` por padrão em toda função
+-- nova, e nunca teve revoke próprio.
+--
+-- Por que importa: ela é SECURITY DEFINER e, diferente das funções
+-- `backoffice_*`, NÃO tem guarda interna de papel (não chama
+-- `sou_super_admin()` nem checa `app.papel()`). Só deve rodar
+-- automaticamente em DDL, nunca ser invocada por API.
+--
+-- Por que o event trigger continua funcionando: event trigger executa
+-- a função como o DONO dela, no contexto do comando DDL — não passa
+-- pelo grant de EXECUTE da API. Verificado após aplicar: `ensure_rls`
+-- segue `evtenabled = 'O'` em ddl_command_end nos dois projetos, e os
+-- lints `anon_security_definer_function_executable` e
+-- `authenticated_security_definer_function_executable` para
+-- `rls_auto_enable` sumiram da lista.
+--
+-- Fora do escopo (deliberado): `backoffice_*`, `resumo_escola`,
+-- `salvar_onboarding_aluno` e `sou_super_admin` continuam chamáveis por
+-- `authenticated` — têm guarda interna própria, como já registrado na
+-- 0045.
+--
+-- Também observado e NÃO corrigido aqui (nível INFO, risco baixo):
+-- `app.acessos_codigo` e `app.login_tentativas` com RLS ligada e nenhuma
+-- policy em produção. O schema `app` não é exposto via PostgREST, então
+-- não há superfície de API. Ver nota de divergência prod × teste no
+-- backlog (em teste essas duas tabelas estão com RLS DESLIGADA).
+--
+-- Aditiva. Idempotente (revoke de grant ausente é no-op). Não altera
+-- 0001–0046.
+-- ============================================================
+
+revoke execute on function public.rls_auto_enable() from public, anon, authenticated;
+
+-- ------------------------------------------------------------
+-- ROLLBACK (manual, se necessário — reabre o RPC para a API):
+--   grant execute on function public.rls_auto_enable() to public;
+-- ------------------------------------------------------------
