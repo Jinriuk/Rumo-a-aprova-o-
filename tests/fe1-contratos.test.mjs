@@ -78,6 +78,10 @@ test("vinculoDTO: mapeia embed aninhado para contrato estável", () => {
   const cru = { id: "v1", responsavel_id: "r1", criado_em: "2026-01-02T10:00:00Z", usuarios: { nome: "Ana", papel: "responsavel" } };
   assert.deepEqual(vinculoDTO(cru), {
     id: "v1", responsavelId: "r1", responsavelNome: "Ana", papel: "responsavel", desde: "2026-01-02T10:00:00Z",
+    // Etapa 7 / BLOCO B3/B5: sem os dois campos de credencial no embed
+    // (usuarios sem credencial_status/must_change_password), o DTO
+    // assume o caso mais comum — credencial ativa, sem troca pendente.
+    credencialRevogada: false, precisaTrocarSenha: false,
   });
 });
 
@@ -87,6 +91,18 @@ test("vinculoDTO: tolera embed ausente (nome com fallback)", () => {
   assert.equal(dto.responsavelNome, "Responsável");
   assert.equal(dto.papel, "responsavel");
   assert.equal(dto.desde, null);
+  assert.equal(dto.credencialRevogada, false);
+  assert.equal(dto.precisaTrocarSenha, false);
+});
+
+test("vinculoDTO: espelha credencial_status/must_change_password do embed", () => {
+  const cru = {
+    id: "v3", responsavel_id: "r3", criado_em: "2026-02-01T00:00:00Z",
+    usuarios: { nome: "Beto", papel: "responsavel", credencial_status: "revogada", must_change_password: true },
+  };
+  const dto = vinculoDTO(cru);
+  assert.equal(dto.credencialRevogada, true);
+  assert.equal(dto.precisaTrocarSenha, true);
 });
 
 test("vinculosDTO / responsaveisDTO: lidam com null e linhas vazias", () => {

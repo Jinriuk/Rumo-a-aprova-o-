@@ -50,11 +50,15 @@ export function normalizarCodigo(texto) {
   return texto.replace(/[^a-zA-Z0-9]/g, "").toUpperCase();
 }
 
-export async function entrarComCodigo(codigo) {
+// Etapa 7 / BLOCO B1: o código deixou de ser a senha — ele só resolve
+// QUAL é a conta (email sintético, sempre o mesmo pro mesmo código); a
+// senha é um segredo próprio, digitado à parte (temporária no primeiro
+// acesso, pessoal depois — nunca mais o próprio código).
+export async function entrarComCodigo(codigo, senha) {
   const canonico = normalizarCodigo(codigo);
   const { data, error } = await supabase.auth.signInWithPassword({
     email: `${canonico.toLowerCase()}@codigo.acesso.local`,
-    password: canonico,
+    password: senha,
   });
   if (error) throw falha("login por código", error, { esperada: credencialInvalida(error) });
   return data;
@@ -89,8 +93,12 @@ export async function meuPerfil() {
   const { data: s } = await supabase.auth.getSession();
   const uid = s?.session?.user?.id;
   if (!uid) throw new Error("perfil: sessão sem usuário autenticado");
+  // `must_change_password` entra pelo mesmo motivo de `status`/`plano`
+  // abaixo: é o gate de troca obrigatória (Etapa 7 / BLOCO B2) — App.jsx
+  // lê perfil.usuario.must_change_password pra bloquear as telas de
+  // aluno/responsável até a senha temporária ser trocada.
   const { data: u, error } = await supabase
-    .from("usuarios").select("id, escola_id, papel, nome").eq("id", uid).maybeSingle();
+    .from("usuarios").select("id, escola_id, papel, nome, must_change_password").eq("id", uid).maybeSingle();
   if (error) throw falha("perfil", error);
   if (!u) throw new Error("perfil: usuário sem cadastro nesta escola");
   // `status` entra aqui de propósito (D1A.1): a S1 bloqueia a escola
@@ -538,8 +546,16 @@ export async function removerTurma(turmaId) {
 }
 
 export async function listarAlunos({ signal } = {}) {
+  // `usuarios(...)` entra pro card de credencial (Etapa 7 / BLOCO B3/B5)
+  // saber se a conta está revogada e se a senha temporária já foi
+  // trocada — sem isso a tela não teria como distinguir "revogar" de
+  // "reativar", nem avisar quem ainda não fez a troca obrigatória.
+  // Sem FK ambígua entre alunos e usuarios (só usuario_id), o embed não
+  // precisa nomear a constraint.
   const { data, error } = await comSinal(
-    supabase.from("alunos").select("*, alunos_turmas(turma_id, turmas(nome))").order("nome"),
+    supabase.from("alunos")
+      .select("*, alunos_turmas(turma_id, turmas(nome)), usuarios(credencial_status, must_change_password)")
+      .order("nome"),
     signal,
   );
   if (error) throw falha("alunos", error);
@@ -558,7 +574,7 @@ export async function listarTrilhas({ signal } = {}) {
 export async function listarVinculos(alunoId) {
   const { data, error } = await supabase
     .from("vinculos_responsaveis")
-    .select("id, responsavel_id, criado_em, usuarios(nome, papel)")
+    .select("id, responsavel_id, criado_em, usuarios(nome, papel, credencial_status, must_change_password)")
     .eq("aluno_id", alunoId)
     .order("criado_em");
   if (error) throw falha("responsáveis", error);
@@ -654,6 +670,23 @@ export const provisionarResponsavel = (alunoId, nome) =>
   invocar("provisionar-aluno", { tipo: "responsavel", aluno_id: alunoId, nome });
 export const vincularResponsavelExistente = (alunoId, responsavelId) =>
   invocar("provisionar-aluno", { tipo: "vincular-responsavel", aluno_id: alunoId, responsavel_id: responsavelId });
+
+// Etapa 7 / BLOCO B3 (caminho 2) / B5 — ciclo de vida da credencial já
+// emitida, sempre por usuario_id (não aluno_id: um aluno pode ter mais
+// de um responsável, a ação mira a conta certa direto).
+export const resetarSenhaCredencial = (usuarioId) =>
+  invocar("provisionar-aluno", { tipo: "resetar-senha", usuario_id: usuarioId });
+export const revogarCredencial = (usuarioId) =>
+  invocar("provisionar-aluno", { tipo: "revogar-credencial", usuario_id: usuarioId });
+export const reativarCredencial = (usuarioId) =>
+  invocar("provisionar-aluno", { tipo: "reativar-credencial", usuario_id: usuarioId });
+
+// Etapa 7 / BLOCO B2 — o próprio usuário logado troca a senha temporária
+// (ou qualquer senha) pela pessoal. Sem sessão renovada: o JWT atual
+// continua válido (a troca de senha no GoTrue não invalida a sessão
+// corrente), só o perfil precisa ser relido pra `must_change_password`
+// cair — quem chama recarrega a sessão/perfil depois.
+export const trocarSenha = (senhaNova) => invocar("trocar-senha", { senha_nova: senhaNova });
 export const gerarMeta = (alunoId) => invocar("gerar-meta", { aluno_id: alunoId });
 // Tarefa 1: a Edge Function nunca devolve o link de acesso — só o status
 // (…_enviado | …_pendente). A UI do backoffice lê por aqui, não por `.link`

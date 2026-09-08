@@ -14,6 +14,7 @@
 import React, { useId, useState } from "react";
 import { BASE, FONTES_CSS } from "../../shared/ui/tema.js";
 import * as db from "../../shared/data/index.js";
+import { forcaSenha } from "../../shared/lib/senha.js";
 import {
   lerHashRecuperacao,
   mensagemLinkInvalido,
@@ -33,14 +34,6 @@ const inputS = {
   marginBottom: 12,
 };
 const lbl = { fontSize: 12, color: T.sub, marginBottom: 6, display: "block", textTransform: "uppercase", letterSpacing: 0.4 };
-
-function forcaSenha(s) {
-  if (s.length < 8) return { nivel: 0, texto: "Muito curta (mín. 8 caracteres)" };
-  const tem = [/[A-Z]/, /[a-z]/, /[0-9]/, /[^A-Za-z0-9]/].filter((r) => r.test(s)).length;
-  if (tem <= 1) return { nivel: 1, texto: "Fraca — adicione letras maiúsculas, números ou símbolos" };
-  if (tem === 2) return { nivel: 2, texto: "Razoável" };
-  return { nivel: 3, texto: "Forte" };
-}
 
 function voltarAoLogin() {
   // `replace` (e não `assign`) para o hash com o token não ficar na

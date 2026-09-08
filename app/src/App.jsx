@@ -21,6 +21,7 @@ const AreaEscola = lazy(() => import("./routes/escola/AreaEscola.jsx"));
 const AreaResponsavel = lazy(() => import("./routes/responsavel/AreaResponsavel.jsx"));
 const AreaAdmin = lazy(() => import("./routes/admin/AreaAdmin.jsx"));
 const RedefinirSenha = lazy(() => import("./routes/publico/RedefinirSenha.jsx"));
+const TrocarSenhaObrigatoria = lazy(() => import("./routes/publico/TrocarSenhaObrigatoria.jsx"));
 
 function EsperandoArea() {
   return (
@@ -76,7 +77,7 @@ export default function App() {
   );
 }
 
-function AppRoteado({ carregando, sessao, perfil, superAdmin, erro }) {
+function AppRoteado({ carregando, sessao, perfil, superAdmin, erro, recarregarPerfil }) {
   // Fluxo de recuperação detectado antes de qualquer roteamento por papel.
   // Verifica o hash da URL na renderização inicial (síncrono) para garantir
   // que o coordenador veja a tela de redefinição mesmo se já estiver logado.
@@ -123,6 +124,21 @@ function AppRoteado({ carregando, sessao, perfil, superAdmin, erro }) {
           Sair e tentar de novo
         </button>
       </TelaNeutra>
+    );
+  }
+
+  // Etapa 7 / BLOCO B2 — troca obrigatória. Verificado ANTES de
+  // qualquer outra tela de área: nenhuma tela de aluno/responsável
+  // (nem a de escola suspensa, nem o painel normal) aparece atrás de
+  // uma credencial temporária ainda não trocada. `recarregarPerfil`
+  // (useSessao) é o que tira a flag daqui depois que trocar-senha
+  // confirma — sem ele, o gate nunca saberia que terminou (a troca não
+  // gera evento de auth, o JWT não muda).
+  if (perfil.usuario.must_change_password) {
+    return (
+      <Suspense fallback={<EsperandoArea />}>
+        <TrocarSenhaObrigatoria nome={perfil.usuario.nome} aoConcluir={recarregarPerfil} />
+      </Suspense>
     );
   }
 

@@ -29,6 +29,9 @@ export function vinculoDTO(linha) {
     responsavelNome: linha.usuarios?.nome ?? "Responsável",
     papel: linha.usuarios?.papel ?? "responsavel",
     desde: linha.criado_em ?? null,
+    // Etapa 7 / BLOCO B3/B5 — ciclo de vida da credencial do responsável.
+    credencialRevogada: linha.usuarios?.credencial_status === "revogada",
+    precisaTrocarSenha: linha.usuarios?.must_change_password === true,
   };
 }
 

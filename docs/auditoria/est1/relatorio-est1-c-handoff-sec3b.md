@@ -5,6 +5,15 @@
 > execução e o passo exato do corte de produção estão em
 > [`relatorio-est1-c-credencial-opaca.md`](./relatorio-est1-c-credencial-opaca.md).
 > Este documento fica como registro da decisão e do handoff de config.
+>
+> **Atualização (Etapa 7 / BLOCO B1-B5).** O corte que a Parte 2 abaixo
+> deixava em aberto ("as três formas de tocar isto") aconteceu — mas
+> pela porta de senha nativa do GoTrue, não pelo proxy de hash da
+> Opção A/B/C originais. Ver a nota no topo de
+> `docs/auditoria/sec3/modelo-credencial-opaca.md` e o registro em
+> `docs/00-indices/08-plano-execucao-set-dez-2026.md` (Etapa 7). A
+> fundação da 0044 segue exatamente como a Opção A deixou: dormente,
+> aditiva, sem uso em produção.
 
 **Data:** 2026-07-14 · **Base:** `main` = `0fbf951` (pós-EST1-B / PR #68)
 **Natureza:** este bloco é, em boa parte, **configuração do seu projeto Supabase**

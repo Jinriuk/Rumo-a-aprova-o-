@@ -8,9 +8,15 @@
 // gravar o hash não aborta o provisionamento. Sem runner de Deno no
 // repo, travamos a propriedade por inspeção de fonte (padrão sec3/d1c).
 //
-// 0093: password passou de `codigo` (cru, com traço) para
+// 0093 (histórico): password passou de `codigo` (cru, com traço) para
 // `normalizarCodigo(codigo)` — bug de raiz do login por código (o
 // front sempre logou com o código sem traço). Ver login-codigo-fronteira.
+//
+// Etapa 7 / BLOCO B1 (atual): password deixou de ser QUALQUER derivação
+// do código — nem cru, nem normalizado. É `senhaTemporaria`, um
+// segredo CSPRNG independente (novaSenhaTemporaria()). O código virou
+// só identificador; a fundação da credencial opaca (0044) continua
+// dormente do mesmo jeito de antes, sem relação com essa mudança.
 // ============================================================
 import test from "node:test";
 import assert from "node:assert/strict";
@@ -33,8 +39,10 @@ test("C2: chama a porta public registrar_codigo_acesso com o código gerado", ()
 test("C2: é NÃO-FATAL — não aborta o provisionamento se o hash falhar", () => {
   // o erro do rpc vira console.error (não throw), como os logs de acesso
   assert.match(src, /registrar_codigo_acesso[\s\S]{0,220}?console\.error/, "erro do hash é logado, não propagado");
-  // o mecanismo de login não foi trocado (ainda é senha no GoTrue, não o
-  // proxy resolver_codigo_acesso — esse corte é janela dedicada); só a
-  // derivação da senha foi corrigida (0093) para usar normalizarCodigo
-  assert.match(src, /password:\s*normalizarCodigo\(codigo\)/, "login direto preservado (dormente até o corte do proxy)");
+  // o mecanismo de login continua direto no GoTrue (signInWithPassword),
+  // não o proxy resolver_codigo_acesso — esse corte segue dormente,
+  // como sempre foi. O que MUDOU (Etapa 7 / BLOCO B1) é que a senha não
+  // é mais derivação nenhuma do código: é senhaTemporaria, independente.
+  assert.match(src, /password:\s*senhaTemporaria,/, "senha do createUser() não é mais uma função do código");
+  assert.ok(!/password:\s*normalizarCodigo\(codigo\)/.test(src), "REGRESSÃO: senha voltou a ser derivada do código (padrão pré-BLOCO-B1)");
 });

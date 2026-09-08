@@ -140,7 +140,9 @@ describe("App.jsx — a faixa combina EH_DEMO com a escola logada", () => {
   });
 
   it("AppRoteado recebe o estado de sessão por props, não chama useSessao própria", () => {
-    assert.match(codigo, /function AppRoteado\(\{\s*carregando,\s*sessao,\s*perfil,\s*superAdmin,\s*erro\s*\}\)/);
+    // recarregarPerfil entrou com o BLOCO B2 (troca obrigatória) — o
+    // resto da assinatura (o que este teste protege) não mudou.
+    assert.match(codigo, /function AppRoteado\(\{\s*carregando,\s*sessao,\s*perfil,\s*superAdmin,\s*erro,\s*recarregarPerfil\s*\}\)/);
   });
 
   it("App() passa o estado de sessão inteiro para AppRoteado", () => {

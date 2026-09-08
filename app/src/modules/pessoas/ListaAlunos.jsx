@@ -46,6 +46,22 @@ export function ListaAlunos({ alunos, consentimentos, concursos = [], turmas = [
   // (0046/motor_gerar_meta_segura) e, se der certo, o próprio gerar-meta
   // limpa o pendente_configuracao no banco.
   const reprocessarMeta = (a) => comAcao(a, () => db.gerarMeta(a.id));
+
+  // Etapa 7 / BLOCO B3 (caminho 2) / B5 — ciclo de vida da credencial já
+  // emitida. resetar/reativar mostram senha nova (mesmo modal de
+  // credencial); revogar é só confirmação + a lista atualiza o selo.
+  const resetarSenha = (a) => comAcao(a, async () => aoGerarCredencial(await db.resetarSenhaCredencial(a.usuario_id)));
+  const revogarCredencial = async (a) => {
+    const ok = await dialogo.confirmar({
+      titulo: "Revogar credencial",
+      mensagem: `${a.nome} não vai mais conseguir entrar. O histórico de estudo continua guardado — dá pra reativar depois, com uma senha nova.`,
+      rotuloConfirmar: "Revogar",
+      perigo: true,
+    });
+    if (!ok) return;
+    return comAcao(a, () => db.revogarCredencial(a.usuario_id));
+  };
+  const reativarCredencial = (a) => comAcao(a, async () => aoGerarCredencial(await db.reativarCredencial(a.usuario_id)));
   // Diálogos do design system (UX1.2) no lugar de window.prompt/confirm.
   const pedirNome = (titulo, mensagem, atual = "") => dialogo.prompt({
     titulo, mensagem, rotulo: "Nome", valorInicial: atual, placeholder: "Nome completo",
@@ -156,6 +172,9 @@ export function ListaAlunos({ alunos, consentimentos, concursos = [], turmas = [
             const turmaAtual = (a.alunos_turmas ?? [])[0]?.turma_id ?? "";
             const temCred = !!a.usuario_id;
             const pendenteConfig = a.status_provisionamento === "pendente_configuracao";
+            // Etapa 7 / BLOCO B3/B5 — estado da credencial já emitida.
+            const credRevogada = temCred && a.usuarios?.credencial_status === "revogada";
+            const aguardaTroca = temCred && !credRevogada && a.usuarios?.must_change_password === true;
             const temCons = comConsentimento.has(a.id);
             const trabalhando = ocupado === a.id;
             const r = resumoPorAluno[a.id];
@@ -178,6 +197,8 @@ export function ListaAlunos({ alunos, consentimentos, concursos = [], turmas = [
                       <StatusBadge tom={temCred ? "ok" : "alerta"}>{temCred ? "com credencial" : "sem credencial"}</StatusBadge>
                       <StatusBadge tom={temCons ? "ok" : "risco"}>{temCons ? "consentimento ok" : "sem consentimento"}</StatusBadge>
                       {pendenteConfig && <StatusBadge tom="risco">meta pendente</StatusBadge>}
+                      {credRevogada && <StatusBadge tom="risco">credencial revogada</StatusBadge>}
+                      {aguardaTroca && <StatusBadge tom="alerta">aguardando troca de senha</StatusBadge>}
                       {r?.semAtividade && <StatusBadge tom="risco">sem atividade 7d</StatusBadge>}
                     </div>
                     <div style={{ display: "flex", gap: 7, marginTop: 8, flexWrap: "wrap" }}>
@@ -211,7 +232,14 @@ export function ListaAlunos({ alunos, consentimentos, concursos = [], turmas = [
                       { rotulo: "+ Adicionar responsável", aoClicar: () => credencialResp(a) },
                       { rotulo: "👨‍👧 Gerenciar responsáveis", aoClicar: () => setAlunoVinculos(a) },
                       ...(!temCons ? [{ rotulo: "Registrar consentimento", aoClicar: () => consentir(a) }] : []),
-                      ...(temCred ? [{ rotulo: "Regerar credencial do aluno", aoClicar: () => credencialAluno(a) }] : []),
+                      // Etapa 7 / BLOCO B3-B5: substitui a antiga "Regerar
+                      // credencial" — provisionar-aluno sempre recusava
+                      // (409) quando já havia usuario_id; resetar-senha é
+                      // o caminho de verdade pra "preciso emitir acesso de
+                      // novo" sem trocar o código nem perder o histórico.
+                      ...(temCred && !credRevogada ? [{ rotulo: "Resetar senha", aoClicar: () => resetarSenha(a) }] : []),
+                      ...(temCred && !credRevogada ? [{ rotulo: "Revogar credencial", aoClicar: () => revogarCredencial(a), perigo: true }] : []),
+                      ...(credRevogada ? [{ rotulo: "Reativar credencial", aoClicar: () => reativarCredencial(a) }] : []),
                       { rotulo: "Exportar dados (LGPD)", aoClicar: () => exportar(a) },
                       { rotulo: "Excluir dados (LGPD)", aoClicar: () => excluir(a), perigo: true },
                     ]} />
@@ -240,6 +268,7 @@ export function ListaAlunos({ alunos, consentimentos, concursos = [], turmas = [
           aluno={alunoVinculos}
           aoMudar={aoMudar}
           aoFechar={() => setAlunoVinculos(null)}
+          aoGerarCredencial={aoGerarCredencial}
         />
       )}
     </SectionCard>
