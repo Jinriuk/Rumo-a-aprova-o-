@@ -6,7 +6,7 @@ import Login from "./routes/publico/Login.jsx";
 import { useSessao } from "./shared/hooks/useSessao.js";
 import { BrandingProvider, useTema } from "./shared/branding/BrandingContext.jsx";
 import { NOME_PLATAFORMA } from "./shared/branding/marca.js";
-import { EH_DEMO } from "./shared/branding/ambiente.js";
+import { EH_DEMO, escolaEhDemo } from "./shared/branding/ambiente.js";
 import { FaixaDemo } from "./shared/branding/FaixaDemo.jsx";
 import { FONTES_CSS } from "./shared/ui/tema.js";
 import { ehRotaRecuperacao } from "./shared/lib/recuperacao.js";
@@ -57,18 +57,26 @@ const AREAS = {
 // telas de App — recuperação de senha, carregando, login, backoffice,
 // escola suspensa e o painel normal — sem repetir a checagem em cada
 // retorno antecipado abaixo.
+//
+// `useSessao()` mora AQUI (e não dentro de AppRoteado, como antes) para
+// a faixa poder decidir por DOIS sinais: o deploy inteiro (EH_DEMO) OU a
+// escola da pessoa logada (escolaEhDemo — ver ambiente.js sobre por que
+// o segundo é necessário). Ter dois `useSessao()` — um aqui, um em
+// AppRoteado — abriria dois listeners de auth e duas consultas de perfil
+// em paralelo; então o estado é resolvido uma vez aqui e passado adiante
+// por props.
 export default function App() {
+  const sessaoEstado = useSessao();
+  const mostrarFaixaDemo = EH_DEMO || escolaEhDemo(sessaoEstado.perfil?.escola);
   return (
     <>
-      {EH_DEMO && <FaixaDemo />}
-      <AppRoteado />
+      {mostrarFaixaDemo && <FaixaDemo />}
+      <AppRoteado {...sessaoEstado} />
     </>
   );
 }
 
-function AppRoteado() {
-  const { carregando, sessao, perfil, superAdmin, erro } = useSessao();
-
+function AppRoteado({ carregando, sessao, perfil, superAdmin, erro }) {
   // Fluxo de recuperação detectado antes de qualquer roteamento por papel.
   // Verifica o hash da URL na renderização inicial (síncrono) para garantir
   // que o coordenador veja a tela de redefinição mesmo se já estiver logado.

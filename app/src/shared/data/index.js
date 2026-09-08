@@ -97,8 +97,12 @@ export async function meuPerfil() {
   // suspensa/cancelada na RLS, mas o SELECT de `escolas` continua
   // visível para o dono — então o front LÊ o status para explicar
   // "acesso suspenso" em vez de mostrar um painel vazio sem motivo.
+  // `plano` entra pelo mesmo motivo, mas para a faixa DEMO (Tarefa 3):
+  // `escolaEhDemo` (shared/branding/ambiente.js) precisa dele além de
+  // status/slug/nome para classificar a escola pela mesma heurística
+  // do backoffice (`categoriaEscola`).
   const { data: e, error: e2 } = await supabase
-    .from("escolas").select("id, nome, slug, logo_url, cor_acento, status").eq("id", u.escola_id).single();
+    .from("escolas").select("id, nome, slug, logo_url, cor_acento, status, plano").eq("id", u.escola_id).single();
   if (e2) throw falha("escola", e2);
   return { usuario: u, escola: e };
 }
