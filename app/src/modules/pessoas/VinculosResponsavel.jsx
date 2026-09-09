@@ -8,7 +8,7 @@ import { useEnvioUnico } from "../../shared/hooks/useEnvioUnico.js";
 import { vinculosDTO, responsaveisDTO, dataCurtaBR } from "../../shared/contratos/dto.js";
 import * as db from "../../shared/data/index.js";
 
-export function VinculosResponsavel({ aluno, aoMudar, aoFechar }) {
+export function VinculosResponsavel({ aluno, aoMudar, aoFechar, aoGerarCredencial }) {
   const T = useTema();
   // Trabalha com DTOs (vinculoDTO): a tela lê responsavelNome/desde,
   // não o shape cru v.usuarios?.nome do PostgREST (FE1, tarefa 79).
@@ -18,7 +18,12 @@ export function VinculosResponsavel({ aluno, aoMudar, aoFechar }) {
   // não dispara duas Edge Functions (FE1, tarefa 82). `erro` é comum.
   const { erro, setErro, enviar } = useEnvioUnico("acao");
   const [revogando, setRevogando] = useState(null);
-  const [confirmando, setConfirmando] = useState(null);
+  // Etapa 7 / BLOCO B3/B5: DOIS tipos de "revogar" nesta tela — o
+  // vínculo com ESTE aluno (o que já existia) e a CREDENCIAL do
+  // responsável (o Auth dele, novo). `confirmando` guarda os dois
+  // (id + tipo) pra um não acender a confirmação do outro por engano.
+  const [confirmando, setConfirmando] = useState(null); // { id, tipo: "vinculo" | "credencial" } | null
+  const [ocupadoCred, setOcupadoCred] = useState(null);
 
   // Estado para re-vinculação
   const [mostraRevincular, setMostraRevincular] = useState(false);
@@ -46,6 +51,45 @@ export function VinculosResponsavel({ aluno, aoMudar, aoFechar }) {
       aoMudar?.();
     }, "revogar");
     if (!r?.ignorado) setRevogando(null);
+  }
+
+  // Recarrega só os vínculos (não o resto da tela) — é o que traz o selo
+  // atualizado depois de resetar/revogar/reativar a credencial.
+  async function recarregarVinculos() {
+    try { setVinculos(vinculosDTO(await db.listarVinculos(aluno.id))); }
+    catch (e) { setErro(mensagemAmigavel(e, "carregar")); }
+  }
+
+  async function resetarSenha(vinculo) {
+    setOcupadoCred(vinculo.id);
+    const r = await enviar(async () => {
+      const resultado = await db.resetarSenhaCredencial(vinculo.responsavelId);
+      aoGerarCredencial?.(resultado);
+      await recarregarVinculos();
+    }, "resetar senha");
+    if (!r?.ignorado) setOcupadoCred(null);
+  }
+
+  async function revogarCredencial(vinculo) {
+    setOcupadoCred(vinculo.id);
+    const r = await enviar(async () => {
+      await db.revogarCredencial(vinculo.responsavelId);
+      setConfirmando(null);
+      await recarregarVinculos();
+      aoMudar?.();
+    }, "revogar credencial");
+    if (!r?.ignorado) setOcupadoCred(null);
+  }
+
+  async function reativarCredencial(vinculo) {
+    setOcupadoCred(vinculo.id);
+    const r = await enviar(async () => {
+      const resultado = await db.reativarCredencial(vinculo.responsavelId);
+      aoGerarCredencial?.(resultado);
+      await recarregarVinculos();
+      aoMudar?.();
+    }, "reativar credencial");
+    if (!r?.ignorado) setOcupadoCred(null);
   }
 
   async function abrirRevincular() {
@@ -116,7 +160,9 @@ export function VinculosResponsavel({ aluno, aoMudar, aoFechar }) {
           <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
             {vinculos.map((v) => {
               const nome = v.responsavelNome;
-              const ehConfirmando = confirmando === v.id;
+              const confirmandoVinculo = confirmando?.id === v.id && confirmando?.tipo === "vinculo";
+              const confirmandoCredencial = confirmando?.id === v.id && confirmando?.tipo === "credencial";
+              const ocupadoNesta = ocupadoCred === v.id;
               return (
                 <div key={v.id} style={{
                   display: "flex", alignItems: "center", justifyContent: "space-between",
@@ -126,9 +172,21 @@ export function VinculosResponsavel({ aluno, aoMudar, aoFechar }) {
                   <div>
                     <div style={{ fontSize: 14, fontWeight: 600 }}>{nome}</div>
                     <div style={{ fontSize: 11.5, color: T.sub }}>desde {dataCurtaBR(v.desde)}</div>
+                    {/* Etapa 7 / BLOCO B3/B5 — estado da credencial (Auth
+                        do responsável), distinto do vínculo com ESTE aluno. */}
+                    {(v.credencialRevogada || v.precisaTrocarSenha) && (
+                      <div style={{ display: "flex", gap: 5, marginTop: 4 }}>
+                        {v.credencialRevogada && (
+                          <span style={{ fontSize: 10.5, color: T.red, border: `1px solid ${T.red}55`, borderRadius: 6, padding: "1px 6px" }}>credencial revogada</span>
+                        )}
+                        {v.precisaTrocarSenha && (
+                          <span style={{ fontSize: 10.5, color: T.gold, border: `1px solid ${T.gold}55`, borderRadius: 6, padding: "1px 6px" }}>aguardando troca de senha</span>
+                        )}
+                      </div>
+                    )}
                   </div>
-                  <div style={{ display: "flex", gap: 6 }}>
-                    {ehConfirmando ? (
+                  <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                    {confirmandoVinculo ? (
                       <>
                         <BotaoMini perigo disabled={revogando === v.id}
                           onClick={() => revogar(v)}>
@@ -136,8 +194,30 @@ export function VinculosResponsavel({ aluno, aoMudar, aoFechar }) {
                         </BotaoMini>
                         <BotaoMini onClick={() => setConfirmando(null)}>Cancelar</BotaoMini>
                       </>
+                    ) : confirmandoCredencial ? (
+                      <>
+                        <BotaoMini perigo disabled={ocupadoNesta}
+                          onClick={() => revogarCredencial(v)}>
+                          {ocupadoNesta ? "Revogando…" : "Confirmar revogação da credencial"}
+                        </BotaoMini>
+                        <BotaoMini onClick={() => setConfirmando(null)}>Cancelar</BotaoMini>
+                      </>
                     ) : (
-                      <BotaoMini onClick={() => setConfirmando(v.id)}>Revogar acesso</BotaoMini>
+                      <>
+                        {v.credencialRevogada ? (
+                          <BotaoMini disabled={ocupadoNesta} onClick={() => reativarCredencial(v)}>
+                            {ocupadoNesta ? "…" : "Reativar credencial"}
+                          </BotaoMini>
+                        ) : (
+                          <>
+                            <BotaoMini disabled={ocupadoNesta} onClick={() => resetarSenha(v)}>
+                              {ocupadoNesta ? "…" : "Resetar senha"}
+                            </BotaoMini>
+                            <BotaoMini perigo onClick={() => setConfirmando({ id: v.id, tipo: "credencial" })}>Revogar credencial</BotaoMini>
+                          </>
+                        )}
+                        <BotaoMini onClick={() => setConfirmando({ id: v.id, tipo: "vinculo" })}>Revogar acesso</BotaoMini>
+                      </>
                     )}
                   </div>
                 </div>

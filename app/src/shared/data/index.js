@@ -7,7 +7,7 @@
    A segurança não está aqui: está na RLS. Este arquivo só pede;
    o banco decide o que entrega.
    ============================================================ */
-import { supabase } from "../../lib/supabase.js";
+import { supabase, SUPABASE_URL, SUPABASE_ANON_KEY } from "../../lib/supabase.js";
 import { patchAluno } from "../contratos/dto.js";
 import { ORIGEM_PRODUCAO } from "../branding/marca.js";
 
@@ -50,11 +50,15 @@ export function normalizarCodigo(texto) {
   return texto.replace(/[^a-zA-Z0-9]/g, "").toUpperCase();
 }
 
-export async function entrarComCodigo(codigo) {
+// Etapa 7 / BLOCO B1: o código deixou de ser a senha — ele só resolve
+// QUAL é a conta (email sintético, sempre o mesmo pro mesmo código); a
+// senha é um segredo próprio, digitado à parte (temporária no primeiro
+// acesso, pessoal depois — nunca mais o próprio código).
+export async function entrarComCodigo(codigo, senha) {
   const canonico = normalizarCodigo(codigo);
   const { data, error } = await supabase.auth.signInWithPassword({
     email: `${canonico.toLowerCase()}@codigo.acesso.local`,
-    password: canonico,
+    password: senha,
   });
   if (error) throw falha("login por código", error, { esperada: credencialInvalida(error) });
   return data;
@@ -89,16 +93,24 @@ export async function meuPerfil() {
   const { data: s } = await supabase.auth.getSession();
   const uid = s?.session?.user?.id;
   if (!uid) throw new Error("perfil: sessão sem usuário autenticado");
+  // `must_change_password` entra pelo mesmo motivo de `status`/`plano`
+  // abaixo: é o gate de troca obrigatória (Etapa 7 / BLOCO B2) — App.jsx
+  // lê perfil.usuario.must_change_password pra bloquear as telas de
+  // aluno/responsável até a senha temporária ser trocada.
   const { data: u, error } = await supabase
-    .from("usuarios").select("id, escola_id, papel, nome").eq("id", uid).maybeSingle();
+    .from("usuarios").select("id, escola_id, papel, nome, must_change_password").eq("id", uid).maybeSingle();
   if (error) throw falha("perfil", error);
   if (!u) throw new Error("perfil: usuário sem cadastro nesta escola");
   // `status` entra aqui de propósito (D1A.1): a S1 bloqueia a escola
   // suspensa/cancelada na RLS, mas o SELECT de `escolas` continua
   // visível para o dono — então o front LÊ o status para explicar
   // "acesso suspenso" em vez de mostrar um painel vazio sem motivo.
+  // `plano` entra pelo mesmo motivo, mas para a faixa DEMO (Tarefa 3):
+  // `escolaEhDemo` (shared/branding/ambiente.js) precisa dele além de
+  // status/slug/nome para classificar a escola pela mesma heurística
+  // do backoffice (`categoriaEscola`).
   const { data: e, error: e2 } = await supabase
-    .from("escolas").select("id, nome, slug, logo_url, cor_acento, status").eq("id", u.escola_id).single();
+    .from("escolas").select("id, nome, slug, logo_url, cor_acento, status, plano").eq("id", u.escola_id).single();
   if (e2) throw falha("escola", e2);
   return { usuario: u, escola: e };
 }
@@ -534,8 +546,16 @@ export async function removerTurma(turmaId) {
 }
 
 export async function listarAlunos({ signal } = {}) {
+  // `usuarios(...)` entra pro card de credencial (Etapa 7 / BLOCO B3/B5)
+  // saber se a conta está revogada e se a senha temporária já foi
+  // trocada — sem isso a tela não teria como distinguir "revogar" de
+  // "reativar", nem avisar quem ainda não fez a troca obrigatória.
+  // Sem FK ambígua entre alunos e usuarios (só usuario_id), o embed não
+  // precisa nomear a constraint.
   const { data, error } = await comSinal(
-    supabase.from("alunos").select("*, alunos_turmas(turma_id, turmas(nome))").order("nome"),
+    supabase.from("alunos")
+      .select("*, alunos_turmas(turma_id, turmas(nome)), usuarios(credencial_status, must_change_password)")
+      .order("nome"),
     signal,
   );
   if (error) throw falha("alunos", error);
@@ -554,7 +574,7 @@ export async function listarTrilhas({ signal } = {}) {
 export async function listarVinculos(alunoId) {
   const { data, error } = await supabase
     .from("vinculos_responsaveis")
-    .select("id, responsavel_id, criado_em, usuarios(nome, papel)")
+    .select("id, responsavel_id, criado_em, usuarios(nome, papel, credencial_status, must_change_password)")
     .eq("aluno_id", alunoId)
     .order("criado_em");
   if (error) throw falha("responsáveis", error);
@@ -650,6 +670,23 @@ export const provisionarResponsavel = (alunoId, nome) =>
   invocar("provisionar-aluno", { tipo: "responsavel", aluno_id: alunoId, nome });
 export const vincularResponsavelExistente = (alunoId, responsavelId) =>
   invocar("provisionar-aluno", { tipo: "vincular-responsavel", aluno_id: alunoId, responsavel_id: responsavelId });
+
+// Etapa 7 / BLOCO B3 (caminho 2) / B5 — ciclo de vida da credencial já
+// emitida, sempre por usuario_id (não aluno_id: um aluno pode ter mais
+// de um responsável, a ação mira a conta certa direto).
+export const resetarSenhaCredencial = (usuarioId) =>
+  invocar("provisionar-aluno", { tipo: "resetar-senha", usuario_id: usuarioId });
+export const revogarCredencial = (usuarioId) =>
+  invocar("provisionar-aluno", { tipo: "revogar-credencial", usuario_id: usuarioId });
+export const reativarCredencial = (usuarioId) =>
+  invocar("provisionar-aluno", { tipo: "reativar-credencial", usuario_id: usuarioId });
+
+// Etapa 7 / BLOCO B2 — o próprio usuário logado troca a senha temporária
+// (ou qualquer senha) pela pessoal. Sem sessão renovada: o JWT atual
+// continua válido (a troca de senha no GoTrue não invalida a sessão
+// corrente), só o perfil precisa ser relido pra `must_change_password`
+// cair — quem chama recarrega a sessão/perfil depois.
+export const trocarSenha = (senhaNova) => invocar("trocar-senha", { senha_nova: senhaNova });
 export const gerarMeta = (alunoId) => invocar("gerar-meta", { aluno_id: alunoId });
 // Tarefa 1: a Edge Function nunca devolve o link de acesso — só o status
 // (…_enviado | …_pendente). A UI do backoffice lê por aqui, não por `.link`
@@ -678,13 +715,59 @@ export async function recuperarSenha(email) {
   if (error) throw falha("recuperar senha", error);
 }
 
-// Redefine a senha do usuário com sessão de recuperação ativa.
-// Chamado apenas a partir da rota /redefinir-senha após o Supabase
-// processar o hash de recuperação e criar a sessão.
-export async function redefinirSenha(novaSenha) {
-  const { data, error } = await supabase.auth.updateUser({ password: novaSenha });
-  if (error) throw falha("redefinir senha", error);
-  return data;
+// Redefine a senha usando o token do LINK de recuperação — de propósito
+// SEM passar pelo cliente compartilhado.
+//
+// Por que não `supabase.auth.updateUser()`: para ele funcionar, a sessão
+// do link precisa estar carregada no cliente, e o cliente é um singleton
+// que persiste na MESMA chave de localStorage da sessão normal. Era isso
+// que derrubava quem já estava logado no navegador (o SuperADM virava o
+// coordenador do link, em todas as abas da origem).
+//
+// Aqui o `access_token` do link vai direto no header, num `fetch` avulso:
+// o GoTrue troca a senha e NADA é escrito na sessão compartilhada. Quem
+// estava logado continua logado; quem redefiniu entra depois pelo login
+// normal, com a senha nova.
+export async function redefinirSenha(accessToken, novaSenha) {
+  if (!accessToken) throw falha("redefinir senha", new Error("link sem token de recuperação"));
+
+  let resposta;
+  try {
+    resposta = await fetch(`${SUPABASE_URL}/auth/v1/user`, {
+      method: "PATCH",
+      headers: {
+        apikey: SUPABASE_ANON_KEY,
+        Authorization: `Bearer ${accessToken}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ password: novaSenha }),
+    });
+  } catch (e) {
+    // rede caiu / CORS: erro de sistema, não do usuário
+    throw falha("redefinir senha", e);
+  }
+
+  if (!resposta.ok) {
+    // O corpo do GoTrue traz o motivo em `msg`/`error_description`; nunca
+    // traz o token de volta, então é seguro entrar na mensagem de erro.
+    let detalhe = `HTTP ${resposta.status}`;
+    let codigo = null;
+    try {
+      const corpo = await resposta.json();
+      detalhe = corpo?.msg ?? corpo?.error_description ?? corpo?.message ?? corpo?.error ?? detalhe;
+      codigo = corpo?.error_code ?? corpo?.code ?? null;
+    } catch { /* corpo não-JSON: fica o HTTP nnn */ }
+    // Link vencido (401/403) e senha recusada (422) são falhas PREVISÍVEIS
+    // do usuário, não do sistema — mesmo rebaixamento de log já usado em
+    // `credencialInvalida` no login.
+    const esperada = [401, 403, 422].includes(resposta.status);
+    const e = falha("redefinir senha", new Error(detalhe), { esperada });
+    e.status = resposta.status;
+    e.codigoGoTrue = typeof codigo === "string" ? codigo : null;
+    throw e;
+  }
+
+  return resposta.json().catch(() => ({}));
 }
 
 /* ---------- motor (meta + registro) ---------- */

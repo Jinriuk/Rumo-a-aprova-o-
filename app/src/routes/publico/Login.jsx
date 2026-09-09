@@ -21,6 +21,23 @@ const T = BASE;
 // (`normalizarCodigo(...).length >= 12`) e também o que a carga desenha.
 const CODIGO_MIN = 12;
 
+// Etapa 7 / BLOCO B4: o código fica no DISPOSITIVO (não é segredo mais
+// — quem provisionou já sabe, e é só identificador). Sem isso, todo
+// login por código digitaria de novo os 12 caracteres toda vez; com
+// isso, só a senha. Nunca guarda a senha — essa é sempre digitada.
+const CHAVE_CODIGO_DISPOSITIVO = "raa:codigo-dispositivo";
+
+function lerCodigoDoDispositivo() {
+  if (typeof window === "undefined") return "";
+  try { return window.localStorage.getItem(CHAVE_CODIGO_DISPOSITIVO) ?? ""; }
+  catch { return ""; }
+}
+
+function esquecerCodigoDoDispositivo() {
+  try { window.localStorage.removeItem(CHAVE_CODIGO_DISPOSITIVO); }
+  catch { /* nada a esquecer se o armazenamento nem responde */ }
+}
+
 const PAPEIS = [
   ["codigo", "Aluno / Responsável", "Entra com o código entregue pela escola"],
   ["coordenacao", "Coordenação", "Entra com e-mail e senha"],
@@ -29,7 +46,13 @@ const PAPEIS = [
 export default function Login() {
   const [modo, setModo] = useState("codigo"); // codigo | coordenacao
   const [tela, setTela] = useState("login");  // login | esqueciSenha | esqueciCodigo | confirmacao
-  const [codigo, setCodigo] = useState("");
+  // Pré-preenchido do dispositivo (B4) — só o código, nunca a senha.
+  const [codigo, setCodigo] = useState(() => lerCodigoDoDispositivo());
+  // Este produto roda em laboratório de escola, onde o dispositivo é
+  // compartilhado: se o código do aluno anterior aparece pré-preenchido
+  // sem saída, o próximo tem que adivinhar que dá pra apagar. Enquanto o
+  // valor vier do dispositivo (e não da digitação), oferecemos a saída.
+  const [codigoDoDispositivo, setCodigoDoDispositivo] = useState(() => !!lerCodigoDoDispositivo());
   const [email, setEmail] = useState("");
   const [senha, setSenha] = useState("");
   const [mostrarSenha, setMostrarSenha] = useState(false);
@@ -69,15 +92,34 @@ export default function Login() {
     setRecusas((n) => n + 1);
   }
 
+  // Dispositivo compartilhado: limpa o código guardado E o que está na
+  // tela, pra próxima pessoa começar do zero em vez de apagar caractere
+  // por caractere o código de outro aluno.
+  function trocarDeCodigo() {
+    esquecerCodigoDoDispositivo();
+    setCodigoDoDispositivo(false);
+    setCodigo("");
+    setSenha("");
+    setErr("");
+  }
+
   async function entrar(e) {
     e?.preventDefault();
     if (!travaRef.current.tentar()) return;
     setBusy(true); setErr("");
     try {
-      if (modo === "codigo") await db.entrarComCodigo(codigo);
-      else await db.entrarComEmail(email.trim(), senha);
+      if (modo === "codigo") {
+        await db.entrarComCodigo(codigo, senha);
+        // B4: só salva o código DEPOIS de confirmado (nunca um código
+        // que nem existe) — e nunca a senha, que continua sendo digitada
+        // sempre. `catch` silencioso: localStorage é conveniência, não
+        // pode derrubar um login que já deu certo.
+        try { window.localStorage.setItem(CHAVE_CODIGO_DISPOSITIVO, db.normalizarCodigo(codigo)); } catch { /* ok sem persistir */ }
+      } else {
+        await db.entrarComEmail(email.trim(), senha);
+      }
     } catch {
-      recusar(modo === "codigo" ? "Código não reconhecido. Confira com a escola." : "E-mail ou senha incorretos.");
+      recusar(modo === "codigo" ? "Código ou senha não reconhecidos." : "E-mail ou senha incorretos.");
       setBusy(false);
     } finally {
       travaRef.current.liberar();
@@ -100,7 +142,7 @@ export default function Login() {
 
   const inputS = { width: "100%", background: T.bg, border: `1px solid ${err ? T.red : T.line}`, color: T.ink, borderRadius: 10, padding: "13px 14px" };
   const codigoLimpo = db.normalizarCodigo(codigo);
-  const pronto = modo === "codigo" ? codigoLimpo.length >= CODIGO_MIN : email && senha;
+  const pronto = modo === "codigo" ? codigoLimpo.length >= CODIGO_MIN && senha : email && senha;
   const emailRecupValido = emailRecup.trim().length > 0 && /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(emailRecup.trim());
 
   // ── Tela de confirmação de recuperação ──
@@ -196,14 +238,24 @@ export default function Login() {
             {modo === "codigo" ? (
               <>
                 <label htmlFor={idCodigo} style={lblS}>Código de acesso</label>
-                <div className="login-input-shell">
+                <div className="login-input-shell" style={{ marginBottom: 12 }}>
                   <IconeCampo tipo="chave" />
                   <input className="login-input login-input--icone" id={idCodigo} value={codigo} autoComplete="off" autoCapitalize="characters"
-                    onChange={(e) => { setCodigo(e.target.value.toUpperCase()); setErr(""); }}
+                    onChange={(e) => { setCodigo(e.target.value.toUpperCase()); setCodigoDoDispositivo(false); setErr(""); }}
                     placeholder="Ex.: LUCASDEMO2026"
                     style={{ ...inputS, letterSpacing: 1.5, textAlign: "center", fontFamily: "monospace" }} />
                 </div>
+                {codigoDoDispositivo && (
+                  <button type="button" onClick={trocarDeCodigo}
+                    style={{ background: "none", border: "none", color: T.sub, fontSize: 11.5, cursor: "pointer", textDecoration: "underline", padding: "0 0 6px", display: "block", marginLeft: "auto" }}>
+                    Não é meu código
+                  </button>
+                )}
                 <CargaCodigo preenchidos={codigoLimpo.length} />
+                <CampoSenha id={idSenha} valor={senha} aoMudar={(v) => { setSenha(v); setErr(""); }}
+                  mostrar={mostrarSenha} aoAlternarMostrar={() => setMostrarSenha((v) => !v)}
+                  capsLigado={capsLigado} aoMudarCaps={setCapsLigado}
+                  placeholder="Senha entregue pela escola" estilo={{ ...inputS, marginTop: 4 }} />
               </>
             ) : (
               <>
@@ -214,26 +266,10 @@ export default function Login() {
                     onChange={(e) => { setEmail(e.target.value); setErr(""); }}
                     style={inputS} />
                 </div>
-                <label htmlFor={idSenha} style={lblS}>Senha</label>
-                <div className="login-input-shell">
-                  <IconeCampo tipo="cadeado" />
-                  <input className="login-input login-input--icone" id={idSenha} type={mostrarSenha ? "text" : "password"} value={senha}
-                    placeholder="Senha de acesso"
-                    onChange={(e) => { setSenha(e.target.value); setErr(""); }}
-                    onKeyUp={(e) => verCapsLock(e, setCapsLigado)}
-                    onKeyDown={(e) => verCapsLock(e, setCapsLigado)}
-                    onBlur={() => setCapsLigado(false)}
-                    style={{ ...inputS, paddingRight: 46 }} />
-                  <button className="login-password-toggle" type="button" onClick={() => setMostrarSenha((v) => !v)}
-                    aria-label={mostrarSenha ? "Ocultar senha" : "Mostrar senha"}>
-                    <IconeCampo tipo={mostrarSenha ? "olho-fechado" : "olho"} />
-                  </button>
-                </div>
-                {capsLigado && (
-                  <div className="login-aviso" role="status">
-                    ⇪ Caps Lock ligado — a senha diferencia maiúsculas de minúsculas.
-                  </div>
-                )}
+                <CampoSenha id={idSenha} valor={senha} aoMudar={(v) => { setSenha(v); setErr(""); }}
+                  mostrar={mostrarSenha} aoAlternarMostrar={() => setMostrarSenha((v) => !v)}
+                  capsLigado={capsLigado} aoMudarCaps={setCapsLigado}
+                  placeholder="Senha de acesso" estilo={inputS} />
               </>
             )}
         </m.div>
@@ -286,6 +322,36 @@ export default function Login() {
 }
 
 const lblS = { fontSize: 12, color: T.sub, marginBottom: 6, display: "block", textTransform: "uppercase", letterSpacing: 0.4 };
+
+/* Campo de senha com olhinho + aviso de Caps Lock — igual pros dois
+   modos de login (Etapa 7 / BLOCO B1: código também passou a exigir
+   senha). Extraído pra não duplicar o bloco inteiro entre os dois. */
+function CampoSenha({ id, valor, aoMudar, mostrar, aoAlternarMostrar, capsLigado, aoMudarCaps, placeholder, estilo }) {
+  return (
+    <>
+      <label htmlFor={id} style={lblS}>Senha</label>
+      <div className="login-input-shell">
+        <IconeCampo tipo="cadeado" />
+        <input className="login-input login-input--icone" id={id} type={mostrar ? "text" : "password"} value={valor}
+          placeholder={placeholder}
+          onChange={(e) => aoMudar(e.target.value)}
+          onKeyUp={(e) => verCapsLock(e, aoMudarCaps)}
+          onKeyDown={(e) => verCapsLock(e, aoMudarCaps)}
+          onBlur={() => aoMudarCaps(false)}
+          style={{ ...estilo, paddingRight: 46 }} />
+        <button className="login-password-toggle" type="button" onClick={aoAlternarMostrar}
+          aria-label={mostrar ? "Ocultar senha" : "Mostrar senha"}>
+          <IconeCampo tipo={mostrar ? "olho-fechado" : "olho"} />
+        </button>
+      </div>
+      {capsLigado && (
+        <div className="login-aviso" role="status">
+          ⇪ Caps Lock ligado — a senha diferencia maiúsculas de minúsculas.
+        </div>
+      )}
+    </>
+  );
+}
 
 function IconeCampo({ tipo }) {
   const caminhos = {

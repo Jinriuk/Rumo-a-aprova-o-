@@ -5,6 +5,21 @@
 **Status:** **PLANEJADO / PARCIAL** — auditoria concluída, desenho fechado, implementação do
 proxy deixada como migração planejada (fora do escopo "não rearquitetar Auth sem migração").
 
+> **Atualização (Etapa 7 / BLOCO B1-B5).** O corte de C-1/C-2 aconteceu,
+> mas **não** pelo proxy de hash desenhado abaixo. A decisão de produto
+> foi diferente da premissa deste documento: em vez do código continuar
+> sendo o ÚNICO campo digitado (com uma senha opaca invisível resolvida
+> por hash no servidor), o aluno passou a digitar código E senha —
+> senha PESSOAL, que ele escolhe e só ele conhece (nem a coordenação
+> vê). Isso não precisa do proxy `login-codigo`: a autenticação
+> continua nativa do GoTrue (`signInWithPassword`), só a SENHA deixou
+> de ser derivada do código. Ver `docs/00-indices/08-plano-execucao-set-dez-2026.md`
+> (Etapa 7) para a implementação e o veredito atualizado dos riscos
+> C-1..C-4 abaixo. A fundação da 0044 (tabelas/funções deste desenho)
+> segue no banco, dormente, intocada — reaproveitável se um dia fizer
+> sentido migrar pro modelo opaco de verdade; o resto deste documento
+> fica como registro do desenho original, não como o que foi construído.
+
 ---
 
 ## 1. Como é hoje (auditoria — tarefa 69)

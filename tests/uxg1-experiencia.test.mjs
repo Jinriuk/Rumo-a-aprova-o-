@@ -56,8 +56,10 @@ test("a entrada responde ao usuário sem inventar dado nem quebrar o fluxo", () 
   assert.match(src, /matchMedia\("\(pointer: fine\)"\)/);
   assert.match(src, /matchMedia\("\(prefers-reduced-motion: reduce\)"\)/);
   assert.match(src, /requestAnimationFrame/);
-  // o fluxo continua o mesmo: mesmas chamadas de entrada
-  assert.match(src, /db\.entrarComCodigo\(codigo\)/);
+  // o fluxo continua o mesmo: mesmas chamadas de entrada. Etapa 7 /
+  // BLOCO B1: entrarComCodigo passou a levar a senha digitada também
+  // (código deixou de bastar sozinho).
+  assert.match(src, /db\.entrarComCodigo\(codigo, senha\)/);
   assert.match(src, /db\.entrarComEmail\(email\.trim\(\), senha\)/);
   assert.match(src, /db\.recuperarSenha\(emailRecup\.trim\(\)\)/);
 });
@@ -153,7 +155,14 @@ test("troca de papel e campos usam transição física sem trocar semântica", (
   assert.match(src, /aria-pressed=\{on\}/);
   assert.match(src, /<label htmlFor=\{idCodigo\}/);
   assert.match(src, /<label htmlFor=\{idEmail\}/);
-  assert.match(src, /<label htmlFor=\{idSenha\}/);
+  // Etapa 7 / BLOCO B1: o campo de senha virou o componente CampoSenha
+  // (reused nos dois modos — código também pede senha agora). O label
+  // associado mora DENTRO dele (htmlFor={id}, prop repassada); aqui
+  // conferimos que os dois modos passam idSenha pro mesmo componente,
+  // não que exista um <label> por modo escrito à mão.
+  assert.match(src, /function CampoSenha\(\{[\s\S]{0,200}?<label htmlFor=\{id\}/);
+  const usosComIdSenha = (src.match(/<CampoSenha id=\{idSenha\}/g) ?? []).length;
+  assert.equal(usosComIdSenha, 2, `CampoSenha com id={idSenha} aparece ${usosComIdSenha}x — esperado 2 (modo código + modo coordenação)`);
 });
 
 test("casca traduz o tema white-label para tokens CSS", () => {

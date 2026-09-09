@@ -6,9 +6,10 @@ import Login from "./routes/publico/Login.jsx";
 import { useSessao } from "./shared/hooks/useSessao.js";
 import { BrandingProvider, useTema } from "./shared/branding/BrandingContext.jsx";
 import { NOME_PLATAFORMA } from "./shared/branding/marca.js";
-import { EH_DEMO } from "./shared/branding/ambiente.js";
+import { EH_DEMO, escolaEhDemo } from "./shared/branding/ambiente.js";
 import { FaixaDemo } from "./shared/branding/FaixaDemo.jsx";
 import { FONTES_CSS } from "./shared/ui/tema.js";
+import { ehRotaRecuperacao } from "./shared/lib/recuperacao.js";
 import * as db from "./shared/data/index.js";
 
 // FIX1 (OBS-RC1-006): cada área vira um chunk próprio — o usuário baixa
@@ -20,6 +21,7 @@ const AreaEscola = lazy(() => import("./routes/escola/AreaEscola.jsx"));
 const AreaResponsavel = lazy(() => import("./routes/responsavel/AreaResponsavel.jsx"));
 const AreaAdmin = lazy(() => import("./routes/admin/AreaAdmin.jsx"));
 const RedefinirSenha = lazy(() => import("./routes/publico/RedefinirSenha.jsx"));
+const TrocarSenhaObrigatoria = lazy(() => import("./routes/publico/TrocarSenhaObrigatoria.jsx"));
 
 function EsperandoArea() {
   return (
@@ -33,11 +35,17 @@ function EsperandoArea() {
 }
 
 // Detecta fluxo de recuperação de senha via hash da URL.
-// O Supabase redireciona com #access_token=...&type=recovery após verificar o OTP.
+// O Supabase redireciona com #access_token=...&type=recovery após verificar
+// o OTP, e com #error=...&error_code=otp_expired quando o link já venceu ou
+// já foi usado. Os DOIS casos vão para RedefinirSenha: o segundo é onde o
+// usuário lê que o link expirou, em vez de cair no login sem explicação.
+// O próprio caminho /redefinir-senha também entra, para o caso do e-mail
+// entregar a URL sem o fragmento — a tela explica em vez de sumir.
+// A leitura do hash é do módulo puro shared/lib/recuperacao.js — nada aqui
+// toca o cliente Supabase, que é justamente o que trocava a sessão ativa.
 function detectarRecuperacao() {
   if (typeof window === "undefined") return false;
-  const hash = new URLSearchParams(window.location.hash.slice(1));
-  return hash.get("type") === "recovery" && !!hash.get("access_token");
+  return ehRotaRecuperacao(window.location.hash, window.location.pathname);
 }
 
 const AREAS = {
@@ -50,18 +58,26 @@ const AREAS = {
 // telas de App — recuperação de senha, carregando, login, backoffice,
 // escola suspensa e o painel normal — sem repetir a checagem em cada
 // retorno antecipado abaixo.
+//
+// `useSessao()` mora AQUI (e não dentro de AppRoteado, como antes) para
+// a faixa poder decidir por DOIS sinais: o deploy inteiro (EH_DEMO) OU a
+// escola da pessoa logada (escolaEhDemo — ver ambiente.js sobre por que
+// o segundo é necessário). Ter dois `useSessao()` — um aqui, um em
+// AppRoteado — abriria dois listeners de auth e duas consultas de perfil
+// em paralelo; então o estado é resolvido uma vez aqui e passado adiante
+// por props.
 export default function App() {
+  const sessaoEstado = useSessao();
+  const mostrarFaixaDemo = EH_DEMO || escolaEhDemo(sessaoEstado.perfil?.escola);
   return (
     <>
-      {EH_DEMO && <FaixaDemo />}
-      <AppRoteado />
+      {mostrarFaixaDemo && <FaixaDemo />}
+      <AppRoteado {...sessaoEstado} />
     </>
   );
 }
 
-function AppRoteado() {
-  const { carregando, sessao, perfil, superAdmin, erro } = useSessao();
-
+function AppRoteado({ carregando, sessao, perfil, superAdmin, erro, recarregarPerfil }) {
   // Fluxo de recuperação detectado antes de qualquer roteamento por papel.
   // Verifica o hash da URL na renderização inicial (síncrono) para garantir
   // que o coordenador veja a tela de redefinição mesmo se já estiver logado.
@@ -108,6 +124,21 @@ function AppRoteado() {
           Sair e tentar de novo
         </button>
       </TelaNeutra>
+    );
+  }
+
+  // Etapa 7 / BLOCO B2 — troca obrigatória. Verificado ANTES de
+  // qualquer outra tela de área: nenhuma tela de aluno/responsável
+  // (nem a de escola suspensa, nem o painel normal) aparece atrás de
+  // uma credencial temporária ainda não trocada. `recarregarPerfil`
+  // (useSessao) é o que tira a flag daqui depois que trocar-senha
+  // confirma — sem ele, o gate nunca saberia que terminou (a troca não
+  // gera evento de auth, o JWT não muda).
+  if (perfil.usuario.must_change_password) {
+    return (
+      <Suspense fallback={<EsperandoArea />}>
+        <TrocarSenhaObrigatoria nome={perfil.usuario.nome} aoConcluir={recarregarPerfil} />
+      </Suspense>
     );
   }
 

@@ -649,26 +649,59 @@ O fluxo final do piloto será:
 
 ### Implementação
 
-- [ ] remover `password: codigo`;
-- [ ] manter código como identificador, não segredo permanente;
-- [ ] criar senha temporária forte de uso inicial;
-- [ ] marcar `must_change_password` ou estado equivalente;
-- [ ] criar rota de primeira troca;
-- [ ] impedir uso normal antes da troca;
-- [ ] implementar reset assistido para aluno sem e-mail próprio;
-- [ ] definir fluxo do responsável com senha própria;
-- [ ] tornar mensagens de login genéricas contra enumeração;
-- [ ] expirar senha temporária;
-- [ ] registrar rotação, revogação e reset;
-- [ ] revogar todas as sessões quando comprometido;
-- [ ] definir duração de sessão e refresh;
-- [ ] aplicar bloqueio temporário por tentativas;
-- [ ] aplicar rate limit por identificador, IP e dispositivo;
-- [ ] alertar padrão distribuído;
-- [ ] usar a fundação da migration 0044 quando fizer sentido, sem manter dois fluxos concorrentes;
-- [ ] migrar somente contas piloto; demo pode ser recriada;
-- [ ] criar rollback da mudança de Auth;
-- [ ] testar aluno, responsável, coordenação e SuperADM.
+> **Atualização (BLOCO B1-B5, commit desta tarefa).** Os itens marcados
+> abaixo estão feitos e verificados — schema/RLS contra Postgres real,
+> lógica pura e contrato das Edge Functions por inspeção de fonte
+> (padrão sec3/d1c já usado no repo), e o ciclo login→gate→troca→
+> revogação→reativação provado ponta a ponta num Chromium real contra
+> um stub HTTP fiel ao contrato do GoTrue/PostgREST — **não** contra o
+> Supabase real (o proxy de rede deste ambiente bloqueia `*.supabase.co`;
+> mesma limitação já registrada no handoff SEC3b). Ver
+> `tests/etapa7-bloco-b-credencial.test.mjs`,
+> `tests/login-codigo-fronteira.test.mjs` e
+> `tests/est1-provisionar-hash-fonte.test.mjs`.
+>
+> **Decisão de modelo, registrada aqui e em
+> `docs/auditoria/sec3/modelo-credencial-opaca.md`:** o corte usa senha
+> NATIVA do GoTrue (`signInWithPassword` direto, como o login da
+> coordenação já funciona), não o proxy de hash desenhado no SEC3 —
+> aquele modelo mantém o código como ÚNICO campo digitado (a senha
+> opaca fica invisível ao aluno); o BLOCO B pede o oposto: aluno digita
+> os DOIS, com senha pessoal que só ele conhece (item 6 abaixo). A
+> fundação da 0044 (`app.acessos_codigo`) segue dormente — não foi
+> usada nem descartada, é reaproveitável se um dia fizer sentido migrar
+> pro modelo opaco de verdade.
+
+- [x] remover `password: codigo`;
+- [x] manter código como identificador, não segredo permanente;
+- [x] criar senha temporária forte de uso inicial (CSPRNG, 16 posições, alfabeto de 56 símbolos ≈ 93 bits);
+- [x] marcar `must_change_password` ou estado equivalente (coluna em `usuarios`, migration 0047);
+- [x] criar rota de primeira troca (`TrocarSenhaObrigatoria.jsx` + Edge Function `trocar-senha`);
+- [x] impedir uso normal antes da troca (gate em `App.jsx`, antes de QUALQUER tela de área);
+- [x] implementar reset assistido para aluno sem e-mail próprio (`resetar-senha`, coordenação gera nova senha temporária);
+- [x] definir fluxo do responsável com senha própria (mesmo modelo do aluno — mesma função, mesmo gate);
+- [x] tornar mensagens de login genéricas contra enumeração ("Código ou senha não reconhecidos." — não distingue qual campo falhou);
+- [ ] expirar senha temporária — **não feito**: a senha temporária não tem prazo próprio (só vira inválida se resetada ou revogada). Ficaria bem como um `TTL`/coluna de expiração checada no login; não fazia parte do escopo desta tarefa.
+- [x] registrar rotação, revogação e reset (`logs_coordenacao`, ações `resetou-senha`/`revogou-credencial`/`reativou-credencial`);
+- [ ] revogar todas as sessões quando comprometido — **parcial**: `revogar-credencial` bane a conta (`ban_duration`, bloqueia login NOVO) mas não foi verificado contra um GoTrue real se isso também invalida um access token JÁ EMITIDO antes do ban, dentro da janela de expiração dele (sem Supabase vivo pra testar — mesma lacuna do handoff SEC3b);
+- [ ] definir duração de sessão e refresh — não alterado; segue o padrão do Supabase (`persistSession`/`autoRefreshToken`, sessão de semanas) — decisão consciente de não mexer, não uma implementação nova;
+- [ ] aplicar bloqueio temporário por tentativas — **não feito** para este login (o GoTrue aplica rate limit de fábrica em `/token`, mesma trava que já valia pro login da coordenação; nenhuma trava PRÓPRIA foi adicionada);
+- [ ] aplicar rate limit por identificador, IP e dispositivo — **não feito**, mesma lacuna do item acima;
+- [ ] alertar padrão distribuído — fora do escopo desta tarefa;
+- [x] usar a fundação da migration 0044 quando fizer sentido, sem manter dois fluxos concorrentes (decisão: não fez sentido pro modelo de senha nativa — 0044 segue dormente, intocada, sem duplicar nada);
+- [x] migrar somente contas piloto; demo pode ser recriada — não há conta piloto hoje (nenhum projeto de produção existe ainda, ver `lgpd-e-infra.md`). Contas de demo/seed EXISTENTES continuam funcionando sem reprovisionar: `must_change_password` tem default `false`, então uma conta antiga (senha = código, por provisionamento anterior a esta mudança) não cai no gate — o aluno digita o código nos dois campos e entra normal, sem qualquer migração ativa necessária;
+- [x] criar rollback da mudança de Auth (ver nota abaixo);
+- [~] testar aluno, responsável, coordenação e SuperADM — aluno: ponta a ponta em Chromium contra stub (login→gate→troca→revogação→reativação, todos os 8 passos verificados). Responsável: mesmo código, mesmo gate, só verificado por inspeção de fonte + DB, não replicado em navegador (alto grau de confiança, não é prova independente). Coordenação/SuperADM: confirmado estruturalmente que `must_change_password` nunca é `true` pra eles (o alvo de `resetar-senha`/`revogar-credencial` é restrito a `papel in ('aluno','responsavel')`).
+
+#### Rollback (sem feature flag — "sem dois fluxos concorrentes" foi decisão explícita)
+
+Reverter em 3 partes independentes, na ordem que fizer sentido pro incidente:
+
+1. **Frontend**: redeploy do commit anterior a esta mudança (Vercel — "Redeploy" numa build antiga, ou reverter o merge). Login volta a aceitar só o código.
+2. **Edge Functions**: `provisionar-aluno` e `trocar-senha` — redeploy da versão anterior (`supabase functions deploy provisionar-aluno` a partir do commit anterior; `trocar-senha` é nova, se não existir mais no front não é chamada — pode ficar implantada sem uso, ou remover com `supabase functions delete trocar-senha`).
+3. **Migration 0047** (só se for realmente necessário desfazer o schema — normalmente NÃO precisa, as colunas novas são aditivas e inofensivas pro código antigo): rodar o bloco `ROLLBACK (manual)` no fim de `supabase/migrations/0047_credencial_senha_temporaria.sql` direto no banco.
+
+Contas já provisionadas pelo modelo novo (`must_change_password=true`, senha temporária própria) continuam funcionando com login antigo (código-como-senha) SÓ SE a senha ainda não tiver sido trocada nem resetada — nesse caso a "senha" que o Auth guarda não é mais o código, então um rollback do FRONT sem reverter as Edge Functions quebraria o login dessas contas específicas (poucas, geradas na janela entre o deploy e o rollback). Se isso acontecer, resolve com `resetar-senha` (gera senha nova) ou, no pior caso, revogar+reprovisionar.
 
 ### MFA
 
