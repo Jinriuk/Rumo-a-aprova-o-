@@ -140,6 +140,23 @@ describe("Edge Function trocar-senha — contrato (inspeção de fonte)", () => 
     assert.match(src, /classes\s*<\s*2/);
   });
 
+  it("recusa senha IGUAL ao código — sem isso o BLOCO B1 inteiro é decorativo", () => {
+    assert.match(src, /function senhaEhOCodigo/);
+    assert.match(src, /senha_igual_ao_codigo/);
+    // compara normalizado dos dois lados, senão "ABCD-EFGH-1234" passaria
+    assert.match(src, /normalizarCodigo\(senha\)\s*===\s*normalizarCodigo\(codigo\)/);
+    // e a checagem tem que estar no CAMINHO da requisição, não só definida
+    assert.match(src, /if \(senhaEhOCodigo\(senha_nova, codigoDoEmail\(quem\.email\)\)\)/);
+  });
+
+  it("o código vem do e-mail do PRÓPRIO chamador, nunca do payload", () => {
+    assert.match(src, /function codigoDoEmail/);
+    assert.match(src, /dominio === "codigo\.acesso\.local"/);
+    // coordenação/super_admin (e-mail real) não tem código: devolve "" e a
+    // regra acima vira no-op em vez de comparar com lixo
+    assert.match(src, /if \(!codigo\) return false/);
+  });
+
   it("chama admin.auth.updateUserById com a senha nova", () => {
     assert.match(src, /admin\.auth\.admin\.updateUserById\(quem\.id,\s*\{\s*password:\s*senha_nova\s*\}\)/);
   });
@@ -156,6 +173,60 @@ describe("Edge Function trocar-senha — contrato (inspeção de fonte)", () => 
     const m = src.match(/const \{ senha_nova \} = await req\.json\(\)\.catch/);
     assert.ok(m, "payload deveria desestruturar só { senha_nova }, sem usuario_id");
   });
+});
+
+// Presença de código não prova comportamento: aqui EXTRAÍMOS as funções
+// reais do .ts e as EXECUTAMOS (mesma técnica de login-codigo-fronteira —
+// sem runner de Deno, é o mais perto de rodar a função de verdade).
+describe("trocar-senha — a regra 'senha ≠ código' rodando de verdade", () => {
+  let codigoDoEmail, senhaEhOCodigo;
+
+  before(() => {
+    const src = ler("supabase/functions/trocar-senha/index.ts");
+    const pedaco = (re, nome) => {
+      const m = src.match(re);
+      assert.ok(m, `não encontrei ${nome} em trocar-senha/index.ts — extração desatualizada`);
+      return m[0];
+    };
+    const fonte = [
+      pedaco(/const normalizarCodigo = [\s\S]+?;\n/, "normalizarCodigo"),
+      pedaco(/function codigoDoEmail\([\s\S]+?\n\}/, "codigoDoEmail"),
+      pedaco(/function senhaEhOCodigo\([\s\S]+?\n\}/, "senhaEhOCodigo"),
+    ].join("\n")
+      // tira só as anotações de tipo — o corpo é JS puro
+      .replace(/:\s*(string|boolean)\b/g, "");
+    ({ codigoDoEmail, senhaEhOCodigo } = new Function(
+      `${fonte}\nreturn { codigoDoEmail, senhaEhOCodigo };`,
+    )());
+  });
+
+  it("extrai o código do e-mail sintético do aluno", () => {
+    assert.equal(codigoDoEmail("lucasdemo2026@codigo.acesso.local"), "LUCASDEMO2026");
+  });
+
+  it("e-mail real (coordenação) não tem código", () => {
+    assert.equal(codigoDoEmail("coordenacao@vitrine.demo"), "");
+    assert.equal(codigoDoEmail(""), "");
+  });
+
+  it("RECUSA a senha que é o próprio código, em qualquer formatação", () => {
+    const codigo = codigoDoEmail("wxyz23456789@codigo.acesso.local");
+    for (const tentativa of ["WXYZ23456789", "wxyz23456789", "WXYZ-2345-6789", "wxyz 2345 6789"]) {
+      assert.equal(senhaEhOCodigo(tentativa, codigo), true, `deveria recusar "${tentativa}"`);
+    }
+  });
+
+  it("aceita senha de verdade, diferente do código", () => {
+    const codigo = codigoDoEmail("wxyz23456789@codigo.acesso.local");
+    for (const boa of ["MinhaSenha#123", "wxyz23456789a", "Outra-Coisa-9"]) {
+      assert.equal(senhaEhOCodigo(boa, codigo), false, `não deveria recusar "${boa}"`);
+    }
+  });
+
+  it("coordenação (sem código) nunca é barrada por esta regra", () => {
+    assert.equal(senhaEhOCodigo("QualquerSenha1", ""), false);
+  });
+
 });
 
 describe("provisionar-aluno — ciclo de vida da credencial (inspeção de fonte)", () => {
@@ -191,6 +262,34 @@ describe("provisionar-aluno — ciclo de vida da credencial (inspeção de fonte
     assert.ok(m, "bloco de resetar-senha/reativar-credencial não encontrado");
     assert.match(m[1], /ban_duration\s*=\s*"none"/);
     assert.match(m[1], /must_change_password:\s*true/);
+  });
+
+  it("ordem das escritas põe o lado RESTRITIVO primeiro (GoTrue e Postgres não têm transação comum)", () => {
+    // Sem transação entre os dois sistemas, a ordem é a única coisa que
+    // decide pra que lado o estado quebrado cai. Uniformizar as duas
+    // ordens "por consistência" reabre um buraco real, então isto fica
+    // travado nos dois sentidos.
+    const reset = src.match(/if \(tipo === "resetar-senha" \|\| tipo === "reativar-credencial"\) \{([\s\S]+?)\n  \}/);
+    assert.ok(reset, "bloco de resetar/reativar não encontrado");
+    const iBancoReset = reset[1].indexOf('from("usuarios").update');
+    const iAuthReset = reset[1].indexOf("auth.admin.updateUserById");
+    assert.ok(iBancoReset > -1 && iAuthReset > -1, "âncoras não encontradas no bloco de reset");
+    assert.ok(
+      iBancoReset < iAuthReset,
+      "resetar/reativar: o banco (must_change_password/ativa) tem que vir ANTES do Auth — " +
+      "invertido, uma falha no banco reativa a conta SEM troca obrigatória",
+    );
+
+    const revoga = src.match(/if \(tipo === "revogar-credencial"\) \{([\s\S]+?)\n  \}/);
+    assert.ok(revoga, "bloco de revogar não encontrado");
+    const iAuthRevoga = revoga[1].indexOf("auth.admin.updateUserById");
+    const iBancoRevoga = revoga[1].indexOf('from("usuarios").update');
+    assert.ok(iAuthRevoga > -1 && iBancoRevoga > -1, "âncoras não encontradas no bloco de revogação");
+    assert.ok(
+      iAuthRevoga < iBancoRevoga,
+      "revogar: o ban no Auth tem que vir ANTES do banco — invertido, o banco diria " +
+      "'revogada' com a conta ainda entrando",
+    );
   });
 
   it("nenhuma ação de credencial fica sem log em logs_coordenacao (rastreabilidade)", () => {
@@ -283,6 +382,53 @@ describe("Login.jsx — código no dispositivo (B4)", () => {
 
   it("gate 'pronto' do modo código agora exige senha também", () => {
     assert.match(codigo, /codigoLimpo\.length >= CODIGO_MIN && senha/);
+  });
+
+  it("dispositivo compartilhado tem saída: 'Não é meu código' limpa o guardado", () => {
+    // laboratório de escola é o ambiente real deste produto — sem isso o
+    // próximo aluno herda o código do anterior e tem que adivinhar que
+    // dá pra apagar
+    assert.match(codigo, /function trocarDeCodigo\(\)/);
+    assert.match(codigo, /esquecerCodigoDoDispositivo\(\)/);
+    assert.match(codigo, /localStorage\.removeItem\(CHAVE_CODIGO_DISPOSITIVO\)/);
+    assert.match(codigo, /Não é meu código/);
+    // limpa os DOIS campos: deixar a senha do anterior pendurada seria pior
+    const m = codigo.match(/function trocarDeCodigo\(\) \{([\s\S]+?)\n  \}/);
+    assert.ok(m, "corpo de trocarDeCodigo não encontrado");
+    assert.match(m[1], /setCodigo\(""\)/);
+    assert.match(m[1], /setSenha\(""\)/);
+  });
+
+  it("a saída só aparece quando o código veio do dispositivo, não quando foi digitado", () => {
+    assert.match(codigo, /\{codigoDoDispositivo && \(/);
+    // digitar por cima desliga a oferta (o código passou a ser do usuário)
+    assert.match(codigo, /onChange=\{\(e\) => \{ setCodigo\(e\.target\.value\.toUpperCase\(\)\); setCodigoDoDispositivo\(false\);/);
+  });
+});
+
+describe("suíte E2E — acompanhou o login de dois campos", () => {
+  // Esta fronteira quebrou de verdade ao virar o modelo: `_apoio.js`
+  // preenchia SÓ o código e clicava Entrar, com o botão já desabilitado
+  // pelo gate novo — 4 specs travariam no CI (aluno, auth, mobile,
+  // motor-progresso) sem nada na suíte local acusar. `node --test` não
+  // roda Playwright, então a trava tem que ser por fonte mesmo.
+  let apoio;
+  before(() => { apoio = ler("app/e2e/_apoio.js"); });
+
+  it("loginPorCodigo preenche senha, não só o código", () => {
+    const m = apoio.match(/async function loginPorCodigo\(page, conta\) \{([\s\S]+?)\n\}/);
+    assert.ok(m, "loginPorCodigo(page, conta) não encontrada — assinatura mudou?");
+    assert.match(m[1], /campo\(page, "Código de acesso"\)\.fill\(conta\.codigo\)/);
+    assert.match(m[1], /input\[type="password"\][\s\S]{0,40}?\.fill\(conta\.senha\)/, "sem preencher a senha o botão fica desabilitado e o teste trava");
+  });
+
+  it("toda conta por código em CONTAS tem senha", () => {
+    const bloco = apoio.match(/export const CONTAS = \{([\s\S]+?)\n\};/);
+    assert.ok(bloco, "bloco CONTAS não encontrado");
+    for (const linha of bloco[1].split("\n")) {
+      if (!linha.includes("codigo:")) continue;
+      assert.match(linha, /senha:/, `conta por código sem senha: ${linha.trim()}`);
+    }
   });
 });
 

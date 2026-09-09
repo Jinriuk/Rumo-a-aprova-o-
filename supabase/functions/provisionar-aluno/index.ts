@@ -188,16 +188,26 @@ async function lidarComCredencial(
 
   if (tipo === "resetar-senha" || tipo === "reativar-credencial") {
     const senhaTemporaria = novaSenhaTemporaria();
+    // ORDEM IMPORTA. São dois sistemas (Postgres + GoTrue) sem transação
+    // comum, então uma das duas escritas pode falhar sozinha — a ordem
+    // decide para que lado o estado quebrado cai. O banco vem PRIMEIRO
+    // porque ele é o lado RESTRITIVO: `must_change_password` (e, na
+    // reativação, sair de 'revogada') só ampliam a exigência. Se o Auth
+    // falhar depois, o pior caso é uma conta que ainda não destravou mas
+    // já está marcada pra trocar senha — inofensivo e auto-corrigível
+    // repetindo a ação. Na ordem inversa, uma falha no banco deixaria a
+    // conta REATIVADA com senha temporária e SEM troca obrigatória: o
+    // exato buraco que o BLOCO B2 existe pra fechar.
+    const patchUsuario: Record<string, unknown> = { must_change_password: true };
+    if (tipo === "reativar-credencial") patchUsuario.credencial_status = "ativa";
+    const { error: e1 } = await admin.from("usuarios").update(patchUsuario).eq("id", usuarioId);
+    if (e1) throw e1;
     // reativar-credencial SEMPRE emite senha nova (nunca reaproveita a
     // que estava ativa quando a conta foi revogada — pode ter sido
     // exatamente o motivo da revogação).
     const patchAuth: Record<string, unknown> = { password: senhaTemporaria };
     if (tipo === "reativar-credencial") patchAuth.ban_duration = "none";
-    const { error: e1 } = await admin.auth.admin.updateUserById(usuarioId, patchAuth);
-    if (e1) throw e1;
-    const patchUsuario: Record<string, unknown> = { must_change_password: true };
-    if (tipo === "reativar-credencial") patchUsuario.credencial_status = "ativa";
-    const { error: e2 } = await admin.from("usuarios").update(patchUsuario).eq("id", usuarioId);
+    const { error: e2 } = await admin.auth.admin.updateUserById(usuarioId, patchAuth);
     if (e2) throw e2;
     const acao = tipo === "resetar-senha" ? "resetou-senha" : "reativou-credencial";
     await registrarLogCoordenacao(quem.escola_id, quem.id, quem.papel, acao,
@@ -207,6 +217,12 @@ async function lidarComCredencial(
   }
 
   if (tipo === "revogar-credencial") {
+    // ORDEM INVERTIDA em relação ao bloco acima, de propósito — não
+    // uniformize. A regra é sempre "o lado restritivo primeiro", e aqui
+    // quem restringe é o BAN (o banco só guarda o rótulo que a tela lê).
+    // Banindo antes: se o banco falhar, a conta já não entra e a tela
+    // fica dizendo 'ativa' — desconfortável, mas seguro. Na ordem do
+    // outro bloco, o banco diria 'revogada' com a conta ainda entrando.
     const { error: e1 } = await admin.auth.admin.updateUserById(usuarioId, { ban_duration: BAN_LONGO });
     if (e1) throw e1;
     const { error: e2 } = await admin.from("usuarios").update({ credencial_status: "revogada" }).eq("id", usuarioId);

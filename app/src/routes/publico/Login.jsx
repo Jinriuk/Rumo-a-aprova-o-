@@ -27,6 +27,17 @@ const CODIGO_MIN = 12;
 // isso, só a senha. Nunca guarda a senha — essa é sempre digitada.
 const CHAVE_CODIGO_DISPOSITIVO = "raa:codigo-dispositivo";
 
+function lerCodigoDoDispositivo() {
+  if (typeof window === "undefined") return "";
+  try { return window.localStorage.getItem(CHAVE_CODIGO_DISPOSITIVO) ?? ""; }
+  catch { return ""; }
+}
+
+function esquecerCodigoDoDispositivo() {
+  try { window.localStorage.removeItem(CHAVE_CODIGO_DISPOSITIVO); }
+  catch { /* nada a esquecer se o armazenamento nem responde */ }
+}
+
 const PAPEIS = [
   ["codigo", "Aluno / Responsável", "Entra com o código entregue pela escola"],
   ["coordenacao", "Coordenação", "Entra com e-mail e senha"],
@@ -36,11 +47,12 @@ export default function Login() {
   const [modo, setModo] = useState("codigo"); // codigo | coordenacao
   const [tela, setTela] = useState("login");  // login | esqueciSenha | esqueciCodigo | confirmacao
   // Pré-preenchido do dispositivo (B4) — só o código, nunca a senha.
-  const [codigo, setCodigo] = useState(() => {
-    if (typeof window === "undefined") return "";
-    try { return window.localStorage.getItem(CHAVE_CODIGO_DISPOSITIVO) ?? ""; }
-    catch { return ""; }
-  });
+  const [codigo, setCodigo] = useState(() => lerCodigoDoDispositivo());
+  // Este produto roda em laboratório de escola, onde o dispositivo é
+  // compartilhado: se o código do aluno anterior aparece pré-preenchido
+  // sem saída, o próximo tem que adivinhar que dá pra apagar. Enquanto o
+  // valor vier do dispositivo (e não da digitação), oferecemos a saída.
+  const [codigoDoDispositivo, setCodigoDoDispositivo] = useState(() => !!lerCodigoDoDispositivo());
   const [email, setEmail] = useState("");
   const [senha, setSenha] = useState("");
   const [mostrarSenha, setMostrarSenha] = useState(false);
@@ -78,6 +90,17 @@ export default function Login() {
   function recusar(mensagem) {
     setErr(mensagem);
     setRecusas((n) => n + 1);
+  }
+
+  // Dispositivo compartilhado: limpa o código guardado E o que está na
+  // tela, pra próxima pessoa começar do zero em vez de apagar caractere
+  // por caractere o código de outro aluno.
+  function trocarDeCodigo() {
+    esquecerCodigoDoDispositivo();
+    setCodigoDoDispositivo(false);
+    setCodigo("");
+    setSenha("");
+    setErr("");
   }
 
   async function entrar(e) {
@@ -218,10 +241,16 @@ export default function Login() {
                 <div className="login-input-shell" style={{ marginBottom: 12 }}>
                   <IconeCampo tipo="chave" />
                   <input className="login-input login-input--icone" id={idCodigo} value={codigo} autoComplete="off" autoCapitalize="characters"
-                    onChange={(e) => { setCodigo(e.target.value.toUpperCase()); setErr(""); }}
+                    onChange={(e) => { setCodigo(e.target.value.toUpperCase()); setCodigoDoDispositivo(false); setErr(""); }}
                     placeholder="Ex.: LUCASDEMO2026"
                     style={{ ...inputS, letterSpacing: 1.5, textAlign: "center", fontFamily: "monospace" }} />
                 </div>
+                {codigoDoDispositivo && (
+                  <button type="button" onClick={trocarDeCodigo}
+                    style={{ background: "none", border: "none", color: T.sub, fontSize: 11.5, cursor: "pointer", textDecoration: "underline", padding: "0 0 6px", display: "block", marginLeft: "auto" }}>
+                    Não é meu código
+                  </button>
+                )}
                 <CargaCodigo preenchidos={codigoLimpo.length} />
                 <CampoSenha id={idSenha} valor={senha} aoMudar={(v) => { setSenha(v); setErr(""); }}
                   mostrar={mostrarSenha} aoAlternarMostrar={() => setMostrarSenha((v) => !v)}

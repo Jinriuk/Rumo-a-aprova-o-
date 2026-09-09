@@ -132,11 +132,16 @@ export default function TrocarSenhaObrigatoria({ nome, aoConcluir }) {
   );
 }
 
+// O servidor recusa senha por dois motivos, os dois com texto pronto em
+// pt-BR: fraca demais e igual ao código (BLOCO B1 — se a senha pudesse
+// ser o código, nada disto teria servido pra nada). Mostrar a mensagem
+// genérica nesses casos faria o aluno repetir a MESMA senha sem entender.
+const ESTADOS_COM_MENSAGEM_PROPRIA = new Set(["senha_fraca", "senha_igual_ao_codigo"]);
+
 function mensagemErro(erro) {
-  if (erro?.estado === "senha_fraca") {
-    // mensagem já pronta em pt-BR, vinda do servidor (trocar-senha); só
-    // tira o prefixo "trocar-senha: " que falha() adiciona pro console.
-    return erro.message?.replace(/^trocar-senha:\s*/i, "") || "Senha recusada. Tente uma combinação mais forte.";
+  if (ESTADOS_COM_MENSAGEM_PROPRIA.has(erro?.estado)) {
+    // só tira o prefixo "trocar-senha: " que falha() adiciona pro console
+    return erro.message?.replace(/^trocar-senha:\s*/i, "") || "Senha recusada. Escolha outra.";
   }
   return "Não foi possível salvar a senha agora. Tente novamente em instantes.";
 }

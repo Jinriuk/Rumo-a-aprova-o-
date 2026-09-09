@@ -54,8 +54,16 @@ comment on column usuarios.credencial_status is
   '0047: espelho LEGÍVEL do estado do Auth (banido/ativo) para a tela da '
   'coordenação — quem BLOQUEIA o login de verdade é o ban_duration do '
   'GoTrue (auth.admin.updateUserById), não esta coluna. Escrito só pelo '
-  'service_role, junto com a chamada que bane/reativa a conta, para os '
-  'dois nunca divergirem.';
+  'service_role, na mesma ação que bane/reativa a conta. '
+  'ATENÇÃO: são dois sistemas (GoTrue + Postgres), sem transação comum — '
+  'se a segunda escrita falhar, a Edge Function lança e o estado fica '
+  'divergente até alguém repetir a ação (as duas são idempotentes, '
+  'repetir reconcilia). Por isso provisionar-aluno ordena as escritas '
+  'pelo lado RESTRITIVO primeiro, e a ordem é diferente em cada ação: '
+  'ao revogar, bane no Auth antes de marcar aqui; ao resetar/reativar, '
+  'marca aqui (must_change_password/ativa) antes de mexer no Auth. Nos '
+  'dois casos a falha no meio deixa o acesso MAIS restrito do que a '
+  'tela sugere, nunca menos.';
 
 -- Defesa em profundidade: `usuarios` já não tinha NENHUMA policy de RLS
 -- para UPDATE (só usuarios_select) — authenticated já estava bloqueado
