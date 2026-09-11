@@ -21,7 +21,7 @@ testada contra evidência (build real, banco real, advisor real):
 | 1 | Entrega (Vercel, CDN, headers, cache) | **Inocente** — 1 defeito menor |
 | 2 | Bundle (o que o navegador baixa e executa) | **Culpado** |
 | 3 | Renderização (custo de pintura na tela) | **Culpado nº 1** |
-| 4 | Rede de dados (quantas viagens, em que ordem) | **Culpado nº 1** |
+| 4 | Rede de dados (quantas viagens, em que ordem) | **Culpado — peso varia com a região** |
 | 5 | Banco (Postgres, RLS, índices) | **Inocente hoje** |
 
 ## 2. O que descarta cada suspeita
@@ -202,10 +202,11 @@ Correção: RPC que devolva o total somado no banco, no padrão de `resumo_escol
 
 | Fato | Verificado | Efeito |
 |------|-----------|--------|
-| Banco em `us-east-1` | sim | ~150 ms por viagem do Brasil, × 12 camadas |
+| Banco **de teste** em `us-east-1` | sim | ~150 ms por viagem do Brasil, × 12 camadas |
 | Organização no plano **free** | sim | CPU compartilhada: bcrypt do login e PostgREST disputam recurso |
 | Projeto free pausa após 7 dias sem uso | política | Primeiro acesso da semana pode levar dezenas de segundos |
-| Produção aponta para o projeto de demo/vitrine | sim | `app/.env.production` → `bdjkgrzfzoamchdpobbl` |
+| `app/.env.production` → projeto de demo/vitrine | sim | Mas `VITE_SUPABASE_URL` no Vercel sobrescreve: o Vite prioriza `process.env` |
+| Banco de **produção** em `sa-east-1` | **não** | Informado pelo dono; fora do alcance desta auditoria — ver §7 |
 | 19 FKs sem índice de cobertura | sim | Irrelevante com 1 aluno; dói a partir de centenas |
 | Projeto Vercel não apareceu na conta conectada | **não** | `list_projects` voltou vazio — sem acesso a logs/analytics |
 
@@ -227,3 +228,59 @@ quem usa resolvem isso:
 3. **Contagem de viagens** — Network com "Preserve log", fazer login, contar as
    linhas até o painel. Mais de 20 confirma a escada. `usuarios` ou `escolas`
    aparecendo duas vezes confirma o achado 03.
+
+---
+
+## 7. Revisão de 11/09 — região da produção
+
+O dono do sistema informa que a produção real roda no Brasil, e que só o
+ambiente de teste está em `us-east-1`. Não foi possível confirmar: a auditoria
+só enxerga a org "Central de projetos", que hoje tem três projetos
+(`barbearia-saas` sa-east-1 inativo, `Rumo — Teste e Vitrine` us-east-1 ativo,
+`pool-poker` sa-east-1 inativo) e nenhum projeto de produção do Rumo.
+
+A correção não é neutra: derruba um achado e promove três.
+
+### Melhora
+A escada de 12 degraus cai de ~2,9 s para ~0,8 s de espera de rede. A camada 4
+sai de culpado nº 1 e vira secundária. Achados 02, 03, 09, 10 e 12 continuam
+sendo desperdício, mas viram faxina e não emergência.
+
+### Não muda em nada
+Achados **01, 04, 06, 07 e 11**. Nenhum passa perto do banco: `blur(74px)` sob
+`backdrop-filter` animado custa o mesmo em São Paulo e na Virgínia; os 580 kB
+do primeiro carregamento vêm da CDN da Vercel; as fontes por `@import` dependem
+do Google. **São exatamente os que fazem a tela de login parecer travada.**
+
+### Fica pior
+A evidência de "está vazio, não dói hoje" veio do banco de **teste** (1 aluno,
+2 usuários, 1 registro). Se produção é outro banco com dado real, essa base de
+comparação não vale:
+
+- **#12** `carregarXpPersistido` lê o ledger inteiro sem `limit` em toda
+  recarga da tela de estudo — pode já estar doendo.
+- **#08** `AreaEscola` segura as 6 abas atrás de 8 leituras, incluindo todos os
+  simulados da escola — escala com o número de alunos.
+- **19 FKs sem índice** — as migrations são as mesmas, então a lacuna existe lá
+  também; só que lá tem linha.
+- O advisor limpo de RLS foi lido no projeto de teste, não no de produção.
+
+### Divergência documental a resolver
+
+Se a produção realmente já está em `sa-east-1`, estes documentos estão
+desatualizados e vão enganar quem abrir o repositório depois:
+
+- `docs/operacao/plano-migracao-sa-east-1.md` — descreve a migração como plano
+  a executar, "Estado atual: projeto de demo em `us-east-1`".
+- `docs/operacao/migracao-producao-dedicada.md` — status "aplicação aguardando
+  o projeto de produção ficar visível na org certa"; §7 diz que nenhum projeto
+  novo apareceu.
+- As 15 referências a URL de Supabase no repositório apontam todas para
+  `bdjkgrzfzoamchdpobbl`.
+- A org está hoje no plano **free**, embora o doc de julho a descrevesse como a
+  que tem o Pro.
+
+### O que destrava
+O project ref de produção. Com ele, contagem de linhas e advisors são refeitos
+em dois minutos e a priorização passa a valer para o banco certo. Os achados
+01, 04, 06, 07 e 11 podem ser atacados sem esperar — valem nas duas hipóteses.
