@@ -20,9 +20,45 @@ const ESTRELAS = [
   [78, 68, 1], [84, 36, 1], [91, 77, 2], [95, 19, 1],
 ];
 
+/* Anel de alcance: o fundo do login era navy chapado em quase metade da
+   tela, e era isso — não a falta de ilustração — que fazia a composição
+   parecer pobre. Em vez de importar um vocabulário novo, adensamos com o
+   que o produto JÁ diz: alvo, alcance e azimute ("Sua prova tem um alvo").
+   É geometria estática — círculos e traços, sem filtro, sem blend, sem
+   animação — então não reintroduz nada do custo que a Onda 2 removeu. */
+const AZIMUTES = Array.from({ length: 36 }, (_, i) => i * 10);
+const ALCANCES = [78, 132, 186, 240, 294];
+
+function AnelDeAlcance() {
+  const ponta = (grau, raio) => {
+    const rad = ((grau - 90) * Math.PI) / 180;
+    return [320 + Math.cos(rad) * raio, 320 + Math.sin(rad) * raio];
+  };
+  return (
+    <svg className="portal-rings" viewBox="0 0 640 640" aria-hidden="true" focusable="false">
+      {ALCANCES.map((r, i) => (
+        <circle key={r} cx="320" cy="320" r={r}
+          className={i === 2 ? "portal-ring portal-ring--forte" : "portal-ring"} />
+      ))}
+      {AZIMUTES.map((grau) => {
+        const cardeal = grau % 90 === 0;
+        const [x1, y1] = ponta(grau, cardeal ? 276 : 286);
+        const [x2, y2] = ponta(grau, 300);
+        return (
+          <line key={grau} x1={x1} y1={y1} x2={x2} y2={y2}
+            className={cardeal ? "portal-tick portal-tick--forte" : "portal-tick"} />
+        );
+      })}
+      <line className="portal-eixo" x1="320" y1="26" x2="320" y2="614" />
+      <line className="portal-eixo" x1="26" y1="320" x2="614" y2="320" />
+    </svg>
+  );
+}
+
 export function FundoPortal({ efeitos }) {
   return (
     <div className="portal-ambient" aria-hidden="true">
+      <AnelDeAlcance />
       <m.div className="portal-grid"
         animate={efeitos ? { backgroundPosition: ["0px 0px", "0px 72px"] } : { backgroundPosition: "0px 0px" }}
         transition={efeitos ? { duration: 8, repeat: Infinity, ease: "linear" } : { duration: 0 }} />
