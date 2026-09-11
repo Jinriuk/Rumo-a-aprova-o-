@@ -2,10 +2,11 @@
    entrega o que é dele — esta tela nem precisa filtrar.
    A contagem para a prova usa a data REAL da trilha quando existe;
    sem trilha, usa a data MÉDIA do concurso escolhido pela escola. */
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { Cabecalho } from "../../shared/ui/Cabecalho.jsx";
 import { Empty, Erro } from "../../shared/ui/componentes.jsx";
 import { VisaoEstudo } from "./VisaoEstudo.jsx";
+import { useTrilha } from "../../modules/conteudo/useTrilha.js";
 import { AvisoMaturidade } from "../../modules/conteudo/SeloMaturidade.jsx";
 import { Onboarding } from "../../modules/motor/Onboarding.jsx";
 import { diasParaProva } from "../../modules/conteudo/concursos.js";
@@ -16,10 +17,25 @@ import * as db from "../../shared/data/index.js";
 export default function AreaAluno({ perfil }) {
   const [aluno, setAluno] = useState(undefined);
   const [erro, setErro] = useState(null);
-  const [prova, setProva] = useState(null);
   const [concurso, setConcurso] = useState(null);
   const [onboarding, setOnboarding] = useState(undefined); // undefined = carregando
   const [materiasProva, setMateriasProva] = useState([]);
+
+  // PERF: a trilha é carregada UMA vez, aqui, e desce por prop para
+  // VisaoEstudo. Antes esta tela chamava `db.carregarTrilha` só para pegar
+  // `semanas` (a contagem para a prova) e, logo em seguida, VisaoEstudo
+  // montava e o `useTrilha` dela buscava a MESMA trilha de novo — 4 queries
+  // repetidas por entrada de aluno, a mais pesada sendo `atividades_modelo`
+  // (159 linhas em produção).
+  const trilhaEstado = useTrilha(aluno?.trilha_id);
+  const { trilha } = trilhaEstado;
+
+  // Data da prova: a da trilha quando existe; senão a data média do concurso.
+  // Vira memo porque agora depende de dois carregamentos independentes.
+  const prova = useMemo(
+    () => diasParaProva({ semanasTrilha: trilha?.semanas ?? null, concurso }),
+    [trilha, concurso],
+  );
 
   useEffect(() => window.scrollTo({ top: 0, left: 0, behavior: "instant" }), []); // login nasce no topo
 
@@ -32,22 +48,15 @@ export default function AreaAluno({ perfil }) {
         setAluno(a);
         if (!a) return;
 
-        let semanasTrilha = null;
-        if (a.trilha_id) {
-          const { semanas } = await db.carregarTrilha(a.trilha_id);
-          semanasTrilha = semanas;
-        }
-        const c = await db.concursoPorId(a.concurso_id);
+        // Concurso e onboarding não dependem um do outro: vão juntos, em vez
+        // de um esperar o outro (cada ida e volta custa ~165 ms em produção).
+        // O onboarding é complementar — se falhar, a tela de estudo continua.
+        const [c, ob] = await Promise.all([
+          db.concursoPorId(a.concurso_id),
+          db.carregarOnboarding(a.id).catch(() => null),
+        ]);
         if (!vivo) return;
         setConcurso(c);
-        setProva(diasParaProva({ semanasTrilha, concurso: c }));
-
-        // onboarding pedagógico (diagnóstico inicial) — só o do próprio aluno
-        let ob = null;
-        try {
-          ob = await db.carregarOnboarding(a.id);
-        } catch { ob = null; }
-        if (!vivo) return;
         setOnboarding(ob);
         // matérias da prova só quando o onboarding AINDA não foi concluído
         // (alimenta o formulário). Evita query extra no caso comum. Best-effort.
@@ -90,6 +99,7 @@ export default function AreaAluno({ perfil }) {
             )}
             {concurso && <AvisoMaturidade codigo={concurso.codigo} style={{ marginBottom: 14 }} />}
             <VisaoEstudo aluno={aluno} podeEditar concurso={concurso}
+              trilhaEstado={trilhaEstado}
               contexto={concurso ? concurso.nome.split(" (")[0] : "Plano de estudos"} />
           </>
         )}

@@ -108,14 +108,22 @@ describe("ambiente.js — reexporta escolaEhDemo sem duplicar", () => {
 });
 
 describe("meuPerfil — seleciona 'plano' (escolaEhDemo precisa dele)", () => {
-  it("o SELECT de escolas em meuPerfil inclui plano", () => {
+  // A escola deixou de vir num SELECT próprio e passou a vir EMBUTIDA no
+  // SELECT de usuarios (uma viagem em vez de duas, ver meuPerfil). O que este
+  // teste protege não mudou: as colunas que a faixa DEMO e o gate de
+  // suspensão leem têm de continuar sendo pedidas.
+  it("o embed de escolas em meuPerfil inclui plano", () => {
     const dados = ler("app/src/shared/data/index.js");
-    const m = dados.match(/from\("escolas"\)\.select\("([^"]+)"\)\.eq\("id", u\.escola_id\)/);
-    assert.ok(m, "SELECT de escolas em meuPerfil não encontrado");
+    const m = dados.match(/from\("usuarios"\)\.select\("[^"]*escolas\(([^)]+)\)[^"]*"\)\.eq\("id", uid\)/);
+    assert.ok(m, "embed de escolas em meuPerfil não encontrado");
     const colunas = m[1].split(",").map((c) => c.trim());
-    assert.ok(colunas.includes("plano"), `plano ausente do SELECT: ${m[1]}`);
+    assert.ok(colunas.includes("plano"), `plano ausente do embed: ${m[1]}`);
     // status continua ali — é o sinal do gate de suspensão (D1A.1); não pode sumir
-    assert.ok(colunas.includes("status"), "status sumiu do SELECT — quebraria TelaAcessoSuspenso");
+    assert.ok(colunas.includes("status"), "status sumiu do embed — quebraria TelaAcessoSuspenso");
+    // e as colunas que a marca da escola consome (BrandingProvider)
+    for (const col of ["id", "nome", "slug", "logo_url", "cor_acento"]) {
+      assert.ok(colunas.includes(col), `${col} ausente do embed: ${m[1]}`);
+    }
   });
 });
 
