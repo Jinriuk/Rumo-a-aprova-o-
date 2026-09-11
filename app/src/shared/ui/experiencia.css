@@ -753,12 +753,18 @@ textarea:focus-visible,
   box-shadow: 0 0 8px color-mix(in srgb, var(--ui-green) 45%, transparent);
 }
 
+/* Esta linha de ajuda fecha o campo de CÓDIGO e é sempre seguida pelo campo
+   de SENHA. Sem a margem de baixo, o rótulo "SENHA" encostava nela: medido
+   0 px de distância entre o fim da ajuda e o topo do rótulo, o que lia como
+   um bloco só. O rótulo traz `marginBottom` mas nenhum `marginTop`, então a
+   separação tem de vir daqui. */
 .login-hint {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 8px;
   margin-top: 7px;
+  margin-bottom: 15px;
   color: var(--ui-sub);
   font-size: 11.5px;
 }
