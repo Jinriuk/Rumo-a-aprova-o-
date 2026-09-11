@@ -6,7 +6,7 @@ e a lista priorizada.
 
 Base: commit atual de `claude/system-performance-analysis-0exixe`.
 Build medido localmente (Vite 8.2.2, 1.126 módulos, 1,29 s).
-Contagens de linha lidas direto do projeto Supabase `bdjkgrzfzoamchdpobbl`.
+Contagens de linha lidas do projeto de PRODUÇÃO `zckyhihxjjbnqjqilymn` (sa-east-1).
 Advisors de performance do Supabase consultados em 11/09/2026.
 
 ---
@@ -21,7 +21,7 @@ testada contra evidência (build real, banco real, advisor real):
 | 1 | Entrega (Vercel, CDN, headers, cache) | **Inocente** — 1 defeito menor |
 | 2 | Bundle (o que o navegador baixa e executa) | **Culpado** |
 | 3 | Renderização (custo de pintura na tela) | **Culpado nº 1** |
-| 4 | Rede de dados (quantas viagens, em que ordem) | **Culpado — peso varia com a região** |
+| 4 | Rede de dados (quantas viagens, em que ordem) | **Culpado** — ~165 ms por viagem, medido |
 | 5 | Banco (Postgres, RLS, índices) | **Inocente hoje** |
 
 ## 2. O que descarta cada suspeita
@@ -234,56 +234,95 @@ quem usa resolvem isso:
 
 ---
 
-## 7. Revisão de 11/09 — região da produção
+---
 
-O dono do sistema informa que a produção real roda no Brasil, e que só o
-ambiente de teste está em `us-east-1`. Não foi possível confirmar: a auditoria
-só enxerga a org "Central de projetos", que hoje tem três projetos
-(`barbearia-saas` sa-east-1 inativo, `Rumo — Teste e Vitrine` us-east-1 ativo,
-`pool-poker` sa-east-1 inativo) e nenhum projeto de produção do Rumo.
+## 7. Fechamento — o que foi medido em produção e corrigido
 
-A correção não é neutra: derruba um achado e promove três.
+Esta seção substitui a revisão anterior sobre região, que partia de premissa
+errada. O sistema de produção foi aberto no Chrome e medido em
+`app.trilivaedu.com.br`; os números abaixo vêm de lá.
 
-### Melhora
-A escada de 12 degraus cai de ~2,9 s para ~0,8 s de espera de rede. A camada 4
-sai de culpado nº 1 e vira secundária. Achados 02, 03, 09, 10 e 12 continuam
-sendo desperdício, mas viram faxina e não emergência.
+### Ambiente real
 
-### Não muda em nada
-Achados **01, 04, 06, 07 e 11**. Nenhum passa perto do banco: `blur(74px)` sob
-`backdrop-filter` animado custa o mesmo em São Paulo e na Virgínia; os 580 kB
-do primeiro carregamento vêm da CDN da Vercel; as fontes por `@import` dependem
-do Google. **São exatamente os que fazem a tela de login parecer travada.**
+Produção é `zckyhihxjjbnqjqilymn`, **sa-east-1**, org `eerbpzacxolwlwsltynb`,
+criado em 03/09/2026. A auditoria original concluiu "não existe projeto de
+produção" a partir de uma listagem que só enxerga a organização do token —
+`get_project` por ref funciona fora dela. Conclusão retirada.
 
-### Fica pior
-A evidência de "está vazio, não dói hoje" veio do banco de **teste** (1 aluno,
-2 usuários, 1 registro). Se produção é outro banco com dado real, essa base de
-comparação não vale:
+Catálogo cheio, tenant vazio: `subassuntos` 354, `questoes_prova` 203,
+`atividades_modelo` 159, `trilha_plano_missoes` 99, `concursos` 6; `alunos` 1,
+`simulados` 0, `registros_estudo` 0, `aluno_eventos_progresso` 0.
+Advisor de produção limpo de RLS, e as mesmas 19 FKs sem índice.
 
-- **#12** `carregarXpPersistido` lê o ledger inteiro sem `limit` em toda
-  recarga da tela de estudo — pode já estar doendo.
-- **#08** `AreaEscola` segura as 6 abas atrás de 8 leituras, incluindo todos os
-  simulados da escola — escala com o número de alunos.
-- **19 FKs sem índice** — as migrations são as mesmas, então a lacuna existe lá
-  também; só que lá tem linha.
-- O advisor limpo de RLS foi lido no projeto de teste, não no de produção.
+### Três correções ao diagnóstico original
 
-### Divergência documental a resolver
+**1. Região não dividiu nada.** Medido do navegador: **~165 ms por requisição**
+ao banco de produção em sa-east-1. A escada de 12 degraus custa o que a
+auditoria estimou. Os achados de rede valem mais, não menos.
 
-Se a produção realmente já está em `sa-east-1`, estes documentos estão
-desatualizados e vão enganar quem abrir o repositório depois:
+**2. O banco não é o gargalo, e o plano free não compraria isso.**
+`EXPLAIN ANALYZE` em produção: `atividades_modelo` executa em 3,485 ms,
+`concursos` em 1,291 ms. O Postgres é 2–9 ms dos 165. O resto é rede, TLS,
+Kong e PostgREST. Só **remover viagens** corta esse tempo.
 
-- `docs/operacao/plano-migracao-sa-east-1.md` — descreve a migração como plano
-  a executar, "Estado atual: projeto de demo em `us-east-1`".
-- `docs/operacao/migracao-producao-dedicada.md` — status "aplicação aguardando
-  o projeto de produção ficar visível na org certa"; §7 diz que nenhum projeto
-  novo apareceu.
-- As 15 referências a URL de Supabase no repositório apontam todas para
-  `bdjkgrzfzoamchdpobbl`.
-- A org está hoje no plano **free**, embora o doc de julho a descrevesse como a
-  que tem o Pro.
+**3. O achado 01 tinha o mecanismo errado.** A tela de login rodava a 9 fps
+**com os efeitos pausados**, ou seja, sem nada animando. A causa não era
+animação: era composição estática. O código explica — `Login.jsx` põe
+`data-effects` no shell, mas nenhuma regra de CSS usa esse atributo; ele só
+alimenta o `MotionConfig`. O botão nunca alcançou a pilha de blur, que é CSS
+incondicional. A correção originalmente proposta (`efeitos = false` no mobile)
+compraria zero.
 
-### O que destrava
-O project ref de produção. Com ele, contagem de linhas e advisors são refeitos
-em dois minutos e a priorização passa a valer para o banco certo. Os achados
-01, 04, 06, 07 e 11 podem ser atacados sem esperar — valem nas duas hipóteses.
+Custo isolado por eliminação: 9 fps como estava → 33 sem as `.portal-aurora`
+(`blur(74px)` + `mix-blend-mode: screen`) → 57 sem o `backdrop-filter` do
+`.login-card` → 58 sem nenhum blur.
+
+### O que foi corrigido
+
+| Onda | O que entrou | Resultado |
+|---|---|---|
+| 1 | `preconnect` (Supabase + fontes), cache imutável em `/assets/*`, fontes no `index.html`, `concursoPorId` filtrando no banco | ~900 ms medidos |
+| 2 | Removida a pilha de blur do login: `blur(74px)` e `mix-blend-mode` das auroras, os dois `backdrop-filter`, `blur(38px)` do glow, `box-shadow: inset` de 180 px da vinheta | **6 → 59 fps**, A/B na mesma máquina |
+| 3 | Boot duplicado do perfil, trilha carregada uma vez só, embed do PostgREST em `meuPerfil`, concurso e onboarding em paralelo | 4 viagens a menos × ~165 ms |
+
+A Onda 2 saiu visualmente muito mais barata que o previsto: comparadas as
+capturas antes/depois em 1440×900 e 390×844, o layout é idêntico e a cena
+segue legível. O `backdrop-filter` do cartão era invisível de qualquer forma —
+o fundo próprio dele já é ~90% opaco.
+
+### O que ficou pendente, e por quê
+
+- **Onda 2b (fase visual)** — fundo de imagem + ícones, na linha do portal de
+  referência. Nasce sobre uma composição que já não custa nada. Regra que vem
+  junto: zero `blur`, zero `backdrop-filter`, zero `mix-blend-mode`, e
+  orçamento de **uma imagem ≤150 kB** (a referência gasta 4,7 MB — é mais leve
+  de pintar e mais pesada de baixar; copiar só a disciplina de composição).
+- **Onda 4 (tirar `realtime` do bundle)** — adiada e condicionada. O
+  `supabase-js` é quem propaga o access token do auth-js para o PostgREST; ao
+  montar os clientes à mão essa fiação vira código nosso, e num sistema com
+  isolamento por RLS um bug ali sai como requisição com token velho, sem erro
+  visível. O ganho encolheu para dezenas de ms de *parse*. Só executar se uma
+  medição em celular real mostrar que o bundle ainda é gargalo.
+- **Onda 5** — pré-requisito: `VACUUM ANALYZE` em produção. `concursos` e
+  `alunos` têm `reltuples = -1` com `last_analyze` e `last_autoanalyze` nulos:
+  **nunca foram analisadas**. O autovacuum só dispara com 50 linhas + 10%,
+  limiar que tabela pequena nunca atinge — é condição permanente, não
+  estatística velha. Sem isso os 19 índices de FK entram num planner sem
+  estatística para decidir usá-los. Repetir depois da primeira escola real.
+- **Pause de 7 dias do plano free** — decisão de negócio: fica no free durante
+  a prospecção. Seguro proposto: workflow agendado no GitHub Actions batendo no
+  REST a cada 3 dias (`pg_cron` não serve, o contador olha requisição de API).
+  Atenção: workflow agendado é desativado após 60 dias sem atividade no repo.
+
+### Limites desta verificação
+
+- Os FPS foram medidos em renderização por software (Basic Render Driver no
+  Chrome do dono; Chromium headless aqui). O ranking está confirmado por duas
+  medições independentes, mas **nenhuma foi em celular** — que é o aparelho do
+  aluno e onde blur de raio grande dói mais.
+- A suíte **E2E não pôde ser executada** no ambiente da correção: o proxy de
+  egresso bloqueia `supabase.co` (`net::ERR_CONNECTION_RESET`). O que dependia
+  dela — os fluxos de login dos quatro papéis após a Onda 3 — foi verificado
+  estaticamente (FK e colunas do embed conferidas no banco real, garantia de
+  `INITIAL_SESSION` lida no auth-js instalado, consumidores do perfil
+  auditados), mas não exercitado ponta a ponta.
