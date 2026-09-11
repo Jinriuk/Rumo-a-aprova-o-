@@ -9,6 +9,24 @@
          que retorna 404 no preview/local (e HTML pelo rewrite na Vercel),
          sujando o console. SVG inline é permitido pela CSP (img-src data:). -->
     <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%230A1622'/%3E%3Ctext x='16' y='22' font-size='18' text-anchor='middle' fill='%23CDA349'%3E%E2%9A%93%3C/text%3E%3C/svg%3E" />
+
+    <!-- PERF: antecipa DNS+TCP+TLS do Supabase (medido: 487 ms na 1ª conexão,
+         71-81 ms depois). A URL vem da variável de build, para cada ambiente
+         preconectar ao seu projeto. crossorigin é obrigatório: as chamadas
+         são CORS e sem ele o navegador abre uma 2ª conexão em vez de reusar. -->
+    <link rel="preconnect" href="%VITE_SUPABASE_URL%" crossorigin />
+
+    <!-- PERF: as fontes vinham por @import num <style> injetado em runtime, e
+         só começavam a baixar depois do JS inteiro (medido: pedido nascia em
+         1408 ms, com o CSS pronto em 1355 ms). Declaradas aqui, entram no
+         HTML inicial. gstatic leva crossorigin (woff2 em modo CORS). -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&amp;family=Archivo:wght@400;500;600;700&amp;display=swap"
+    />
+
     <title>Painel de Estudos</title>
   </head>
   <body style="margin:0;background:#0A1622">

@@ -44,8 +44,14 @@ export function tema(corAcento) {
   return { ...BASE, gold: garantirLegivel(corAcento) };
 }
 
+// PERF: o @import das fontes SAIU daqui e virou <link rel="stylesheet"> no
+// index.html. Enquanto morava neste bloco, ele era injetado por um <style>
+// em tempo de execução — o navegador só descobria as fontes depois de
+// baixar, analisar e executar o JS inteiro. Medido em produção: ~350 ms de
+// atraso até o pedido sequer nascer.
+// Quem mexer aqui: a família (Fraunces + Archivo) é declarada no index.html
+// e USADA abaixo (.disp, inputs). Trocar de fonte exige mexer nos dois lugares.
 export const FONTES_CSS = `
-  @import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&family=Archivo:wght@400;500;600;700&display=swap');
   * { box-sizing: border-box; }
   /* overflow-x: CLIP (não "hidden"): corta estouro lateral SEM criar
      contêiner de rolagem — "hidden" no html quebra a inércia do

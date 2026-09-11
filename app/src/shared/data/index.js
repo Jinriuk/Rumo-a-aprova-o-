@@ -149,10 +149,28 @@ export async function carregarConcursoPorTag(examTag) {
   return data ?? null;
 }
 
+// O CATÁLOGO inteiro. Só para quem precisa dele inteiro — hoje a
+// coordenação, que monta um índice por id para a escola toda. Quem quer UM
+// concurso usa `concursoPorId` abaixo: baixar o catálogo para achar uma
+// linha é uma viagem de ~165 ms paga à toa (medido em produção).
 export async function listarConcursos({ signal } = {}) {
   const { data, error } = await comSinal(supabase.from("concursos").select("*").order("ordem"), signal);
   if (error) throw falha("concursos", error);
   return data;
+}
+
+// UM concurso, filtrado no banco. Aluno e responsável só conhecem o próprio
+// `concurso_id`; antes as duas telas baixavam a tabela e faziam `.find()` no
+// cliente. `maybeSingle` porque o aluno pode apontar para um concurso que a
+// RLS não entrega (ou que sumiu) — isso é ausência, não erro.
+export async function concursoPorId(concursoId, { signal } = {}) {
+  if (!concursoId) return null;
+  const { data, error } = await comSinal(
+    supabase.from("concursos").select("*").eq("id", concursoId).maybeSingle(),
+    signal,
+  );
+  if (error) throw falha("concurso", error);
+  return data ?? null;
 }
 
 /* ---------- fundação pedagógica (Fase 15.1 — global, só leitura) ---------- */

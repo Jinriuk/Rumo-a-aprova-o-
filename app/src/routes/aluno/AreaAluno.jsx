@@ -37,11 +37,7 @@ export default function AreaAluno({ perfil }) {
           const { semanas } = await db.carregarTrilha(a.trilha_id);
           semanasTrilha = semanas;
         }
-        let c = null;
-        if (a.concurso_id) {
-          const concursos = await db.listarConcursos();
-          c = concursos.find((x) => x.id === a.concurso_id) ?? null;
-        }
+        const c = await db.concursoPorId(a.concurso_id);
         if (!vivo) return;
         setConcurso(c);
         setProva(diasParaProva({ semanasTrilha, concurso: c }));
