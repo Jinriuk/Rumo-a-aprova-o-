@@ -29,10 +29,13 @@ testada contra evidência (build real, banco real, advisor real):
 - **Não é a Vercel.** O deploy é HTML + JS estático na CDN de borda. Não há
   função serverless, SSR nem cold start de função no caminho da entrada.
   O único defeito de entrega encontrado é falta de cache imutável em `/assets/*`.
-- **Não é volume de dados.** No banco de produção: `alunos` = 1 linha,
-  `usuarios` = 2, `registros_estudo` = 1, `aluno_eventos_progresso` = 1.
-- **Não é RLS mal escrita.** O advisor não acusou `auth_rls_initplan` nem
-  `multiple_permissive_policies` — a migration 0029 resolveu isso.
+- **Não é volume de dados** *(no banco medido)*. Em `bdjkgrzfzoamchdpobbl`:
+  `alunos` = 1 linha, `usuarios` = 2, `registros_estudo` = 1,
+  `aluno_eventos_progresso` = 1. Ver §7: se a produção for outro banco, esta
+  conclusão precisa ser refeita lá.
+- **Não é RLS mal escrita** *(no banco medido)*. O advisor não acusou
+  `auth_rls_initplan` nem `multiple_permissive_policies` — a migration 0029
+  resolveu isso.
 - **É a soma de latência com desenho de carregamento.** Muitas viagens, uma
   esperando a outra, contra um servidor longe e num plano compartilhado.
 
