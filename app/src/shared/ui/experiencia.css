@@ -986,12 +986,20 @@ textarea:focus-visible,
   mask-image: linear-gradient(to top, #000 18%, transparent 82%);
 }
 
+/* PERF — NÃO REINTRODUZIR blur nem blend aqui sem medir antes.
+   Estas duas manchas tinham `filter: blur(74px)` e `mix-blend-mode: screen`.
+   Medido na tela de login PARADA (nada animando): removê-las levou o quadro
+   de 9 fps para 33. Blur de raio grande custa preenchimento a cada quadro
+   mesmo sem animação nenhuma, e `screen` obriga a recompor a pilha inteira.
+   O fundo já é um radial-gradient suave — o blur estava borrando um
+   degradê que já era borrado.
+   O acabamento visual disto é a Onda 2b (fundo de imagem); até lá fica
+   chapado de propósito. `will-change` fica: sem o blur, a translação da
+   mancha passa a ser trabalho só de composição. */
 .portal-aurora {
   position: absolute;
   border-radius: 50%;
-  filter: blur(74px);
   will-change: transform;
-  mix-blend-mode: screen;
 }
 
 .portal-aurora--gold {
@@ -1032,10 +1040,14 @@ textarea:focus-visible,
   background: linear-gradient(90deg, transparent, rgba(205,163,73,.055), rgba(108,202,218,.08), transparent);
 }
 
+/* PERF: o `box-shadow: inset 0 0 180px 42px` em tela cheia também é um
+   desfoque — raio de 180 px recalculado sobre toda a viewport. O mesmo
+   escurecimento de borda sai de um radial-gradient, que o navegador
+   resolve como pintura comum. */
 .portal-vignette {
   z-index: 4;
-  box-shadow: inset 0 0 180px 42px rgba(0, 0, 0, .66);
   background:
+    radial-gradient(ellipse 78% 72% at 50% 50%, transparent 55%, rgba(0,0,0,.66) 100%),
     linear-gradient(90deg, rgba(2,6,10,.16), transparent 28%, transparent 72%, rgba(2,6,10,.22)),
     repeating-linear-gradient(0deg, transparent 0 3px, rgba(255,255,255,.009) 3px 4px);
 }
@@ -1214,7 +1226,8 @@ textarea:focus-visible,
   height: 190px;
   border-radius: 50%;
   translate: -50% -50%;
-  filter: blur(38px);
+  /* PERF: `filter: blur(38px)` removido — mesmo caso das auroras, era um
+     desfoque sobre um radial-gradient que já é difuso. */
   background: radial-gradient(circle, rgba(205,163,73,.2), transparent 68%);
 }
 
@@ -1313,7 +1326,9 @@ textarea:focus-visible,
   font-weight: 700;
   letter-spacing: .04em;
   cursor: pointer;
-  backdrop-filter: blur(12px);
+  /* PERF: aqui havia `backdrop-filter: blur(12px)`. Segundo desfoque de
+     fundo da tela, sobre um chip pequeno — o fundo atrás dele é quase
+     opaco, então o desfoque não era visível o bastante para pagar por si. */
   transition: color .2s ease, border-color .2s ease, background .2s ease;
 }
 .login-effects:hover { color: var(--ui-ink); border-color: rgba(205,163,73,.42); background: rgba(11,29,43,.82); }
@@ -1337,7 +1352,13 @@ textarea:focus-visible,
     0 44px 110px rgba(0,0,0,.52),
     0 0 0 1px rgba(255,255,255,.025) inset,
     0 -1px 28px rgba(205,163,73,.07) inset;
-  backdrop-filter: blur(24px) saturate(118%);
+  /* PERF — NÃO REINTRODUZIR. Aqui havia `backdrop-filter: blur(24px)
+     saturate(118%)`. Medido: removê-lo levou o quadro de 33 fps para 57.
+     O cartão fica sobre as manchas do fundo, e o navegador tinha de
+     recalcular o desfoque do que está ATRÁS dele a cada quadro. O fundo
+     próprio do cartão já é ~90% opaco (ver `background` acima), então
+     quase nada do desfoque chegava a aparecer.
+     `preserve-3d` fica: o cartão entra com `rotateY` via Motion. */
   transform-style: preserve-3d;
 }
 
@@ -1516,7 +1537,14 @@ textarea:focus-visible,
 
 @media (max-width: 820px) {
   .login-shell { display: block; height: auto; min-height: 100vh; min-height: 100dvh; padding: 18px clamp(18px, 5vw, 38px) 28px; overflow-x: hidden; overflow-y: auto; }
-  .portal-vignette { box-shadow: inset 0 0 100px 18px rgba(0,0,0,.58); }
+  /* PERF: mesma troca da vinheta principal — gradiente no lugar do
+     box-shadow de raio grande, aqui um pouco mais suave para telas curtas. */
+  .portal-vignette {
+    background:
+      radial-gradient(ellipse 86% 80% at 50% 50%, transparent 58%, rgba(0,0,0,.58) 100%),
+      linear-gradient(90deg, rgba(2,6,10,.16), transparent 28%, transparent 72%, rgba(2,6,10,.22)),
+      repeating-linear-gradient(0deg, transparent 0 3px, rgba(255,255,255,.009) 3px 4px);
+  }
   .login-layout { display: grid; grid-template-columns: 1fr; gap: 18px; width: min(480px, 100%); margin: 0 auto; }
   .login-story { min-height: 286px; padding-top: 8px; }
   .login-hero-brand { margin: 0 0 27px; }
