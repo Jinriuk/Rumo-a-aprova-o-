@@ -29,10 +29,10 @@ testada contra evidência (build real, banco real, advisor real):
 - **Não é a Vercel.** O deploy é HTML + JS estático na CDN de borda. Não há
   função serverless, SSR nem cold start de função no caminho da entrada.
   O único defeito de entrega encontrado é falta de cache imutável em `/assets/*`.
-- **Não é volume de dados** *(no banco medido)*. Em `bdjkgrzfzoamchdpobbl`:
-  `alunos` = 1 linha, `usuarios` = 2, `registros_estudo` = 1,
-  `aluno_eventos_progresso` = 1. Ver §7: se a produção for outro banco, esta
-  conclusão precisa ser refeita lá.
+- **Não é volume de dados** *(confirmado no banco de produção — ver §8 sobre a
+  contagem errada que esta linha trazia antes)*. Em `zckyhihxjjbnqjqilymn`:
+  `alunos` = 1, `registros_estudo` = 0, `simulados` = 0,
+  `aluno_eventos_progresso` = 0.
 - **Não é RLS mal escrita** *(no banco medido)*. O advisor não acusou
   `auth_rls_initplan` nem `multiple_permissive_policies` — a migration 0029
   resolveu isso.
@@ -326,3 +326,58 @@ o fundo próprio dele já é ~90% opaco.
   estaticamente (FK e colunas do embed conferidas no banco real, garantia de
   `INITIAL_SESSION` lida no auth-js instalado, consumidores do perfil
   auditados), mas não exercitado ponta a ponta.
+
+---
+
+## 8. Correção — as contagens do banco de TESTE estavam erradas
+
+Registrado em 11/09, depois do fechamento do §7.
+
+As contagens do projeto de teste/demo `bdjkgrzfzoamchdpobbl` que apareciam no §2
+deste relatório (`alunos` = 1, `usuarios` = 2, `registros_estudo` = 1) **estavam
+erradas**. Elas vieram de `pg_stat_user_tables.n_live_tup`, que é alimentado
+pelo coletor de estatísticas — e este relatório mesmo descobriu, no §7, que
+essas tabelas **nunca foram analisadas**. Sem `ANALYZE`, esse campo lê zero (ou
+quase) mesmo com a tabela cheia. Usei um número de estatística como se fosse
+contagem.
+
+Contado com `count(*)` em 11/09:
+
+| Tabela | Demo (`bdjkgrzfzoamchdpobbl`) | Produção (`zckyhihxjjbnqjqilymn`) |
+|---|---:|---:|
+| escolas | 4 | 1 |
+| usuarios | 78 | 1 |
+| alunos | 69 | 1 |
+| turmas | 8 | 1 |
+| registros_estudo | 457 | 0 |
+| simulados | 53 | 0 |
+| metas | 547 | 2 |
+| meta_atividades | 3.056 | — |
+| aluno_eventos_progresso | 1.003 | 0 |
+| consentimentos | 19 | 1 |
+| vinculos_responsaveis | 4 | 0 |
+| logs_acesso | 1.010 | 0 |
+
+### O que muda, e o que não muda
+
+**Não muda nenhuma conclusão de performance.** As conclusões do §7 são sobre
+PRODUÇÃO, e produção está mesmo vazia — a contagem real confirma (1 aluno, 0
+registros, 0 simulados, 0 eventos). Os achados 08 e 12, rebaixados por falta de
+dado de tenant, seguem rebaixados.
+
+**Muda a leitura do ambiente de demo.** O demo não é um banco vazio: tem a
+escola de vitrine "Matriz Educação RM" com 60 alunos fictícios, 4 turmas, 430
+registros e 51 simulados. É o ambiente certo para qualquer varredura visual ou
+de UX — produção mostraria estado vazio em toda tela.
+
+**Lição de método:** `n_live_tup` e `reltuples` são estimativas do planner, não
+contagem. Num banco que nunca rodou `ANALYZE`, eles mentem. Para decidir
+qualquer coisa com base em volume, usar `count(*)`.
+
+### Achado colateral
+
+O projeto de demo está no **plano free**, igual ao de produção — ou seja,
+**também pausa após 7 dias sem uso**. O workflow `manter-banco-acordado.yml`
+(PR #98) cobre só produção. Como a vitrine é a peça de apresentação para
+escolas, ela pode estar dormindo na hora de uma demonstração. O mesmo workflow
+resolve, com um segundo par de secrets apontando para o ref do demo.
