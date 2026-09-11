@@ -97,8 +97,14 @@ export async function meuPerfil() {
   // abaixo: é o gate de troca obrigatória (Etapa 7 / BLOCO B2) — App.jsx
   // lê perfil.usuario.must_change_password pra bloquear as telas de
   // aluno/responsável até a senha temporária ser trocada.
+  // PERF: a escola vem EMBUTIDA, pela FK `usuarios_escola_id_fkey`. Antes
+  // eram duas viagens em fila — ler `usuarios`, e só com o `escola_id` em
+  // mãos ler `escolas`. Como o perfil recarrega a cada evento de auth, essa
+  // fila reaparecia o dia todo, a ~165 ms por ida e volta em produção.
+  // A RLS é a mesma: o PostgREST aplica a política de `escolas` no embed
+  // exatamente como aplicava no SELECT separado.
   const { data: u, error } = await supabase
-    .from("usuarios").select("id, escola_id, papel, nome, must_change_password").eq("id", uid).maybeSingle();
+    .from("usuarios").select("id, escola_id, papel, nome, must_change_password, escolas(id, nome, slug, logo_url, cor_acento, status, plano)").eq("id", uid).maybeSingle();
   if (error) throw falha("perfil", error);
   if (!u) throw new Error("perfil: usuário sem cadastro nesta escola");
   // `status` entra aqui de propósito (D1A.1): a S1 bloqueia a escola
@@ -109,10 +115,9 @@ export async function meuPerfil() {
   // `escolaEhDemo` (shared/branding/ambiente.js) precisa dele além de
   // status/slug/nome para classificar a escola pela mesma heurística
   // do backoffice (`categoriaEscola`).
-  const { data: e, error: e2 } = await supabase
-    .from("escolas").select("id, nome, slug, logo_url, cor_acento, status, plano").eq("id", u.escola_id).single();
-  if (e2) throw falha("escola", e2);
-  return { usuario: u, escola: e };
+  const { escolas: escola, ...usuario } = u;
+  if (!escola) throw new Error("perfil: escola do usuário não encontrada");
+  return { usuario, escola };
 }
 
 // Espelho do gate de suspensão do banco — módulo PURO (testável sem
@@ -149,10 +154,28 @@ export async function carregarConcursoPorTag(examTag) {
   return data ?? null;
 }
 
+// O CATÁLOGO inteiro. Só para quem precisa dele inteiro — hoje a
+// coordenação, que monta um índice por id para a escola toda. Quem quer UM
+// concurso usa `concursoPorId` abaixo: baixar o catálogo para achar uma
+// linha é uma viagem de ~165 ms paga à toa (medido em produção).
 export async function listarConcursos({ signal } = {}) {
   const { data, error } = await comSinal(supabase.from("concursos").select("*").order("ordem"), signal);
   if (error) throw falha("concursos", error);
   return data;
+}
+
+// UM concurso, filtrado no banco. Aluno e responsável só conhecem o próprio
+// `concurso_id`; antes as duas telas baixavam a tabela e faziam `.find()` no
+// cliente. `maybeSingle` porque o aluno pode apontar para um concurso que a
+// RLS não entrega (ou que sumiu) — isso é ausência, não erro.
+export async function concursoPorId(concursoId, { signal } = {}) {
+  if (!concursoId) return null;
+  const { data, error } = await comSinal(
+    supabase.from("concursos").select("*").eq("id", concursoId).maybeSingle(),
+    signal,
+  );
+  if (error) throw falha("concurso", error);
+  return data ?? null;
 }
 
 /* ---------- fundação pedagógica (Fase 15.1 — global, só leitura) ---------- */

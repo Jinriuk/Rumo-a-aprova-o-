@@ -75,11 +75,7 @@ export default function AreaResponsavel({ perfil }) {
 
         let semanasTrilha = null;
         if (aluno.trilha_id) semanasTrilha = (await db.carregarTrilha(aluno.trilha_id)).semanas;
-        let c = null;
-        if (aluno.concurso_id) {
-          const concursos = await db.listarConcursos();
-          c = concursos.find((x) => x.id === aluno.concurso_id) ?? null;
-        }
+        const c = await db.concursoPorId(aluno.concurso_id);
         if (!vivo) return;
         setConcurso(c);
         setProva(diasParaProva({ semanasTrilha, concurso: c }));

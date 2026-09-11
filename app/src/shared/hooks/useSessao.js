@@ -47,12 +47,23 @@ export function useSessao() {
   useEffect(() => {
     vivoRef.current = true;
 
-    db.sessaoAtual().then(carregarPerfil).catch((e) => {
-      if (vivoRef.current) setEstado({ carregando: false, sessao: null, perfil: null, superAdmin: false, erro: mensagemAmigavel(e, "carregar") });
-    });
-
+    // PERF: aqui havia TAMBÉM um `db.sessaoAtual().then(carregarPerfil)` na
+    // montagem. Ele era redundante: ao assinar `onAuthStateChange`, o
+    // supabase-js chama `_emitInitialSession` e emite `INITIAL_SESSION` uma
+    // vez — com a sessão recuperada, ou com `null` se a recuperação falhar.
+    // Ou seja, o callback abaixo JÁ cobre a carga inicial.
+    //
+    // Com os dois, `carregarPerfil` corria duas vezes em paralelo a cada
+    // boot: dois `souSuperAdmin()` e dois `meuPerfil()` — 6 requisições onde
+    // bastavam 3, a ~165 ms cada em produção.
+    //
+    // Consequência a conhecer: uma falha de rede ao recuperar a sessão agora
+    // chega como `INITIAL_SESSION` com sessão nula (o auth-js engole o erro),
+    // então cai na tela de login em vez da tela de erro. Erro ao carregar o
+    // PERFIL continua aparecendo normalmente — quem trata é o catch de
+    // `carregarPerfil`.
     const parar = db.aoMudarSessao((sessao) => {
-      // re-carrega o perfil a cada troca de sessão (login/logout)
+      // carga inicial (INITIAL_SESSION) e toda troca de sessão (login/logout)
       carregarPerfil(sessao);
     });
     return () => { vivoRef.current = false; parar(); };
