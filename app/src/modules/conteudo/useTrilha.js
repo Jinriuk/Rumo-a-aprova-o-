@@ -30,7 +30,6 @@ export function useTrilha(trilhaId) {
       })
       .catch((e) => vivo && setEstado({ carregando: false, erro: mensagemAmigavel(e, "carregar"), trilha: null }));
     return () => { vivo = false; };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [trilhaId, versao]);
 
   return { ...estado, recarregar };

@@ -202,12 +202,12 @@ function OnboardingAluno({ alunoId }) {
               </div>
             ) : null).filter(Boolean)}
             {!dados.experiencia_previa && !dados.objetivo && !dados.maior_dificuldade && (
-              <div style={{ fontSize: 13, color: T.sub }}>Onboarding em branco. Clique em "Editar" para preencher.</div>
+              <div style={{ fontSize: 13, color: T.sub }}>Onboarding em branco. Clique em &quot;Editar&quot; para preencher.</div>
             )}
           </div>
         ) : (
           <div style={{ padding: "12px 0", fontSize: 13, color: T.sub }}>
-            Nenhuma informação de onboarding. Clique em "Preencher" para registrar o contexto inicial do aluno.
+            Nenhuma informação de onboarding. Clique em &quot;Preencher&quot; para registrar o contexto inicial do aluno.
           </div>
         )
       )}

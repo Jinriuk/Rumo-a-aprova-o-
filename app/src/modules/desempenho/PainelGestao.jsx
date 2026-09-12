@@ -14,6 +14,11 @@ export function PainelGestao({ resumo, aoIr, aoIrFiltrado }) {
   const T = useTema();
   const ag = resumo;
 
+  // Hook antes do return condicional abaixo (regra dos hooks: a lista
+  // pode ficar vazia hoje e ganhar alunos depois, sem remontar o
+  // componente — a ordem dos hooks não pode depender disso).
+  const [criterio, setCriterio] = useState("acerto");
+
   if (ag.length === 0) {
     return (
       <SectionCard titulo="Painel de gestão">
@@ -34,7 +39,6 @@ export function PainelGestao({ resumo, aoIr, aoIrFiltrado }) {
   const questoesSemana = ag.reduce((s, x) => s + x.qSem, 0);
 
   // Destaques: a escola escolhe o critério (Fase 9 do doc central)
-  const [criterio, setCriterio] = useState("acerto");
   const CRITERIOS = {
     acerto: { rotulo: "Melhor acerto", v: (x) => x.acc ?? -1, fmt: (x) => (x.acc == null ? "—" : `${x.acc}%`), sub: "acerto" },
     questoes: { rotulo: "Mais questões (7d)", v: (x) => x.qSem, fmt: (x) => x.qSem, sub: "questões 7d" },

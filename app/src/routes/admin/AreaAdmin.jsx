@@ -105,12 +105,15 @@ export default function AreaAdmin() {
 /* ---------- Dashboard ---------- */
 function Dashboard({ dash, lista = [] }) {
   const T = useTema();
-  if (!dash) return null;
-  const semCoord = Number(dash.escolas_sem_coordenador || 0);
-  const suspensas = Number(dash.escolas_suspensas || 0);
+  // Hook antes do "if (!dash) return null" abaixo: dash chega async
+  // (useRecurso) e pode virar null→objeto entre renders sem remontar
+  // o componente — a ordem dos hooks não pode depender disso.
   // Resumo de risco/categoria derivado da LISTA (puro). Separa demo/teste/
   // real/individual e conta pendências para o painel de saúde (ADM2 t.36/38).
   const risco = useMemo(() => resumoRisco(lista), [lista]);
+  if (!dash) return null;
+  const semCoord = Number(dash.escolas_sem_coordenador || 0);
+  const suspensas = Number(dash.escolas_suspensas || 0);
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(150px,1fr))", gap: 10 }}>
@@ -931,7 +934,7 @@ function ChecklistGoLive({ d }) {
         <div style={{ fontSize: 11.5, color: T.sub, padding: "10px 15px", borderTop: `1px solid ${T.line}`, lineHeight: 1.5, background: T.bg2 }}>
           ◌ itens <b>manuais</b> (backup, smoke, SMTP, termo) são confirmados pelo operador fora do sistema —
           ver <span style={{ color: T.gold }}>docs/operacao/checklist-go-live-escola.md</span>. Eles não fecham
-          automaticamente para não dar falso "pronto".
+          automaticamente para não dar falso &quot;pronto&quot;.
         </div>
       )}
     </SectionCard>
