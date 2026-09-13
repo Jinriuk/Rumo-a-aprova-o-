@@ -1,7 +1,7 @@
 // ============================================================
 // trocar-senha — o próprio usuário define uma senha nova (Etapa 7 /
 // BLOCO B2: troca obrigatória no primeiro acesso)
-// Auto-contida: sem imports de _shared/ (compat. com MCP bundler)
+// Usa _shared/cors.ts (o deploy empacota); ver comentário no import.
 // ------------------------------------------------------------
 // Quem chama: qualquer usuário AUTENTICADO trocando a PRÓPRIA senha —
 // o alvo nunca vem do payload, só do JWT (não existe "trocar a senha de
@@ -26,48 +26,18 @@ const admin = createClient(
   { auth: { persistSession: false } },
 );
 
-// CORS com allowlist (SEG2 / E-1). Cópia mínima de propósito — a versão
-// canônica vive em _shared/cors.ts; ver comentário igual nas outras
-// funções sobre por que esta cópia existe.
-const ENV_ORIGINS = (Deno.env.get("ALLOWED_ORIGINS") ?? "")
-  .split(",").map((o) => o.trim()).filter(Boolean);
-const DEFAULT_ORIGINS = [
-  "https://rumo-a-aprova-o.vercel.app",
-  "http://localhost:5173",
-  "http://localhost:3000",
-];
-const ORIGINS = ENV_ORIGINS.length > 0 ? ENV_ORIGINS : DEFAULT_ORIGINS;
-const PREVIEW_PREFIX_DEFAULTS = ["rumo-a-aprova-o"];
-const PREVIEW_PREFIX_RE = /^[a-z0-9-]{1,63}$/i;
-function previewPrefixes(): string[] {
-  const csv = (Deno.env.get("VERCEL_PREVIEW_PREFIXES") ?? "")
-    .split(",").map((p) => p.trim()).filter((p) => PREVIEW_PREFIX_RE.test(p));
-  if (csv.length > 0) return csv;
-  const single = (Deno.env.get("VERCEL_PREVIEW_PREFIX") ?? "").trim();
-  if (PREVIEW_PREFIX_RE.test(single)) return [single];
-  return PREVIEW_PREFIX_DEFAULTS;
-}
-const VERCEL_PREVIEW = new RegExp(
-  `^https://(?:${previewPrefixes().join("|")})-[a-z0-9-]+\\.vercel\\.app$`, "i",
-);
-
-function origemPermitida(origin: string): boolean {
-  if (!origin) return false;
-  if (ORIGINS.includes(origin)) return true;
-  return VERCEL_PREVIEW.test(origin);
-}
-
-function corsHeaders(req: Request): Record<string, string> {
-  const origin = req.headers.get("origin") ?? "";
-  const headers: Record<string, string> = {
-    "Vary": "Origin",
-    "Access-Control-Allow-Methods": "POST, OPTIONS",
-    "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-    "Access-Control-Max-Age": "86400",
-  };
-  if (origemPermitida(origin)) headers["Access-Control-Allow-Origin"] = origin;
-  return headers;
-}
+// CORS com allowlist (SEG2 / E-1) — FONTE ÚNICA em _shared/cors.ts.
+//
+// B1 (segunda passada): esta função carregava uma CÓPIA inline da
+// allowlist. Consequência concreta: a correção da Onda 1, que pôs os
+// domínios da marca em _shared/cors.ts, NÃO alcançava esta função —
+// ela continuaria respondendo sem Access-Control-Allow-Origin para
+// www/app.trilivaedu.com.br, exatamente o defeito que a onda fechou.
+// A cópia existia por limitação de um fluxo de publicação antigo (o
+// MCP publicando um arquivo só), não por necessidade da função: tanto
+// `supabase functions deploy` quanto o MCP com os arquivos _shared/ no
+// payload resolvem este import relativo.
+import { buildCorsHeaders as corsHeaders } from "../_shared/cors.ts";
 
 async function chamador(req: Request) {
   const auth = req.headers.get("authorization") ?? "";

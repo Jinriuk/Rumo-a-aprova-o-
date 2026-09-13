@@ -117,6 +117,41 @@ test("B1: a allowlist padrão do CORS inclui os domínios da marca", () => {
   assert.match(src, /DEFAULT_ORIGINS\s*=\s*\[/, "DEFAULT_ORIGINS precisa existir no código");
 });
 
+// A allowlist corrigida só vale para quem CHEGA nela. Quatro das sete
+// funções (backoffice-coordenador, provisionar-aluno, revogar-responsavel,
+// trocar-senha) carregavam uma CÓPIA inline da allowlist, herdada de um
+// fluxo antigo de publicação pelo MCP, que não resolvia import relativo.
+// Nelas a correção de _shared/cors.ts não mudava nada — e o teste acima
+// passava mesmo assim, porque só olhava _shared/cors.ts. Era um teste que
+// não pegava o defeito que existia para pegar. Este pega.
+function semComentarios(fonte) {
+  return fonte
+    .replace(/\/\*[\s\S]*?\*\//g, "")
+    .replace(/(^|[^:\\])\/\/.*$/gm, "$1");
+}
+
+test("B1: nenhuma função redeclara a allowlist — todas leem _shared/cors.ts", () => {
+  for (const nome of FUNCOES) {
+    const bruto = ler(`supabase/functions/${nome}/index.ts`);
+    const codigo = semComentarios(bruto);
+    assert.match(
+      codigo,
+      /from\s+"\.\.\/_shared\/(?:cors|contexto)\.ts"/,
+      `${nome} não importa o CORS compartilhado — uma correção em _shared/cors.ts não a alcança`,
+    );
+    assert.doesNotMatch(
+      codigo,
+      /DEFAULT_ORIGINS\s*=\s*\[/,
+      `${nome} redeclara DEFAULT_ORIGINS: cópia inline, imune à correção de _shared/cors.ts`,
+    );
+    assert.match(
+      codigo,
+      /corsHeaders\(req\)/,
+      `${nome} importa o CORS mas não o aplica na resposta`,
+    );
+  }
+});
+
 test("B1: previews da Vercel cobrem os dois projetos que publicam este repo", () => {
   const src = ler("supabase/functions/_shared/cors.ts");
   const m = src.match(/PREVIEW_PREFIX_DEFAULTS\s*=\s*\[([^\]]*)\]/);
