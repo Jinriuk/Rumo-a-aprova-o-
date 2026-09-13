@@ -3,6 +3,7 @@
    médio), treemap de tempo por disciplina e a linha de desempenho
    por meta. Tudo calculado dos registros que já existem. */
 import React, { useMemo, useState } from "react";
+import { corDeAcerto } from "./metricas.js";
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer, Treemap,
@@ -106,7 +107,7 @@ export function Acumulado({ registros, trilha }) {
                   </td>
                   <td className="num" style={{ padding: "10px", textAlign: "right", fontSize: 13 }}>{x.acertos}</td>
                   <td className="num" style={{ padding: "10px", textAlign: "right", fontSize: 13 }}>{x.q}</td>
-                  <td className="num" style={{ padding: "10px", textAlign: "right", fontSize: 13, color: x.acc == null ? T.sub : x.acc >= 70 ? T.green : x.acc >= 55 ? T.gold : T.red, fontWeight: 700 }}>
+                  <td className="num" style={{ padding: "10px", textAlign: "right", fontSize: 13, color: corDeAcerto(T, x.acc), fontWeight: 700 }}>
                     {x.acc == null ? "—" : `${x.acc}%`}
                   </td>
                   <td className="num" style={{ padding: "10px", textAlign: "right", fontSize: 13, color: T.sub }}>{fmtH(x.minutos)}</td>
@@ -117,7 +118,7 @@ export function Acumulado({ registros, trilha }) {
                 <td className="disp" style={{ padding: "11px 10px", fontWeight: 800, fontSize: 13.5 }}>TOTAL</td>
                 <td className="num" style={{ padding: "11px 10px", textAlign: "right", fontWeight: 800 }}>{total.acertos}</td>
                 <td className="num" style={{ padding: "11px 10px", textAlign: "right", fontWeight: 800 }}>{total.q}</td>
-                <td className="num" style={{ padding: "11px 10px", textAlign: "right", fontWeight: 800, color: total.acc >= 70 ? T.green : T.gold }}>{total.acc}%</td>
+                <td className="num" style={{ padding: "11px 10px", textAlign: "right", fontWeight: 800, color: corDeAcerto(T, total.acc) }}>{total.acc}%</td>
                 <td className="num" style={{ padding: "11px 10px", textAlign: "right", fontWeight: 800, color: T.sub }}>{fmtH(total.minutos)}</td>
                 <td className="num" style={{ padding: "11px 10px", textAlign: "right", fontWeight: 800, color: T.sub }}>{fmtH(total.tempoMedio)}</td>
               </tr>

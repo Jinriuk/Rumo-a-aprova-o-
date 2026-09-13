@@ -4,6 +4,7 @@
    sobre o agregado por aluno que a Área da Escola já carregou sob a
    RLS — nenhuma consulta nova, nenhum dado de outra escola. */
 import React, { useMemo } from "react";
+import { corDeAcerto } from "./metricas.js";
 import { SectionCard, EmptyState, BotaoMini } from "../../shared/ui/componentes.jsx";
 import { useTema } from "../../shared/branding/BrandingContext.jsx";
 import { paraCSV, baixarCSV, nomeArquivoSeguro } from "../../shared/lib/csv.js";
@@ -80,7 +81,7 @@ function TabelaComparativo({ titulo, colunaChave, rotuloChave, linhas, T }) {
   }
   const th = { textAlign: "right", fontSize: 10.5, color: T.sub, textTransform: "uppercase", letterSpacing: 0.4, padding: "8px 10px", whiteSpace: "nowrap", fontWeight: 700 };
   const td = { textAlign: "right", fontSize: 13, padding: "9px 10px", borderTop: `1px solid ${T.line}`, whiteSpace: "nowrap" };
-  const cor = (acc) => (acc == null ? T.sub : acc >= 70 ? T.green : acc >= 55 ? T.gold : T.red);
+  const cor = (acc) => corDeAcerto(T, acc);
   return (
     <SectionCard titulo={titulo} sub="Visível só para a coordenação." semPadding>
       <div style={{ overflowX: "auto" }}>

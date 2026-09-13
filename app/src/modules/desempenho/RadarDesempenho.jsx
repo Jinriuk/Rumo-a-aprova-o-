@@ -8,7 +8,7 @@ import {
 } from "recharts";
 import { SectionCard, EmptyState, InsightCard } from "../../shared/ui/componentes.jsx";
 import { useTema } from "../../shared/branding/BrandingContext.jsx";
-import { calcularInsights } from "./metricas.js";
+import { calcularInsights, corDeAcerto } from "./metricas.js";
 
 export function RadarDesempenho({ m, trilha, aoRegistrar }) {
   const T = useTema();
@@ -82,7 +82,7 @@ export function RadarDesempenho({ m, trilha, aoRegistrar }) {
               <div key={s.id}>
                 <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12.5, marginBottom: 4 }}>
                   <span style={{ color: T.ink, fontWeight: 600 }}>{s.name}</span>
-                  <span className="num" style={{ fontWeight: 800, color: s.acc >= 70 ? T.green : s.acc >= 55 ? T.gold : T.red }}>{s.acc}%</span>
+                  <span className="num" style={{ fontWeight: 800, color: corDeAcerto(T, s.acc) }}>{s.acc}%</span>
                 </div>
                 <div style={{ height: 8, background: T.bg, borderRadius: 4, overflow: "hidden" }}>
                   <div style={{ width: `${s.acc}%`, height: "100%", background: s.acc >= 55 ? s.cor : T.red, borderRadius: 4, transition: "width .4s" }} />

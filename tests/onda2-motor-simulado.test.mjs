@@ -211,3 +211,42 @@ test("I2: o eixo Y esquerdo tem largura para o rótulo mais largo", () => {
     }
   }
 });
+
+// ── T9: semáforo de acerto se contradizendo na mesma tabela ──────────────────
+test("T9: a cor de acerto sai de uma fonte só, com o ramo vermelho presente", async () => {
+  const { corDeAcerto, ACERTO_BOM, ACERTO_ATENCAO } =
+    await import("../app/src/modules/desempenho/metricas.js");
+  const T = { green: "verde", gold: "dourado", red: "vermelho", sub: "cinza" };
+
+  // O defeito medido: Química 53,8% em vermelho e o TOTAL 53,1% em
+  // dourado, na MESMA tabela — o número menor com a cor melhor. A
+  // linha TOTAL do Acumulado usava `acc >= 70 ? verde : dourado`, sem
+  // o ramo vermelho que a linha de matéria tinha.
+  assert.equal(corDeAcerto(T, 53.8), "vermelho");
+  assert.equal(corDeAcerto(T, 53.1), "vermelho", "53,1 não pode ser melhor que 53,8");
+
+  assert.equal(corDeAcerto(T, ACERTO_BOM), "verde");
+  assert.equal(corDeAcerto(T, ACERTO_ATENCAO), "dourado");
+  assert.equal(corDeAcerto(T, ACERTO_ATENCAO - 0.1), "vermelho", "o ramo vermelho existe");
+  assert.equal(corDeAcerto(T, null), "cinza", "sem dado não é nota ruim");
+
+  // monotonicidade: nota maior nunca pode receber cor pior
+  const ordem = { cinza: 0, vermelho: 1, dourado: 2, verde: 3 };
+  for (let a = 0; a < 100; a++) {
+    assert.ok(
+      ordem[corDeAcerto(T, a)] <= ordem[corDeAcerto(T, a + 1)],
+      `${a}% recebeu cor melhor que ${a + 1}%`,
+    );
+  }
+});
+
+test("T9: nenhuma tela reimplementa a escala 70/55 por conta própria", () => {
+  const dir = resolve(root, "app/src/modules/desempenho");
+  for (const f of readdirSync(dir).filter((x) => x.endsWith(".jsx"))) {
+    const src = readFileSync(resolve(dir, f), "utf8");
+    assert.doesNotMatch(
+      src, />=\s*70\s*\?\s*T\.green\s*:[^;]*>=\s*55/,
+      `${f}: cópia local da escala de acerto — use corDeAcerto(T, acc) de metricas.js`,
+    );
+  }
+});
