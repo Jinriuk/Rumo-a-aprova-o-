@@ -33,7 +33,12 @@ const ESPCEX = [
 test("validação de máximos: acerto acima do total da matéria é capado e reportado", () => {
   const r = validarAcertos(CN, { mat: 25, ing: 18, fis: 4 });
   assert.equal(r.valido, false);
-  assert.deepEqual(r.violacoes, [{ materia: "mat", informado: 25, max: 20 }]);
+  // Onda 2 / I6: a violação passou a carregar `perdido` — quanto some
+  // no capping. Era exatamente essa informação que sumia calada e
+  // fazia a tela mostrar um total menor sem explicar a diferença.
+  assert.equal(r.violacoes.length, 1);
+  assert.partialDeepStrictEqual(r.violacoes[0], { materia: "mat", informado: 25, max: 20 });
+  assert.equal(r.violacoes[0].perdido, 5, "5 acertos informados a mais que o máximo");
   assert.equal(r.capados.mat, 20, "capa no máximo");
   assert.equal(r.capados.ing, 18);
 });

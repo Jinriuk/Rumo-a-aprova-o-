@@ -2,6 +2,7 @@
    (ref. spec). Linguagem clara para o pai/mãe, sem jargão de jogo e
    sem controles administrativos. Tudo leitura. */
 import React from "react";
+import { corDeAcerto } from "./metricas.js";
 import { SectionCard, StatCard, EmptyState, StatusBadge, InsightCard } from "../../shared/ui/componentes.jsx";
 import { useTema } from "../../shared/branding/BrandingContext.jsx";
 import { fmtBR } from "../../shared/regras/regras.js";
@@ -146,7 +147,7 @@ export function ResumoResponsavel({ aluno, m, meta, trilha, simulados, semanaAti
               <div key={s.id} style={{ display: "flex", alignItems: "center", gap: 10 }}>
                 <div style={{ flex: 1, fontSize: 13, color: T.ink }}>{s.name}</div>
                 <div style={{ fontSize: 12, color: T.sub, width: 90, textAlign: "right" }}>{s.q} questões</div>
-                <div className="num" style={{ width: 52, textAlign: "right", fontWeight: 700, color: s.acc == null ? T.sub : s.acc >= 70 ? T.green : s.acc >= 55 ? T.gold : T.red }}>
+                <div className="num" style={{ width: 52, textAlign: "right", fontWeight: 700, color: corDeAcerto(T, s.acc) }}>
                   {s.acc == null ? "—" : `${s.acc}%`}
                 </div>
               </div>

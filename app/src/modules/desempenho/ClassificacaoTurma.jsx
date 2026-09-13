@@ -4,6 +4,7 @@
    escola; aluno não vê classificação de aluno (comparativo social
    entre alunos é Fase 3, travada nos documentos). */
 import React, { useMemo, useState } from "react";
+import { corDeAcerto } from "./metricas.js";
 import { Card, Empty } from "../../shared/ui/componentes.jsx";
 import { useTema } from "../../shared/branding/BrandingContext.jsx";
 import { fmtBR } from "../../shared/regras/regras.js";
@@ -180,7 +181,7 @@ export function ClassificacaoTurma({ alunos, turmas, resumoPorAluno = {}, simula
                 </div>
                 <div style={{ display: "flex", gap: 14, fontSize: 12, color: T.sub, flexShrink: 0, textAlign: "right" }}>
                   <span><b className="num" style={{ color: T.ink, fontSize: 15 }}>{r.q}</b><br />questões</span>
-                  <span><b className="num" style={{ color: r.acc == null ? T.sub : r.acc >= 70 ? T.green : r.acc >= 55 ? T.gold : T.red, fontSize: 15 }}>{r.acc == null ? "—" : `${r.acc}%`}</b><br />acerto</span>
+                  <span><b className="num" style={{ color: corDeAcerto(T, r.acc), fontSize: 15 }}>{r.acc == null ? "—" : `${r.acc}%`}</b><br />acerto</span>
                   <span><b className="num" style={{ color: T.ink, fontSize: 15 }}>{fmtH(r.minutos)}</b><br />tempo</span>
                   <span><b className="num" style={{ color: T.ink, fontSize: 15 }}>{r.dias}</b><br />dias</span>
                 </div>

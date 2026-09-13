@@ -3,6 +3,7 @@
    médio), treemap de tempo por disciplina e a linha de desempenho
    por meta. Tudo calculado dos registros que já existem. */
 import React, { useMemo, useState } from "react";
+import { corDeAcerto } from "./metricas.js";
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer, Treemap,
@@ -106,7 +107,7 @@ export function Acumulado({ registros, trilha }) {
                   </td>
                   <td className="num" style={{ padding: "10px", textAlign: "right", fontSize: 13 }}>{x.acertos}</td>
                   <td className="num" style={{ padding: "10px", textAlign: "right", fontSize: 13 }}>{x.q}</td>
-                  <td className="num" style={{ padding: "10px", textAlign: "right", fontSize: 13, color: x.acc == null ? T.sub : x.acc >= 70 ? T.green : x.acc >= 55 ? T.gold : T.red, fontWeight: 700 }}>
+                  <td className="num" style={{ padding: "10px", textAlign: "right", fontSize: 13, color: corDeAcerto(T, x.acc), fontWeight: 700 }}>
                     {x.acc == null ? "—" : `${x.acc}%`}
                   </td>
                   <td className="num" style={{ padding: "10px", textAlign: "right", fontSize: 13, color: T.sub }}>{fmtH(x.minutos)}</td>
@@ -117,7 +118,7 @@ export function Acumulado({ registros, trilha }) {
                 <td className="disp" style={{ padding: "11px 10px", fontWeight: 800, fontSize: 13.5 }}>TOTAL</td>
                 <td className="num" style={{ padding: "11px 10px", textAlign: "right", fontWeight: 800 }}>{total.acertos}</td>
                 <td className="num" style={{ padding: "11px 10px", textAlign: "right", fontWeight: 800 }}>{total.q}</td>
-                <td className="num" style={{ padding: "11px 10px", textAlign: "right", fontWeight: 800, color: total.acc >= 70 ? T.green : T.gold }}>{total.acc}%</td>
+                <td className="num" style={{ padding: "11px 10px", textAlign: "right", fontWeight: 800, color: corDeAcerto(T, total.acc) }}>{total.acc}%</td>
                 <td className="num" style={{ padding: "11px 10px", textAlign: "right", fontWeight: 800, color: T.sub }}>{fmtH(total.minutos)}</td>
                 <td className="num" style={{ padding: "11px 10px", textAlign: "right", fontWeight: 800, color: T.sub }}>{fmtH(total.tempoMedio)}</td>
               </tr>
@@ -131,10 +132,10 @@ export function Acumulado({ registros, trilha }) {
           <div className="disp" style={{ fontSize: 15, fontWeight: 700, marginBottom: 12 }}>Desempenho por meta</div>
           {porMeta.every((x) => x.acc == null) ? <Empty txt="Aparece conforme as semanas passam." /> : (
             <ResponsiveContainer width="100%" height={220}>
-              <LineChart data={porMeta} margin={{ top: 6, right: 10, left: -18, bottom: 0 }}>
+              <LineChart data={porMeta} margin={{ top: 6, right: 10, left: 0, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke={T.line} />
                 <XAxis dataKey="label" tick={{ fill: T.sub, fontSize: 11 }} axisLine={{ stroke: T.line }} tickLine={false} />
-                <YAxis domain={[0, 100]} tick={{ fill: T.sub, fontSize: 10 }} axisLine={false} tickLine={false} width={32} />
+                <YAxis domain={[0, 100]} tick={{ fill: T.sub, fontSize: 10 }} axisLine={false} tickLine={false} width={36} />
                 <Tooltip contentStyle={{ background: T.bg2, border: `1px solid ${T.line}`, borderRadius: 8 }} formatter={(v) => [v == null ? "—" : `${v}%`, "acerto"]} />
                 <Line type="monotone" dataKey="acc" stroke={T.gold} strokeWidth={2.5} dot={{ r: 4, fill: T.gold }} connectNulls />
               </LineChart>

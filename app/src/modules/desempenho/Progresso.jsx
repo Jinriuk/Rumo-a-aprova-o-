@@ -84,10 +84,10 @@ export function Progresso({ registros, trilha }) {
         </div>
         {totalPeriodo === 0 ? <Empty txt="Sem registros neste período ainda." /> : (
           <ResponsiveContainer width="100%" height={210}>
-            <BarChart data={days} margin={{ top: 4, right: 6, left: -18, bottom: 0 }}>
+            <BarChart data={days} margin={{ top: 4, right: 6, left: 0, bottom: 0 }}>
               <CartesianGrid strokeDasharray="3 3" stroke={T.line} vertical={false} />
               <XAxis dataKey="label" tick={{ fill: T.sub, fontSize: 10 }} axisLine={{ stroke: T.line }} tickLine={false} interval="preserveStartEnd" minTickGap={24} />
-              <YAxis tick={{ fill: T.sub, fontSize: 10 }} axisLine={false} tickLine={false} width={28} allowDecimals={false} />
+              <YAxis tick={{ fill: T.sub, fontSize: 10 }} axisLine={false} tickLine={false} width={36} allowDecimals={false} />
               <Tooltip contentStyle={{ background: T.bg2, border: `1px solid ${T.line}`, borderRadius: 8, color: T.ink }} cursor={{ fill: "#ffffff08" }} labelStyle={{ color: T.sub }} />
               <Bar dataKey="q" radius={[4, 4, 0, 0]} fill={T.gold} />
             </BarChart>
@@ -102,10 +102,10 @@ export function Progresso({ registros, trilha }) {
         <div className="disp" style={{ fontSize: 15, fontWeight: 700, marginBottom: 12 }}>Evolução por semana — as {trilha.semanas.length} semanas até a prova</div>
         {!temSemana ? <Empty txt="A evolução por semana aparece conforme os registros entram." /> : (
           <ResponsiveContainer width="100%" height={230}>
-            <ComposedChart data={porSemana} margin={{ top: 6, right: 6, left: -18, bottom: 0 }}>
+            <ComposedChart data={porSemana} margin={{ top: 6, right: 6, left: 0, bottom: 0 }}>
               <CartesianGrid strokeDasharray="3 3" stroke={T.line} vertical={false} />
               <XAxis dataKey="label" tick={{ fill: T.sub, fontSize: 11 }} axisLine={{ stroke: T.line }} tickLine={false} />
-              <YAxis yAxisId="q" tick={{ fill: T.sub, fontSize: 10 }} axisLine={false} tickLine={false} width={30} allowDecimals={false} />
+              <YAxis yAxisId="q" tick={{ fill: T.sub, fontSize: 10 }} axisLine={false} tickLine={false} width={36} allowDecimals={false} />
               <YAxis yAxisId="acc" orientation="right" domain={[0, 100]} tick={{ fill: T.sub, fontSize: 10 }} axisLine={false} tickLine={false} width={30} />
               <Tooltip contentStyle={{ background: T.bg2, border: `1px solid ${T.line}`, borderRadius: 8 }} formatter={(v, n) => n === "Acerto %" ? [v == null ? "—" : `${v}%`, n] : [v, n]} cursor={{ fill: "#ffffff08" }} />
               <Legend wrapperStyle={{ fontSize: 11 }} />
@@ -226,6 +226,15 @@ function SimuladoGenerico({ aluno, simulados, podeEditar, semanaAtiva, concurso,
     await enviar(async () => {
       await db.adicionarSimulado({
         escola_id: aluno.escola_id, aluno_id: aluno.id, nome: f.nome, data: f.data,
+        // A9: este caminho NÃO gravava exam_tag, e era a origem dos 20
+        // simulados (de 53) com formato nulo no demo — não era dado
+        // velho, era a fonte ainda produzindo nulo. Sem ele, a tela
+        // rotula o simulado pelo concurso ATUAL do aluno; se a
+        // coordenação trocar o concurso depois (e o T29 mostra que até
+        // o scroll do mouse sobre o select faz isso), todo o histórico
+        // é reetiquetado em silêncio. O formato é do simulado, não do
+        // cadastro de hoje.
+        exam_tag: concurso?.codigo ?? null,
         acertos: Object.fromEntries(materias.map((m) => [m.k, Math.min(+f[m.k] || 0, m.max)])),
       });
       // reseta com o próximo número livre, já contando o que acabou de entrar
@@ -289,10 +298,10 @@ function SimuladoGenerico({ aluno, simulados, podeEditar, semanaAtiva, concurso,
         <div className="disp" style={{ fontSize: 15, fontWeight: 700, marginBottom: 10 }}>Evolução nos simulados — {prova.rotulo}</div>
         {chart.length === 0 ? <Empty txt="Nenhum simulado registrado ainda. Registre o primeiro abaixo." /> : (
           <ResponsiveContainer width="100%" height={230}>
-            <LineChart data={chart} margin={{ top: 6, right: 10, left: -16, bottom: 0 }}>
+            <LineChart data={chart} margin={{ top: 6, right: 10, left: 0, bottom: 0 }}>
               <CartesianGrid strokeDasharray="3 3" stroke={T.line} />
               <XAxis dataKey="label" tick={{ fill: T.sub, fontSize: 10 }} axisLine={{ stroke: T.line }} tickLine={false} minTickGap={6} />
-              <YAxis domain={[0, 100]} tick={{ fill: T.sub, fontSize: 10 }} axisLine={false} tickLine={false} width={28} allowDecimals={false} />
+              <YAxis domain={[0, 100]} tick={{ fill: T.sub, fontSize: 10 }} axisLine={false} tickLine={false} width={36} allowDecimals={false} />
               <Tooltip contentStyle={{ background: T.bg2, border: `1px solid ${T.line}`, borderRadius: 8 }} />
               <Legend wrapperStyle={{ fontSize: 11 }} />
               <Line type="monotone" dataKey="nota" name={prova.notaRotulo ?? "nota geral %"} stroke={T.gold} strokeWidth={2.5} dot={{ r: 3 }} />
