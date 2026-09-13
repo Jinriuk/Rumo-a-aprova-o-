@@ -456,8 +456,9 @@ function MissaoJornada({ w, trilha, ativaNum, estadosPorAtividade, T }) {
           )}
 
           {tarefas.length > 0 && (
-            <button onClick={() => setAberto((v) => !v)}
-              style={{ marginTop: 10, border: "none", background: "transparent", color: T.sub, fontSize: 12, fontWeight: 600, padding: "4px 0", display: "flex", alignItems: "center", gap: 5 }}>
+            // T1: alvo de toque — padding vertical + minHeight reais no botão.
+            <button type="button" onClick={() => setAberto((v) => !v)}
+              style={{ marginTop: 10, border: "none", background: "transparent", color: T.sub, fontSize: 12, fontWeight: 600, padding: "8px 0", minHeight: 32, display: "flex", alignItems: "center", gap: 5 }}>
               {aberto ? "▾ ocultar" : `▸ ver ${tarefas.length} ${tarefas.length === 1 ? "objetivo" : "objetivos"}`}
             </button>
           )}

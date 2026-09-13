@@ -90,3 +90,65 @@ test("BLOCO2: a tabela de CSV em CadastroAlunos continua com top:0 puro (sticky 
   const src = lerCodigo("app/src/modules/pessoas/CadastroAlunos.jsx");
   assert.match(src, /position:\s*"sticky",\s*top:\s*0\s*\}/, "o sticky do cabeçalho de tabela do CSV não devia ter sido tocado");
 });
+
+// ============================================================
+// BLOCO 3 — alvos de toque (T1, T29-tamanho, T36, T41)
+// ============================================================
+// Padrão do defeito, em todo o bloco: padding no <div> pai (não-clicável),
+// <button>/<select> com padding:0 ou sem minHeight. A correção segue os
+// dois padrões JÁ existentes no repo (componentes.jsx:318, tab transparente
+// com padding+minHeight; e HistoricoProgresso.jsx:72-73/AreaEscola.jsx:
+// 305-311, botão com borda) — nunca um terceiro padrão novo.
+test("BLOCO3: Registrar.jsx — botão 'Ver mais' de registros recentes tem alvo de toque real", () => {
+  const src = lerCodigo("app/src/modules/motor/Registrar.jsx");
+  const m = src.match(/onClick=\{\(\) => setLimiteRecentes\(registros\.length\)\}\s*\n\s*style=\{\{([^}]*)\}\}/);
+  assert.ok(m, "não achei o botão 'Ver mais' de registros recentes");
+  assert.match(m[1], /minHeight:\s*32/, "sem minHeight — o padding sozinho não bastava (era padding: 0)");
+});
+
+test("BLOCO3: Conquistas.jsx — 'Ver carreira completa' e 'Ver mais/menos' por grupo têm alvo de toque real", () => {
+  const src = lerCodigo("app/src/modules/motor/Conquistas.jsx");
+  const m1 = src.match(/onClick=\{\(\) => setVerCarreira\(\(v\) => !v\)\}\s*\n\s*style=\{\{([^}]*)\}\}/);
+  assert.ok(m1, "não achei o botão 'Ver carreira completa'");
+  assert.match(m1[1], /minHeight:\s*32/, "'Ver carreira completa' sem minHeight");
+
+  const m2 = src.match(/onClick=\{\(\) => setGruposExpandidos\(\(prev\) => \{[\s\S]*?\}\)\}\s*\n\s*style=\{\{([^}]*)\}\}/);
+  assert.ok(m2, "não achei o botão 'Ver mais/menos' por grupo");
+  assert.match(m2[1], /minHeight:\s*32/, "'Ver mais/menos' por grupo sem minHeight");
+});
+
+test("BLOCO3: VisaoEstudo.jsx — botão 'ver N objetivos' tem alvo de toque real", () => {
+  const src = lerCodigo("app/src/routes/aluno/VisaoEstudo.jsx");
+  const m = src.match(/onClick=\{\(\) => setAberto\(\(v\) => !v\)\}\s*\n\s*style=\{\{([^}]*)\}\}/);
+  assert.ok(m, "não achei o botão de expandir objetivos");
+  assert.match(m[1], /minHeight:\s*32/, "sem minHeight — antes era padding: \"4px 0\" só");
+});
+
+test("BLOCO3: Acumulado.jsx — toggle Tempo/Questões tem alvo de toque real", () => {
+  const src = lerCodigo("app/src/modules/desempenho/Acumulado.jsx");
+  const m = src.match(/onClick=\{\(\) => setVistaTreemap\(k\)\}\s*\n\s*style=\{\{([^}]*)\}\}/);
+  assert.ok(m, "não achei o toggle Tempo/Questões");
+  assert.match(m[1], /minHeight:\s*32/, "toggle Tempo/Questões sem minHeight (era ≈28px)");
+});
+
+test("BLOCO3: AreaEscola.jsx — cabeçalho de turma (abrir/fechar alunos) tem alvo de toque real", () => {
+  const src = lerCodigo("app/src/routes/escola/AreaEscola.jsx");
+  const m = src.match(/onClick=\{\(\) => setTurmaAberta\(aberta \? null : t\.id\)\}\s*\n\s*style=\{\{([^}]*)\}\}/);
+  assert.ok(m, "não achei o cabeçalho de turma");
+  assert.doesNotMatch(m[1], /padding:\s*0\b/, "cabeçalho de turma ainda com padding: 0");
+  assert.match(m[1], /minHeight:\s*44/, "cabeçalho de turma sem minHeight");
+});
+
+test("BLOCO3: PainelGestao.jsx — 'Ver completo' (o pior caso, ≈17px) tem alvo de toque real", () => {
+  const src = lerCodigo("app/src/modules/desempenho/PainelGestao.jsx");
+  const m = src.match(/onClick=\{\(\) => aoIr\("ranking"\)\}[\s\S]{0,20}style=\{\{([^}]*)\}\}/);
+  assert.ok(m, "não achei o botão 'Ver completo'");
+  assert.match(m[1], /minHeight:\s*32/, "'Ver completo' continua sem minHeight — não tinha padding nenhum antes");
+});
+
+test("BLOCO3: ListaAlunos.jsx — selMini (turma/concurso/trilha, 3 por linha × ~34 linhas) tem alvo de toque real", () => {
+  const src = lerCodigo("app/src/modules/pessoas/ListaAlunos.jsx");
+  const m = src.match(/const selMini = \{([\s\S]*?)\};/);
+  assert.ok(m, "não achei a definição de selMini");
+  assert.match(m[1], /minHeight:\s*32/, "selMini sem minHeight — dava ≈26px");
+});

@@ -115,7 +115,8 @@ export function PainelGestao({ resumo, aoIr, aoIrFiltrado }) {
             style={{ background: T.bg, border: `1px solid ${T.line}`, color: T.ink, borderRadius: 8, padding: "7px 9px", fontSize: 12 }}>
             {Object.entries(CRITERIOS).map(([k, c]) => <option key={k} value={k} style={{ background: T.bg2 }}>{c.rotulo}</option>)}
           </select>
-          <button onClick={() => aoIr("ranking")} style={{ border: "none", background: "transparent", color: T.gold, fontSize: 12.5, fontWeight: 700 }}>Ver completo ›</button>
+          {/* T1: sem padding nenhum antes — o pior caso do bloco (~17px). */}
+          <button type="button" onClick={() => aoIr("ranking")} style={{ border: "none", background: "transparent", color: T.gold, fontSize: 12.5, fontWeight: 700, padding: "9px 4px", minHeight: 32 }}>Ver completo ›</button>
         </div>
       } semPadding>
         {ranking.length === 0 ? (

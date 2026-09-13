@@ -261,8 +261,10 @@ function Turmas({ turmas, alunos, porAluno, aoMudar, aoVerRanking, aoVerAluno })
               const aberta = turmaAberta === t.id;
               return (
                 <div key={t.id} style={{ padding: "13px 15px", borderBottom: i === turmas.length - 1 ? "none" : `1px solid ${T.line}`, background: aberta ? `${T.gold}06` : "transparent" }}>
-                  <button onClick={() => setTurmaAberta(aberta ? null : t.id)}
-                    style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, flexWrap: "wrap", width: "100%", border: "none", background: "transparent", textAlign: "left", padding: 0, color: T.ink }}>
+                  {/* T1: o padding vivia só no <div> pai (não-clicável);
+                      o botão em si tinha padding:0. */}
+                  <button type="button" onClick={() => setTurmaAberta(aberta ? null : t.id)}
+                    style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, flexWrap: "wrap", width: "100%", border: "none", background: "transparent", textAlign: "left", padding: "8px 0", minHeight: 44, color: T.ink }}>
                     <div className="disp" style={{ fontSize: 15, fontWeight: 700 }}>
                       {t.nome} <span style={{ fontSize: 11, color: T.gold, fontWeight: 700, marginLeft: 6 }}>{aberta ? "fechar alunos ▴" : "ver alunos ▾"}</span>
                     </div>

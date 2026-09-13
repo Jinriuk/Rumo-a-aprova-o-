@@ -178,7 +178,8 @@ export function ListaAlunos({ alunos, consentimentos, concursos = [], turmas = [
             const temCons = comConsentimento.has(a.id);
             const trabalhando = ocupado === a.id;
             const r = resumoPorAluno[a.id];
-            const selMini = { background: T.bg, border: `1px solid ${T.line}`, color: T.sub, borderRadius: 7, padding: "5px 9px", fontSize: 11.5, maxWidth: "100%" };
+            // T29-tamanho: os 3 <select> por linha davam ≈26px — minHeight completa o alvo de toque.
+            const selMini = { background: T.bg, border: `1px solid ${T.line}`, color: T.sub, borderRadius: 7, padding: "5px 9px", minHeight: 32, fontSize: 11.5, maxWidth: "100%" };
             return (
               <div key={a.id} style={{ padding: "13px 15px", borderBottom: i === pagina_itens.length - 1 ? "none" : `1px solid ${T.line}` }}>
                 <div style={{ display: "flex", gap: 10, alignItems: "flex-start", flexWrap: "wrap" }}>

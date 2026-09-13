@@ -225,8 +225,11 @@ export function Registrar({
             <ListaRegistros registros={recentes} porCodigo={trilha.porCodigo} aoApagar={apagar} rotuloAcerto />
             {temMaisRecentes && (
               <div style={{ padding: "10px 14px", borderTop: `1px solid ${T.line}` }}>
-                <button onClick={() => setLimiteRecentes(registros.length)}
-                  style={{ border: "none", background: "transparent", color: T.gold, fontSize: 13, fontWeight: 700, padding: 0, cursor: "pointer" }}>
+                {/* T1: alvo de toque real no botão, não só padding no <div>
+                    pai — o mesmo padrão de componentes.jsx:318 (tab
+                    transparente com padding+minHeight próprios). */}
+                <button type="button" onClick={() => setLimiteRecentes(registros.length)}
+                  style={{ border: "none", background: "transparent", color: T.gold, fontSize: 13, fontWeight: 700, padding: "9px 4px", minHeight: 32, cursor: "pointer" }}>
                   Ver mais ({registros.length - limiteRecentes} registros)
                 </button>
               </div>

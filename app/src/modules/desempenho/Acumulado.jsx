@@ -148,8 +148,9 @@ export function Acumulado({ registros, trilha }) {
             <div className="disp" style={{ fontSize: 15, fontWeight: 700 }}>Desempenho por disciplina</div>
             <div style={{ display: "flex", background: T.bg, borderRadius: 8, padding: 3, border: `1px solid ${T.line}` }}>
               {[["tempo", "Tempo"], ["questoes", "Questões"]].map(([k, lb]) => (
-                <button key={k} onClick={() => setVistaTreemap(k)}
-                  style={{ border: "none", background: vistaTreemap === k ? T.gold : "transparent", color: vistaTreemap === k ? "#0A1622" : T.sub, fontWeight: 600, fontSize: 12, padding: "6px 11px", borderRadius: 6 }}>
+                // T1: minHeight explícito — o padding sozinho dava ≈28px.
+                <button key={k} type="button" onClick={() => setVistaTreemap(k)}
+                  style={{ border: "none", background: vistaTreemap === k ? T.gold : "transparent", color: vistaTreemap === k ? "#0A1622" : T.sub, fontWeight: 600, fontSize: 12, padding: "6px 11px", minHeight: 32, borderRadius: 6 }}>
                   {lb}
                 </button>
               ))}
