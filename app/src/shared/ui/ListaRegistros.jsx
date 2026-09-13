@@ -21,7 +21,7 @@ export function RegistroRow({ registro: l, disciplina, aoApagar, rotuloAcerto = 
         </div>
       </div>
       {aoApagar && (
-        <button onClick={() => aoApagar(l.id)} aria-label="Apagar registro" style={{ background: "transparent", border: "none", color: T.sub, fontSize: 22, width: 40, height: 40, flexShrink: 0, lineHeight: 1 }}>×</button>
+        <button type="button" onClick={() => aoApagar(l.id)} aria-label="Apagar registro" style={{ background: "transparent", border: "none", color: T.sub, fontSize: 22, width: 40, height: 40, flexShrink: 0, lineHeight: 1 }}>×</button>
       )}
     </div>
   );

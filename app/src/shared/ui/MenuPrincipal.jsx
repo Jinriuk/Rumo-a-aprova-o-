@@ -6,7 +6,7 @@
    - DESKTOP (≥1024px): MENU LATERAL fixo (sidebar, ref. Guruja) — o
      conteúdo ocupa praticamente a tela toda (classe .com-sidebar).
    Contrato: abas = [[chave, rótulo, badge?, nomeDoÍcone]]. */
-import React, { useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { useTema, useBranding } from "../branding/BrandingContext.jsx";
 import { NOME_PLATAFORMA } from "../branding/marca.js";
 import { Icone } from "./Icones.jsx";
@@ -14,10 +14,22 @@ import { Icone } from "./Icones.jsx";
 const MAX_NA_BARRA = 4;
 export const LARGURA_SIDEBAR = 236;
 
-export function MenuPrincipal({ abas, ativo, aoTrocar, usuario }) {
+export function MenuPrincipal({ abas, ativo, aoTrocar, usuario, rotuloExtra }) {
   const T = useTema();
   const { escola } = useBranding();
   const [maisAberto, setMaisAberto] = useState(false);
+  // T47/T48: a folha do "Mais" não tratava Escape, não devolvia foco ao
+  // gatilho e (a causa de T47) não tinha CSS nenhum ligado ao breakpoint —
+  // se estivesse aberta ao cruzar para ≥1024px, continuava renderizada por
+  // cima da sidebar. `.menu-barra` já esconde o GATILHO nesse breakpoint
+  // (:60/:65 abaixo); a folha ganha a mesma regra via `.menu-folha-mais`.
+  const gatilhoMaisRef = useRef(null);
+  useEffect(() => {
+    if (!maisAberto) return;
+    const onKey = (e) => { if (e.key === "Escape") { setMaisAberto(false); gatilhoMaisRef.current?.focus(); } };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [maisAberto]);
   // Rodapé da sidebar: nome da escola (white-label leve) sobre a assinatura
   // discreta da plataforma. Sem escola — ou quando a "escola" É a plataforma
   // (fluxo de recuperação em App.jsx) — a assinatura repetiria o mesmo nome
@@ -26,6 +38,22 @@ export function MenuPrincipal({ abas, ativo, aoTrocar, usuario }) {
   const mostrarAssinatura = nomeExibido !== NOME_PLATAFORMA;
   const iniciais = (usuario?.nome ?? "")
     .split(" ").filter(Boolean).slice(0, 2).map((p) => p[0].toUpperCase()).join("");
+
+  // C2: <title> era estático (index.html), sem router e sem
+  // document.title em lugar nenhum do JS. MenuPrincipal é o único ponto
+  // onde escola (useBranding, acima) e aba ativa coexistem — os dois
+  // pontos onde é usado (VisaoEstudo.jsx, AreaEscola.jsx) ganham o
+  // título de graça. `rotuloExtra` cobre o TERCEIRO estado de tela que
+  // não é aba nenhuma: AreaEscola passa o nome do aluno quando
+  // `alunoAberto` (FichaAluno) está montado por cima do painel — sem
+  // isso a aba na barra do navegador continuaria dizendo "Painel"
+  // enquanto a tela mostra a ficha de um aluno específico.
+  useEffect(() => {
+    const rotuloAba = rotuloExtra ?? abas.find(([k]) => k === ativo)?.[1];
+    if (typeof document !== "undefined" && rotuloAba) {
+      document.title = `${rotuloAba} · ${nomeExibido}`;
+    }
+  }, [ativo, rotuloExtra, nomeExibido, abas]);
 
   const precisaMais = abas.length > MAX_NA_BARRA + 1;
   const naBarra = precisaMais ? abas.slice(0, MAX_NA_BARRA) : abas;
@@ -39,9 +67,10 @@ export function MenuPrincipal({ abas, ativo, aoTrocar, usuario }) {
     window.scrollTo({ top: 0, left: 0, behavior: "instant" });
   }
 
-  const ItemBarra = ({ rotulo, badge, icone, on, aoClicar }) => (
-    <button className="app-nav-item" onClick={aoClicar}
-      aria-current={on ? "page" : undefined}
+  const ItemBarra = ({ rotulo, badge, icone, on, aoClicar, refBtn, ariaHaspopup, ariaExpandido }) => (
+    <button ref={refBtn} type="button" className="app-nav-item" onClick={aoClicar}
+      aria-current={ariaHaspopup ? undefined : on ? "page" : undefined}
+      aria-haspopup={ariaHaspopup} aria-expanded={ariaHaspopup ? ariaExpandido : undefined}
       style={{ flex: 1, minWidth: 0, border: "none", background: "transparent", display: "flex", flexDirection: "column", alignItems: "center", gap: 4, padding: "8px 2px 7px", position: "relative", color: on ? T.gold : T.sub }}>
       <span style={{ position: "absolute", top: 0, left: "22%", right: "22%", height: 3, borderRadius: "0 0 3px 3px", background: on ? T.gold : "transparent", boxShadow: on ? `0 0 10px ${T.gold}88` : "none" }} />
       <Icone nome={icone} tam={21} grosso={on ? 2.4 : 2} />
@@ -67,12 +96,53 @@ export function MenuPrincipal({ abas, ativo, aoTrocar, usuario }) {
         .mi { transition: background .15s, color .15s, transform .15s; }
         .mi:hover { background: ${T.cardHi} !important; color: ${T.ink} !important; transform: translateX(2px); }
         .mi:hover .mi-ic { color: ${T.gold} !important; }
-        /* rolagem do menu: vertical fina e discreta, lateral nunca */
-        .menu-rolagem { scrollbar-width: none; }
-        .menu-rolagem::-webkit-scrollbar { display: none; }
+        /* rolagem do menu (I1/I7): a lista de abas é DINÂMICA por papel
+           (4 a 8+ itens hoje, tende a crescer) — "fazer caber" quebraria
+           de novo no primeiro papel com mais uma aba, ou com zoom do
+           navegador, ou com nome de usuário que quebra em 2 linhas no
+           perfil acima. A correção é affordance, não tentar caber: a
+           barra de rolagem fica VISÍVEL e fina em vez de suprimida.
+           Antes era "scrollbar-width: none" + "::-webkit-scrollbar
+           display:none" — rolava, e não havia nenhum sinal disso; a
+           aba "Marca" (a tela do white-label, sempre por último na nav
+           da coordenação) ficava indistinguível de "não existe". */
+        .menu-rolagem { scrollbar-width: thin; scrollbar-color: ${T.line} transparent; }
+        .menu-rolagem::-webkit-scrollbar { width: 6px; }
+        .menu-rolagem::-webkit-scrollbar-track { background: transparent; }
+        .menu-rolagem::-webkit-scrollbar-thumb { background: ${T.line}; border-radius: 3px; }
+        .menu-rolagem::-webkit-scrollbar-thumb:hover { background: ${T.sub}; }
+        /* T47: a folha do "Mais" é renderizada fora de .menu-barra (é
+           position:fixed, sobre TUDO — precisa ficar acima da barra, não
+           dentro dela), então não herdava a regra que esconde a barra em
+           ≥1024px. Sem isto, uma folha aberta ao cruzar pro desktop
+           continuava por cima da sidebar. */
+        .menu-folha-mais { display: block; }
+        @media (min-width: 1024px) {
+          .menu-folha-mais { display: none; }
+        }
+        /* T25: skip-link — primeiro elemento focável da nav, invisível até
+           receber foco por teclado. Sem isto, Tab a partir do topo da
+           página passa por TODAS as abas (até 8, ver I1/I7) antes de
+           chegar no conteúdo. O alvo (#conteudo-principal) é setado no
+           bloco de conteúdo que segue o <MenuPrincipal> nas duas telas
+           que o usam (VisaoEstudo.jsx, AreaEscola.jsx). */
+        .skip-link {
+          position: fixed; left: 12px; top: -60px; z-index: 10000;
+          background: ${T.gold}; color: #0A1622; padding: 10px 16px;
+          border-radius: 8px; font-weight: 700; font-size: 13px;
+          text-decoration: none; transition: top .15s;
+        }
+        .skip-link:focus { top: 12px; }
       `}</style>
 
       {/* ============ DESKTOP: menu lateral fixo ============ */}
+      {/* T25: as duas navs abaixo tinham o MESMO aria-label — só uma
+          fica exposta por vez via CSS (media query), mas um leitor de
+          landmarks não respeita display:none igual um leitor de tela
+          respeita, e a "folha do Mais" (T47, acima) já mostrou que a
+          separação CSS/estado nem sempre bate. Rótulos distintos. */}
+      <a href="#conteudo-principal" className="skip-link">Pular para o conteúdo</a>
+
       <nav className="menu-lateral app-sidebar" aria-label="Navegação principal" style={{ position: "fixed", left: 0, top: 0, bottom: 0, width: LARGURA_SIDEBAR, zIndex: 10, flexDirection: "column", background: `linear-gradient(180deg, ${T.bg2} 0%, ${T.bg} 100%)`, borderRight: `1px solid ${T.line}`, padding: "86px 12px 14px", overflow: "hidden" }}>
 
         {/* perfil VERTICAL: avatar centralizado em cima, nome embaixo
@@ -100,7 +170,7 @@ export function MenuPrincipal({ abas, ativo, aoTrocar, usuario }) {
           {abas.map(([k, lb, badge, icone]) => {
             const on = ativo === k;
             return (
-              <button key={k} className={`app-nav-item ${on ? "" : "mi"}`.trim()} onClick={() => trocar(k)}
+              <button type="button" key={k} className={`app-nav-item ${on ? "" : "mi"}`.trim()} onClick={() => trocar(k)}
                 aria-current={on ? "page" : undefined}
                 style={{
                   display: "flex", alignItems: "center", gap: 12, width: "100%", textAlign: "left",
@@ -148,24 +218,25 @@ export function MenuPrincipal({ abas, ativo, aoTrocar, usuario }) {
       {/* ============ CELULAR/TABLET: barra inferior fixa ============
           fundo SÓLIDO de propósito: backdrop-filter (blur) em elemento
           fixo repinta a cada pixel rolado e trava o scroll em tablet */}
-      <nav className="menu-barra app-bottom-nav" aria-label="Navegação principal" style={{ position: "fixed", left: 0, right: 0, bottom: 0, zIndex: 40, background: T.bg2, borderTop: `1px solid ${T.line}`, paddingBottom: "env(safe-area-inset-bottom)", boxShadow: "0 -4px 16px #0006" }}>
+      <nav className="menu-barra app-bottom-nav" aria-label="Navegação principal (barra inferior)" style={{ position: "fixed", left: 0, right: 0, bottom: 0, zIndex: 40, background: T.bg2, borderTop: `1px solid ${T.line}`, paddingBottom: "env(safe-area-inset-bottom)", boxShadow: "0 -4px 16px #0006" }}>
         {naBarra.map(([k, lb, badge, icone]) => (
           <ItemBarra key={k} rotulo={lb} badge={badge} icone={icone} on={ativo === k} aoClicar={() => trocar(k)} />
         ))}
         {precisaMais && (
-          <ItemBarra rotulo="Mais" icone="mais" on={ativoNoMais || maisAberto} aoClicar={() => setMaisAberto((v) => !v)} />
+          <ItemBarra refBtn={gatilhoMaisRef} rotulo="Mais" icone="mais" on={ativoNoMais || maisAberto}
+            aoClicar={() => setMaisAberto((v) => !v)} ariaHaspopup="menu" ariaExpandido={maisAberto} />
         )}
       </nav>
 
-      {/* folha do "Mais" */}
+      {/* folha do "Mais" — .menu-folha-mais garante T47 (some sozinha em ≥1024px) */}
       {maisAberto && (
-        <>
+        <div className="menu-folha-mais">
           <div onClick={() => setMaisAberto(false)} style={{ position: "fixed", inset: 0, zIndex: 41, background: "#0008" }} />
-          <div style={{ position: "fixed", left: "50%", transform: "translateX(-50%)", width: "min(440px, calc(100% - 20px))", bottom: `calc(66px + env(safe-area-inset-bottom))`, zIndex: 42, background: T.bg2, border: `1px solid ${T.line}`, borderRadius: 14, overflow: "hidden", boxShadow: "0 12px 40px #000a" }}>
+          <div role="menu" aria-label="Mais opções de navegação" style={{ position: "fixed", left: "50%", transform: "translateX(-50%)", width: "min(440px, calc(100% - 20px))", bottom: `calc(66px + env(safe-area-inset-bottom))`, zIndex: 42, background: T.bg2, border: `1px solid ${T.line}`, borderRadius: 14, overflow: "hidden", boxShadow: "0 12px 40px #000a" }}>
             {noMais.map(([k, lb, badge, icone], i) => {
               const on = ativo === k;
               return (
-                <button key={k} onClick={() => trocar(k)}
+                <button key={k} type="button" role="menuitem" onClick={() => trocar(k)}
                   style={{ display: "flex", alignItems: "center", gap: 12, width: "100%", textAlign: "left", border: "none", background: on ? `${T.gold}14` : "transparent", color: on ? T.gold : T.ink, padding: "14px 16px", minHeight: 52, fontSize: 15, fontWeight: on ? 800 : 600, borderBottom: i === noMais.length - 1 ? "none" : `1px solid ${T.line}` }}>
                   <Icone nome={icone} tam={19} />
                   <span style={{ flex: 1 }}>{lb}</span>
@@ -177,7 +248,7 @@ export function MenuPrincipal({ abas, ativo, aoTrocar, usuario }) {
               );
             })}
           </div>
-        </>
+        </div>
       )}
     </>
   );

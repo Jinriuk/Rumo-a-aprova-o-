@@ -22,7 +22,7 @@ export function RadarDesempenho({ m, trilha, aoRegistrar }) {
           dica="Ainda há poucos dados para mapear seu desempenho. Continue registrando seus estudos — os indicadores aparecem aqui." />
         {aoRegistrar && (
           <div style={{ textAlign: "center", marginTop: 4 }}>
-            <button onClick={aoRegistrar} style={{ border: "none", background: T.gold, color: "#0A1622", borderRadius: 9, fontWeight: 800, fontSize: 14, padding: "11px 22px", minHeight: 46 }}>
+            <button type="button" onClick={aoRegistrar} style={{ border: "none", background: T.gold, color: "#0A1622", borderRadius: 9, fontWeight: 800, fontSize: 14, padding: "11px 22px", minHeight: 46 }}>
               Registrar estudo
             </button>
           </div>

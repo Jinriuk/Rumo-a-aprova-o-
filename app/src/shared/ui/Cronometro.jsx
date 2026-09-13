@@ -67,16 +67,16 @@ export function Cronometro({ aoFinalizar }) {
       )}
 
       {st.fase === "parado" && (
-        <button onClick={iniciar} style={btn({ background: T.gold, color: "#0A1622", border: "none" })}>▶ Iniciar estudo</button>
+        <button type="button" onClick={iniciar} style={btn({ background: T.gold, color: "#0A1622", border: "none" })}>▶ Iniciar estudo</button>
       )}
       {st.fase === "rodando" && (
-        <button onClick={pausar} style={btn({ background: T.goldSoft, color: T.gold, borderColor: T.gold })}>⏸ Pausar</button>
+        <button type="button" onClick={pausar} style={btn({ background: T.goldSoft, color: T.gold, borderColor: T.gold })}>⏸ Pausar</button>
       )}
       {st.fase === "pausa" && (
         <>
-          <button onClick={iniciar} style={btn({ background: T.gold, color: "#0A1622", border: "none" })}>▶ Retomar</button>
-          <button onClick={finalizar} style={btn({ borderColor: T.green, color: T.green })}>■ Finalizar → registrar {minutos}min</button>
-          <button onClick={zerar} title="Descartar tempo" style={btn({ color: T.sub, padding: "8px 10px" })}>↺</button>
+          <button type="button" onClick={iniciar} style={btn({ background: T.gold, color: "#0A1622", border: "none" })}>▶ Retomar</button>
+          <button type="button" onClick={finalizar} style={btn({ borderColor: T.green, color: T.green })}>■ Finalizar → registrar {minutos}min</button>
+          <button type="button" onClick={zerar} title="Descartar tempo" style={btn({ color: T.sub, padding: "8px 10px" })}>↺</button>
         </>
       )}
     </div>

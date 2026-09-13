@@ -108,7 +108,7 @@ function CicloEncerrado({ trilha, m, metas, aoAvancar }) {
       </div>
 
       {aoAvancar && (
-        <button className="mission-primary-action" onClick={() => aoAvancar("registrar")}
+        <button type="button" className="mission-primary-action" onClick={() => aoAvancar("registrar")}
           style={{ display: "block", width: "100%", marginTop: 12, background: "transparent", color: T.gold, border: `1.5px solid ${T.gold}`, borderRadius: 9, padding: "10px 16px", fontWeight: 700, fontSize: 13, cursor: "pointer", textAlign: "center" }}>
           Registrar estudo
         </button>
@@ -193,8 +193,12 @@ export function MissaoAtual({ meta, trilha, m, metas, ciclo, aoAvancar }) {
               ⚠ Missão atrasada — <b>{pendentes} {pendentes === 1 ? "pendência" : "pendências"}</b> em aberto. Conclua antes de avançar.
             </div>
             {aoAvancar && (
-              <button className="mission-primary-action" onClick={() => aoAvancar("registrar", contextoAlvo)}
-                style={{ display: "block", width: "100%", marginTop: 12, background: T.red, color: "#fff", border: `1.5px solid ${T.red}`, borderRadius: 9, padding: "10px 16px", fontWeight: 700, fontSize: 13, cursor: "pointer", textAlign: "center" }}>
+              // I4: era o único branco-sobre-coral do app (3,42:1, abaixo
+              // de 4,5:1). O botão de perigo canônico (componentes.jsx,
+              // `Botao perigo`) já usa #0A1622 sobre T.red e passa em
+              // 5,33:1 — o conserto é voltar pro padrão que já existe.
+              <button type="button" className="mission-primary-action" onClick={() => aoAvancar("registrar", contextoAlvo)}
+                style={{ display: "block", width: "100%", marginTop: 12, background: T.red, color: "#0A1622", border: `1.5px solid ${T.red}`, borderRadius: 9, padding: "10px 16px", fontWeight: 700, fontSize: 13, cursor: "pointer", textAlign: "center" }}>
                 Continuar missão
               </button>
             )}
@@ -206,11 +210,11 @@ export function MissaoAtual({ meta, trilha, m, metas, ciclo, aoAvancar }) {
             </div>
             {aoAvancar && (
               <div style={{ display: "flex", gap: 8, marginTop: 12, flexWrap: "wrap" }}>
-                <button className="mission-primary-action" onClick={() => aoAvancar("plano")}
+                <button type="button" className="mission-primary-action" onClick={() => aoAvancar("plano")}
                   style={{ flex: 1, minWidth: 140, background: T.gold, color: "#0A1622", border: `1.5px solid ${T.gold}`, borderRadius: 9, padding: "10px 12px", fontWeight: 700, fontSize: 13, cursor: "pointer" }}>
                   Ver próxima missão ›
                 </button>
-                <button onClick={() => aoAvancar("registrar", null)}
+                <button type="button" onClick={() => aoAvancar("registrar", null)}
                   style={{ flex: 1, minWidth: 140, background: "transparent", color: T.gold, border: `1.5px solid ${T.gold}66`, borderRadius: 9, padding: "10px 12px", fontWeight: 700, fontSize: 13, cursor: "pointer" }}>
                   ✎ Revisar missão
                 </button>
@@ -223,7 +227,7 @@ export function MissaoAtual({ meta, trilha, m, metas, ciclo, aoAvancar }) {
               🎯 Sua missão: concluir <b style={{ color: T.gold }}>{pendentes} {pendentes === 1 ? "objetivo" : "objetivos"}</b> até {fmtBR(String(meta.fim))}.
             </div>
             {aoAvancar && (
-              <button className="mission-primary-action" onClick={() => aoAvancar("registrar", contextoAlvo)}
+              <button type="button" className="mission-primary-action" onClick={() => aoAvancar("registrar", contextoAlvo)}
                 style={{ display: "block", width: "100%", marginTop: 12, background: T.gold, color: "#0A1622", border: `1.5px solid ${T.gold}`, borderRadius: 9, padding: "10px 16px", fontWeight: 700, fontSize: 13, cursor: "pointer", textAlign: "center" }}>
                 Continuar missão <span aria-hidden="true">→</span>
               </button>

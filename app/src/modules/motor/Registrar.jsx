@@ -75,6 +75,7 @@ export function Registrar({
   const tempoInvalido = !!validacao.erros.tempo;
   const acertosDemais = !!validacao.erros.acertos;
   const podeSalvar = validacao.ok && !ocupado;
+  const faltaTopico = f.questoes !== "" && +f.questoes > 0 && f.topico.trim() === "";
 
   // resumo do dia
   const hoje = todayISO();
@@ -141,7 +142,7 @@ export function Registrar({
               {contextoInicial.questoesSugeridas ? ` · prática sugerida: ≈${contextoInicial.questoesSugeridas} questões` : ""}
             </span>
           </div>
-          <button onClick={aoSairContexto}>Usar registro livre</button>
+          <button type="button" onClick={aoSairContexto}>Usar registro livre</button>
         </section>
       )}
       {/* RESUMO DO DIA */}
@@ -165,7 +166,12 @@ export function Registrar({
           </div>
           <div style={{ gridColumn: "1 / -1" }}>
             <label htmlFor={id("top")} style={lbl}>Tópico <span style={{ color: T.gold }} title="Campo obrigatório">*</span></label>
-            <input id={id("top")} value={f.topico} onChange={(e) => set("topico", e.target.value)} aria-required="true" placeholder="ex: divisibilidade — MDC e MMC (obrigatório)" style={inputS} />
+            {/* T13: aria-required sem o required nativo correspondente —
+                o único par assim no repo (`required` não aparecia nenhuma
+                vez). Este campo não está dentro de <form>, então o
+                atributo nativo não muda o comportamento de envio: só
+                alinha a semântica ARIA com o HTML de verdade. */}
+            <input id={id("top")} value={f.topico} onChange={(e) => set("topico", e.target.value)} required aria-required="true" placeholder="ex: divisibilidade — MDC e MMC (obrigatório)" style={inputS} />
           </div>
           <div>
             <label htmlFor={id("q")} style={lbl}>Questões</label>
@@ -196,7 +202,7 @@ export function Registrar({
 
         {/* alvo de toque de 32px: acima do mínimo de 24px do WCAG 2.5.8,
             sem ganhar peso visual de ação concorrente. */}
-        <button onClick={() => setMaisCampos((v) => !v)}
+        <button type="button" onClick={() => setMaisCampos((v) => !v)}
           style={{ marginTop: 12, border: "none", background: "transparent", color: T.gold, fontSize: 12.5, fontWeight: 600, padding: "6px 8px", minHeight: 32, marginLeft: -8 }}>
           {maisCampos ? "− Menos campos" : "+ Observação e data"}
         </button>
@@ -207,11 +213,23 @@ export function Registrar({
           </div>
         )}
 
-        <Botao onClick={adicionar} disabled={!podeSalvar} style={{ marginTop: 14, width: "100%" }}>
+        {/* T13: o botão desabilitava sem anunciar o porquê, e a explicação
+            (quando existia) vivia num <div> comum, sem aria-live e sem
+            ligação nenhuma com o botão. aria-disabled fica AO LADO do
+            disabled nativo (não troca um pelo outro — trocar mexeria no
+            comportamento de foco/Tab de todo botão desabilitado do app,
+            fora do escopo desta onda); aria-describedby aponta pra
+            explicação sempre que ela existe, então quem navega em modo
+            de leitura contínua (não só Tab) a encontra ligada ao botão. */}
+        <Botao onClick={adicionar} disabled={!podeSalvar} aria-disabled={!podeSalvar || undefined}
+          aria-describedby={faltaTopico ? id("dica-topico") : undefined}
+          style={{ marginTop: 14, width: "100%" }}>
           {ocupado ? "Confirmando no seu progresso…" : "Confirmar estudo"}
         </Botao>
-        {f.questoes !== "" && +f.questoes > 0 && f.topico.trim() === "" && (
-          <div style={{ fontSize: 12, color: T.sub, marginTop: 8 }}>Falta o <b style={{ color: T.gold }}>tópico</b> — ele alimenta seu histórico e o radar de desempenho.</div>
+        {faltaTopico && (
+          <div id={id("dica-topico")} role="status" aria-live="polite" style={{ fontSize: 12, color: T.sub, marginTop: 8 }}>
+            Falta o <b style={{ color: T.gold }}>tópico</b> — ele alimenta seu histórico e o radar de desempenho.
+          </div>
         )}
         <Erro>{erro}</Erro>
       </SectionCard>
@@ -225,8 +243,11 @@ export function Registrar({
             <ListaRegistros registros={recentes} porCodigo={trilha.porCodigo} aoApagar={apagar} rotuloAcerto />
             {temMaisRecentes && (
               <div style={{ padding: "10px 14px", borderTop: `1px solid ${T.line}` }}>
-                <button onClick={() => setLimiteRecentes(registros.length)}
-                  style={{ border: "none", background: "transparent", color: T.gold, fontSize: 13, fontWeight: 700, padding: 0, cursor: "pointer" }}>
+                {/* T1: alvo de toque real no botão, não só padding no <div>
+                    pai — o mesmo padrão de componentes.jsx:318 (tab
+                    transparente com padding+minHeight próprios). */}
+                <button type="button" onClick={() => setLimiteRecentes(registros.length)}
+                  style={{ border: "none", background: "transparent", color: T.gold, fontSize: 13, fontWeight: 700, padding: "9px 4px", minHeight: 32, cursor: "pointer" }}>
                   Ver mais ({registros.length - limiteRecentes} registros)
                 </button>
               </div>

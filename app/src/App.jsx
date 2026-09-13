@@ -120,7 +120,7 @@ function AppRoteado({ carregando, sessao, perfil, superAdmin, erro, recarregarPe
       <TelaNeutra>
         <div style={{ marginBottom: 12 }}>Não foi possível carregar seu perfil.</div>
         <div style={{ fontSize: 13, opacity: 0.8, marginBottom: 18 }}>{erro}</div>
-        <button onClick={() => db.sair().catch(console.error)} style={{ padding: "10px 18px", borderRadius: 8, border: "none", fontWeight: 700 }}>
+        <button type="button" onClick={() => db.sair().catch(console.error)} style={{ padding: "10px 18px", borderRadius: 8, border: "none", fontWeight: 700 }}>
           Sair e tentar de novo
         </button>
       </TelaNeutra>
@@ -179,7 +179,7 @@ function TelaAcessoSuspenso({ escola }) {
           ? "foi encerrado. Fale com o responsável pela conta para mais informações."
           : "está suspenso no momento. Assim que for reativado pela administração, seu painel volta automaticamente."}
       </div>
-      <button onClick={() => db.sair().catch(console.error)}
+      <button type="button" onClick={() => db.sair().catch(console.error)}
         style={{ padding: "11px 20px", borderRadius: 9, border: "1px solid #1E3A52", background: "#102236", color: "#8AA4BC", fontWeight: 700, fontSize: 14 }}>
         Sair
       </button>

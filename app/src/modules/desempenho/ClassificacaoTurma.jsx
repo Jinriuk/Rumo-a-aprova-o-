@@ -89,7 +89,7 @@ export function ClassificacaoTurma({ alunos, turmas, resumoPorAluno = {}, simula
   const seletor = (valor, setValor, opcoes) => (
     <div style={{ display: "flex", background: T.bg, borderRadius: 8, padding: 3, border: `1px solid ${T.line}` }}>
       {opcoes.map(([k, lb]) => (
-        <button key={k} onClick={() => setValor(k)}
+        <button type="button" key={k} onClick={() => setValor(k)}
           style={{ border: "none", background: valor === k ? T.gold : "transparent", color: valor === k ? "#0A1622" : T.sub, fontWeight: 600, fontSize: 12, padding: "7px 11px", minHeight: 36, borderRadius: 6, whiteSpace: "nowrap" }}>
           {lb}
         </button>
@@ -101,7 +101,7 @@ export function ClassificacaoTurma({ alunos, turmas, resumoPorAluno = {}, simula
     <Card>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 10, marginBottom: 4 }}>
         <div>
-          <div className="disp" style={{ fontSize: 15, fontWeight: 700 }}>Ranking — {modo === "estudos" ? "Estudos" : "Simulados"}</div>
+          <h2 className="disp" style={{ margin: 0, fontSize: 15, fontWeight: 700 }}>Ranking — {modo === "estudos" ? "Estudos" : "Simulados"}</h2>
           <div style={{ fontSize: 12, color: T.sub, marginTop: 2 }}>
             {modo === "estudos"
               ? "Constância e volume: escolha o critério de ordenação. Visível só para a coordenação."

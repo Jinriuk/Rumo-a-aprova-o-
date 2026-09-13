@@ -58,7 +58,7 @@ export function PainelGestao({ resumo, aoIr, aoIrFiltrado }) {
     const cor = tom === "risco" ? T.red : tom === "alerta" ? T.gold : T.sub;
     const preview = nomes.slice(0, 3);
     return (
-      <button onClick={ir ?? undefined}
+      <button type="button" onClick={ir ?? undefined}
         style={{ width: "100%", textAlign: "left", display: "flex", alignItems: "flex-start", gap: 12, background: T.card, border: `1px solid ${T.line}`, borderLeft: `4px solid ${cor}`, borderRadius: 12, padding: "13px 15px", cursor: ir ? "pointer" : "default" }}>
         <div style={{ width: 38, height: 38, borderRadius: 10, background: `${cor}1a`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, flexShrink: 0, marginTop: 1 }}>{icone}</div>
         <div style={{ flex: 1, minWidth: 0 }}>
@@ -115,7 +115,8 @@ export function PainelGestao({ resumo, aoIr, aoIrFiltrado }) {
             style={{ background: T.bg, border: `1px solid ${T.line}`, color: T.ink, borderRadius: 8, padding: "7px 9px", fontSize: 12 }}>
             {Object.entries(CRITERIOS).map(([k, c]) => <option key={k} value={k} style={{ background: T.bg2 }}>{c.rotulo}</option>)}
           </select>
-          <button onClick={() => aoIr("ranking")} style={{ border: "none", background: "transparent", color: T.gold, fontSize: 12.5, fontWeight: 700 }}>Ver completo ›</button>
+          {/* T1: sem padding nenhum antes — o pior caso do bloco (~17px). */}
+          <button type="button" onClick={() => aoIr("ranking")} style={{ border: "none", background: "transparent", color: T.gold, fontSize: 12.5, fontWeight: 700, padding: "9px 4px", minHeight: 32 }}>Ver completo ›</button>
         </div>
       } semPadding>
         {ranking.length === 0 ? (

@@ -75,10 +75,10 @@ export function Progresso({ registros, trilha }) {
     <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
       <Card>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 8, marginBottom: 12 }}>
-          <div className="disp" style={{ fontSize: 15, fontWeight: 700 }}>Questões por dia</div>
+          <h2 className="disp" style={{ margin: 0, fontSize: 15, fontWeight: 700 }}>Questões por dia</h2>
           <div style={{ display: "flex", background: T.bg, borderRadius: 8, padding: 3, border: `1px solid ${T.line}` }}>
             {RANGES.map((r) => (
-              <button key={r.id} onClick={() => setRange(r.id)} style={{ border: "none", background: range === r.id ? T.gold : "transparent", color: range === r.id ? "#0A1622" : T.sub, fontWeight: 600, fontSize: 12, padding: "7px 11px", minHeight: 36, borderRadius: 6 }}>{r.label}</button>
+              <button type="button" key={r.id} onClick={() => setRange(r.id)} style={{ border: "none", background: range === r.id ? T.gold : "transparent", color: range === r.id ? "#0A1622" : T.sub, fontWeight: 600, fontSize: 12, padding: "7px 11px", minHeight: 36, borderRadius: 6 }}>{r.label}</button>
             ))}
           </div>
         </div>
@@ -99,7 +99,7 @@ export function Progresso({ registros, trilha }) {
       </Card>
 
       <Card>
-        <div className="disp" style={{ fontSize: 15, fontWeight: 700, marginBottom: 12 }}>Evolução por semana — as {trilha.semanas.length} semanas até a prova</div>
+        <h2 className="disp" style={{ margin: 0, fontSize: 15, fontWeight: 700, marginBottom: 12 }}>Evolução por semana — as {trilha.semanas.length} semanas até a prova</h2>
         {!temSemana ? <Empty txt="A evolução por semana aparece conforme os registros entram." /> : (
           <ResponsiveContainer width="100%" height={230}>
             <ComposedChart data={porSemana} margin={{ top: 6, right: 6, left: 0, bottom: 0 }}>
@@ -118,7 +118,7 @@ export function Progresso({ registros, trilha }) {
 
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(280px,1fr))", gap: 16 }}>
         <Card>
-          <div className="disp" style={{ fontSize: 15, fontWeight: 700, marginBottom: 12 }}>% de acerto por matéria</div>
+          <h2 className="disp" style={{ margin: 0, fontSize: 15, fontWeight: 700, marginBottom: 12 }}>% de acerto por matéria</h2>
           {comAcc.length === 0 ? <Empty txt="Registre acertos pra ver o acerto por matéria." /> : (
             <ResponsiveContainer width="100%" height={Math.max(160, comAcc.length * 42)}>
               <BarChart layout="vertical" data={comAcc} margin={{ top: 0, right: 30, left: 30, bottom: 0 }}>
@@ -134,7 +134,7 @@ export function Progresso({ registros, trilha }) {
           )}
         </Card>
         <Card>
-          <div className="disp" style={{ fontSize: 15, fontWeight: 700, marginBottom: 12 }}>Total de questões por matéria</div>
+          <h2 className="disp" style={{ margin: 0, fontSize: 15, fontWeight: 700, marginBottom: 12 }}>Total de questões por matéria</h2>
           {comQ.length === 0 ? <Empty txt="Sem registros ainda." /> : (
             <ResponsiveContainer width="100%" height={Math.max(160, comQ.length * 42)}>
               <BarChart layout="vertical" data={comQ} margin={{ top: 0, right: 30, left: 30, bottom: 0 }}>
@@ -295,7 +295,7 @@ function SimuladoGenerico({ aluno, simulados, podeEditar, semanaAtiva, concurso,
       )}
 
       <Card>
-        <div className="disp" style={{ fontSize: 15, fontWeight: 700, marginBottom: 10 }}>Evolução nos simulados — {prova.rotulo}</div>
+        <h2 className="disp" style={{ margin: 0, fontSize: 15, fontWeight: 700, marginBottom: 10 }}>Evolução nos simulados — {prova.rotulo}</h2>
         {chart.length === 0 ? <Empty txt="Nenhum simulado registrado ainda. Registre o primeiro abaixo." /> : (
           <ResponsiveContainer width="100%" height={230}>
             <LineChart data={chart} margin={{ top: 6, right: 10, left: 0, bottom: 0 }}>
@@ -313,7 +313,7 @@ function SimuladoGenerico({ aluno, simulados, podeEditar, semanaAtiva, concurso,
 
       {podeEditar && (
         <Card>
-          <div className="disp" style={{ fontSize: 15, fontWeight: 700, marginBottom: 4 }}>Registrar simulado — {prova.rotulo}</div>
+          <h2 className="disp" style={{ margin: 0, fontSize: 15, fontWeight: 700, marginBottom: 4 }}>Registrar simulado — {prova.rotulo}</h2>
           <div style={{ fontSize: 11.5, color: T.sub, marginBottom: 12 }}>
             Acertos por matéria, com o máximo de cada prova. {totalMax} questões no total.
           </div>
@@ -344,7 +344,7 @@ function SimuladoGenerico({ aluno, simulados, podeEditar, semanaAtiva, concurso,
               ⚠ {estouros.map((m) => `${m.nome} tem no máximo ${m.max} questões`).join(" · ")}
             </div>
           )}
-          <button onClick={adicionar} disabled={estouros.length > 0 || ocupado}
+          <button type="button" onClick={adicionar} disabled={estouros.length > 0 || ocupado}
             style={{ background: estouros.length || ocupado ? T.line : T.gold, color: estouros.length || ocupado ? T.sub : "#0A1622", border: "none", borderRadius: 8, padding: "13px 20px", minHeight: 48, fontWeight: 700, fontSize: 15, width: "100%" }}>
             {ocupado ? "Salvando…" : "+ Salvar simulado"}
           </button>
@@ -354,7 +354,7 @@ function SimuladoGenerico({ aluno, simulados, podeEditar, semanaAtiva, concurso,
 
       {simulados.length > 0 && (
         <Card>
-          <div className="disp" style={{ fontSize: 15, fontWeight: 700, marginBottom: 10 }}>Histórico</div>
+          <h2 className="disp" style={{ margin: 0, fontSize: 15, fontWeight: 700, marginBottom: 10 }}>Histórico</h2>
           <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
             {[...simulados].reverse().map((s) => {
               const tot = totalAcertos(prova, s.acertos);
@@ -372,7 +372,7 @@ function SimuladoGenerico({ aluno, simulados, podeEditar, semanaAtiva, concurso,
                     </div>
                   </div>
                   <div className="num disp" style={{ fontSize: 20, fontWeight: 700, color: T.gold }}>{tot}</div>
-                  {podeEditar && <button onClick={() => apagar(s.id)} disabled={ocupado} aria-label="Apagar simulado" style={{ background: "transparent", border: "none", color: T.sub, fontSize: 22, width: 44, height: 44, flexShrink: 0, lineHeight: 1 }}>×</button>}
+                  {podeEditar && <button type="button" onClick={() => apagar(s.id)} disabled={ocupado} aria-label="Apagar simulado" style={{ background: "transparent", border: "none", color: T.sub, fontSize: 22, width: 44, height: 44, flexShrink: 0, lineHeight: 1 }}>×</button>}
                 </div>
               );
             })}

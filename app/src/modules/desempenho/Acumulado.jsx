@@ -82,7 +82,7 @@ export function Acumulado({ registros, trilha }) {
     <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
       <Card style={{ padding: 0, overflow: "hidden" }}>
         <div style={{ padding: "12px 16px", borderBottom: `1px solid ${T.line}` }}>
-          <div className="disp" style={{ fontSize: 15, fontWeight: 700 }}>Desempenho acumulado</div>
+          <h2 className="disp" style={{ margin: 0, fontSize: 15, fontWeight: 700 }}>Desempenho acumulado</h2>
           <div style={{ fontSize: 12, color: T.sub, marginTop: 2 }}>Cada disciplina: questões resolvidas, acerto e tempo estudado.</div>
         </div>
         <div style={{ overflowX: "auto" }}>
@@ -129,7 +129,7 @@ export function Acumulado({ registros, trilha }) {
 
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(300px,1fr))", gap: 16 }}>
         <Card>
-          <div className="disp" style={{ fontSize: 15, fontWeight: 700, marginBottom: 12 }}>Desempenho por meta</div>
+          <h2 className="disp" style={{ margin: 0, fontSize: 15, fontWeight: 700, marginBottom: 12 }}>Desempenho por meta</h2>
           {porMeta.every((x) => x.acc == null) ? <Empty txt="Aparece conforme as semanas passam." /> : (
             <ResponsiveContainer width="100%" height={220}>
               <LineChart data={porMeta} margin={{ top: 6, right: 10, left: 0, bottom: 0 }}>
@@ -145,11 +145,12 @@ export function Acumulado({ registros, trilha }) {
 
         <Card>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 8, marginBottom: 12 }}>
-            <div className="disp" style={{ fontSize: 15, fontWeight: 700 }}>Desempenho por disciplina</div>
+            <h2 className="disp" style={{ margin: 0, fontSize: 15, fontWeight: 700 }}>Desempenho por disciplina</h2>
             <div style={{ display: "flex", background: T.bg, borderRadius: 8, padding: 3, border: `1px solid ${T.line}` }}>
               {[["tempo", "Tempo"], ["questoes", "Questões"]].map(([k, lb]) => (
-                <button key={k} onClick={() => setVistaTreemap(k)}
-                  style={{ border: "none", background: vistaTreemap === k ? T.gold : "transparent", color: vistaTreemap === k ? "#0A1622" : T.sub, fontWeight: 600, fontSize: 12, padding: "6px 11px", borderRadius: 6 }}>
+                // T1: minHeight explícito — o padding sozinho dava ≈28px.
+                <button key={k} type="button" onClick={() => setVistaTreemap(k)}
+                  style={{ border: "none", background: vistaTreemap === k ? T.gold : "transparent", color: vistaTreemap === k ? "#0A1622" : T.sub, fontWeight: 600, fontSize: 12, padding: "6px 11px", minHeight: 32, borderRadius: 6 }}>
                   {lb}
                 </button>
               ))}

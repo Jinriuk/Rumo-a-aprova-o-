@@ -155,7 +155,7 @@ export default function Login() {
           <div className="disp" style={{ fontSize: 17, fontWeight: 700, color: T.ink, marginBottom: 8 }}>Solicitação recebida</div>
           <div style={{ fontSize: 13.5, color: T.sub, lineHeight: 1.6 }}>{msgConfirmacao}</div>
         </div>
-        <button className="login-primary" onClick={() => { setTela("login"); setEmailRecup(""); setErr(""); }}
+        <button type="button" className="login-primary" onClick={() => { setTela("login"); setEmailRecup(""); setErr(""); }}
           style={{ width: "100%", marginTop: 8, background: T.gold, color: "#0A1622", border: "none", borderRadius: 10, padding: "14px", minHeight: 50, fontWeight: 800, fontSize: 15 }}>
           ← Voltar ao login
         </button>
@@ -375,7 +375,7 @@ function verCapsLock(e, definir) {
   definir(e.getModifierState("CapsLock"));
 }
 
-/* Controle segmentado do papel. Continuam sendo dois <button> com
+/* Controle segmentado do papel. Continuam sendo dois <button type="button"> com
    aria-pressed (é o que a leitura de tela e a suíte E2E enxergam); o
    que muda é o realce, que DESLIZA de um para o outro — a troca vira
    um movimento visto, não um pisca. Setas navegam entre as opções. */

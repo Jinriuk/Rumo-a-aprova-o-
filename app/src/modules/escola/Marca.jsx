@@ -129,7 +129,7 @@ function BrandPreview({ nome, logo, acento }) {
           ? <img src={logoSrcSeguro} alt="" style={{ width: 32, height: 32, borderRadius: 8, objectFit: "cover" }} onError={(e) => { e.currentTarget.style.display = "none"; }} />
           : <div className="disp" style={{ width: 32, height: 32, borderRadius: 8, background: `linear-gradient(135deg, ${acento}, #9c7d2e)`, display: "flex", alignItems: "center", justifyContent: "center", color: "#0A1622", fontWeight: 800 }}>⚓</div>}
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div className="disp" style={{ fontSize: 14, fontWeight: 700, color: C.ink, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{nome}</div>
+          <h2 className="disp" style={{ margin: 0, fontSize: 14, fontWeight: 700, color: C.ink, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{nome}</h2>
           <div style={{ fontSize: 10.5, color: C.sub }}>Painel de estudos</div>
         </div>
         {/* C9: aqui havia `124` cravado no JSX, enquanto o cabeçalho da
@@ -146,7 +146,7 @@ function BrandPreview({ nome, logo, acento }) {
       </div>
       {/* card + botão */}
       <div style={{ background: C.card, border: `1px solid ${C.line}`, borderRadius: 10, padding: 13 }}>
-        <div className="disp" style={{ fontSize: 13.5, fontWeight: 700, color: C.ink }}>Missão da semana</div>
+        <h2 className="disp" style={{ margin: 0, fontSize: 13.5, fontWeight: 700, color: C.ink }}>Missão da semana</h2>
         <div style={{ height: 7, background: C.bg, borderRadius: 4, overflow: "hidden", margin: "9px 0" }}>
           <div style={{ width: "62%", height: "100%", background: `linear-gradient(90deg, ${acento}, ${C.green})` }} />
         </div>
