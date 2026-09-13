@@ -33,6 +33,25 @@
 -- `pgrst_ddl_watch`) sem nenhuma diferença real. O `set search_path`
 -- abaixo trava a renderização de pg_get_expr / pg_get_constraintdef /
 -- pg_get_indexdef / format_type pelo mesmo motivo.
+--
+-- ------------------------------------------------------------
+-- DUAS ARMADILHAS A MAIS, achadas na Onda 2.5 (13/09/2026) ao comparar
+-- o banco LOCAL (o que as migrations do repo produzem) com produção.
+-- O script foi escrito para prod × demo, que são dois projetos
+-- Supabase; nessa dupla as duas passavam despercebidas.
+--
+-- 1. COLLATION. `order by item` usa o collation do BANCO. Medido:
+--    produção e demo em en_US.UTF-8, o banco local do reset-db.sh em
+--    C.UTF-8. Ordens diferentes, hash diferente, schema IDÊNTICO —
+--    falso positivo puro, de novo medindo o observador. Por isso todo
+--    `order by` de hash aqui leva `collate "C"`.
+--
+-- 2. FUNÇÕES DE EXTENSÃO. Num Postgres vanilla `create extension` põe
+--    as funções em `public` (pgcrypto, uuid-ossp...); no Supabase elas
+--    vivem no schema `extensions`. Isso dava 98 funções no local
+--    contra 62 em produção, nenhuma delas do produto. As categorias
+--    `funcoes` e `acl_funcoes` agora excluem o que pertence a extensão
+--    (pg_depend deptype='e'), medindo só código nosso.
 -- ============================================================
 
 set search_path = pg_catalog;
@@ -78,7 +97,8 @@ with itens as (
          format('%s.%s(%s) vol=%s secdef=%s', n.nspname, p.proname,
                 pg_get_function_identity_arguments(p.oid), p.provolatile, p.prosecdef::text)
     from pg_proc p join pg_namespace n on n.oid = p.pronamespace
-   where n.nspname in ('public','app')
+    left join pg_depend d on d.objid = p.oid and d.deptype = 'e'
+   where n.nspname in ('public','app') and d.objid is null
 
   union all  -- grants de tabela via ACL (independe de quem conecta)
   select 'acl_tabelas',
@@ -92,7 +112,8 @@ with itens as (
                 pg_get_function_identity_arguments(p.oid),
                 coalesce(array_to_string(p.proacl, ','), 'NULL'))
     from pg_proc p join pg_namespace n on n.oid = p.pronamespace
-   where n.nspname in ('public','app')
+    left join pg_depend d on d.objid = p.oid and d.deptype = 'e'
+   where n.nspname in ('public','app') and d.objid is null
 
   union all
   select 'triggers', format('%s.%s %s', n.nspname, c.relname, t.tgname)
@@ -112,10 +133,15 @@ with itens as (
   select 'views', format('%s.%s', schemaname, viewname)
     from pg_views where schemaname in ('public','app')
 )
-select categoria, count(*) as itens, md5(string_agg(item, E'\n' order by item)) as hash
+-- `collate "C"` NÃO é decoração: sem ele este script compara o
+-- observador, não o schema (ver a armadilha do collation no cabeçalho).
+select categoria, count(*) as itens,
+       md5(string_agg(item, E'\n' order by item collate "C")) as hash
   from itens
  group by categoria
 union all
-select 'TOTAL', count(*), md5(string_agg(categoria || '|' || item, E'\n' order by categoria || '|' || item))
+select 'TOTAL', count(*),
+       md5(string_agg(categoria || '|' || item, E'\n'
+                      order by (categoria || '|' || item) collate "C"))
   from itens
  order by 1;

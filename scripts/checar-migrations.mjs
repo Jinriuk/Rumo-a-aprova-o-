@@ -12,14 +12,23 @@
 // Uso (a string de conexão NUNCA entra no repositório):
 //   SUPABASE_DB_URL="postgresql://postgres:SENHA@HOST:5432/postgres" \
 //     node scripts/checar-migrations.mjs
-// Aceita também DATABASE_URL. Requer o pacote `pg` disponível
-// (ex.: rode de dentro de tests/, que já o tem:  cd tests && node ../scripts/checar-migrations.mjs).
+// Aceita também DATABASE_URL. Roda de QUALQUER diretório — o `pg` é
+// resolvido por _pg.mjs a partir de tests/node_modules. (Antes a
+// instrução mandava "cd tests && node ../scripts/...", o que nunca
+// funcionou: em ESM o import nu resolve pelo diretório do módulo, não
+// pelo cwd. Ver _pg.mjs.)
+
+// ATENÇÃO ao que este script responde: "o LEDGER registrou?", e não
+// "o BANCO tem?". Em 13/09/2026 produção tinha 3 linhas de ledger e o
+// schema COMPLETO — este checador acusaria 47 migrations faltando,
+// todas falsas. Para a segunda pergunta use scripts/impressao-schema.mjs.
 //
 // Saída: lista o que está aplicado, o que FALTA aplicar (bloqueia) e o
 // que está no banco mas não no repo (drift — investigar). Exit:
 //   0 = em dia    1 = faltam migrations    2 = erro de conexão/uso
 // ============================================================
 import { readdirSync } from "node:fs";
+import { carregarPg } from "./_pg.mjs";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 
@@ -35,14 +44,13 @@ const locais = readdirSync(dir)
   .map((f) => f.replace(/\.sql$/, ""))
   .sort();
 
-let Client;
-try {
-  ({ Client } = await import("pg"));
-} catch {
-  console.error("pacote `pg` não encontrado. Rode de dentro de tests/ (que já o tem):");
-  console.error("  cd tests && node ../scripts/checar-migrations.mjs");
+const pg = await carregarPg();
+if (!pg) {
+  console.error("pacote `pg` não encontrado. Instale as dependências de tests/:");
+  console.error("  cd tests && npm ci");
   process.exit(2);
 }
+const { Client } = pg.default ?? pg;
 
 const cliente = new Client({ connectionString: conexao });
 try {
