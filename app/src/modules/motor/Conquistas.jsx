@@ -83,7 +83,7 @@ export function Conquistas({ nome, xp, m, metas, simulados }) {
         <div style={{ fontSize: 13, color: T.sub, marginTop: 4 }}>
           nível {p.nivel} de {PATENTES.length} · {p.faixa === "oficial" ? "Oficialato" : "Praças"}
         </div>
-        {p.lema && <div style={{ fontSize: 12.5, color: T.gold, marginTop: 6, fontStyle: "italic", maxWidth: 360, marginInline: "auto" }}>"{p.lema}"</div>}
+        {p.lema && <div style={{ fontSize: 12.5, color: T.gold, marginTop: 6, fontStyle: "italic", maxWidth: 360, marginInline: "auto" }}>&quot;{p.lema}&quot;</div>}
 
         {p.proxXp != null && (
           <div style={{ maxWidth: 420, margin: "14px auto 0" }}>

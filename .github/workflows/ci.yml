@@ -65,6 +65,16 @@ jobs:
         working-directory: app
         run: npm ci
 
+      # Onda 0 do plano de correção dos 86 defeitos (12/09/2026): o
+      # repositório nunca teve linter. eslint.config.js trata a11y e
+      # os achados do React Compiler (eslint-plugin-react-hooks v7)
+      # como warn de propósito — não travam o gate ainda, ficam
+      # visíveis para as ondas que os corrigem. O que trava aqui é
+      # regressão real: import morto, hook fora de ordem, etc.
+      - name: Lint (ESLint)
+        working-directory: app
+        run: npm run lint
+
       - name: Build de produção
         working-directory: app
         run: npm run build
