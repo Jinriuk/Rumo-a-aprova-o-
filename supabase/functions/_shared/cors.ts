@@ -21,8 +21,21 @@ const ENV_ORIGINS = (Deno.env.get("ALLOWED_ORIGINS") ?? "")
   .map((o) => o.trim())
   .filter(Boolean);
 
+// B1 (catálogo de defeitos): os domínios da marca NÃO estavam aqui —
+// só o slug antigo da Vercel. Com o preflight destravado (verify_jwt
+// no config.toml) a resposta ainda sairia sem Access-Control-Allow-
+// Origin para www/app.trilivaedu.com.br, e o navegador bloquearia do
+// mesmo jeito. As duas causas precisam cair juntas.
+//
+// Ficam no CÓDIGO de propósito: assim a correção não depende de um
+// secret (ALLOWED_ORIGINS) estar certo num painel que o repositório
+// não enxerga. O override por env continua valendo para o dia em que
+// entrar um domínio novo sem deploy.
 const DEFAULT_ORIGINS = [
-  "https://rumo-a-aprova-o.vercel.app", // produção (Vercel)
+  "https://app.trilivaedu.com.br", // produção (domínio próprio)
+  "https://www.trilivaedu.com.br", // demo / vitrine (domínio próprio)
+  "https://trilivaedu.com.br", // apex, sem www
+  "https://rumo-a-aprova-o.vercel.app", // slug legado da Vercel
   "http://localhost:5173", // dev local (Vite)
   "http://localhost:3000", // dev local (alternativo)
 ];
@@ -40,7 +53,10 @@ const ORIGINS = ENV_ORIGINS.length > 0 ? ENV_ORIGINS : DEFAULT_ORIGINS;
 // Sem nenhuma das duas, usa o default. Para desligar previews por
 // completo, defina ALLOWED_ORIGINS sem eles; o regex segue só validando
 // os prefixos configurados.
-const PREVIEW_PREFIX_DEFAULTS = ["rumo-a-aprova-o"];
+// Dois projetos Vercel publicam este repositório hoje (visível nos
+// deploys de PR): o slug legado e o de produção da marca. O default
+// cobria só o primeiro, então preview do segundo nascia bloqueado.
+const PREVIEW_PREFIX_DEFAULTS = ["rumo-a-aprova-o", "triliva-producao"];
 const PREVIEW_PREFIX_RE = /^[a-z0-9-]{1,63}$/i;
 function previewPrefixes(): string[] {
   const csv = (Deno.env.get("VERCEL_PREVIEW_PREFIXES") ?? "")

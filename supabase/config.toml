@@ -17,19 +17,57 @@ enabled = true
 # coordenação é provisionada pelo operador)
 enable_signup = false
 
+# ============================================================
+# verify_jwt = false em TODAS as funções — B1 do catálogo de defeitos
+# ------------------------------------------------------------
+# NÃO é afrouxamento. O gate `verify_jwt` da PLATAFORMA roda antes do
+# código da função e rejeita o preflight `OPTIONS` do navegador, que
+# por especificação vai SEM cabeçalho `Authorization`. Resultado: o
+# `if (req.method === "OPTIONS")` que todas as funções já têm nunca
+# era alcançado, e o browser bloqueava gerar credencial, resetar
+# senha, revogar credencial, troca obrigatória de senha e os dois
+# botões de LGPD. A assinatura do problema era `virar-semana` ser a
+# única com `false` e a única que funcionava.
+#
+# A autenticação REAL continua, no código de cada função, e é ela que
+# sempre valeu (o gate de plataforma era redundante com ela):
+#   gerar-meta, lgpd-titular, provisionar-aluno, trocar-senha
+#       → chamador(req) → admin.auth.getUser(token) → 401
+#         + papel !== "coordenacao" → 403
+#   revogar-responsavel
+#       → chamador(), e se null resolverSuperAdmin() (getUser +
+#         internal_admins.ativo) → 401
+#   backoffice-coordenador → superAdmin(req) → 403
+#   virar-semana → comparação timing-safe da service role key → 403
+#
+# tests/onda1-cors-preflight.test.mjs trava as duas pontas: toda
+# função responde OPTIONS antes de qualquer auth, e toda função tem
+# entrada aqui com verify_jwt = false. Mexer numa sem a outra falha.
+# ============================================================
+
 [functions.gerar-meta]
-verify_jwt = true
+verify_jwt = false
 
 [functions.virar-semana]
 # valida a chave de serviço no código (operador), não JWT de usuário
 verify_jwt = false
 
 [functions.provisionar-aluno]
-verify_jwt = true
+verify_jwt = false
 
 [functions.lgpd-titular]
-verify_jwt = true
+verify_jwt = false
 
 [functions.backoffice-coordenador]
-# exige JWT; o código ainda confirma super_admin ativo em internal_admins
-verify_jwt = true
+# o código confirma super_admin ativo em internal_admins (superAdmin())
+verify_jwt = false
+
+# As duas abaixo NÃO existiam neste arquivo e por isso caíam no
+# default da plataforma (true) — parte do mesmo defeito B1.
+[functions.revogar-responsavel]
+# coordenação (chamador) ou super_admin (resolverSuperAdmin), no código
+verify_jwt = false
+
+[functions.trocar-senha]
+# exige sessão válida do próprio dono da senha (chamador → 401)
+verify_jwt = false
