@@ -67,9 +67,21 @@ export function MenuPrincipal({ abas, ativo, aoTrocar, usuario }) {
         .mi { transition: background .15s, color .15s, transform .15s; }
         .mi:hover { background: ${T.cardHi} !important; color: ${T.ink} !important; transform: translateX(2px); }
         .mi:hover .mi-ic { color: ${T.gold} !important; }
-        /* rolagem do menu: vertical fina e discreta, lateral nunca */
-        .menu-rolagem { scrollbar-width: none; }
-        .menu-rolagem::-webkit-scrollbar { display: none; }
+        /* rolagem do menu (I1/I7): a lista de abas é DINÂMICA por papel
+           (4 a 8+ itens hoje, tende a crescer) — "fazer caber" quebraria
+           de novo no primeiro papel com mais uma aba, ou com zoom do
+           navegador, ou com nome de usuário que quebra em 2 linhas no
+           perfil acima. A correção é affordance, não tentar caber: a
+           barra de rolagem fica VISÍVEL e fina em vez de suprimida.
+           Antes era "scrollbar-width: none" + "::-webkit-scrollbar
+           display:none" — rolava, e não havia nenhum sinal disso; a
+           aba "Marca" (a tela do white-label, sempre por último na nav
+           da coordenação) ficava indistinguível de "não existe". */
+        .menu-rolagem { scrollbar-width: thin; scrollbar-color: ${T.line} transparent; }
+        .menu-rolagem::-webkit-scrollbar { width: 6px; }
+        .menu-rolagem::-webkit-scrollbar-track { background: transparent; }
+        .menu-rolagem::-webkit-scrollbar-thumb { background: ${T.line}; border-radius: 3px; }
+        .menu-rolagem::-webkit-scrollbar-thumb:hover { background: ${T.sub}; }
       `}</style>
 
       {/* ============ DESKTOP: menu lateral fixo ============ */}
