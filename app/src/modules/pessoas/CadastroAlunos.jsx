@@ -3,6 +3,7 @@
    em lote (um nome por linha ou via CSV). O consentimento entra no mesmo
    passo: é termo no cadastro, não burocracia separada. */
 import React, { useId, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { Card, Botao, BotaoMini, Erro, useInputStyle } from "../../shared/ui/componentes.jsx";
 import { useTema } from "../../shared/branding/BrandingContext.jsx";
 import { limparNome, nomeValido } from "../../shared/validacao.js";
@@ -540,7 +541,11 @@ export function CredencialGerada({ credencial, aoFechar }) {
   // z-index 70: acima do modal de VinculosResponsavel (60) — resetar/
   // reativar credencial de um responsável pode disparar isto com o
   // outro modal ainda aberto por trás; este precisa ficar visível.
-  return (
+  // B2: portal em document.body. `.fade` (tema.js) anima transform e
+  // vira containing block para position:fixed — sem o portal este
+  // modal resolve contra o wrapper da aba (altura do documento) e
+  // nasce fora de alcance na lista cheia. Ver componentes.jsx/Modal.
+  return createPortal(
     <div style={{ position: "fixed", inset: 0, background: "#000a", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 70, padding: 18 }}>
       <Card style={{ maxWidth: 420, width: "100%", textAlign: "center" }}>
         <div className="disp" style={{ fontSize: 17, fontWeight: 700, marginBottom: 6 }}>
@@ -576,7 +581,8 @@ export function CredencialGerada({ credencial, aoFechar }) {
           <Botao onClick={aoFechar}>Entreguei, fechar</Botao>
         </div>
       </Card>
-    </div>
+    </div>,
+    document.body,
   );
 }
 

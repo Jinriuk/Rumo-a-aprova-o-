@@ -5,6 +5,7 @@
    via RPC/Edge Function com porteiro. Credencial de admin nunca no navegador.
    D1B: backoffice substitui os scripts manuais de provisionamento. */
 import React, { useEffect, useId, useMemo, useState } from "react";
+import { createPortal } from "react-dom";
 import {
   SectionCard, Erro, ErroComRetry, EmptyState, StatCard, StatusBadge,
   Botao, BotaoMini, useInputStyle, CarregandoBloco, Tabs,
@@ -823,7 +824,11 @@ function AcoesStatus({ escola, aoMudar }) {
 /* ---------- Modal de confirmação ---------- */
 function ConfirmacaoModal({ titulo, corpo, perigo, ocupado, rotuloConfirmar = "Confirmar", aoConfirmar, aoCancelar }) {
   const T = useTema();
-  return (
+  // B2: portal em document.body. O backoffice também envolve o
+  // conteúdo de aba em <div className="fade">, e `.fade` anima
+  // transform — vira containing block para position:fixed. Ver
+  // componentes.jsx/Modal para o diagnóstico completo.
+  return createPortal(
     <div onClick={aoCancelar} style={{ position: "fixed", inset: 0, zIndex: 50, background: "#0A1622cc", display: "flex", alignItems: "center", justifyContent: "center", padding: 18 }}>
       <div onClick={(ev) => ev.stopPropagation()} style={{ width: "100%", maxWidth: 420, background: T.bg2, border: `1px solid ${perigo ? T.red + "66" : T.line}`, borderRadius: 14, padding: 20, boxShadow: "0 18px 50px #0009" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
@@ -844,7 +849,8 @@ function ConfirmacaoModal({ titulo, corpo, perigo, ocupado, rotuloConfirmar = "C
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }
 
