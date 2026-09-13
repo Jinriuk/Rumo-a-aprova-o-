@@ -45,6 +45,30 @@ Deno.serve(async (req) => {
     if (error) throw error;
 
     const resultado = (data as { resultado?: string; erro?: string } | null)?.resultado;
+
+    // Onda 3 / 0049: gerar_meta_protegida passou a nomear dois estados
+    // que ANTES saíam disfarçados de 'ja_tinha'. Sem este ramo, a
+    // coordenação clicando "gerar meta" num aluno de ciclo encerrado
+    // receberia 500 e o aluno seria marcado pendente_configuracao — o
+    // que, por provisionar-aluno, BLOQUEIA a emissão de credencial.
+    // Regressão silenciosa; por isso os dois entram explicitamente.
+    //   ciclo_encerrado  → a trilha acabou. Não há meta a gerar, e isso
+    //                      não é falha de configuração nenhuma.
+    //   sem_semana_hoje  → lacuna no calendário da trilha; o ciclo segue.
+    const SEM_META_SEM_FALHA: Record<string, string> = {
+      ciclo_encerrado: "ciclo_encerrado",
+      sem_semana_hoje: "sem_semana_hoje",
+    };
+    if (resultado && SEM_META_SEM_FALHA[resultado]) {
+      // limpa um pendente anterior pelo mesmo motivo do ramo de sucesso:
+      // o aluno não está pendente de configuração, a trilha é que acabou.
+      await admin.from("alunos")
+        .update({ status_provisionamento: "ok" })
+        .eq("id", aluno_id)
+        .eq("status_provisionamento", "pendente_configuracao");
+      return json({ estado: SEM_META_SEM_FALHA[resultado] });
+    }
+
     if (resultado !== "gerada" && resultado !== "ja_tinha") {
       const mensagem = (data as { erro?: string } | null)?.erro ?? "falha ao gerar meta";
       await admin.from("alunos")

@@ -104,8 +104,15 @@ function BrandPreview({ nome, logo, acento }) {
           <div className="disp" style={{ fontSize: 14, fontWeight: 700, color: C.ink, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{nome}</div>
           <div style={{ fontSize: 10.5, color: C.sub }}>Painel de estudos</div>
         </div>
-        <div style={{ textAlign: "center" }}>
-          <div className="num disp" style={{ fontSize: 16, fontWeight: 800, color: acento }}>124</div>
+        {/* C9: aqui havia `124` cravado no JSX, enquanto o cabeçalho da
+            MESMA sessão dizia "0". Duas afirmações contraditórias sobre
+            o mesmo dado, na mesma tela. Esta é uma pré-visualização de
+            MARCA — ela existe para a coordenação ver cor e logo, não
+            para informar contagem, e não tem aluno de referência de onde
+            tirar uma. Então ela não finge ter um número: mostra o
+            formato do bloco, rotulado como exemplo. */}
+        <div style={{ textAlign: "center" }} title="Exemplo de layout — a contagem real usa a data de prova de cada aluno">
+          <div className="disp" style={{ fontSize: 13, fontWeight: 800, color: acento, lineHeight: 1.1 }}>––</div>
           <div style={{ fontSize: 8.5, color: C.sub }}>dias p/ prova</div>
         </div>
       </div>

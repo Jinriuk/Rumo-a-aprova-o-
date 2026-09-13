@@ -1,7 +1,8 @@
 /* Área do aluno: a própria meta e o próprio progresso. O banco só
    entrega o que é dele — esta tela nem precisa filtrar.
-   A contagem para a prova usa a data REAL da trilha quando existe;
-   sem trilha, usa a data MÉDIA do concurso escolhido pela escola. */
+   A contagem para a prova usa a data do ALUNO (data_prova_alvo) quando
+   existe; sem ela, a data MÉDIA do concurso escolhido pela escola.
+   A trilha NÃO entra nessa conta — ver concursos.js (Onda 3 / T27). */
 import React, { useEffect, useMemo, useState } from "react";
 import { Cabecalho } from "../../shared/ui/Cabecalho.jsx";
 import { Empty, Erro } from "../../shared/ui/componentes.jsx";
@@ -28,13 +29,15 @@ export default function AreaAluno({ perfil }) {
   // repetidas por entrada de aluno, a mais pesada sendo `atividades_modelo`
   // (159 linhas em produção).
   const trilhaEstado = useTrilha(aluno?.trilha_id);
-  const { trilha } = trilhaEstado;
 
-  // Data da prova: a da trilha quando existe; senão a data média do concurso.
-  // Vira memo porque agora depende de dois carregamentos independentes.
+  // Data da prova: a do ALUNO (data_prova_alvo) quando existe; senão a
+  // data média do concurso. Onda 3 / T27: a trilha saiu daqui. Ela é o
+  // plano de estudo, não a data da prova — usá-la dava "0 dias p/ prova"
+  // a 40 dos 63 alunos do demo, cuja prova é semanas depois (ou antes)
+  // do fim da trilha. Ver o cabeçalho de modules/conteudo/concursos.js.
   const prova = useMemo(
-    () => diasParaProva({ semanasTrilha: trilha?.semanas ?? null, concurso }),
-    [trilha, concurso],
+    () => diasParaProva({ dataProvaAlvo: aluno?.data_prova_alvo ?? null, concurso }),
+    [aluno?.data_prova_alvo, concurso],
   );
 
   useEffect(() => window.scrollTo({ top: 0, left: 0, behavior: "instant" }), []); // login nasce no topo
@@ -81,7 +84,7 @@ export default function AreaAluno({ perfil }) {
 
   return (
     <div>
-      <Cabecalho subtitulo={subtitulo} diasProva={prova?.dias ?? null} nomeUsuario={perfil.usuario.nome} />
+      <Cabecalho subtitulo={subtitulo} diasProva={prova?.dias ?? null} provaRealizada={prova?.realizada ?? false} nomeUsuario={perfil.usuario.nome} />
       <main className="com-sidebar" style={{ maxWidth: 1080, margin: "0 auto", padding: "18px max(16px, env(safe-area-inset-right)) calc(88px + env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left))" }}>
         {erro && <Erro>{erro}</Erro>}
         {aluno === undefined && !erro && <Empty txt="Preparando painel de estudos…" />}

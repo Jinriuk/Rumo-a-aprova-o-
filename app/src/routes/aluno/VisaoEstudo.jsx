@@ -29,7 +29,7 @@ const Simulados = lazy(() => import("../../modules/desempenho/Progresso.jsx").th
 const Acumulado = lazy(() => import("../../modules/desempenho/Acumulado.jsx").then((m) => ({ default: m.Acumulado })));
 const RadarDesempenho = lazy(() => import("../../modules/desempenho/RadarDesempenho.jsx").then((m) => ({ default: m.RadarDesempenho })));
 import { calcularMetricas } from "../../modules/desempenho/metricas.js";
-import { semanaAtual, fmtBR } from "../../shared/regras/regras.js";
+import { semanaAtual, estadoDoCiclo, fmtBR } from "../../shared/regras/regras.js";
 import { mensagemAmigavel } from "../../shared/lib/erros.js";
 import * as db from "../../shared/data/index.js";
 
@@ -230,6 +230,14 @@ export function VisaoEstudo({ aluno, podeEditar, concurso = null, contexto = "Pl
   );
   const semanaAtiva = semanasRegras.length ? semanaAtual(semanasRegras) : null;
 
+  // A1: `semanaAtiva` gruda na última semana depois do fim da trilha —
+  // é o clamp que tornava o fim do ciclo invisível. Ela continua sendo
+  // a referência das MÉTRICAS (o resumo do ciclo encerrado precisa de
+  // uma semana contra a qual calcular), mas quem decide o que a tela
+  // DIZ é estadoDoCiclo, que sabe distinguir "última semana" de
+  // "passou da última semana".
+  const ciclo = useMemo(() => estadoDoCiclo(semanasRegras), [semanasRegras]);
+
   const m = useMemo(() => {
     if (!trilha || !semanaAtiva) return null;
     return calcularMetricas({
@@ -290,7 +298,8 @@ export function VisaoEstudo({ aluno, podeEditar, concurso = null, contexto = "Pl
               aoAbrirConquistas={() => irAba("conquistas")} />
             <div ref={missaoRef} tabIndex={-1} aria-label="Missão da semana"
               className={realceMissao ? "mission-impact" : undefined} style={{ scrollMarginTop: 18 }}>
-              <MissaoAtual meta={meta} trilha={trilha} m={m} aoAvancar={podeEditar ? irAba : undefined} />
+              <MissaoAtual meta={meta} trilha={trilha} m={m} metas={dados.metas} ciclo={ciclo.estado}
+                aoAvancar={podeEditar ? irAba : undefined} />
             </div>
             {!essencial && examTag && gam.missoes.length > 0 && <MissoesPersistidas missoes={gam.missoes} disciplinas={trilha.disciplinas} />}
             <MetaSemana meta={meta} trilha={trilha} podeEditar={podeEditar} aoMudar={recarregar}
