@@ -1,3 +1,5 @@
+import { clarearAteRazao, razaoContraste, luminanciaRelativa, HEX_VALIDO } from "./contraste.js";
+
 /* Sistema de design FIXO (Doc 6, 1.2), herdado da versão atual:
    navy #0A1622, dourado #CDA349, Fraunces/Archivo. O white-label
    é leve: a escola troca logo, nome e a COR DE ACENTO — nada mais. */
@@ -16,31 +18,57 @@ export const BASE = {
   red: "#D9695E",
 };
 
-// Contraste mínimo no tema escuro: acento escuro demais some (botão
-// preto em fundo navy). Clareia até a luminância mínima — a cor da
-// escola é respeitada, mas nunca pode quebrar a leitura.
-const LUM_MINIMA = 0.32;
+/* ── Legibilidade da cor de acento (I12) ──────────────────────────
+   A escola escolhe a cor; o sistema garante que ela dê para ler. O
+   acento aparece em DOIS papéis, e os dois precisam de 4,5:1:
 
-export function luminancia(hex) {
-  const n = parseInt(hex.slice(1), 16);
-  const r = (n >> 16) & 255, g = (n >> 8) & 255, b = n & 255;
-  return (0.2126 * r + 0.7152 * g + 0.0722 * b) / 255;
+     a) como TEXTO sobre as superfícies escuras do tema;
+     b) como FUNDO de botão, com texto #0A1622 por cima
+        (componentes.jsx, `Botao`).
+
+   O papel (a) é o vinculante. Medido: exigir 4,5:1 como texto pede
+   luminância relativa ≥ 0,327; como fundo de botão pede ≥ 0,209. Os
+   dois são pisos, então quem satisfaz (a) satisfaz (b) de graça —
+   não há conflito entre os papéis, há um piso só.
+
+   QUAL superfície manda: a MAIS CLARA, porque é contra ela que um
+   acento claro tem a menor razão. Não é `card`, e não é `cardHi`:
+   é `goldSoft` (#3a3320, L=0,0337 > cardHi 0,0288). `goldSoft` NÃO
+   é re-tematizado pela escola e serve de fundo para texto no acento
+   em Cronometro.jsx (botão "Pausar": background goldSoft, color gold).
+   `line` (#1E3A55) é mais clara ainda, mas nunca recebe texto no
+   acento — só texto em `sub` e divisórias —, então não restringe.
+   Quem passar a usar o acento sobre `line` precisa entrar aqui. */
+export const SUPERFICIES_DO_ACENTO = [BASE.bg, BASE.bg2, BASE.card, BASE.cardHi, BASE.goldSoft];
+
+/* A mais clara das superfícies acima = a restrição mais apertada. */
+export const SUPERFICIE_CRITICA = SUPERFICIES_DO_ACENTO
+  .reduce((pior, s) => (luminanciaRelativa(s) > luminanciaRelativa(pior) ? s : pior));
+
+/* WCAG 2.x 1.4.3 (Contrast Minimum), texto normal. */
+export const RAZAO_MINIMA = 4.5;
+
+/* Substitui o antigo `luminancia(cor) < 0.32`, que estava duplicado
+   aqui e em Marca.jsx. O limiar agora é UM só e mora no algoritmo:
+   "precisa clarear" é exatamente "não alcança RAZAO_MINIMA contra a
+   superfície crítica" — a mesma pergunta que garantirLegivel faz. */
+export function precisaClarear(hex) {
+  if (!HEX_VALIDO.test(hex)) return false;
+  return razaoContraste(hex, SUPERFICIE_CRITICA) < RAZAO_MINIMA;
 }
 
+/* Clareia o acento até 4,5:1 contra a superfície crítica, segurando o
+   matiz da escola (ver contraste.js para a escolha do espaço de cor).
+   Cores que já passam saem intactas — o dourado padrão #CDA349, por
+   exemplo, mede 5,33:1 e não é tocado. */
 export function garantirLegivel(hex) {
-  const lum = luminancia(hex);
-  if (lum >= LUM_MINIMA) return hex;
-  const n = parseInt(hex.slice(1), 16);
-  let r = (n >> 16) & 255, g = (n >> 8) & 255, b = n & 255;
-  const t = (LUM_MINIMA - lum) / (1 - lum); // mistura com branco
-  r = Math.round(r + (255 - r) * t); g = Math.round(g + (255 - g) * t); b = Math.round(b + (255 - b) * t);
-  return `#${((r << 16) | (g << 8) | b).toString(16).padStart(6, "0")}`;
+  return clarearAteRazao(hex, SUPERFICIE_CRITICA, RAZAO_MINIMA);
 }
 
 // A cor de acento da escola entra DENTRO de limites: substitui só o
 // dourado de destaque (já clareada se preciso). O resto não se toca.
 export function tema(corAcento) {
-  if (!corAcento || !/^#[0-9a-fA-F]{6}$/.test(corAcento)) return BASE;
+  if (!corAcento || !HEX_VALIDO.test(corAcento)) return BASE;
   return { ...BASE, gold: garantirLegivel(corAcento) };
 }
 
