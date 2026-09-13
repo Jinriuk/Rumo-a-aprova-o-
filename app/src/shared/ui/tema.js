@@ -4,18 +4,41 @@ import { clarearAteRazao, razaoContraste, luminanciaRelativa, HEX_VALIDO } from 
    navy #0A1622, dourado #CDA349, Fraunces/Archivo. O white-label
    é leve: a escola troca logo, nome e a COR DE ACENTO — nada mais. */
 
+const CARD_HI = "#173050";
+
+/* T23/C11 — o vermelho original (#D9695E) media 3,894:1 como texto sobre
+   cardHi (a mais clara das superfícies fixas — mesmo raciocínio de
+   SUPERFICIE_CRITICA logo abaixo, calculado aqui antes de BASE existir
+   porque BASE.cardHi ainda não está definido neste ponto do módulo).
+   Abaixo de 4,5:1 em ~49 lugares do app (T.red usado direto em `color:`
+   — badge de risco, erro de validação, "sem atividade", etc.): não é um
+   ponto fora da curva, é o TOKEN falhando no papel de texto.
+
+   Corrigido pelo token, não por um `redText` paralelo: T.red também é
+   FUNDO em vários lugares (badge "PARCIAL" com #0A1622 por cima, botão
+   de perigo canônico, bordas translúcidas ${T.red}44/55/66) — um
+   segundo token exigiria migrar caso a caso e deixa margem pra alguém
+   voltar a usar T.red como texto por engano. Clarear o token resolve
+   os dois papéis de uma vez: como FUNDO, luminância mais alta contra
+   um texto tão escuro (#0A1622) só melhora o contraste, nunca piora.
+
+   Mesmo algoritmo do acento (clarearAteRazao, OKLCh — a escolha de
+   espaço está justificada em contraste.js) — matiz e croma saem quase
+   intactos (a distância até 4,5:1 é pequena; o clareamento é sutil). */
+const RED = clarearAteRazao("#D9695E", CARD_HI, 4.5);
+
 export const BASE = {
   bg: "#0A1622",
   bg2: "#0E1F30",
   card: "#12273B",
-  cardHi: "#173050",
+  cardHi: CARD_HI,
   line: "#1E3A55",
   ink: "#EAF1F8",
   sub: "#8AA4BC",
   gold: "#CDA349",
   goldSoft: "#3a3320",
   green: "#4FB477",
-  red: "#D9695E",
+  red: RED,
 };
 
 /* ── Legibilidade da cor de acento (I12) ──────────────────────────

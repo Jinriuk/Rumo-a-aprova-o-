@@ -193,8 +193,12 @@ export function MissaoAtual({ meta, trilha, m, metas, ciclo, aoAvancar }) {
               ⚠ Missão atrasada — <b>{pendentes} {pendentes === 1 ? "pendência" : "pendências"}</b> em aberto. Conclua antes de avançar.
             </div>
             {aoAvancar && (
+              // I4: era o único branco-sobre-coral do app (3,42:1, abaixo
+              // de 4,5:1). O botão de perigo canônico (componentes.jsx,
+              // `Botao perigo`) já usa #0A1622 sobre T.red e passa em
+              // 5,33:1 — o conserto é voltar pro padrão que já existe.
               <button type="button" className="mission-primary-action" onClick={() => aoAvancar("registrar", contextoAlvo)}
-                style={{ display: "block", width: "100%", marginTop: 12, background: T.red, color: "#fff", border: `1.5px solid ${T.red}`, borderRadius: 9, padding: "10px 16px", fontWeight: 700, fontSize: 13, cursor: "pointer", textAlign: "center" }}>
+                style={{ display: "block", width: "100%", marginTop: 12, background: T.red, color: "#0A1622", border: `1.5px solid ${T.red}`, borderRadius: 9, padding: "10px 16px", fontWeight: 700, fontSize: 13, cursor: "pointer", textAlign: "center" }}>
                 Continuar missão
               </button>
             )}

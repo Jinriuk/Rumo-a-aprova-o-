@@ -406,3 +406,58 @@ test("T45: aria-labelledby real — o <h2> ganha id e o diálogo aponta pra ele 
   // aria-label vira reserva só quando NÃO há título (mesma prioridade da ARIA spec)
   assert.match(src, /aria-label=\{titulo \? undefined : rotulo\}/);
 });
+
+// ============================================================
+// BLOCO 8 — contraste (I4, T23, C11)
+// ============================================================
+test("I4: MetaHero.jsx volta ao padrão canônico #0A1622 sobre T.red (não mais branco)", () => {
+  const src = lerCodigo("app/src/modules/motor/MetaHero.jsx");
+  assert.doesNotMatch(src, /background: T\.red, color: "#fff"/, "ainda tem branco sobre coral (3,42:1)");
+  assert.match(src, /background: T\.red, color: "#0A1622"/, "não voltou ao padrão do botão de perigo canônico");
+});
+
+test("T23/C11: T.red foi corrigido no TOKEN — mede ≥4,5:1 como texto contra as 4 superfícies fixas", () => {
+  const src = ler("app/src/shared/ui/tema.js");
+  assert.match(src, /const RED = clarearAteRazao\("#D9695E", CARD_HI, 4\.5\)/,
+    "T.red não é mais derivado por razão de contraste — voltou a ser um hex solto?");
+
+  return import(new URL("../app/src/shared/ui/tema.js", import.meta.url)).then(({ BASE }) => {
+    return import(new URL("../app/src/shared/ui/contraste.js", import.meta.url)).then(({ razaoContraste }) => {
+      for (const sup of ["bg", "bg2", "card", "cardHi"]) {
+        const r = razaoContraste(BASE.red, BASE[sup]);
+        assert.ok(r >= 4.5, `T.red vs ${sup} = ${r.toFixed(3)}:1, abaixo de 4,5:1`);
+      }
+      // como FUNDO (texto #0A1622 por cima — badge "PARCIAL", botão de perigo)
+      const comoFundo = razaoContraste("#0A1622", BASE.red);
+      assert.ok(comoFundo >= 4.5, `#0A1622 sobre T.red = ${comoFundo.toFixed(3)}:1`);
+    });
+  });
+});
+
+test("T23/C11: a correção do token preserva o matiz — ainda é claramente vermelho/coral, não lavou pra cinza", () => {
+  return import(new URL("../app/src/shared/ui/tema.js", import.meta.url)).then(({ BASE }) => {
+    return import(new URL("../app/src/shared/ui/contraste.js", import.meta.url)).then(({ paraOklch }) => {
+      const antes = paraOklch("#D9695E");
+      const depois = paraOklch(BASE.red);
+      const grau = (r) => ((r * 180) / Math.PI + 360) % 360;
+      const desvio = Math.abs(((grau(depois.H) - grau(antes.H) + 540) % 360) - 180);
+      assert.ok(desvio < 3, `matiz girou ${desvio.toFixed(1)}° — original ${grau(antes.H).toFixed(1)}°, novo ${grau(depois.H).toFixed(1)}°`);
+      assert.ok(depois.C >= antes.C * 0.9, `croma caiu de ${antes.C.toFixed(3)} para ${depois.C.toFixed(3)} — lavou a cor`);
+    });
+  });
+});
+
+test("T23/C11: nenhuma das ~49 ocorrências de T.red como texto precisou mudar de arquivo — o token resolve todas de uma vez", () => {
+  // amostra alguns dos locais citados no laudo — todos continuam usando
+  // T.red diretamente, sem virar um token paralelo (`redText` etc.)
+  const alvos = [
+    "app/src/modules/pessoas/CadastroAlunos.jsx",
+    "app/src/modules/desempenho/SimuladoConcurso.jsx",
+    "app/src/modules/motor/Registrar.jsx",
+  ];
+  for (const caminho of alvos) {
+    const src = lerCodigo(caminho);
+    assert.match(src, /color: T\.red/, `${caminho} não usa mais T.red como texto — verificar se não virou token paralelo`);
+    assert.doesNotMatch(src, /redText/, `${caminho} passou a referenciar um token 'redText' — decisão foi corrigir o token, não criar um segundo`);
+  }
+});
