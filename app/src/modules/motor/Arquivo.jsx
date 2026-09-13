@@ -40,7 +40,7 @@ export function Arquivo({ metas, trilha, registros }) {
             const min = wl.reduce((a, l) => a + (+l.minutos || 0), 0);
 
             return (
-              <button key={meta.id} onClick={() => setAberta(sel ? null : meta.id)}
+              <button type="button" key={meta.id} onClick={() => setAberta(sel ? null : meta.id)}
                 style={{ textAlign: "left", background: T.bg, border: `1.5px solid ${sel || ativa ? T.gold : T.line}`, borderRadius: 12, padding: 13, color: T.ink }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 6 }}>
                   <span className="disp" style={{ fontWeight: 700, fontSize: 14.5 }}>Semana {meta.semana_numero}</span>

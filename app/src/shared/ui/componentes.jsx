@@ -80,12 +80,15 @@ export function Empty({ txt }) {
   return <div style={{ padding: "24px 0", textAlign: "center", color: T.sub, fontSize: 13 }}>{txt}</div>;
 }
 
-export function Botao({ children, onClick, disabled, secundario, perigo, style, type = "button" }) {
+export function Botao({ children, onClick, disabled, secundario, perigo, style, type = "button", ...resto }) {
   const T = useTema();
   const fundo = disabled ? T.line : perigo ? T.red : secundario ? T.card : T.gold;
   const cor = disabled ? T.sub : secundario ? T.ink : "#0A1622";
+  // T13: `...resto` deixa passar aria-describedby/aria-disabled etc. sem
+  // precisar de uma prop nova por atributo — usado por Registrar.jsx para
+  // ligar "Confirmar estudo" à explicação de por que está desabilitado.
   return (
-    <button className="ui-button" type={type} onClick={onClick} disabled={disabled}
+    <button className="ui-button" type={type} onClick={onClick} disabled={disabled} {...resto}
       style={{ background: fundo, color: cor, border: secundario ? `1px solid ${T.line}` : "none", borderRadius: 8, padding: "13px 20px", minHeight: 48, fontWeight: 700, fontSize: 15, ...style }}>
       {children}
     </button>
@@ -123,7 +126,7 @@ export function ErroComRetry({ children, aoTentar, rotulo = "Tentar de novo" }) 
         <span style={{ lineHeight: 1.5 }}>{String(children)}</span>
       </div>
       {aoTentar && (
-        <button onClick={aoTentar}
+        <button type="button" onClick={aoTentar}
           style={{ border: `1px solid ${T.gold}`, background: `${T.gold}14`, color: T.gold, borderRadius: 8, padding: "8px 16px", minHeight: 40, fontWeight: 700, fontSize: 13, cursor: "pointer" }}>
           ↻ {rotulo}
         </button>
@@ -294,7 +297,10 @@ export function SectionCard({ titulo, sub, acao, children, style, semPadding }) 
       {(titulo || acao) && (
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, padding: "13px 16px", borderBottom: `1px solid ${T.line}`, flexWrap: "wrap" }}>
           <div style={{ minWidth: 0 }}>
-            {titulo && <h3 className="disp" style={{ margin: 0, fontSize: 15.5, fontWeight: 700, lineHeight: 1.2, color: T.ink }}>{titulo}</h3>}
+            {/* T3/T24: SectionCard é o título de seção mais usado do app —
+                era h3 direto sob o h1 do Cabecalho, sem h2 nenhum entre os
+                dois. Vira h2: um nível por vez. */}
+            {titulo && <h2 className="disp" style={{ margin: 0, fontSize: 15.5, fontWeight: 700, lineHeight: 1.2, color: T.ink }}>{titulo}</h2>}
             {sub && <div style={{ fontSize: 12, color: T.sub, marginTop: 2 }}>{sub}</div>}
           </div>
           {acao && <div style={{ flexShrink: 0 }}>{acao}</div>}
@@ -313,7 +319,7 @@ export function Tabs({ abas, ativo, aoTrocar }) {
       {abas.map(([k, lb, badge]) => {
         const on = ativo === k;
         return (
-          <button key={k} className="tab" onClick={() => aoTrocar(k)}
+          <button type="button" key={k} className="tab" onClick={() => aoTrocar(k)}
             style={{ border: "none", background: "transparent", color: on ? T.gold : T.sub, fontWeight: 600, fontSize: 13.5, padding: "12px 13px", minHeight: 46, whiteSpace: "nowrap", borderBottom: on ? `2px solid ${T.gold}` : "2px solid transparent", display: "inline-flex", alignItems: "center", gap: 6 }}>
             {lb}
             {badge != null && badge !== 0 && (
@@ -429,7 +435,7 @@ export function MaisAcoes({ acoes }) {
   if (!acoes?.length) return null;
   return (
     <div style={{ position: "relative" }}>
-      <button ref={gatilhoRef} onClick={() => setAberto((v) => !v)}
+      <button type="button" ref={gatilhoRef} onClick={() => setAberto((v) => !v)}
         aria-haspopup="menu" aria-expanded={aberto} aria-label="Mais ações"
         style={{ border: `1px solid ${T.line}`, background: "transparent", color: T.sub, borderRadius: 7, fontSize: 12, fontWeight: 600, padding: "6px 10px", minHeight: 32 }}>
         ⋯ Mais
@@ -448,7 +454,7 @@ export function MaisAcoes({ acoes }) {
               ...(abrirParaCima ? { bottom: "calc(100% + 4px)" } : { top: "calc(100% + 4px)" }),
             }}>
             {acoes.map((a, i) => (
-              <button key={i} role="menuitem" onClick={() => { setAberto(false); a.aoClicar(); }} disabled={a.desabilitado}
+              <button type="button" key={i} role="menuitem" onClick={() => { setAberto(false); a.aoClicar(); }} disabled={a.desabilitado}
                 style={{ display: "block", width: "100%", textAlign: "left", border: "none", background: "transparent", color: a.perigo ? T.red : T.ink, borderRadius: 7, fontSize: 13, padding: "9px 11px", minHeight: 38, opacity: a.desabilitado ? 0.4 : 1 }}>
                 {a.rotulo}
               </button>
@@ -497,7 +503,7 @@ export function BotaoMini({ children, onClick, destaque, perigo, disabled }) {
   const T = useTema();
   const cor = perigo ? T.red : destaque ? T.gold : T.sub;
   return (
-    <button onClick={onClick} disabled={disabled}
+    <button type="button" onClick={onClick} disabled={disabled}
       style={{ border: `1px solid ${destaque ? T.gold : T.line}`, background: destaque ? `${T.gold}14` : "transparent", color: cor, borderRadius: 7, fontSize: 12, fontWeight: 600, padding: "6px 10px", minHeight: 32, opacity: disabled ? 0.5 : 1, whiteSpace: "nowrap" }}>
       {children}
     </button>

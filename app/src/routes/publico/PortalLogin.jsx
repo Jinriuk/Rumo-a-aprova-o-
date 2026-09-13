@@ -87,7 +87,7 @@ export function MarcaPortal({ compacta = false }) {
   return (
     <div className={`portal-brand ${compacta ? "portal-brand--compacta" : ""}`.trim()}>
       <span className="portal-brand-mark" aria-hidden="true">
-        <svg viewBox="0 0 48 48" focusable="false">
+        <svg viewBox="0 0 48 48" aria-hidden="true" focusable="false">
           <circle cx="24" cy="24" r="16" />
           <circle cx="24" cy="24" r="7" />
           <path d="M24 3v8M24 37v8M3 24h8M37 24h8" />
@@ -109,7 +109,7 @@ export function MapaDaMissao({ efeitos }) {
         animate={efeitos ? { opacity: [.34, .72, .34], scale: [.94, 1.06, .94] } : { opacity: .46, scale: 1 }}
         transition={efeitos ? { duration: 4.8, repeat: Infinity, ease: "easeInOut" } : { duration: 0 }} />
 
-      <svg className="mission-map-lines" viewBox="0 0 620 310" preserveAspectRatio="none" focusable="false">
+      <svg className="mission-map-lines" viewBox="0 0 620 310" preserveAspectRatio="none" aria-hidden="true" focusable="false">
         <defs>
           <linearGradient id="rota-dourada" x1="0" x2="1">
             <stop offset="0" stopColor="var(--ui-accent)" stopOpacity=".08" />

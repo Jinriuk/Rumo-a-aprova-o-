@@ -146,7 +146,7 @@ export function VinculosResponsavel({ aluno, aoMudar, aoFechar, aoGerarCredencia
           <div id={tituloId} className="disp" style={{ fontWeight: 700, fontSize: 15 }}>
             Responsáveis de {aluno?.nome}
           </div>
-          <button onClick={aoFechar}
+          <button type="button" onClick={aoFechar}
             style={{ background: "none", border: "none", color: T.sub, fontSize: 18, cursor: "pointer", padding: "4px 8px" }}>
             ×
           </button>
@@ -276,7 +276,7 @@ export function VinculosResponsavel({ aluno, aoMudar, aoFechar, aoGerarCredencia
           </div>
         )}
 
-        <button onClick={aoFechar}
+        <button type="button" onClick={aoFechar}
           style={{ marginTop: 16, width: "100%", background: T.line, border: "none", color: T.sub, borderRadius: 9, padding: "11px", fontWeight: 700, fontSize: 13.5, cursor: "pointer" }}>
           Fechar
         </button>

@@ -69,7 +69,7 @@ export function HistoricoProgresso({ alunoId }) {
           </div>
           {total > limite && (
             <div style={{ textAlign: "center", padding: 12 }}>
-              <button onClick={() => setLimite((n) => n + POR_PAGINA)}
+              <button type="button" onClick={() => setLimite((n) => n + POR_PAGINA)}
                 style={{ border: `1px solid ${T.line}`, background: T.bg, color: T.gold, borderRadius: 8, padding: "8px 16px", fontSize: 13, fontWeight: 700, minHeight: 38 }}>
                 Ver mais · {limite} de {total}
               </button>

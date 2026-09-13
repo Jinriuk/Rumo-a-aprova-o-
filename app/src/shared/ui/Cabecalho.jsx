@@ -44,7 +44,7 @@ export function Cabecalho({ titulo, subtitulo, diasProva, diasProvaMedia, provaR
         )}
 
         <span className="hdr-user" style={{ fontSize: 12, color: T.sub, whiteSpace: "nowrap", flexShrink: 0, maxWidth: 120, overflow: "hidden", textOverflow: "ellipsis" }}>{nomeUsuario}</span>
-        <button onClick={() => db.sair().catch((e) => console.error(e))} title="Sair" aria-label="Sair"
+        <button type="button" onClick={() => db.sair().catch((e) => console.error(e))} title="Sair" aria-label="Sair"
           style={{ border: `1px solid ${T.line}`, background: T.card, color: T.sub, borderRadius: 8, padding: "7px 11px", minHeight: 38, fontSize: 12.5, fontWeight: 600, flexShrink: 0 }}>
           Sair
         </button>

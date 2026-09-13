@@ -291,7 +291,8 @@ export function VisaoEstudo({ aluno, podeEditar, concurso = null, contexto = "Pl
         usuario={{ nome: aluno.nome, sub: `${patente(xp).nome} · ${xp.toLocaleString("pt-BR")} XP` }} />
 
       <Suspense fallback={<CarregandoBloco titulo="Carregando o painel…" cartoes={2} linhas={3} />}>
-      <div className="fade" key={tab}>
+      {/* T25: alvo do skip-link renderizado por <MenuPrincipal> acima. */}
+      <div id="conteudo-principal" tabIndex={-1} className="fade" key={tab}>
         {tab === "hoje" && (
           <div style={{ display: "flex", flexDirection: "column", gap: 16, paddingTop: 4 }}>
             <FaixaAspirante nome={aluno.nome.split(" ")[0]} contexto={contexto} xp={xp} streak={m?.streak ?? 0}
@@ -314,7 +315,7 @@ export function VisaoEstudo({ aluno, podeEditar, concurso = null, contexto = "Pl
             {podeEditar && (
               <div className="today-preference">
                 <span>Preferência desta tela</span>
-                <button onClick={alternarEssencial} aria-pressed={essencial}
+                <button type="button" onClick={alternarEssencial} aria-pressed={essencial}
                   title={essencial ? "Mostrar missões extras e conquistas" : "Recolher missões extras e conquistas"}>
                   <i aria-hidden="true" />
                   {essencial ? "Modo essencial" : "Modo completo"}
@@ -339,7 +340,7 @@ export function VisaoEstudo({ aluno, podeEditar, concurso = null, contexto = "Pl
           <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
             <nav aria-label="Seções do desempenho" className="navwrap" style={{ display: "flex", gap: 8, overflowX: "auto", paddingBottom: 2 }}>
               {[["Resumo", refResumo], ["Por matéria", refMaterias], ["Histórico", refHistorico]].map(([rot, r]) => (
-                <button key={rot} onClick={() => rolarPara(r)}
+                <button type="button" key={rot} onClick={() => rolarPara(r)}
                   style={{ flexShrink: 0, border: `1px solid ${T.line}`, background: T.card, color: T.sub, borderRadius: 999, fontSize: 12.5, fontWeight: 700, padding: "7px 14px", minHeight: 36, whiteSpace: "nowrap" }}>
                   {rot}
                 </button>

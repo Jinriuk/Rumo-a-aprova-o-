@@ -66,7 +66,7 @@ export function FichaAluno({ aluno, concurso }) {
           {aluno.nome.split(" ").filter(Boolean).slice(0, 2).map((x) => x[0].toUpperCase()).join("")}
         </div>
         <div style={{ flex: 1, minWidth: 180 }}>
-          <div className="disp" style={{ fontSize: 18, fontWeight: 800 }}>{aluno.nome}</div>
+          <h2 className="disp" style={{ margin: 0, fontSize: 18, fontWeight: 800 }}>{aluno.nome}</h2>
           <div style={{ fontSize: 12, color: T.sub, marginTop: 2 }}>
             {[turma, concurso ? concurso.nome.split(" (")[0] : null].filter(Boolean).join(" · ") || "sem turma"}
           </div>
@@ -177,7 +177,7 @@ function OnboardingAluno({ alunoId }) {
       titulo="Onboarding pedagógico"
       sub="Contexto inicial do aluno — preenchido pela coordenação."
       acao={!editando && !carregando && (
-        <button onClick={iniciarEdicao}
+        <button type="button" onClick={iniciarEdicao}
           style={{ background: "none", border: "none", color: T.gold, fontSize: 12.5, cursor: "pointer", textDecoration: "underline" }}>
           {dados ? "Editar" : "Preencher"}
         </button>

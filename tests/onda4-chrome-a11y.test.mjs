@@ -16,8 +16,8 @@
    marcação que implementa a correção), não a aparência renderizada. */
 import test from "node:test";
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
-import { resolve, dirname } from "node:path";
+import { readFileSync, readdirSync } from "node:fs";
+import { resolve, dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const __dir = dirname(fileURLToPath(import.meta.url));
@@ -27,6 +27,19 @@ const semComentarios = (f) => f
   .replace(/\/\*[\s\S]*?\*\//g, "")
   .replace(/(^|[^:\\])\/\/.*$/gm, "$1");
 const lerCodigo = (p) => semComentarios(ler(p));
+
+function todosOsJsx(dirRel) {
+  const base = resolve(root, dirRel);
+  const achados = [];
+  (function andar(dir) {
+    for (const ent of readdirSync(dir, { withFileTypes: true })) {
+      const caminho = join(dir, ent.name);
+      if (ent.isDirectory()) andar(caminho);
+      else if (ent.name.endsWith(".jsx")) achados.push(caminho);
+    }
+  })(base);
+  return achados;
+}
 
 // ============================================================
 // BLOCO 1 — menu que esconde abas (I1, I7)
@@ -230,4 +243,124 @@ test("BLOCO5: o fix NÃO adiciona confirmação — onChange continua gravando d
   assert.match(src, /onChange=\{\(e\) => trocarConcurso\(a, e\.target\.value\)\}/, "onChange de concurso não deveria mudar de assinatura");
   assert.match(src, /onChange=\{\(e\) => trocarTrilha\(a, e\.target\.value\)\}/, "onChange de trilha não deveria mudar de assinatura");
   assert.doesNotMatch(src, /confirmar\(\{[\s\S]{0,200}trocarTurma|window\.confirm/, "confirmação foi adicionada — fora de escopo desta onda");
+});
+
+// ============================================================
+// BLOCO 6 — acessibilidade mecânica (I8, T2, T3/T24, T13, T25, C6)
+// ============================================================
+
+test("I8: os 3 <select> por aluno têm aria-label com o nome do aluno, não só title", () => {
+  const src = lerCodigo("app/src/modules/pessoas/ListaAlunos.jsx");
+  assert.match(src, /aria-label=\{`Turma de \$\{a\.nome\}`\}/, "select de turma sem aria-label com nome do aluno");
+  assert.match(src, /aria-label=\{`Concurso de \$\{a\.nome\}`\}/, "select de concurso sem aria-label com nome do aluno");
+  assert.match(src, /aria-label=\{`Trilha de estudo de \$\{a\.nome\}`\}/, "select de trilha sem aria-label com nome do aluno");
+  // title continua (tooltip visual), não foi removido — só deixou de ser o único rótulo
+  assert.match(src, /title="Turma do aluno"/);
+});
+
+test("T2: nenhum <button> do app fica sem type= (79 ocorrências no laudo)", () => {
+  const arquivos = todosOsJsx("app/src");
+  let semType = 0;
+  const exemplos = [];
+  for (const caminho of arquivos) {
+    const src = lerCodigo(caminho);
+    for (const m of src.matchAll(/<button\b[\s\S]*?>/g)) {
+      if (!m[0].includes("type=")) {
+        semType++;
+        if (exemplos.length < 5) exemplos.push(`${caminho.replace(root + "/", "")}: ${m[0].slice(0, 60)}`);
+      }
+    }
+  }
+  assert.equal(semType, 0, `${semType} <button> ainda sem type=\n${exemplos.join("\n")}`);
+});
+
+test("T2: os botões de submit dos 5 <form> do app continuam type=\"submit\" explícito (a correção não pisou neles)", () => {
+  const arquivos = [
+    "app/src/shared/ui/componentes.jsx",
+    "app/src/routes/publico/RedefinirSenha.jsx",
+    "app/src/routes/publico/Login.jsx",
+    "app/src/routes/publico/TrocarSenhaObrigatoria.jsx",
+  ];
+  let achouSubmit = 0;
+  for (const caminho of arquivos) {
+    const src = lerCodigo(caminho);
+    achouSubmit += (src.match(/type="submit"/g) ?? []).length;
+  }
+  assert.ok(achouSubmit >= 4, `esperava pelo menos 4 botões type="submit" nos formulários, achei ${achouSubmit}`);
+});
+
+test("T3/T24: SectionCard (o título de seção mais usado do app) é h2, não h3 — fecha o salto h1→h3", () => {
+  const src = lerCodigo("app/src/shared/ui/componentes.jsx");
+  assert.doesNotMatch(src, /<h3 className="disp"[^>]*>\{titulo\}<\/h3>/, "SectionCard ainda usa h3 para o título");
+  assert.match(src, /<h2 className="disp"[^>]*>\{titulo\}<\/h2>/, "SectionCard não virou h2");
+});
+
+test("T3/T24: os 15 títulos de seção que eram <div> viraram <h2>, sem mudar o texto nem a posição visual", () => {
+  const alvos = [
+    ["app/src/modules/desempenho/Progresso.jsx", ["Questões por dia", "Evolução por semana — as {trilha.semanas.length} semanas até a prova", "% de acerto por matéria", "Total de questões por matéria", "Evolução nos simulados — {prova.rotulo}", "Registrar simulado — {prova.rotulo}", "Histórico"]],
+    ["app/src/modules/desempenho/Acumulado.jsx", ["Desempenho acumulado", "Desempenho por meta", "Desempenho por disciplina"]],
+    ["app/src/modules/desempenho/SimuladoConcurso.jsx", ["Registrar simulado — formato {concurso?.codigo?.toUpperCase()}", "Histórico"]],
+    ["app/src/modules/desempenho/ClassificacaoTurma.jsx", ['Ranking — {modo === "estudos" ? "Estudos" : "Simulados"}']],
+    ["app/src/modules/desempenho/FichaAluno.jsx", ["{aluno.nome}"]],
+    ["app/src/modules/escola/Marca.jsx", ["{nome}", "Missão da semana"]],
+  ];
+  for (const [caminho, textos] of alvos) {
+    const src = lerCodigo(caminho);
+    for (const texto of textos) {
+      const escapado = texto.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+      const re = new RegExp(`<h2 className="disp" style=\\{\\{ margin: 0,[^}]*\\}\\}>${escapado}</h2>`);
+      assert.match(src, re, `"${texto}" em ${caminho} não virou h2 com margin:0`);
+    }
+  }
+  // CadastroAlunos.jsx: um título é multilinha (expressão), o outro é texto direto
+  const cad = lerCodigo("app/src/modules/pessoas/CadastroAlunos.jsx");
+  assert.match(cad, /<h2 className="disp" style=\{\{ margin: 0, fontSize: 17, fontWeight: 700, marginBottom: 6 \}\}>/, "título do modal de credencial não virou h2");
+  assert.match(cad, /<h2 className="disp" style=\{\{ margin: 0, fontSize: 15, fontWeight: 700, marginBottom: 10 \}\}>Nova turma<\/h2>/, "'Nova turma' não virou h2");
+});
+
+test("T13: 'Confirmar estudo' liga aria-disabled + aria-describedby à explicação, que agora é live region", () => {
+  const src = lerCodigo("app/src/modules/motor/Registrar.jsx");
+  assert.match(src, /aria-disabled=\{!podeSalvar \|\| undefined\}/, "sem aria-disabled amarrado ao mesmo estado do disabled nativo");
+  assert.match(src, /aria-describedby=\{faltaTopico \? id\("dica-topico"\) : undefined\}/, "aria-describedby não aponta pra explicação condicionalmente");
+  assert.match(src, /id=\{id\("dica-topico"\)\} role="status" aria-live="polite"/, "a explicação não é live region com id correspondente");
+});
+
+test("T13: o único aria-required do repo agora tem required nativo correspondente", () => {
+  const src = lerCodigo("app/src/modules/motor/Registrar.jsx");
+  assert.match(src, /id=\{id\("top"\)\}[\s\S]{0,120}required aria-required="true"/, "input de tópico sem required nativo");
+  // e o `required` continua não afetando o fluxo de envio (sem <form>)
+  assert.doesNotMatch(src, /<form/, "Registrar.jsx ganhou um <form> — reconferir que required não passa a bloquear envio nativo");
+});
+
+test("T25: as duas navs de MenuPrincipal têm aria-label distintos", () => {
+  const src = lerCodigo("app/src/shared/ui/MenuPrincipal.jsx");
+  assert.match(src, /className="menu-lateral app-sidebar" aria-label="Navegação principal"/, "nav lateral perdeu o rótulo original");
+  assert.match(src, /className="menu-barra app-bottom-nav" aria-label="Navegação principal \(barra inferior\)"/, "nav da barra inferior não ganhou rótulo distinto");
+});
+
+test("T25: existe skip-link, visível só no foco, apontando para #conteudo-principal", () => {
+  const menu = lerCodigo("app/src/shared/ui/MenuPrincipal.jsx");
+  assert.match(menu, /<a href="#conteudo-principal" className="skip-link">/, "sem skip-link no início da nav");
+  assert.match(menu, /\.skip-link \{[\s\S]*?top: -60px/, "skip-link não está fora da tela por padrão");
+  assert.match(menu, /\.skip-link:focus \{ top: 12px; \}/, "skip-link não aparece ao ganhar foco");
+
+  const visao = lerCodigo("app/src/routes/aluno/VisaoEstudo.jsx");
+  assert.match(visao, /id="conteudo-principal" tabIndex=\{-1\} className="fade"/, "VisaoEstudo sem o alvo do skip-link");
+  const escola = lerCodigo("app/src/routes/escola/AreaEscola.jsx");
+  assert.match(escola, /id="conteudo-principal" tabIndex=\{-1\} className="fade"/, "AreaEscola sem o alvo do skip-link");
+});
+
+test("C6: os 2 svgs decorativos de PortalLogin.jsx ganham aria-hidden (consistente com o 3º, que já tinha)", () => {
+  const src = lerCodigo("app/src/routes/publico/PortalLogin.jsx");
+  assert.match(src, /<svg viewBox="0 0 48 48" aria-hidden="true" focusable="false">/, "svg da marca do portal sem aria-hidden");
+  assert.match(src, /<svg className="mission-map-lines" viewBox="0 0 620 310" preserveAspectRatio="none" aria-hidden="true" focusable="false">/, "svg do mapa da missão sem aria-hidden");
+  // o terceiro já estava certo — contraprova de que não regrediu
+  assert.match(src, /<svg className="portal-rings" viewBox="0 0 640 640" aria-hidden="true" focusable="false">/);
+});
+
+test("Botao aceita e repassa atributos extras (aria-*) — é o que viabiliza o fix de T13", () => {
+  const src = lerCodigo("app/src/shared/ui/componentes.jsx");
+  assert.match(src, /export function Botao\(\{[^}]*\.\.\.resto[^}]*\}\)/, "Botao não desestrutura ...resto");
+  assert.match(src, /<button className="ui-button" type=\{type\} onClick=\{onClick\} disabled=\{disabled\} \{\.\.\.resto\}/,
+    "Botao não espalha ...resto no <button>");
 });

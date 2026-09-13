@@ -104,9 +104,29 @@ export function MenuPrincipal({ abas, ativo, aoTrocar, usuario }) {
         @media (min-width: 1024px) {
           .menu-folha-mais { display: none; }
         }
+        /* T25: skip-link — primeiro elemento focável da nav, invisível até
+           receber foco por teclado. Sem isto, Tab a partir do topo da
+           página passa por TODAS as abas (até 8, ver I1/I7) antes de
+           chegar no conteúdo. O alvo (#conteudo-principal) é setado no
+           bloco de conteúdo que segue o <MenuPrincipal> nas duas telas
+           que o usam (VisaoEstudo.jsx, AreaEscola.jsx). */
+        .skip-link {
+          position: fixed; left: 12px; top: -60px; z-index: 10000;
+          background: ${T.gold}; color: #0A1622; padding: 10px 16px;
+          border-radius: 8px; font-weight: 700; font-size: 13px;
+          text-decoration: none; transition: top .15s;
+        }
+        .skip-link:focus { top: 12px; }
       `}</style>
 
       {/* ============ DESKTOP: menu lateral fixo ============ */}
+      {/* T25: as duas navs abaixo tinham o MESMO aria-label — só uma
+          fica exposta por vez via CSS (media query), mas um leitor de
+          landmarks não respeita display:none igual um leitor de tela
+          respeita, e a "folha do Mais" (T47, acima) já mostrou que a
+          separação CSS/estado nem sempre bate. Rótulos distintos. */}
+      <a href="#conteudo-principal" className="skip-link">Pular para o conteúdo</a>
+
       <nav className="menu-lateral app-sidebar" aria-label="Navegação principal" style={{ position: "fixed", left: 0, top: 0, bottom: 0, width: LARGURA_SIDEBAR, zIndex: 10, flexDirection: "column", background: `linear-gradient(180deg, ${T.bg2} 0%, ${T.bg} 100%)`, borderRight: `1px solid ${T.line}`, padding: "86px 12px 14px", overflow: "hidden" }}>
 
         {/* perfil VERTICAL: avatar centralizado em cima, nome embaixo
@@ -134,7 +154,7 @@ export function MenuPrincipal({ abas, ativo, aoTrocar, usuario }) {
           {abas.map(([k, lb, badge, icone]) => {
             const on = ativo === k;
             return (
-              <button key={k} className={`app-nav-item ${on ? "" : "mi"}`.trim()} onClick={() => trocar(k)}
+              <button type="button" key={k} className={`app-nav-item ${on ? "" : "mi"}`.trim()} onClick={() => trocar(k)}
                 aria-current={on ? "page" : undefined}
                 style={{
                   display: "flex", alignItems: "center", gap: 12, width: "100%", textAlign: "left",
@@ -182,7 +202,7 @@ export function MenuPrincipal({ abas, ativo, aoTrocar, usuario }) {
       {/* ============ CELULAR/TABLET: barra inferior fixa ============
           fundo SÓLIDO de propósito: backdrop-filter (blur) em elemento
           fixo repinta a cada pixel rolado e trava o scroll em tablet */}
-      <nav className="menu-barra app-bottom-nav" aria-label="Navegação principal" style={{ position: "fixed", left: 0, right: 0, bottom: 0, zIndex: 40, background: T.bg2, borderTop: `1px solid ${T.line}`, paddingBottom: "env(safe-area-inset-bottom)", boxShadow: "0 -4px 16px #0006" }}>
+      <nav className="menu-barra app-bottom-nav" aria-label="Navegação principal (barra inferior)" style={{ position: "fixed", left: 0, right: 0, bottom: 0, zIndex: 40, background: T.bg2, borderTop: `1px solid ${T.line}`, paddingBottom: "env(safe-area-inset-bottom)", boxShadow: "0 -4px 16px #0006" }}>
         {naBarra.map(([k, lb, badge, icone]) => (
           <ItemBarra key={k} rotulo={lb} badge={badge} icone={icone} on={ativo === k} aoClicar={() => trocar(k)} />
         ))}
