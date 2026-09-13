@@ -205,3 +205,29 @@ test("confere contra a falha: revertendo o bloco 4, os testes acima quebram", ()
   assert.doesNotMatch(src, /top:\s*"calc\(100% \+ 4px\)",\s*zIndex:\s*31/,
     "o painel de MaisAcoes ainda tem top fixo hardcoded (sem flip)");
 });
+
+// ============================================================
+// BLOCO 5 — scroll que troca o concurso (T29-comportamento)
+// ============================================================
+test("BLOCO5: os 3 <select> por aluno (turma/concurso/trilha) tiram o foco no wheel", () => {
+  const src = lerCodigo("app/src/modules/pessoas/ListaAlunos.jsx");
+  const selects = [
+    /<select value=\{turmaAtual\}[\s\S]*?<\/select>/,
+    /<select value=\{a\.concurso_id \?\? ""\}[\s\S]*?<\/select>/,
+    /<select value=\{a\.trilha_id \?\? ""\}[\s\S]*?<\/select>/,
+  ];
+  for (const re of selects) {
+    const m = src.match(re);
+    assert.ok(m, `select não encontrado: ${re}`);
+    assert.match(m[0], /onWheel=\{\(e\) => e\.currentTarget\.blur\(\)\}/,
+      `select sem onWheel/blur — a roda do mouse ainda troca o valor e grava: ${re}`);
+  }
+});
+
+test("BLOCO5: o fix NÃO adiciona confirmação — onChange continua gravando direto (decisão de produto da Onda 5)", () => {
+  const src = lerCodigo("app/src/modules/pessoas/ListaAlunos.jsx");
+  assert.match(src, /onChange=\{\(e\) => trocarTurma\(a, e\.target\.value\)\}/, "onChange de turma não deveria mudar de assinatura");
+  assert.match(src, /onChange=\{\(e\) => trocarConcurso\(a, e\.target\.value\)\}/, "onChange de concurso não deveria mudar de assinatura");
+  assert.match(src, /onChange=\{\(e\) => trocarTrilha\(a, e\.target\.value\)\}/, "onChange de trilha não deveria mudar de assinatura");
+  assert.doesNotMatch(src, /confirmar\(\{[\s\S]{0,200}trocarTurma|window\.confirm/, "confirmação foi adicionada — fora de escopo desta onda");
+});

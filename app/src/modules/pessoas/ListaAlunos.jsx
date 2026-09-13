@@ -202,21 +202,28 @@ export function ListaAlunos({ alunos, consentimentos, concursos = [], turmas = [
                       {aguardaTroca && <StatusBadge tom="alerta">aguardando troca de senha</StatusBadge>}
                       {r?.semAtividade && <StatusBadge tom="risco">sem atividade 7d</StatusBadge>}
                     </div>
+                    {/* T29-comportamento: a roda do mouse sobre um <select> FOCADO troca
+                        o valor e grava na hora (onChange sem confirmação — de propósito,
+                        é decisão de produto, não bug). onWheel tira o foco antes do navegador
+                        aplicar o scroll ao valor selecionado. */}
                     <div style={{ display: "flex", gap: 7, marginTop: 8, flexWrap: "wrap" }}>
                       {turmas.length > 0 && (
-                        <select value={turmaAtual} disabled={trabalhando} onChange={(e) => trocarTurma(a, e.target.value)} title="Turma do aluno" style={selMini}>
+                        <select value={turmaAtual} disabled={trabalhando} onChange={(e) => trocarTurma(a, e.target.value)}
+                          onWheel={(e) => e.currentTarget.blur()} title="Turma do aluno" style={selMini}>
                           <option value="" style={{ background: T.bg2 }}>— sem turma —</option>
                           {turmas.map((t) => <option key={t.id} value={t.id} style={{ background: T.bg2 }}>{t.nome}</option>)}
                         </select>
                       )}
                       {concursos.length > 0 && (
-                        <select value={a.concurso_id ?? ""} disabled={trabalhando} onChange={(e) => trocarConcurso(a, e.target.value)} title="Concurso do aluno" style={selMini}>
+                        <select value={a.concurso_id ?? ""} disabled={trabalhando} onChange={(e) => trocarConcurso(a, e.target.value)}
+                          onWheel={(e) => e.currentTarget.blur()} title="Concurso do aluno" style={selMini}>
                           <option value="" style={{ background: T.bg2 }}>— sem concurso —</option>
                           {concursos.map((c) => <option key={c.id} value={c.id} style={{ background: T.bg2 }}>{c.nome}</option>)}
                         </select>
                       )}
                       {trilhas.length > 1 && (
-                        <select value={a.trilha_id ?? ""} disabled={trabalhando} onChange={(e) => trocarTrilha(a, e.target.value)} title="Trilha de estudo" style={selMini}>
+                        <select value={a.trilha_id ?? ""} disabled={trabalhando} onChange={(e) => trocarTrilha(a, e.target.value)}
+                          onWheel={(e) => e.currentTarget.blur()} title="Trilha de estudo" style={selMini}>
                           <option value="" style={{ background: T.bg2 }}>— sem trilha —</option>
                           {trilhas.map((t) => <option key={t.id} value={t.id} style={{ background: T.bg2 }}>{t.nome}</option>)}
                         </select>
