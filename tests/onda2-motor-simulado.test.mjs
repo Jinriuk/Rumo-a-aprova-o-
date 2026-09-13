@@ -23,6 +23,11 @@
 // ============================================================
 import test from "node:test";
 import assert from "node:assert/strict";
+import { readFileSync, readdirSync } from "node:fs";
+import { resolve, dirname } from "node:path";
+import { fileURLToPath } from "node:url";
+
+const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 
 import { provaDoConcurso, totalAcertos } from "../app/src/modules/conteudo/provas.js";
 import { notaPorMateria, avaliarEliminacao, validarAcertos, objetivoSugerido, insumoParaNivel }
@@ -175,4 +180,34 @@ test("validarAcertos expõe as não respondidas em vez de fingir zero", () => {
   assert.ok(r.naoRespondidas.includes("bio"));
   assert.equal(r.capados.bio, undefined, "não respondida não entra em capados como 0");
   assert.equal(r.capados.his, 6, "veio de soc, expandida e capada");
+});
+
+// ── I2: eixo Y ilegível ──────────────────────────────────────────────────────
+test("I2: nenhum gráfico usa margem esquerda negativa (cortava o rótulo do eixo Y)", () => {
+  // O relatório mediu "100/75/50/25/0" sendo lido como "0/5/0/5/0": a
+  // margem negativa empurrava os rótulos para x negativo e o overflow
+  // do SVG cortava o começo de cada número. Estava em 5 gráficos, não
+  // nos 2 que a varredura viu — mesma causa, mesmo padrão copiado.
+  const dir = resolve(root, "app/src/modules/desempenho");
+  for (const f of readdirSync(dir).filter((x) => x.endsWith(".jsx"))) {
+    const src = readFileSync(resolve(dir, f), "utf8");
+    const negativas = [...src.matchAll(/margin=\{\{[^}]*left:\s*-\d+/g)];
+    assert.equal(
+      negativas.length, 0,
+      `${f}: margem esquerda negativa corta o rótulo do eixo Y — use left: 0 e aumente o width do YAxis`,
+    );
+  }
+});
+
+test("I2: o eixo Y esquerdo tem largura para o rótulo mais largo", () => {
+  // "100" a fontSize 10 ocupa ~17px; abaixo de ~34 o rótulo encosta ou corta.
+  for (const arq of ["Acumulado.jsx", "RadarDesempenho.jsx", "Progresso.jsx"]) {
+    const src = readFileSync(resolve(root, "app/src/modules/desempenho", arq), "utf8");
+    for (const m of src.matchAll(/<YAxis(?![^>]*orientation="right")(?![^>]*type="category")[^>]*width=\{(\d+)\}/g)) {
+      assert.ok(
+        Number(m[1]) >= 34,
+        `${arq}: YAxis com width=${m[1]} é estreito demais para "100" a 10px`,
+      );
+    }
+  }
 });

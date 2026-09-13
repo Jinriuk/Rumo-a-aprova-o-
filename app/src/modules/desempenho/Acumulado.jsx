@@ -131,10 +131,10 @@ export function Acumulado({ registros, trilha }) {
           <div className="disp" style={{ fontSize: 15, fontWeight: 700, marginBottom: 12 }}>Desempenho por meta</div>
           {porMeta.every((x) => x.acc == null) ? <Empty txt="Aparece conforme as semanas passam." /> : (
             <ResponsiveContainer width="100%" height={220}>
-              <LineChart data={porMeta} margin={{ top: 6, right: 10, left: -18, bottom: 0 }}>
+              <LineChart data={porMeta} margin={{ top: 6, right: 10, left: 0, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke={T.line} />
                 <XAxis dataKey="label" tick={{ fill: T.sub, fontSize: 11 }} axisLine={{ stroke: T.line }} tickLine={false} />
-                <YAxis domain={[0, 100]} tick={{ fill: T.sub, fontSize: 10 }} axisLine={false} tickLine={false} width={32} />
+                <YAxis domain={[0, 100]} tick={{ fill: T.sub, fontSize: 10 }} axisLine={false} tickLine={false} width={36} />
                 <Tooltip contentStyle={{ background: T.bg2, border: `1px solid ${T.line}`, borderRadius: 8 }} formatter={(v) => [v == null ? "—" : `${v}%`, "acerto"]} />
                 <Line type="monotone" dataKey="acc" stroke={T.gold} strokeWidth={2.5} dot={{ r: 4, fill: T.gold }} connectNulls />
               </LineChart>

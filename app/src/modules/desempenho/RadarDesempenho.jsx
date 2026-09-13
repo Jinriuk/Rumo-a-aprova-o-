@@ -100,7 +100,7 @@ export function RadarDesempenho({ m, trilha, aoRegistrar }) {
             dica="A trajetória aparece quando há acerto registrado em pelo menos uma semana." />
         ) : (
           <ResponsiveContainer width="100%" height={210}>
-            <AreaChart data={trajetoria} margin={{ top: 8, right: 8, left: -20, bottom: 0 }}>
+            <AreaChart data={trajetoria} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
               <defs>
                 <linearGradient id="gradPrecisao" x1="0" y1="0" x2="0" y2="1">
                   <stop offset="0%" stopColor={T.gold} stopOpacity={0.4} />
@@ -109,7 +109,7 @@ export function RadarDesempenho({ m, trilha, aoRegistrar }) {
               </defs>
               <CartesianGrid strokeDasharray="3 3" stroke={T.line} vertical={false} />
               <XAxis dataKey="label" tick={{ fill: T.sub, fontSize: 11 }} axisLine={{ stroke: T.line }} tickLine={false} />
-              <YAxis domain={[0, 100]} tick={{ fill: T.sub, fontSize: 10 }} axisLine={false} tickLine={false} width={34} />
+              <YAxis domain={[0, 100]} tick={{ fill: T.sub, fontSize: 10 }} axisLine={false} tickLine={false} width={36} />
               <Tooltip contentStyle={{ background: T.bg2, border: `1px solid ${T.line}`, borderRadius: 8 }} formatter={(v) => [v == null ? "—" : `${v}%`, "precisão"]} />
               <Area type="monotone" dataKey="acc" stroke={T.gold} strokeWidth={2.5} fill="url(#gradPrecisao)" dot={{ r: 3, fill: T.gold }} connectNulls />
             </AreaChart>
