@@ -152,3 +152,56 @@ test("BLOCO3: ListaAlunos.jsx — selMini (turma/concurso/trilha, 3 por linha ×
   assert.ok(m, "não achei a definição de selMini");
   assert.match(m[1], /minHeight:\s*32/, "selMini sem minHeight — dava ≈26px");
 });
+
+// ============================================================
+// BLOCO 4 — menus: flip e Escape/foco (T47, T48)
+// ============================================================
+test("BLOCO4/T48: MaisAcoes mede o painel e flipa pra cima quando falta espaço embaixo", () => {
+  const src = lerCodigo("app/src/shared/ui/componentes.jsx");
+  assert.match(src, /useLayoutEffect/, "sem medição pós-montagem — flip decidido sem saber a altura real do painel");
+  assert.match(src, /abrirParaCima/, "sem estado de flip");
+  // a decisão usa as DUAS condições (não cabe embaixo E cabe em cima) —
+  // nunca vira o painel pra fora da tela nos dois sentidos numa tela curta
+  assert.match(src, /alturaPainel\s*>\s*espacoAbaixo\s*&&\s*gRect\.top\s*>\s*alturaPainel/,
+    "flip não checa as duas condições (espaço faltando embaixo E sobrando em cima)");
+  // rede de segurança: mesmo com flip, nunca deixa de caber na viewport
+  assert.match(src, /maxHeight:\s*"min\(360px,\s*calc\(100vh - 24px\)\)"/, "sem teto de altura + rolagem no painel");
+});
+
+test("BLOCO4/T48: o painel de MaisAcoes abre para cima OU para baixo, nunca os dois ao mesmo tempo", () => {
+  const src = lerCodigo("app/src/shared/ui/componentes.jsx");
+  assert.match(src, /abrirParaCima\s*\?\s*\{\s*bottom:\s*"calc\(100% \+ 4px\)"\s*\}\s*:\s*\{\s*top:\s*"calc\(100% \+ 4px\)"\s*\}/,
+    "posicionamento condicional do painel não encontrado");
+});
+
+test("BLOCO4/T47: a folha do 'Mais' desaparece sozinha em ≥1024px (mesma regra que esconde a barra)", () => {
+  const src = lerCodigo("app/src/shared/ui/MenuPrincipal.jsx");
+  assert.match(src, /\.menu-folha-mais\s*\{\s*display:\s*block;\s*\}/, "sem classe .menu-folha-mais");
+  assert.match(src, /@media \(min-width:\s*1024px\)\s*\{\s*\.menu-folha-mais\s*\{\s*display:\s*none;/,
+    "a folha não some no breakpoint desktop — T47 continua reproduzível");
+  assert.match(src, /className="menu-folha-mais"/, "a div da folha não usa a classe nova");
+});
+
+test("BLOCO4/T47: a folha do 'Mais' trata Escape e devolve o foco ao gatilho", () => {
+  const src = lerCodigo("app/src/shared/ui/MenuPrincipal.jsx");
+  assert.match(src, /gatilhoMaisRef/, "sem ref para o gatilho — não há como devolver foco");
+  const efeito = src.match(/useEffect\(\(\) => \{\s*if \(!maisAberto\) return;[\s\S]*?\}, \[maisAberto\]\);/);
+  assert.ok(efeito, "sem efeito ligado a maisAberto para tratar Escape");
+  assert.match(efeito[0], /key === "Escape"/, "efeito não escuta Escape");
+  assert.match(efeito[0], /gatilhoMaisRef\.current\?\.focus\(\)/, "Escape não devolve o foco ao gatilho");
+});
+
+test("BLOCO4/T47: o gatilho 'Mais' anuncia haspopup e expanded para leitor de tela", () => {
+  const src = lerCodigo("app/src/shared/ui/MenuPrincipal.jsx");
+  assert.match(src, /refBtn=\{gatilhoMaisRef\}[\s\S]{0,200}ariaHaspopup="menu"[\s\S]{0,40}ariaExpandido=\{maisAberto\}/,
+    "gatilho do 'Mais' sem aria-haspopup/aria-expanded amarrados ao estado real");
+});
+
+test("confere contra a falha: revertendo o bloco 4, os testes acima quebram", () => {
+  // teste-sentinela: garante que o arquivo de origem realmente mudou —
+  // fica aqui como documentação executável do processo de verificação,
+  // não substitui o revert manual feito durante o desenvolvimento.
+  const src = lerCodigo("app/src/shared/ui/componentes.jsx");
+  assert.doesNotMatch(src, /top:\s*"calc\(100% \+ 4px\)",\s*zIndex:\s*31/,
+    "o painel de MaisAcoes ainda tem top fixo hardcoded (sem flip)");
+});

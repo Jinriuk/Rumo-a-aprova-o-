@@ -401,15 +401,31 @@ export function StatusBadge({ tom = "neutro", children }) {
 export function MaisAcoes({ acoes }) {
   const T = useTema();
   const [aberto, setAberto] = React.useState(false);
+  // T48: o painel abria sempre para BAIXO, sem checar se cabia. Com 8
+  // ações (~320px) a última — "Excluir dados (LGPD)", a mais destrutiva
+  // — saía da viewport quando o gatilho estava perto do rodapé da tela.
+  const [abrirParaCima, setAbrirParaCima] = React.useState(false);
   // AV2 MEL-P3-003: o menu fechava de forma instável. Fecha só por clique
   // fora (camada fixa) ou Esc — nunca por hover. Esc devolve o foco ao gatilho.
   const gatilhoRef = React.useRef(null);
+  const painelRef = React.useRef(null);
   React.useEffect(() => {
     if (!aberto) return;
     const onKey = (e) => { if (e.key === "Escape") { setAberto(false); gatilhoRef.current?.focus(); } };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [aberto]);
+  // Mede DEPOIS de montado — a altura real depende de quantas ações e de
+  // quanto texto quebra linha, não dá pra estimar sem renderizar. Decide
+  // abrir pra cima só quando falta espaço embaixo E sobra espaço em cima
+  // (nunca os dois virados por engano numa tela minúscula).
+  React.useLayoutEffect(() => {
+    if (!aberto || !painelRef.current || !gatilhoRef.current) return;
+    const gRect = gatilhoRef.current.getBoundingClientRect();
+    const alturaPainel = painelRef.current.offsetHeight;
+    const espacoAbaixo = window.innerHeight - gRect.bottom;
+    setAbrirParaCima(alturaPainel > espacoAbaixo && gRect.top > alturaPainel);
+  }, [aberto, acoes.length]);
   if (!acoes?.length) return null;
   return (
     <div style={{ position: "relative" }}>
@@ -421,7 +437,16 @@ export function MaisAcoes({ acoes }) {
       {aberto && (
         <>
           <div onClick={() => setAberto(false)} style={{ position: "fixed", inset: 0, zIndex: 30 }} />
-          <div role="menu" style={{ position: "absolute", right: 0, top: "calc(100% + 4px)", zIndex: 31, background: T.bg2, border: `1px solid ${T.line}`, borderRadius: 10, padding: 4, minWidth: 180, boxShadow: "0 8px 24px #0007" }}>
+          <div ref={painelRef} role="menu"
+            style={{
+              position: "absolute", right: 0, zIndex: 31, background: T.bg2, border: `1px solid ${T.line}`, borderRadius: 10, padding: 4, minWidth: 180,
+              // rede de segurança: mesmo com o flip, uma viewport baixíssima
+              // (celular deitado) ainda cabe — rola dentro do painel, nunca
+              // estoura por cima ou por baixo da tela.
+              maxHeight: "min(360px, calc(100vh - 24px))", overflowY: "auto",
+              boxShadow: "0 8px 24px #0007",
+              ...(abrirParaCima ? { bottom: "calc(100% + 4px)" } : { top: "calc(100% + 4px)" }),
+            }}>
             {acoes.map((a, i) => (
               <button key={i} role="menuitem" onClick={() => { setAberto(false); a.aoClicar(); }} disabled={a.desabilitado}
                 style={{ display: "block", width: "100%", textAlign: "left", border: "none", background: "transparent", color: a.perigo ? T.red : T.ink, borderRadius: 7, fontSize: 13, padding: "9px 11px", minHeight: 38, opacity: a.desabilitado ? 0.4 : 1 }}>

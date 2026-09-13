@@ -6,7 +6,7 @@
    - DESKTOP (≥1024px): MENU LATERAL fixo (sidebar, ref. Guruja) — o
      conteúdo ocupa praticamente a tela toda (classe .com-sidebar).
    Contrato: abas = [[chave, rótulo, badge?, nomeDoÍcone]]. */
-import React, { useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { useTema, useBranding } from "../branding/BrandingContext.jsx";
 import { NOME_PLATAFORMA } from "../branding/marca.js";
 import { Icone } from "./Icones.jsx";
@@ -18,6 +18,18 @@ export function MenuPrincipal({ abas, ativo, aoTrocar, usuario }) {
   const T = useTema();
   const { escola } = useBranding();
   const [maisAberto, setMaisAberto] = useState(false);
+  // T47/T48: a folha do "Mais" não tratava Escape, não devolvia foco ao
+  // gatilho e (a causa de T47) não tinha CSS nenhum ligado ao breakpoint —
+  // se estivesse aberta ao cruzar para ≥1024px, continuava renderizada por
+  // cima da sidebar. `.menu-barra` já esconde o GATILHO nesse breakpoint
+  // (:60/:65 abaixo); a folha ganha a mesma regra via `.menu-folha-mais`.
+  const gatilhoMaisRef = useRef(null);
+  useEffect(() => {
+    if (!maisAberto) return;
+    const onKey = (e) => { if (e.key === "Escape") { setMaisAberto(false); gatilhoMaisRef.current?.focus(); } };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [maisAberto]);
   // Rodapé da sidebar: nome da escola (white-label leve) sobre a assinatura
   // discreta da plataforma. Sem escola — ou quando a "escola" É a plataforma
   // (fluxo de recuperação em App.jsx) — a assinatura repetiria o mesmo nome
@@ -39,9 +51,10 @@ export function MenuPrincipal({ abas, ativo, aoTrocar, usuario }) {
     window.scrollTo({ top: 0, left: 0, behavior: "instant" });
   }
 
-  const ItemBarra = ({ rotulo, badge, icone, on, aoClicar }) => (
-    <button className="app-nav-item" onClick={aoClicar}
-      aria-current={on ? "page" : undefined}
+  const ItemBarra = ({ rotulo, badge, icone, on, aoClicar, refBtn, ariaHaspopup, ariaExpandido }) => (
+    <button ref={refBtn} type="button" className="app-nav-item" onClick={aoClicar}
+      aria-current={ariaHaspopup ? undefined : on ? "page" : undefined}
+      aria-haspopup={ariaHaspopup} aria-expanded={ariaHaspopup ? ariaExpandido : undefined}
       style={{ flex: 1, minWidth: 0, border: "none", background: "transparent", display: "flex", flexDirection: "column", alignItems: "center", gap: 4, padding: "8px 2px 7px", position: "relative", color: on ? T.gold : T.sub }}>
       <span style={{ position: "absolute", top: 0, left: "22%", right: "22%", height: 3, borderRadius: "0 0 3px 3px", background: on ? T.gold : "transparent", boxShadow: on ? `0 0 10px ${T.gold}88` : "none" }} />
       <Icone nome={icone} tam={21} grosso={on ? 2.4 : 2} />
@@ -82,6 +95,15 @@ export function MenuPrincipal({ abas, ativo, aoTrocar, usuario }) {
         .menu-rolagem::-webkit-scrollbar-track { background: transparent; }
         .menu-rolagem::-webkit-scrollbar-thumb { background: ${T.line}; border-radius: 3px; }
         .menu-rolagem::-webkit-scrollbar-thumb:hover { background: ${T.sub}; }
+        /* T47: a folha do "Mais" é renderizada fora de .menu-barra (é
+           position:fixed, sobre TUDO — precisa ficar acima da barra, não
+           dentro dela), então não herdava a regra que esconde a barra em
+           ≥1024px. Sem isto, uma folha aberta ao cruzar pro desktop
+           continuava por cima da sidebar. */
+        .menu-folha-mais { display: block; }
+        @media (min-width: 1024px) {
+          .menu-folha-mais { display: none; }
+        }
       `}</style>
 
       {/* ============ DESKTOP: menu lateral fixo ============ */}
@@ -165,19 +187,20 @@ export function MenuPrincipal({ abas, ativo, aoTrocar, usuario }) {
           <ItemBarra key={k} rotulo={lb} badge={badge} icone={icone} on={ativo === k} aoClicar={() => trocar(k)} />
         ))}
         {precisaMais && (
-          <ItemBarra rotulo="Mais" icone="mais" on={ativoNoMais || maisAberto} aoClicar={() => setMaisAberto((v) => !v)} />
+          <ItemBarra refBtn={gatilhoMaisRef} rotulo="Mais" icone="mais" on={ativoNoMais || maisAberto}
+            aoClicar={() => setMaisAberto((v) => !v)} ariaHaspopup="menu" ariaExpandido={maisAberto} />
         )}
       </nav>
 
-      {/* folha do "Mais" */}
+      {/* folha do "Mais" — .menu-folha-mais garante T47 (some sozinha em ≥1024px) */}
       {maisAberto && (
-        <>
+        <div className="menu-folha-mais">
           <div onClick={() => setMaisAberto(false)} style={{ position: "fixed", inset: 0, zIndex: 41, background: "#0008" }} />
-          <div style={{ position: "fixed", left: "50%", transform: "translateX(-50%)", width: "min(440px, calc(100% - 20px))", bottom: `calc(66px + env(safe-area-inset-bottom))`, zIndex: 42, background: T.bg2, border: `1px solid ${T.line}`, borderRadius: 14, overflow: "hidden", boxShadow: "0 12px 40px #000a" }}>
+          <div role="menu" aria-label="Mais opções de navegação" style={{ position: "fixed", left: "50%", transform: "translateX(-50%)", width: "min(440px, calc(100% - 20px))", bottom: `calc(66px + env(safe-area-inset-bottom))`, zIndex: 42, background: T.bg2, border: `1px solid ${T.line}`, borderRadius: 14, overflow: "hidden", boxShadow: "0 12px 40px #000a" }}>
             {noMais.map(([k, lb, badge, icone], i) => {
               const on = ativo === k;
               return (
-                <button key={k} onClick={() => trocar(k)}
+                <button key={k} type="button" role="menuitem" onClick={() => trocar(k)}
                   style={{ display: "flex", alignItems: "center", gap: 12, width: "100%", textAlign: "left", border: "none", background: on ? `${T.gold}14` : "transparent", color: on ? T.gold : T.ink, padding: "14px 16px", minHeight: 52, fontSize: 15, fontWeight: on ? 800 : 600, borderBottom: i === noMais.length - 1 ? "none" : `1px solid ${T.line}` }}>
                   <Icone nome={icone} tam={19} />
                   <span style={{ flex: 1 }}>{lb}</span>
@@ -189,7 +212,7 @@ export function MenuPrincipal({ abas, ativo, aoTrocar, usuario }) {
               );
             })}
           </div>
-        </>
+        </div>
       )}
     </>
   );
