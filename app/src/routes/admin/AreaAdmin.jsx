@@ -51,7 +51,10 @@ export default function AreaAdmin() {
 
   return (
     <div>
-      <header style={{ borderBottom: `1px solid ${T.line}`, background: T.bg2, position: "sticky", top: 0, zIndex: 10 }}>
+      {/* I3: mesma compensação de Cabecalho.jsx — FaixaDemo cobre a
+          árvore inteira (App.jsx), este header também precisa ceder
+          espaço quando ela existe. */}
+      <header style={{ borderBottom: `1px solid ${T.line}`, background: T.bg2, position: "sticky", top: "var(--altura-faixa-demo, 0px)", zIndex: 10 }}>
         <div style={{ maxWidth: 1080, margin: "0 auto", padding: "14px 16px", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
             <div className="disp" style={{ width: 34, height: 34, borderRadius: 8, background: `linear-gradient(135deg,${T.gold},#9c7d2e)`, display: "flex", alignItems: "center", justifyContent: "center", color: "#0A1622", fontWeight: 800, fontSize: 17 }}>⚓</div>

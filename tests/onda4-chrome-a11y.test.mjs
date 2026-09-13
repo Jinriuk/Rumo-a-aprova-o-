@@ -61,3 +61,32 @@ test("BLOCO1: aluno (8 abas) e coordenação (6, 'marca' por último) — a list
   assert.ok(abasEscola.trim().endsWith('["marca", "Marca", null, "pincel"],'),
     "'marca' não é mais a última aba da coordenação — I7 partia disso");
 });
+
+// ============================================================
+// BLOCO 2 — faixa DEMO sobre o h1 (I3)
+// ============================================================
+test("BLOCO2: FaixaDemo publica a própria altura como variável CSS no :root", () => {
+  const src = lerCodigo("app/src/shared/branding/FaixaDemo.jsx");
+  assert.match(src, /export const ALTURA_FAIXA_DEMO\s*=\s*20/, "altura não exportada como constante única");
+  assert.match(src, /--altura-faixa-demo:\s*\$\{ALTURA_FAIXA_DEMO\}px/, "a faixa não publica --altura-faixa-demo");
+  // a div fixa continua usando a MESMA constante (uma fonte só, sem número duplicado)
+  assert.match(src, /height:\s*ALTURA_FAIXA_DEMO/, "a altura visual ainda está com número solto, dessincronizada da variável publicada");
+});
+
+test("BLOCO2: Cabecalho e o header de AreaAdmin cedem espaço à faixa (sticky top compensado)", () => {
+  const cab = lerCodigo("app/src/shared/ui/Cabecalho.jsx");
+  assert.doesNotMatch(cab, /position:\s*"sticky",\s*top:\s*0\b/, "Cabecalho ainda gruda em top:0 fixo — nasce coberto pela faixa");
+  assert.match(cab, /top:\s*"var\(--altura-faixa-demo,\s*0px\)"/, "Cabecalho não lê a variável da faixa");
+
+  const admin = lerCodigo("app/src/routes/admin/AreaAdmin.jsx");
+  assert.match(admin, /position:\s*"sticky",\s*top:\s*"var\(--altura-faixa-demo,\s*0px\)"/,
+    "header de AreaAdmin não foi compensado — FaixaDemo cobre toda a árvore (App.jsx), admin incluso");
+});
+
+test("BLOCO2: a tabela de CSV em CadastroAlunos continua com top:0 puro (sticky de container próprio, não do topo da página)", () => {
+  // Contraprova: este sticky é da rolagem INTERNA de uma tabela (maxHeight
+  // + overflowY:auto), nunca fica sob a faixa fixa da viewport — não deve
+  // ser "corrigido" para var(--altura-faixa-demo) por engano de find/replace.
+  const src = lerCodigo("app/src/modules/pessoas/CadastroAlunos.jsx");
+  assert.match(src, /position:\s*"sticky",\s*top:\s*0\s*\}/, "o sticky do cabeçalho de tabela do CSV não devia ter sido tocado");
+});
