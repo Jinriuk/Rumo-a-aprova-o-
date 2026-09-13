@@ -1,10 +1,11 @@
 /* Configuração da marca (white-label leve) + PREVIEW ao vivo (ref.
    spec): a escola vê, na hora, como ficam cabeçalho, botão e card
    com a cor e o logo dela. O design segue fixo — só a marca muda. */
-import React, { useId, useState } from "react";
+import React, { useId, useMemo, useState } from "react";
 import { SectionCard, Botao, Erro, useInputStyle } from "../../shared/ui/componentes.jsx";
 import { useTema, useBranding } from "../../shared/branding/BrandingContext.jsx";
-import { BASE, luminancia, garantirLegivel } from "../../shared/ui/tema.js";
+import { BASE, precisaClarear, garantirLegivel, SUPERFICIE_CRITICA, RAZAO_MINIMA } from "../../shared/ui/tema.js";
+import { razaoContraste, paraOklch } from "../../shared/ui/contraste.js";
 import { mensagemAmigavel } from "../../shared/lib/erros.js";
 import * as db from "../../shared/data/index.js";
 
@@ -22,8 +23,29 @@ export function Marca({ escola, aoMudar }) {
   const id = (k) => `${uid}-${k}`;
 
   const corValida = /^#[0-9a-fA-F]{6}$/.test(cor);
-  const corEscura = corValida && luminancia(cor) < 0.32;
-  const acento = corValida ? garantirLegivel(cor) : BASE.gold;
+  // Sem limiar duplicado: quem decide se a cor precisa de ajuste é o
+  // mesmo algoritmo que faz o ajuste (tema.js), não uma cópia do
+  // número aqui. Antes havia uma constante de luminância mínima em
+  // tema.js e uma cópia dela nesta linha — e as duas estavam erradas.
+  /* PERF: o clamp faz busca binária em OKLCh (pior caso medido ~0,25 ms,
+     num azul saturado). Sem o memo ele rodaria a cada tecla digitada em
+     QUALQUER campo desta tela — nome e URL do logo inclusive —, porque
+     todos compartilham o mesmo render. Depende só de `cor`. */
+  const { precisaAjuste, acento, razaoOriginal, razaoAjustada, perdeuSaturacao } = useMemo(() => {
+    const valida = /^#[0-9a-fA-F]{6}$/.test(cor);
+    const ac = valida ? garantirLegivel(cor) : BASE.gold;
+    return {
+      precisaAjuste: valida && precisaClarear(cor),
+      acento: ac,
+      razaoOriginal: valida ? razaoContraste(cor, SUPERFICIE_CRITICA) : null,
+      razaoAjustada: razaoContraste(ac, SUPERFICIE_CRITICA),
+      /* Só avisa sobre perda de saturação quando ela de fato acontece:
+         em matiz vermelho/azul fechado o gamut sRGB não oferece croma
+         suficiente na luminância exigida, mas num verde escuro como
+         #0B3D2E o croma sai intacto e o aviso seria mentira. */
+      perdeuSaturacao: valida && paraOklch(ac).C < paraOklch(cor).C * 0.98,
+    };
+  }, [cor]);
 
   async function salvar() {
     setOcupado(true); setErro(null); setOk(false);
@@ -58,10 +80,16 @@ export function Marca({ escola, aoMudar }) {
             </div>
           </div>
         </div>
-        {corEscura && (
+        {precisaAjuste && (
           <div style={{ marginTop: 12, fontSize: 12.5, color: T.gold, border: `1px solid ${T.gold}44`, background: `${T.gold}10`, borderRadius: 8, padding: "9px 12px", lineHeight: 1.5 }}>
-            ⚠ Esta cor é escura demais para o tema escuro — o sistema vai clareá-la automaticamente
-            (<span style={{ fontFamily: "monospace" }}>{acento}</span>) para manter botões e destaques legíveis.
+            ⚠ Esta cor rende <b className="num">{razaoOriginal.toFixed(1).replace(".", ",")}:1</b> de contraste
+            no fundo mais claro em que o sistema a usa — abaixo dos {String(RAZAO_MINIMA).replace(".", ",")}:1
+            que texto precisa para ser legível (WCAG 1.4.3). O sistema vai exibi-la clareada
+            (<span style={{ fontFamily: "monospace" }}>{acento}</span>,
+            {" "}<b className="num">{razaoAjustada.toFixed(1).replace(".", ",")}:1</b>), mantendo o mesmo matiz.
+            {perdeuSaturacao
+              ? " Neste matiz não existe cor em tela que alcance esse contraste sem ceder saturação, então ela sai também menos intensa que a escolhida."
+              : " A saturação é preservada — muda só a claridade."}
           </div>
         )}
         <Botao onClick={salvar} disabled={ocupado} style={{ marginTop: 16, width: "100%" }}>{ocupado ? "Salvando…" : "Salvar marca"}</Botao>
