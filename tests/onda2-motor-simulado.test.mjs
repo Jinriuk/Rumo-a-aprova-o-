@@ -250,3 +250,83 @@ test("T9: nenhuma tela reimplementa a escala 70/55 por conta própria", () => {
     );
   }
 });
+
+// ── T17: trajetória com cauda vazia ─────────────────────────────────────────
+test("T17: a trajetória de precisão para no último ponto medido", () => {
+  // Medido: dado até S4 sendo plotado de S1 a S9 — 55% do gráfico vazio
+  // e a área cortada a seco, sugerindo uma queda a zero que não houve.
+  // A lógica vive no componente; este teste reproduz a regra pura.
+  const semanas = [
+    { label: "S1", acc: 60, isPast: true },
+    { label: "S2", acc: null, isPast: true },  // buraco no meio: FICA
+    { label: "S3", acc: 72, isPast: true },
+    { label: "S4", acc: 68, isPast: true },
+    { label: "S5", acc: null, isPast: true },  // cauda: SAI
+    { label: "S6", acc: null, isPast: true },
+    { label: "S7", acc: null, isNow: true },
+  ];
+  const ate = semanas.reduce((u, w, i) => (w.acc != null ? i : u), -1);
+  const trajetoria = semanas.slice(0, ate + 1);
+
+  assert.deepEqual(trajetoria.map((w) => w.label), ["S1", "S2", "S3", "S4"]);
+  assert.equal(trajetoria.at(-1).acc, 68, "termina no último ponto REAL");
+  assert.ok(trajetoria.some((w) => w.acc == null), "buraco do meio preservado");
+});
+
+test("T17: o componente usa a regra da cauda, não plota tudo que é passado", () => {
+  const src = readFileSync(resolve(root, "app/src/modules/desempenho/RadarDesempenho.jsx"), "utf8");
+  assert.match(src, /ultimaComDado/, "a trajetória precisa aparar a cauda sem dado");
+  assert.doesNotMatch(
+    src,
+    /const trajetoria = m\.weeksData\s*\.filter\(\(w\) => w\.isPast \|\| w\.isNow\)\s*\.map/,
+    "voltou a plotar toda semana passada, inclusive a cauda vazia",
+  );
+});
+
+// ── A9: formato do simulado não registrado ──────────────────────────────────
+test("A9: os DOIS caminhos de gravação de simulado registram o exam_tag", () => {
+  // 20 dos 53 simulados do demo tinham exam_tag nulo. Não era dado
+  // legado: o formulário genérico (Progresso.jsx) simplesmente não
+  // gravava a coluna, enquanto o formulário por concurso
+  // (SimuladoConcurso.jsx) gravava. A origem seguia produzindo nulos.
+  //
+  // Importa porque, sem exam_tag, a tela rotula o simulado pelo
+  // concurso ATUAL do aluno — e trocar o concurso (T29: até o scroll
+  // do mouse sobre o select faz isso) reetiqueta o histórico inteiro
+  // em silêncio.
+  for (const arq of ["Progresso.jsx", "SimuladoConcurso.jsx"]) {
+    const src = readFileSync(resolve(root, "app/src/modules/desempenho", arq), "utf8");
+    const bloco = src.slice(src.indexOf("adicionarSimulado({"));
+    const payload = bloco.slice(0, bloco.indexOf("});"));
+    assert.match(payload, /exam_tag:/, `${arq}: o insert de simulado não registra o formato`);
+  }
+});
+
+// ── A8: o caminho de redação nunca foi exercido ─────────────────────────────
+test("A8: avaliarRedacao é exercida em todos os papéis, não só no 'ausente'", async () => {
+  // redacao_nota é nulo nos 53 simulados do demo, então este caminho
+  // nunca rodou com dado real e nenhum teste o cobria. O reseed (Onda
+  // 8) resolve o lado do DADO; aqui fica a cobertura do CÓDIGO, para a
+  // primeira redação real não ser a primeira execução da função.
+  const { avaliarRedacao } = await import("../app/src/modules/conteudo/simuladoConcurso.js");
+
+  const ausente = avaliarRedacao("ausente", null);
+  assert.equal(ausente.presente, false);
+  assert.equal(ausente.apto, true, "concurso sem redação não reprova por redação");
+
+  // eliminatória com nota acima e abaixo do mínimo
+  const acima = avaliarRedacao("eliminatoria", 7, { minimo: 5 });
+  assert.equal(acima.presente, true);
+  assert.equal(acima.apto, true);
+
+  const abaixo = avaliarRedacao("eliminatoria", 3, { minimo: 5 });
+  assert.equal(abaixo.presente, true);
+  assert.equal(abaixo.apto, false, "abaixo do mínimo elimina");
+
+  // nota AUSENTE num concurso que TEM redação: não pode virar apto
+  // silencioso nem nota zero — é dado que falta, e era exatamente o
+  // estado dos 53 simulados do demo.
+  const semNota = avaliarRedacao("eliminatoria", null, { minimo: 5 });
+  assert.equal(semNota.presente, false, "sem nota não é 'fez e tirou 0'");
+  assert.equal(semNota.apto, false, "sem nota não pode passar por apto");
+});

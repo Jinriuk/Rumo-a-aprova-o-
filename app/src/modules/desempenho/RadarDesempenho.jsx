@@ -43,10 +43,23 @@ export function RadarDesempenho({ m, trilha, aoRegistrar }) {
     .sort((a, b) => b.acc - a.acc)
     .map((s) => ({ ...s, cor: trilha.porCodigo[s.id]?.cor ?? T.gold }));
 
-  const trajetoria = m.weeksData
-    .filter((w) => w.isPast || w.isNow)
+  /* T17 — a trajetória plotava todas as semanas passadas, inclusive a
+     cauda sem nenhum acerto registrado: com dado até S4 de S1 a S9, o
+     gráfico ficava 55% vazio e a área terminava num corte vertical
+     seco, como se a precisão tivesse despencado a zero.
+
+     Semana sem dado NO MEIO fica (é informação: o aluno parou aquela
+     semana e o `connectNulls` liga o traço por cima). O que sai é só a
+     CAUDA — plotar espaço vazio depois do último ponto medido não
+     informa nada e sugere queda que não existe. */
+  const semanasAteHoje = m.weeksData.filter((w) => w.isPast || w.isNow);
+  const ultimaComDado = semanasAteHoje.reduce(
+    (ultimo, w, i) => (w.acc != null ? i : ultimo), -1,
+  );
+  const trajetoria = semanasAteHoje
+    .slice(0, ultimaComDado + 1)
     .map((w) => ({ label: w.label, acc: w.acc }));
-  const temTrajetoria = trajetoria.some((x) => x.acc != null);
+  const temTrajetoria = trajetoria.length > 0;
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>

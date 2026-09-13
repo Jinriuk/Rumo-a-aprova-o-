@@ -226,6 +226,15 @@ function SimuladoGenerico({ aluno, simulados, podeEditar, semanaAtiva, concurso,
     await enviar(async () => {
       await db.adicionarSimulado({
         escola_id: aluno.escola_id, aluno_id: aluno.id, nome: f.nome, data: f.data,
+        // A9: este caminho NÃO gravava exam_tag, e era a origem dos 20
+        // simulados (de 53) com formato nulo no demo — não era dado
+        // velho, era a fonte ainda produzindo nulo. Sem ele, a tela
+        // rotula o simulado pelo concurso ATUAL do aluno; se a
+        // coordenação trocar o concurso depois (e o T29 mostra que até
+        // o scroll do mouse sobre o select faz isso), todo o histórico
+        // é reetiquetado em silêncio. O formato é do simulado, não do
+        // cadastro de hoje.
+        exam_tag: concurso?.codigo ?? null,
         acertos: Object.fromEntries(materias.map((m) => [m.k, Math.min(+f[m.k] || 0, m.max)])),
       });
       // reseta com o próximo número livre, já contando o que acabou de entrar
