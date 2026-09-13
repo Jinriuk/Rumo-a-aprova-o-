@@ -9,8 +9,20 @@ import { fmtBR } from "../../shared/regras/regras.js";
 import { fmtHoras } from "../motor/jargao.js";
 import { provaDoConcurso, notaPct, totalAcertos, totalQuestoes } from "../conteudo/provas.js";
 
-export function ResumoResponsavel({ aluno, m, meta, trilha, simulados, semanaAtiva, concurso }) {
+export function ResumoResponsavel({ aluno, m, meta, trilha, simulados, semanaAtiva, concurso, ciclo, fimDoCiclo }) {
   const T = useTema();
+
+  // T28 — CICLO ENCERRADO. Sem isto, esta tela lê a última semana da
+  // trilha como se fosse a semana corrente: o pai vê "Precisa de
+  // atenção", "ainda não estudou nesta semana" e "faltam N atividades"
+  // para um curso que ACABOU. No demo eram três blocos vermelhos e dois
+  // banners, e a leitura que sobra é "meu filho parou de estudar".
+  //
+  // O que é suprimido: só o que fala de RITMO SEMANAL, que não existe
+  // mais. Desempenho (queda de acerto, matérias fracas) continua — é
+  // histórico verdadeiro e é o que o pai precisa para a conversa sobre
+  // o próximo ciclo.
+  const encerrado = ciclo === "encerrado";
 
   const itens = (meta?.meta_atividades ?? [])
     .map((ma) => ({ ...ma, atividade: trilha.atividadesPorId[ma.atividade_modelo_id] }))
@@ -32,7 +44,14 @@ export function ResumoResponsavel({ aluno, m, meta, trilha, simulados, semanaAti
         : "A meta da semana foi concluída. 🎉")
     : consideradas > 0 ? `Faltam ${pendentes} ${pendentes === 1 ? "atividade" : "atividades"} para concluir a meta.`
     : "";
-  const frase = m.diasSemana === 0
+  const frase = encerrado
+    ? `O ciclo de preparação de ${primeiroNome} foi concluído` +
+      (fimDoCiclo ? ` em ${fmtBR(String(fimDoCiclo))}` : "") + ". " +
+      (m.totDone > 0
+        ? `Ao longo dele foram ${m.totDone.toLocaleString("pt-BR")} ${m.totDone === 1 ? "questão" : "questões"}` +
+          (m.acerto > 0 ? `, com ${m.acerto}% de acerto` : "") + "."
+        : "")
+    : m.diasSemana === 0
     ? `${primeiroNome} ainda não registrou estudos nesta semana.`
     : `${primeiroNome} estudou em ${m.diasSemana} ${m.diasSemana === 1 ? "dia" : "dias"} nesta semana, ` +
       `resolveu ${m.qSem} ${m.qSem === 1 ? "questão" : "questões"}` +
@@ -43,7 +62,7 @@ export function ResumoResponsavel({ aluno, m, meta, trilha, simulados, semanaAti
   // tratado com tom positivo na frase acima — não repetimos como alerta
   // (evita assustar o responsável diante de uma semana, no fim, cumprida).
   const alertas = [];
-  if (m.totalDias > 0 && poucosDias && !metaConcluida) alertas.push("Poucos dias de estudo nesta semana — vale distribuir melhor a rotina.");
+  if (!encerrado && m.totalDias > 0 && poucosDias && !metaConcluida) alertas.push("Poucos dias de estudo nesta semana — vale distribuir melhor a rotina.");
   if (m.accTrend && m.accTrend.delta <= -5) alertas.push(`O acerto caiu de ${m.accTrend.de}% para ${m.accTrend.para}% nas últimas semanas.`);
   const fracas = m.matStats.filter((s) => s.comAcc && s.acc < 60).map((s) => s.name);
   if (fracas.length) alertas.push(`Matérias para reforçar: ${fracas.join(", ")}.`);
@@ -62,6 +81,12 @@ export function ResumoResponsavel({ aluno, m, meta, trilha, simulados, semanaAti
   // o responsável, com limiares honestos e alinhados ao resto da tela
   // (70% = bom acerto; 5+ dias = rotina forte). Não inventa nota; resume.
   const semaforo = (() => {
+    if (encerrado) {
+      return {
+        tom: T.green, rotulo: "Ciclo concluído",
+        txt: "O curso chegou ao fim. Não há mais metas semanais a cumprir — a coordenação abre o próximo ciclo quando ele estiver pronto.",
+      };
+    }
     if (m.diasSemana === 0)
       return { tom: T.red, rotulo: "Precisa de atenção", txt: `${primeiroNome} ainda não estudou nesta semana — um incentivo ajuda a retomar.` };
     if ((m.acerto > 0 && m.acerto < 55) || (m.diasSemana < 3 && pendentes > 0))
@@ -86,7 +111,7 @@ export function ResumoResponsavel({ aluno, m, meta, trilha, simulados, semanaAti
       </div>
 
       {/* frase interpretativa */}
-      <div style={{ background: `linear-gradient(160deg, ${T.cardHi}, ${T.card})`, border: `1px solid ${T.line}`, borderLeft: `4px solid ${metaConcluida ? T.green : T.gold}`, borderRadius: 12, padding: "14px 16px" }}>
+      <div style={{ background: `linear-gradient(160deg, ${T.cardHi}, ${T.card})`, border: `1px solid ${T.line}`, borderLeft: `4px solid ${encerrado || metaConcluida ? T.green : T.gold}`, borderRadius: 12, padding: "14px 16px" }}>
         <div style={{ fontSize: 14.5, color: T.ink, lineHeight: 1.55 }}>{frase}</div>
       </div>
 

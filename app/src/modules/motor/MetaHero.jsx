@@ -51,8 +51,83 @@ export function FaixaAspirante({ nome, contexto, xp, streak, aoAbrirConquistas }
   );
 }
 
-export function MissaoAtual({ meta, trilha, m, aoAvancar }) {
+/* CICLO ENCERRADO (Onda 3 — A1). A trilha acabou: não há missão nova
+   para cobrar, e insistir em cobrar a última é o defeito que deixou 63
+   alunos do demo olhando "MISSÃO 9, ATRASADA" em vermelho por 43 dias.
+
+   O que esta tela NÃO faz: declarar que a prova passou. A prova tem
+   data própria (ver concursos.js) e, no dado real, 40 dos 63 alunos
+   têm prova DEPOIS do fim da trilha — para eles o ciclo de estudo
+   acabou e a prova ainda vem. Aqui só se fala do plano de estudo.
+
+   O aluno continua podendo registrar estudo e simulado (decisão de
+   produto): o ciclo fecha a cobrança, não a porta. */
+function CicloEncerrado({ trilha, m, metas, aoAvancar }) {
   const T = useTema();
+  const ultima = trilha?.semanas?.[trilha.semanas.length - 1] ?? null;
+  const semanas = Array.isArray(metas) ? metas.length : (trilha?.semanas?.length ?? 0);
+  const alvos = Array.isArray(metas)
+    ? metas.reduce((soma, x) => soma + (x.meta_atividades ?? []).filter((i) => i.estado === "concluida").length, 0)
+    : 0;
+
+  const numero = (valor, rotulo) => (
+    <div style={{ flex: "1 1 88px", minWidth: 78 }}>
+      <div className="num disp" style={{ fontSize: 21, fontWeight: 800, color: T.ink, lineHeight: 1.1 }}>{valor}</div>
+      <div style={{ fontSize: 10, color: T.sub, textTransform: "uppercase", letterSpacing: 0.4, marginTop: 2 }}>{rotulo}</div>
+    </div>
+  );
+
+  return (
+    <div className="mission-card" style={{ "--mission-accent": T.green, background: `linear-gradient(160deg, ${T.cardHi}, ${T.card})`, border: `1.5px solid ${T.green}66`, borderRadius: 14, padding: 16 }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 9, flexWrap: "wrap", marginBottom: 10 }}>
+        <span className="disp" style={{ background: T.green, color: "#0A1622", borderRadius: 8, padding: "3px 11px", fontWeight: 800, fontSize: 14 }}>
+          CICLO CONCLUÍDO
+        </span>
+        {ultima && (
+          <span style={{ fontSize: 11, color: T.sub, fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.4 }}>
+            encerrado em {fmtBR(String(ultima.fim))}
+          </span>
+        )}
+      </div>
+
+      {trilha?.trilha?.nome && (
+        <div className="disp" style={{ fontSize: 17, fontWeight: 700, lineHeight: 1.25 }}>{trilha.trilha.nome}</div>
+      )}
+
+      <div style={{ display: "flex", flexWrap: "wrap", gap: 14, marginTop: 14, paddingTop: 14, borderTop: `1px solid ${T.line}` }}>
+        {numero(semanas, semanas === 1 ? "semana" : "semanas")}
+        {numero(alvos, "alvos abatidos")}
+        {m?.totDone != null && numero(m.totDone.toLocaleString("pt-BR"), "questões")}
+        {m?.acerto != null && numero(`${m.acerto}%`, "de acerto")}
+      </div>
+
+      <div style={{ fontSize: 13, color: T.sub, marginTop: 14, lineHeight: 1.5 }}>
+        A trilha chegou ao fim. A coordenação abre a próxima quando ela estiver pronta &mdash;
+        até lá, <b style={{ color: T.ink }}>você continua podendo registrar estudo e simulado</b>, e tudo
+        que registrar entra no seu histórico.
+      </div>
+
+      {aoAvancar && (
+        <button className="mission-primary-action" onClick={() => aoAvancar("registrar")}
+          style={{ display: "block", width: "100%", marginTop: 12, background: "transparent", color: T.gold, border: `1.5px solid ${T.gold}`, borderRadius: 9, padding: "10px 16px", fontWeight: 700, fontSize: 13, cursor: "pointer", textAlign: "center" }}>
+          Registrar estudo
+        </button>
+      )}
+    </div>
+  );
+}
+
+export function MissaoAtual({ meta, trilha, m, metas, ciclo, aoAvancar }) {
+  const T = useTema();
+
+  // A1: o fim do ciclo vem ANTES de qualquer leitura da meta. A meta da
+  // última semana continua existindo e continua vencida — é justamente
+  // por lê-la sem saber que o ciclo acabou que a tela ficava vermelha
+  // para sempre.
+  if (ciclo === "encerrado") {
+    return <CicloEncerrado trilha={trilha} m={m} metas={metas} aoAvancar={aoAvancar} />;
+  }
+
   if (!meta) {
     return (
       <div className="mission-card" style={{ background: T.card, border: `1px solid ${T.line}`, borderRadius: 14, padding: 18, textAlign: "center" }}>
