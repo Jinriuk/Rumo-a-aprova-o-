@@ -20,7 +20,8 @@ import { mensagemAmigavel } from "../../shared/lib/erros.js";
 import { navReducer, NAV_INICIAL } from "./navegacaoEscola.js";
 import * as db from "../../shared/data/index.js";
 
-const VAZIO = { turmas: [], alunos: [], consentimentos: [], logs: [], concursos: [], resumo: [], simuladosEscola: [], trilhas: [] };
+const VAZIO_NUCLEO = { turmas: [], alunos: [], concursos: [], resumo: [], trilhas: [], consentimentos: [] };
+const VAZIO_EXTRA = { logs: [], simuladosEscola: [] };
 
 export default function AreaEscola({ perfil }) {
   const T = useTema();
@@ -28,20 +29,43 @@ export default function AreaEscola({ perfil }) {
   // navegacaoEscola.js. Cada transição deixa o estado coerente.
   const [nav, despacharNav] = useReducer(navReducer, NAV_INICIAL);
   const { tab, filtroStatus: filtroAlunosStatus, alunoAberto } = nav;
-  // Cancelamento (tarefa 81): a carga mais pesada do app são estas 8
-  // leituras paralelas da coordenação. O signal do useRecurso é
-  // repassado a cada uma; se a coordenação sai da tela (ou recarrega)
-  // no meio, as viagens em curso são abortadas em vez de só ignoradas.
+  // PERF: antes eram 8 leituras num Promise.all só, e as SEIS abas ficavam
+  // atrás dele. A aba Painel — a que abre por padrão — precisa de duas.
+  // Agora a carga é em duas ondas:
+  //
+  //   NÚCLEO  o que o Painel, a navegação e a lista de alunos precisam.
+  //           É esta onda que o `carregando` segura.
+  //   EXTRA   o que pertence a UMA aba só: os 100 logs de acesso (LGPD) e
+  //           os simulados da escola (Ranking). Carrega em paralelo e não
+  //           atrasa a tela; as duas abas mostram o próprio "carregando".
+  //
+  // `consentimentos` fica no NÚCLEO de propósito, mesmo sendo lido só pela
+  // aba LGPD e pela lista: ele alimenta o filtro "sem consentimento", que o
+  // Painel alcança direto por `aoIrFiltrado`. Na onda extra, a lista
+  // apareceria com todo mundo marcado como sem consentimento até o dado
+  // chegar — seria trocar latência por resposta errada.
+  //
+  // Cancelamento (tarefa 81) preservado nas duas: o signal do useRecurso é
+  // repassado a cada leitura, então sair da tela aborta as viagens em curso.
   const { dados: carregado, carregando, erro, recarregar } = useRecurso(
     (signal) => Promise.all([
-      db.listarTurmas({ signal }), db.listarAlunos({ signal }), db.listarConsentimentos({ signal }),
-      db.listarLogsAcesso(100, { signal }), db.listarConcursos({ signal }),
-      db.resumoEscola({ signal }), db.listarSimuladosEscola({ signal }), db.listarTrilhas({ signal }),
-    ]).then(([turmas, alunos, consentimentos, logs, concursos, resumo, simuladosEscola, trilhas]) =>
-      ({ turmas, alunos, consentimentos, logs, concursos, resumo, simuladosEscola, trilhas })),
+      db.listarTurmas({ signal }), db.listarAlunos({ signal }), db.listarConcursos({ signal }),
+      db.resumoEscola({ signal }), db.listarTrilhas({ signal }), db.listarConsentimentos({ signal }),
+    ]).then(([turmas, alunos, concursos, resumo, trilhas, consentimentos]) =>
+      ({ turmas, alunos, concursos, resumo, trilhas, consentimentos })),
     [],
   );
-  const dados = carregado ?? VAZIO;
+  const { dados: carregadoExtra, carregando: carregandoExtra, recarregar: recarregarExtra } = useRecurso(
+    (signal) => Promise.all([
+      db.listarLogsAcesso(100, { signal }), db.listarSimuladosEscola({ signal }),
+    ]).then(([logs, simuladosEscola]) => ({ logs, simuladosEscola })),
+    [],
+  );
+  const dados = { ...VAZIO_NUCLEO, ...VAZIO_EXTRA, ...(carregado ?? {}), ...(carregadoExtra ?? {}) };
+  // Toda mutação da tela pode mexer nas duas ondas (cadastrar aluno mexe no
+  // núcleo; registrar consentimento mexe no extra), então o retry recarrega
+  // as duas — o custo é o mesmo de antes e evita tela desatualizada.
+  const recarregarTudo = () => { recarregar(); recarregarExtra(); };
   const [credencial, setCredencial] = useState(null);
 
   const aoTopo = () => window.scrollTo({ top: 0, left: 0, behavior: "instant" });
@@ -79,7 +103,7 @@ export default function AreaEscola({ perfil }) {
           usuario={{ nome: perfil.usuario.nome, sub: "Coordenação" }} />
 
         <div className="fade" key={tab + (alunoAberto?.id ?? "")}>
-          {erro && <ErroComRetry aoTentar={recarregar}>{erro}</ErroComRetry>}
+          {erro && <ErroComRetry aoTentar={recarregarTudo}>{erro}</ErroComRetry>}
           {carregando && <CarregandoBloco titulo="Carregando dados da escola…" cartoes={4} linhas={4} />}
 
           {!carregando && alunoAberto && (
@@ -95,15 +119,22 @@ export default function AreaEscola({ perfil }) {
 
           {!carregando && !alunoAberto && tab === "alunos" && (
             <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-              <PainelCadastroAlunos turmas={dados.turmas} trilhas={dados.trilhas} concursos={dados.concursos} aoMudar={recarregar} />
+              <PainelCadastroAlunos turmas={dados.turmas} trilhas={dados.trilhas} concursos={dados.concursos} aoMudar={recarregarTudo} />
               <ListaAlunos alunos={dados.alunos} consentimentos={dados.consentimentos} concursos={dados.concursos}
                 turmas={dados.turmas} trilhas={dados.trilhas} resumoPorAluno={resumoPorAluno}
-                aoMudar={recarregar} aoGerarCredencial={setCredencial} aoVerAluno={verAluno}
+                aoMudar={recarregarTudo} aoGerarCredencial={setCredencial} aoVerAluno={verAluno}
                 filtroStatusInicial={filtroAlunosStatus} />
             </div>
           )}
 
-          {!carregando && !alunoAberto && tab === "ranking" && (
+          {/* Ranking depende dos simulados, que vêm na onda extra: enquanto
+              não chegam, a aba diz que está carregando em vez de desenhar
+              uma classificação sem simulado nenhum. */}
+          {!carregando && !alunoAberto && tab === "ranking" && carregandoExtra && (
+            <CarregandoBloco titulo="Carregando a classificação…" cartoes={2} linhas={4} />
+          )}
+
+          {!carregando && !alunoAberto && tab === "ranking" && !carregandoExtra && (
             <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
               <ClassificacaoTurma alunos={dados.alunos} turmas={dados.turmas}
                 resumoPorAluno={resumoPorAluno}
@@ -116,16 +147,21 @@ export default function AreaEscola({ perfil }) {
 
           {!carregando && !alunoAberto && tab === "turmas" && (
             <Turmas turmas={dados.turmas} alunos={dados.alunos} porAluno={resumoPorAluno}
-              aoMudar={recarregar} aoVerRanking={() => irPara("ranking")}
+              aoMudar={recarregarTudo} aoVerRanking={() => irPara("ranking")}
               aoVerAluno={verAluno} />
           )}
 
-          {!carregando && !alunoAberto && tab === "conformidade" && (
+          {/* LGPD depende dos logs de acesso, que vêm na onda extra. */}
+          {!carregando && !alunoAberto && tab === "conformidade" && carregandoExtra && (
+            <CarregandoBloco titulo="Carregando a trilha de acesso…" cartoes={2} linhas={5} />
+          )}
+
+          {!carregando && !alunoAberto && tab === "conformidade" && !carregandoExtra && (
             <PainelConformidade consentimentos={dados.consentimentos} logs={dados.logs} alunosPorId={alunosPorId} />
           )}
 
           {!carregando && !alunoAberto && tab === "marca" && (
-            <Marca escola={perfil.escola} aoMudar={recarregar} />
+            <Marca escola={perfil.escola} aoMudar={recarregarTudo} />
           )}
         </div>
       </main>

@@ -1,6 +1,6 @@
 /* A camada de marca (white-label leve, Doc 6 §1.2): aplica logo,
    nome e cor de acento da escola POR CIMA do design fixo. */
-import React, { createContext, useContext, useState } from "react";
+import React, { createContext, useContext, useMemo, useState } from "react";
 import { BASE, tema as temaDaEscola } from "../ui/tema.js";
 
 const BrandingContext = createContext({ escola: null, tema: BASE, aplicarMarca: () => {} });
@@ -8,10 +8,23 @@ const BrandingContext = createContext({ escola: null, tema: BASE, aplicarMarca: 
 export function BrandingProvider({ escola, children }) {
   // override local: a tela Marca aplica a mudança NA HORA, sem F5
   const [marcaLocal, setMarcaLocal] = useState(null);
-  const efetiva = escola && marcaLocal ? { ...escola, ...marcaLocal } : escola;
-  const tema = temaDaEscola(efetiva?.cor_acento);
+  const efetiva = useMemo(
+    () => (escola && marcaLocal ? { ...escola, ...marcaLocal } : escola),
+    [escola, marcaLocal],
+  );
+  const tema = useMemo(() => temaDaEscola(efetiva?.cor_acento), [efetiva?.cor_acento]);
+  // PERF: sem este memo o `value` era um objeto literal novo a cada
+  // renderização do provider, e TODO consumidor de contexto re-renderizava
+  // junto — `useTema()` aparece 92 vezes em 36 arquivos. Era também o que
+  // anulava o `React.memo` do componente `Mini` em AreaEscola: ele lê o
+  // contexto por dentro, então o memo de props não o protegia de nada.
+  // `setMarcaLocal` já é estável (vem do useState), não precisa de useCallback.
+  const valor = useMemo(
+    () => ({ escola: efetiva, tema, aplicarMarca: setMarcaLocal }),
+    [efetiva, tema],
+  );
   return (
-    <BrandingContext.Provider value={{ escola: efetiva, tema, aplicarMarca: setMarcaLocal }}>
+    <BrandingContext.Provider value={valor}>
       {children}
     </BrandingContext.Provider>
   );

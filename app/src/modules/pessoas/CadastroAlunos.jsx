@@ -511,25 +511,68 @@ export function PainelCadastroAlunos({ turmas, trilhas = [], concursos = [], aoM
   );
 }
 
-/* Credencial gerada: aparece UMA vez, grande, pra copiar e entregar. */
+// Etapa 7 / BLOCO B1/B3/B5: o mesmo modal cobre credencial nova
+// (código + senha) e senha resetada/reativada (só senha — o código já
+// foi entregue antes e não muda; "revogar-credencial" não passa por
+// aqui, é confirmação + a lista atualiza o selo, sem nada pra copiar).
+const TITULOS_CREDENCIAL = {
+  aluno_criado: "Credencial de aluno",
+  responsavel_criado: "Credencial de responsável",
+  senha_resetada: "Nova senha temporária",
+  credencial_reativada: "Credencial reativada",
+};
+
+/* Credencial (ou senha) gerada: aparece UMA vez, grande, pra copiar e
+   entregar. Depois de fechado, nem o código nem a senha ficam
+   recuperáveis por aqui — só reset (nova senha) ou revogação. */
 export function CredencialGerada({ credencial, aoFechar }) {
   const T = useTema();
   if (!credencial) return null;
+  const temCodigo = !!credencial.codigo;
+  const temSenha = !!credencial.senhaTemporaria;
+  const copiar = () => {
+    const texto = [
+      temCodigo && `Código: ${credencial.codigo}`,
+      temSenha && `Senha: ${credencial.senhaTemporaria}`,
+    ].filter(Boolean).join("\n");
+    navigator.clipboard?.writeText(texto).catch(() => {});
+  };
+  // z-index 70: acima do modal de VinculosResponsavel (60) — resetar/
+  // reativar credencial de um responsável pode disparar isto com o
+  // outro modal ainda aberto por trás; este precisa ficar visível.
   return (
-    <div style={{ position: "fixed", inset: 0, background: "#000a", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 50, padding: 18 }}>
+    <div style={{ position: "fixed", inset: 0, background: "#000a", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 70, padding: 18 }}>
       <Card style={{ maxWidth: 420, width: "100%", textAlign: "center" }}>
         <div className="disp" style={{ fontSize: 17, fontWeight: 700, marginBottom: 6 }}>
-          Credencial de {credencial.papel === "aluno" ? "aluno" : "responsável"}
+          {TITULOS_CREDENCIAL[credencial.estado] ?? (credencial.papel === "aluno" ? "Credencial de aluno" : "Credencial de responsável")}
         </div>
         <div style={{ fontSize: 13, color: T.sub, marginBottom: 14 }}>{credencial.nome}</div>
-        <div className="num" style={{ fontSize: 28, fontWeight: 800, letterSpacing: 3, color: T.gold, fontFamily: "monospace", padding: "14px 0", border: `1px dashed ${T.gold}`, borderRadius: 10, userSelect: "all" }}>
-          {credencial.codigo}
-        </div>
+
+        {temCodigo && (
+          <>
+            <div style={{ fontSize: 10.5, color: T.sub, textTransform: "uppercase", letterSpacing: 0.6, marginBottom: 4 }}>Código (identificação)</div>
+            <div className="num" style={{ fontSize: 24, fontWeight: 800, letterSpacing: 2.5, color: T.ink, fontFamily: "monospace", padding: "10px 0", border: `1px solid ${T.line}`, borderRadius: 10, userSelect: "all", marginBottom: 10 }}>
+              {credencial.codigo}
+            </div>
+          </>
+        )}
+        {temSenha && (
+          <>
+            <div style={{ fontSize: 10.5, color: T.sub, textTransform: "uppercase", letterSpacing: 0.6, marginBottom: 4 }}>Senha temporária</div>
+            <div className="num" style={{ fontSize: 22, fontWeight: 800, letterSpacing: 1, color: T.gold, fontFamily: "monospace", padding: "10px 6px", border: `1px dashed ${T.gold}`, borderRadius: 10, userSelect: "all", wordBreak: "break-all" }}>
+              {credencial.senhaTemporaria}
+            </div>
+          </>
+        )}
+
         <div style={{ fontSize: 12, color: T.red, marginTop: 12, lineHeight: 1.5 }}>
-          Anote e entregue agora: por segurança, este código não fica visível depois.
+          {temCodigo
+            ? "Anote e entregue agora: por segurança, nem o código nem a senha ficam visíveis depois."
+            : "Anote e entregue agora: por segurança, esta senha não fica visível depois. O código continua sendo o mesmo que a escola já entregou."}
+          {" "}A pessoa vai precisar trocar por uma senha própria no próximo acesso.
         </div>
         <div style={{ display: "flex", gap: 8, marginTop: 14, justifyContent: "center" }}>
-          <Botao onClick={() => navigator.clipboard?.writeText(credencial.codigo).catch(() => {})} secundario>Copiar</Botao>
+          <Botao onClick={copiar} secundario>Copiar</Botao>
           <Botao onClick={aoFechar}>Entreguei, fechar</Botao>
         </div>
       </Card>

@@ -41,11 +41,19 @@ function SecaoDesempenho({ rotulo }) {
   );
 }
 
-export function VisaoEstudo({ aluno, podeEditar, concurso = null, contexto = "Plano de estudos" }) {
+// PERF: `trilhaEstado` vem de fora (AreaAluno) de propósito. Esta tela já
+// chamava `useTrilha(aluno.trilha_id)` enquanto AreaAluno carregava a MESMA
+// trilha para a contagem da prova — as duas buscavam as mesmas 4 tabelas por
+// entrada de aluno. Agora quem monta a tela carrega uma vez e passa adiante.
+// O fallback mantém o componente utilizável sozinho (e é o mesmo hook, então
+// não há caminho de dado diferente): se ninguém passar `trilhaEstado`, ele
+// busca por conta própria, como antes.
+export function VisaoEstudo({ aluno, podeEditar, concurso = null, contexto = "Plano de estudos", trilhaEstado = null }) {
   const T = useTema();
   const [tab, setTab] = useState("hoje");
   const [dados, setDados] = useState({ carregando: true, metas: [], registros: [], simulados: [], xpPersistido: null, erro: null, versao: -1 });
-  const { trilha, carregando: carregandoTrilha, erro: erroTrilha, recarregar: recarregarTrilha } = useTrilha(aluno?.trilha_id);
+  const trilhaPropria = useTrilha(trilhaEstado ? null : aluno?.trilha_id);
+  const { trilha, carregando: carregandoTrilha, erro: erroTrilha, recarregar: recarregarTrilha } = trilhaEstado ?? trilhaPropria;
   const [versao, setVersao] = useState(0);
   const [minutosSugeridos, setMinutosSugeridos] = useState(0);
   const [contextoRegistro, setContextoRegistro] = useState(null);

@@ -249,9 +249,26 @@ describe("D1C — funções novas existem no data/index.js", () => {
     assert.ok(conteudo.includes("resetPasswordForEmail"), "Método incorreto");
   });
 
-  it("redefinirSenha usa updateUser com password", () => {
-    assert.ok(conteudo.includes("updateUser"), "updateUser ausente");
+  // Contrato NOVO (correção do link de recovery que trocava a sessão
+  // ativa): `redefinirSenha` fala com o GoTrue por fora do cliente
+  // compartilhado. `updateUser` aqui voltaria a exigir sessão carregada
+  // no singleton — que é o que sobrescrevia a sessão de quem já estava
+  // logado no mesmo navegador.
+  it("redefinirSenha faz PATCH direto em /auth/v1/user com o token do link", () => {
+    assert.ok(conteudo.includes("/auth/v1/user"), "endpoint do GoTrue ausente");
+    assert.ok(conteudo.includes('method: "PATCH"'), "PATCH ausente");
     assert.ok(conteudo.includes("password"), "campo password ausente");
+    assert.ok(/Authorization:\s*`Bearer \$\{accessToken\}`/.test(conteudo), "token do link não vai no header");
+  });
+
+  it("redefinirSenha NÃO usa updateUser nem setSession — REGRESSÃO de sessão trocada", () => {
+    // olha o CÓDIGO, não os comentários: eles explicam por que esses
+    // dois métodos ficaram de fora, e citar o nome não é chamar.
+    const codigo = conteudo
+      .replace(/\/\*[\s\S]*?\*\//g, "")
+      .replace(/(^|[^:\\])\/\/.*$/gm, "$1");
+    assert.ok(!codigo.includes("auth.updateUser"), "auth.updateUser voltou — sobrescreve a sessão ativa");
+    assert.ok(!codigo.includes("setSession"), "setSession voltou — sobrescreve a sessão ativa");
   });
 
   it("recuperarSenha usa redirectTo para /redefinir-senha", () => {

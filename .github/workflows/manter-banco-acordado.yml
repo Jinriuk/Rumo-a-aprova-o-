@@ -1,0 +1,103 @@
+# Mantém o projeto Supabase de PRODUÇÃO acordado.
+#
+# POR QUE ISTO EXISTE
+# Projeto no plano free do Supabase é PAUSADO após 7 dias sem atividade de
+# API, e acordar leva dezenas de segundos. Durante a prospecção o sistema
+# passa dias sem ninguém entrar — então o primeiro prospecto a abrir o
+# sistema na semana seria justamente quem pagaria a espera. Este workflow é
+# o seguro contra isso, e custa ~10 segundos de runner por dia.
+#
+# POR QUE NÃO É pg_cron
+# O contador de inatividade do Supabase olha REQUISIÇÃO DE API, não trabalho
+# interno do banco. Um job rodando dentro do próprio Postgres não conta — a
+# batida precisa vir de fora. Por isso Actions, e não a migration 0004.
+#
+# ⚠️ ATENÇÃO — ESTE SEGURO TEM UM PRAZO DE VALIDADE
+# O GitHub DESATIVA automaticamente workflows agendados após 60 dias sem
+# nenhuma atividade no repositório. Ou seja: se o projeto ficar dois meses
+# parado, o seguro para de rodar exatamente quando ele seria mais necessário,
+# e sem avisar. Se houver um período longo sem commits, entre no Actions e
+# reative este workflow à mão (ou rode uma vez pelo "Run workflow").
+#
+# O QUE A BATIDA FAZ
+# Um GET no endpoint REST com a chave anon. A tabela `concursos` tem GRANT de
+# SELECT para `anon`, mas RLS ligada e NENHUMA policy para esse papel — então
+# a resposta é 200 com lista vazia. A consulta chega ao Postgres (o plano roda
+# e a policy é avaliada), e nenhum dado sai. É a batida mais barata possível
+# que ainda conta como atividade real.
+name: Manter banco acordado
+
+on:
+  schedule:
+    # Diário. O plano previa a cada 3 dias; ficou diário de propósito, porque
+    # o GitHub avisa que execuções agendadas podem ATRASAR em períodos de
+    # carga alta. Com uma por dia sobram 7 chances dentro da janela de 7 dias;
+    # a cada 3 dias sobrariam 2, e duas falhas seguidas já deixariam pausar.
+    # Minuto quebrado de propósito: o topo da hora é o horário mais disputado
+    # e o que mais sofre atraso.
+    - cron: "17 6 * * *"
+  workflow_dispatch:
+
+# Sem permissão nenhuma: este job não lê nem escreve nada do repositório.
+permissions: {}
+
+concurrency:
+  group: manter-banco-acordado
+  cancel-in-progress: false
+
+jobs:
+  bater:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Bater no REST de produção
+        env:
+          # A chave anon é PUBLICÁVEL por design (ela já viaja no bundle para
+          # todo visitante; a segurança é a RLS). Está como secret aqui só
+          # para não aparecer no log — não porque o segredo importe.
+          # Configure em Settings > Secrets and variables > Actions:
+          #   PROD_SUPABASE_URL       ex.: https://SEU-REF.supabase.co
+          #   PROD_SUPABASE_ANON_KEY  a chave anon do projeto de PRODUÇÃO
+          URL: ${{ secrets.PROD_SUPABASE_URL }}
+          ANON: ${{ secrets.PROD_SUPABASE_ANON_KEY }}
+        run: |
+          set -uo pipefail
+
+          # Mesma regra do e2e-guard: sem ambiente configurado, PULA de forma
+          # explícita. Nunca fingir que o seguro está ativo quando não está.
+          if [ -z "${URL:-}" ] || [ -z "${ANON:-}" ]; then
+            echo "::warning::PULADO — sem PROD_SUPABASE_URL / PROD_SUPABASE_ANON_KEY. O projeto de produção NÃO está sendo mantido acordado, e pode pausar após 7 dias sem uso. Ver docs/operacao/manter-banco-acordado.md."
+            exit 0
+          fi
+
+          alvo="${URL%/}/rest/v1/concursos?select=id&limit=1"
+
+          # Três tentativas: uma falha de rede isolada não pode gastar a
+          # batida do dia. Espera crescente entre elas.
+          for tentativa in 1 2 3; do
+            # A atribuição vem primeiro e o fallback DEPOIS, fora do $( ):
+            # em falha de rede o próprio curl já imprime "000", então um
+            # `|| echo 000` dentro da substituição concatenaria os dois.
+            codigo=$(curl -sS -o /dev/null -w '%{http_code}' \
+              --max-time 30 \
+              -H "apikey: ${ANON}" \
+              -H "Authorization: Bearer ${ANON}" \
+              "$alvo") || codigo="000"
+
+            echo "tentativa ${tentativa}: HTTP ${codigo}"
+
+            # 2xx e 4xx servem: os dois provam que a requisição chegou ao
+            # projeto e contam como atividade. Só 000 (sem resposta) e 5xx
+            # significam que a batida não chegou.
+            case "$codigo" in
+              2*|4*)
+                echo "Banco acordado — resposta ${codigo}."
+                exit 0
+                ;;
+            esac
+
+            [ "$tentativa" -lt 3 ] && sleep $((tentativa * 10))
+          done
+
+          echo "::error::A batida NÃO chegou ao projeto após 3 tentativas (última: HTTP ${codigo}). O projeto pode pausar se isso persistir por 7 dias."
+          exit 1

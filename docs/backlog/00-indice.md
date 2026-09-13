@@ -1,6 +1,6 @@
 # Índice do backlog — Rumo à Aprovação
 
-**Atualizado em:** 02/09/2026 (revisão 5 — PR #84, #85, #86 e os 3 dependabot mergeados em `main`)
+**Atualizado em:** 07/09/2026 (revisão 6 — BKL-014 a BKL-017: drift de migration em produção, ledger incompleto, divergência de RLS e critério de paridade)
 **Como usar:** este índice é a visão cruzada de tudo que está aberto. O detalhe de cada item mora no arquivo da etapa correspondente (`etapa-01.md`, `etapa-02.md`, ...). "Frente" é engenharia, comercial ou revisão. "Etapa" é a etapa do plano mestre à qual o item pertence, é uma tag de dependência, não uma fila: o trabalho roda por frente, em paralelo, não etapa a etapa.
 
 **Regra de carga (BKL-013):** no máximo 3 itens em estado `em execução` **por frente** ao mesmo tempo.
@@ -20,6 +20,10 @@
 | BKL-011 | Calendário semanal fixo / blocos GrinderBank | 1 | revisão | Gabriel | Média | pendente (parcial) | 05/09 |
 | BKL-012 | Planilha de gastos e caixa do produto | 1 | revisão | Gabriel | Média | concluído | — |
 | BKL-013 | Regra de carga simultânea (3 por frente) | 1 | revisão | Gabriel | Baixa | validado | — |
+| BKL-014 | Aplicar migration em produção não é passo do merge | 2 | engenharia | Gabriel | Alta | pendente | — |
+| BKL-015 | Ledger de migrations de produção incompleto (2 de 47) | 2 | engenharia | Gabriel | Alta | pendente | — |
+| BKL-016 | RLS em `app.acessos_codigo`/`login_tentativas` só em produção | 2 | engenharia | Gabriel | Baixa | pendente | — |
+| BKL-017 | Paridade entre ambientes deve comparar schema, não ledger | 2 | engenharia | Gabriel | Média | pendente | — |
 
 Detalhe completo de cada item: [etapa-01.md](./etapa-01.md) (governança) e [etapa-02.md](./etapa-02.md) (inventário técnico).
 Decisões arquiteturais registradas: [`docs/adr/`](../adr/).

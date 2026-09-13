@@ -12,12 +12,22 @@ test("tela de login aparece com as duas formas de entrar", async ({ page }) => {
   expect(erros).toEqual([]);
 });
 
-test("código inválido é rejeitado com mensagem clara", async ({ page }) => {
+test("só o código não libera o botão — senha é obrigatória (BLOCO B1)", async ({ page }) => {
   await page.goto("/");
   await page.getByRole("button", { name: /Aluno \/ Responsável/ }).click();
   await campo(page, "Código de acesso").fill("AAAABBBBCCCC");
+  // conhecer o código deixou de bastar: sem senha o botão continua morto
+  await expect(page.getByRole("button", { name: "Entrar" })).toBeDisabled();
+});
+
+test("código ou senha inválidos são rejeitados com mensagem genérica", async ({ page }) => {
+  await page.goto("/");
+  await page.getByRole("button", { name: /Aluno \/ Responsável/ }).click();
+  await campo(page, "Código de acesso").fill("AAAABBBBCCCC");
+  await page.locator('input[type="password"]').fill("SenhaQualquer123");
   await page.getByRole("button", { name: "Entrar" }).click();
-  await expect(page.getByText(/Código não reconhecido/)).toBeVisible({ timeout: 15_000 });
+  // a mensagem não diz QUAL dos dois falhou (anti-enumeração)
+  await expect(page.getByText(/Código ou senha não reconhecidos/)).toBeVisible({ timeout: 15_000 });
 });
 
 test("login do aluno (código) e logout", async ({ page }) => {

@@ -3,14 +3,22 @@
    funções de login por papel e um guarda de erros de console. */
 import { expect } from "@playwright/test";
 
-// Credenciais provisionadas pelo seed (supabase/seed/04_usuarios_auth_dev.sql).
-// Conferidas em auth.users no projeto de demo.
+// Credenciais provisionadas pelo seed (supabase/seed/04_usuarios_auth_dev.sql
+// e scripts/seed-auth-usuarios.mjs). Conferidas em auth.users no projeto de demo.
+//
+// Etapa 7 / BLOCO B1: o login por código passou a exigir DOIS campos
+// (código identifica, senha autentica). As contas de seed são anteriores
+// a essa mudança e têm senha = o próprio código (era o modelo antigo,
+// `password: normalizarCodigo(codigo)`) — por isso `senha` repete o
+// `codigo` aqui. Isso NÃO é o modelo novo: conta provisionada de hoje em
+// diante nasce com senha temporária própria e `must_change_password`.
+// Se o seed for regerado pelo fluxo novo, estas senhas mudam junto.
 export const CONTAS = {
   coordenacaoVitrine: { email: "coordenacao@vitrine.demo", senha: "vitrine-coord-2026" },
   coordenacaoBeta: { email: "coordenacao@beta.demo", senha: "beta-coord-2026" },
-  alunoLucas: { codigo: "LUCASDEMO2026" },     // Vitrine
-  alunoBruno: { codigo: "BRUNODEMO2026" },     // Beta
-  responsavelLucas: { codigo: "RESPDEMO2026X" }, // Vitrine
+  alunoLucas: { codigo: "LUCASDEMO2026", senha: "LUCASDEMO2026" },     // Vitrine
+  alunoBruno: { codigo: "BRUNODEMO2026", senha: "BRUNODEMO2026" },     // Beta
+  responsavelLucas: { codigo: "RESPDEMO2026X", senha: "RESPDEMO2026X" }, // Vitrine
 };
 
 // Erros de console que NÃO devem reprovar o teste (ruído conhecido e
@@ -73,13 +81,17 @@ export async function loginCoordenacao(page, conta = CONTAS.coordenacaoVitrine) 
   await expect(page.getByText("Painel de gestão")).toBeVisible({ timeout: 15_000 });
 }
 
-async function loginPorCodigo(page, codigo) {
+async function loginPorCodigo(page, conta) {
   await abrirLogin(page);
   await page.getByRole("button", { name: /Aluno \/ Responsável/ }).click();
   // Seletor por rótulo (label "Código de acesso" + input). Antes usava
   // getByPlaceholder("XXXX-XXXX-XXXX"), que deixou de casar quando o
   // placeholder virou "Ex.: LUCASDEMO2026" — quebrava todo login por código.
-  await campo(page, "Código de acesso").fill(codigo);
+  await campo(page, "Código de acesso").fill(conta.codigo);
+  // Etapa 7 / BLOCO B1: sem preencher a senha o botão fica DESABILITADO
+  // (o gate `pronto` exige os dois campos) e o clique abaixo não faz nada
+  // — foi exatamente assim que esta suíte quebrou ao virar o modelo.
+  await page.locator('input[type="password"]').fill(conta.senha);
   await page.getByRole("button", { name: "Entrar" }).click();
 }
 
@@ -97,7 +109,7 @@ export async function loginAluno(page, conta = CONTAS.alunoLucas) {
   page.on("pageerror", (e) => diag.push("pageerror: " + String(e)));
   page.on("requestfailed", (r) => net.push(`FAIL ${r.method()} ${soPath(r.url())} — ${r.failure()?.errorText ?? ""}`));
   page.on("response", (r) => { if (r.status() >= 400) net.push(`${r.status()} ${soPath(r.url())}`); });
-  await loginPorCodigo(page, conta.codigo);
+  await loginPorCodigo(page, conta);
   try {
     await expect(botaoVisivel(page, "Hoje")).toBeVisible({ timeout: 15_000 });
   } catch (_e) {
@@ -112,7 +124,7 @@ export async function loginAluno(page, conta = CONTAS.alunoLucas) {
 }
 
 export async function loginResponsavel(page, conta = CONTAS.responsavelLucas) {
-  await loginPorCodigo(page, conta.codigo);
+  await loginPorCodigo(page, conta);
   await expect(page.getByRole("button", { name: "Sair" })).toBeVisible({ timeout: 15_000 });
 }
 
