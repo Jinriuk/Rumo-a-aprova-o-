@@ -1,6 +1,8 @@
 /* Gerenciamento de responsáveis de um aluno: lista + revogação + re-vinculação.
-   Usar como modal ou painel inline — recebe aluno e onClose. */
-import React, { useEffect, useState } from "react";
+   É sempre MODAL (renderiza overlay fixo por portal em document.body —
+   ver B2 abaixo); recebe aluno e aoFechar. */
+import React, { useEffect, useId, useState } from "react";
+import { createPortal } from "react-dom";
 import { SectionCard, BotaoMini, Erro, EmptyState } from "../../shared/ui/componentes.jsx";
 import { useTema } from "../../shared/branding/BrandingContext.jsx";
 import { mensagemAmigavel } from "../../shared/lib/erros.js";
@@ -10,6 +12,7 @@ import * as db from "../../shared/data/index.js";
 
 export function VinculosResponsavel({ aluno, aoMudar, aoFechar, aoGerarCredencial }) {
   const T = useTema();
+  const tituloId = useId(); // T44: dá nome ao diálogo para o leitor de tela
   // Trabalha com DTOs (vinculoDTO): a tela lê responsavelNome/desde,
   // não o shape cru v.usuarios?.nome do PostgREST (FE1, tarefa 79).
   const [vinculos, setVinculos] = useState([]);
@@ -123,18 +126,24 @@ export function VinculosResponsavel({ aluno, aoMudar, aoFechar, aoGerarCredencia
     if (!r?.ignorado) setVinculando(null);
   }
 
-  return (
+  // B2: portal em document.body. `.fade` (tema.js) anima transform e
+  // vira containing block para position:fixed — sem o portal este
+  // modal resolve contra o wrapper da aba (altura do documento) e,
+  // na lista com 60 alunos, nascia em top ~2.933px, inalcançável.
+  // Ver componentes.jsx/Modal para o diagnóstico completo.
+  // T44: era uma div anônima — ganhou role/aria-modal/aria-labelledby.
+  return createPortal(
     <div style={{
       position: "fixed", inset: 0, background: "#000a", display: "flex",
       alignItems: "center", justifyContent: "center", zIndex: 60, padding: 18,
     }}>
-      <div style={{
+      <div role="dialog" aria-modal="true" aria-labelledby={tituloId} style={{
         background: T.card, border: `1px solid ${T.line}`, borderTop: `3px solid ${T.gold}`,
         borderRadius: 14, padding: 20, width: "100%", maxWidth: 440, maxHeight: "90vh",
         overflowY: "auto",
       }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
-          <div className="disp" style={{ fontWeight: 700, fontSize: 15 }}>
+          <div id={tituloId} className="disp" style={{ fontWeight: 700, fontSize: 15 }}>
             Responsáveis de {aluno?.nome}
           </div>
           <button onClick={aoFechar}
@@ -272,6 +281,7 @@ export function VinculosResponsavel({ aluno, aoMudar, aoFechar, aoGerarCredencia
           Fechar
         </button>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }

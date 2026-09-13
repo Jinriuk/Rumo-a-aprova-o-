@@ -60,6 +60,17 @@ export const FONTES_CSS = `
   /* sem efeito elástico no topo (mobile): o cabeçalho não "descola"
      do resto da tela ao puxar pra baixo */
   html, body { overscroll-behavior-y: none; }
+  /* ATENÇÃO (B2 do catálogo de defeitos, 12/09/2026): esta animação
+     usa \`transform\`, e um elemento com animação de transform vira
+     CONTAINING BLOCK para descendentes \`position: fixed\` — eles
+     deixam de resolver contra a viewport e passam a resolver contra
+     ele. As três áreas envolvem o conteúdo de aba em
+     <div className="fade"> (AreaEscola, VisaoEstudo, AreaAdmin),
+     então qualquer overlay fixo renderizado dentro cai na armadilha:
+     na lista com 60 alunos o wrapper tem a altura do documento
+     (~6.010px) e o modal nascia em top ~2.933px, fora de alcance.
+     Os 4 modais foram resolvidos com createPortal(document.body) —
+     NÃO conserte um overlay novo mexendo aqui: use portal também. */
   .fade { animation: fade .5s ease both; }
   @keyframes fade { from { opacity:0; transform: translateY(8px);} to {opacity:1; transform:none;} }
   /* font-size 16px nos inputs evita o zoom automático do iOS ao focar */

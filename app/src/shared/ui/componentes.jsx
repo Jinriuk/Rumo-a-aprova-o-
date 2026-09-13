@@ -1,6 +1,7 @@
 /* Componentes do sistema de design — portados da versão atual.
    Recebem o tema via contexto de branding (useTema). */
 import React from "react";
+import { createPortal } from "react-dom";
 import { useTema } from "../branding/BrandingContext.jsx";
 
 export function Card({ children, style, className = "", onClick }) {
@@ -484,6 +485,23 @@ export function BotaoMini({ children, onClick, destaque, perigo, disabled }) {
    identidade visual e davam má UX no mobile. role=dialog +
    aria-modal, fecha com Esc/clique-fora, trava o scroll do corpo,
    devolve o foco a quem abriu e respeita prefers-reduced-motion.
+
+   B2 (catálogo de defeitos): vai por PORTAL em document.body.
+   O CSS daqui sempre esteve certo (fixed + inset:0 + maxHeight
+   100vh); o que quebrava era o ANCESTRAL. `.fade` (tema.js) anima
+   `transform`, e um elemento com animação de transform vira
+   containing block para descendentes `position: fixed` — eles
+   passam a resolver contra ele em vez da viewport. As três áreas
+   envolvem o conteúdo de aba em <div className="fade">, então na
+   lista com 60 alunos o modal centralizava dentro de 6.010px e
+   nascia em top ~2.933px, fora de alcance (com a lista filtrada em
+   1 aluno o wrapper encolhia e o modal aparecia — mesmo botão,
+   mesmo modal, comportamento diferente).
+
+   O portal é a correção ESTRUTURAL: renderizando em document.body
+   nenhum CSS de ancestral alcança o modal, hoje ou depois. Corrigir
+   só o `.fade` consertaria por tabela e voltaria a quebrar no dia
+   que alguém puser outro transform em qualquer ancestral.
    ============================================================ */
 export function Modal({ titulo, sub, children, aoFechar, larguraMax = 440, focoRef, rotulo }) {
   const T = useTema();
@@ -503,7 +521,7 @@ export function Modal({ titulo, sub, children, aoFechar, larguraMax = 440, focoR
       ativoAntes?.focus?.();
     };
   }, [aoFechar, focoRef]);
-  return (
+  return createPortal(
     <div
       onMouseDown={(e) => { if (e.target === e.currentTarget) aoFechar?.(); }}
       style={{ position: "fixed", inset: 0, zIndex: 80, background: "#000a", display: "flex", alignItems: "center", justifyContent: "center", padding: 18 }}>
@@ -518,7 +536,8 @@ export function Modal({ titulo, sub, children, aoFechar, larguraMax = 440, focoR
         )}
         <div style={{ padding: (titulo || sub) ? "0 18px 18px" : 18 }}>{children}</div>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }
 
