@@ -99,8 +99,13 @@ export default function AreaEscola({ perfil }) {
     <div>
       <Cabecalho subtitulo="Painel de gestão" nomeUsuario={perfil.usuario.nome} rotuloPapel="Coordenação" />
       <main className="com-sidebar" style={{ maxWidth: 1080, margin: "0 auto", padding: "16px max(16px, env(safe-area-inset-right)) calc(88px + env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left))" }}>
+        {/* C2: alunoAberto é um terceiro estado de tela que não está em
+            nenhuma aba — sem rotuloExtra o título da aba do navegador
+            continuaria preso na última aba visitada enquanto a tela
+            mostra a ficha de um aluno específico. */}
         <MenuPrincipal abas={ABAS} ativo={tab} aoTrocar={irPara}
-          usuario={{ nome: perfil.usuario.nome, sub: "Coordenação" }} />
+          usuario={{ nome: perfil.usuario.nome, sub: "Coordenação" }}
+          rotuloExtra={alunoAberto ? `Ficha de ${alunoAberto.nome}` : undefined} />
 
         {/* T25: alvo do skip-link renderizado por <MenuPrincipal> acima. */}
         <div id="conteudo-principal" tabIndex={-1} className="fade" key={tab + (alunoAberto?.id ?? "")}>

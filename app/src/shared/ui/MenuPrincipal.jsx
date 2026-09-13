@@ -14,7 +14,7 @@ import { Icone } from "./Icones.jsx";
 const MAX_NA_BARRA = 4;
 export const LARGURA_SIDEBAR = 236;
 
-export function MenuPrincipal({ abas, ativo, aoTrocar, usuario }) {
+export function MenuPrincipal({ abas, ativo, aoTrocar, usuario, rotuloExtra }) {
   const T = useTema();
   const { escola } = useBranding();
   const [maisAberto, setMaisAberto] = useState(false);
@@ -38,6 +38,22 @@ export function MenuPrincipal({ abas, ativo, aoTrocar, usuario }) {
   const mostrarAssinatura = nomeExibido !== NOME_PLATAFORMA;
   const iniciais = (usuario?.nome ?? "")
     .split(" ").filter(Boolean).slice(0, 2).map((p) => p[0].toUpperCase()).join("");
+
+  // C2: <title> era estático (index.html), sem router e sem
+  // document.title em lugar nenhum do JS. MenuPrincipal é o único ponto
+  // onde escola (useBranding, acima) e aba ativa coexistem — os dois
+  // pontos onde é usado (VisaoEstudo.jsx, AreaEscola.jsx) ganham o
+  // título de graça. `rotuloExtra` cobre o TERCEIRO estado de tela que
+  // não é aba nenhuma: AreaEscola passa o nome do aluno quando
+  // `alunoAberto` (FichaAluno) está montado por cima do painel — sem
+  // isso a aba na barra do navegador continuaria dizendo "Painel"
+  // enquanto a tela mostra a ficha de um aluno específico.
+  useEffect(() => {
+    const rotuloAba = rotuloExtra ?? abas.find(([k]) => k === ativo)?.[1];
+    if (typeof document !== "undefined" && rotuloAba) {
+      document.title = `${rotuloAba} · ${nomeExibido}`;
+    }
+  }, [ativo, rotuloExtra, nomeExibido, abas]);
 
   const precisaMais = abas.length > MAX_NA_BARRA + 1;
   const naBarra = precisaMais ? abas.slice(0, MAX_NA_BARRA) : abas;

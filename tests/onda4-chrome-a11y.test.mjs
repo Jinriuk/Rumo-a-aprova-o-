@@ -461,3 +461,45 @@ test("T23/C11: nenhuma das ~49 ocorrências de T.red como texto precisou mudar d
     assert.doesNotMatch(src, /redText/, `${caminho} passou a referenciar um token 'redText' — decisão foi corrigir o token, não criar um segundo`);
   }
 });
+
+// ============================================================
+// BLOCO 9 — <title> dinâmico (C2)
+// ============================================================
+// Confirmado com Chromium real via Playwright (harness isolado,
+// MenuPrincipal + BrandingProvider, servido por `vite`, sem login —
+// mesma técnica do bloco 7). Sequência observada:
+//   carrega (aba "painel")      → document.title = "Painel · Escola Teste"
+//   troca pra "alunos"          → "Alunos · Escola Teste"
+//   troca pra "marca"           → "Marca · Escola Teste"
+//   abre ficha (rotuloExtra)    → "Ficha de João Teste · Escola Teste"
+//   fecha ficha (rotuloExtra=undefined) → volta a "Marca · Escola Teste"
+// (a aba ativa, não um valor travado). O harness foi deletado — não é
+// produto; os testes abaixo travam a implementação já confirmada.
+
+test("C2: MenuPrincipal seta document.title a partir da aba ativa e do nome da escola", () => {
+  const src = lerCodigo("app/src/shared/ui/MenuPrincipal.jsx");
+  assert.match(src, /const rotuloAba = rotuloExtra \?\? abas\.find\(\(\[k\]\) => k === ativo\)\?\.\[1\];/,
+    "não deriva o rótulo da aba ativa (com rotuloExtra como override)");
+  assert.match(src, /document\.title = `\$\{rotuloAba\} · \$\{nomeExibido\}`/,
+    "não seta document.title no formato 'Aba · Escola'");
+  assert.match(src, /}, \[ativo, rotuloExtra, nomeExibido, abas\]\);/,
+    "o efeito de título não reage a todas as entradas que podem mudar o rótulo");
+});
+
+test("C2: AreaEscola.jsx passa rotuloExtra para o 3º estado de tela (ficha de aluno aberta, fora das abas)", () => {
+  const src = lerCodigo("app/src/routes/escola/AreaEscola.jsx");
+  assert.match(src, /rotuloExtra=\{alunoAberto \? `Ficha de \$\{alunoAberto\.nome\}` : undefined\}/,
+    "AreaEscola não repassa o nome do aluno pro título quando a ficha está aberta");
+});
+
+test("C2: VisaoEstudo.jsx usa o MenuPrincipal sem rotuloExtra — não tem 3º estado de tela fora de aba", () => {
+  const src = lerCodigo("app/src/routes/aluno/VisaoEstudo.jsx");
+  const chamada = src.match(/<MenuPrincipal abas=\{ABAS\}[\s\S]{0,150}\/>/);
+  assert.ok(chamada, "não achei a chamada de MenuPrincipal em VisaoEstudo");
+  assert.doesNotMatch(chamada[0], /rotuloExtra/, "VisaoEstudo não deveria precisar de rotuloExtra — reavaliar se ganhou um 3º estado");
+});
+
+test("index.html mantém o título estático como FALLBACK (antes de qualquer JS rodar, e nas telas sem MenuPrincipal — login, recuperação)", () => {
+  const src = ler("app/index.html");
+  assert.match(src, /<title>Painel de Estudos<\/title>/);
+});
