@@ -68,7 +68,7 @@ test("migrations: todo arquivo segue NNNN_nome_em_snake_case.sql", () => {
 });
 
 // ── as duas ferramentas de operador precisam ser EXECUTÁVEIS ────────────────
-test("scripts de operador resolvem `pg` de qualquer diretório", () => {
+test("checar-migrations resolve `pg` de qualquer diretório", () => {
   // Achado da Onda 2.5: `checar-migrations.mjs` mandava rodar
   // "cd tests && node ../scripts/checar-migrations.mjs" e isso NUNCA
   // funcionou — em ESM o import nu resolve pelo diretório do módulo
@@ -77,14 +77,12 @@ test("scripts de operador resolvem `pg` de qualquer diretório", () => {
   // apoia não era executável pela instrução dela mesma, o que ajuda a
   // explicar o ledger de produção ter ficado em 3 de 49 sem ninguém
   // tropeçar.
-  for (const s of ["checar-migrations.mjs", "impressao-schema.mjs"]) {
-    const src = readFileSync(resolve(root, "scripts", s), "utf8");
-    assert.match(src, /carregarPg\(\)/, `${s}: precisa usar o carregador de _pg.mjs`);
-    assert.doesNotMatch(
-      src, /\(\{ Client \} = await import\("pg"\)\)/,
-      `${s}: o import nu de "pg" volta a falhar fora de um diretório com node_modules/pg`,
-    );
-  }
+  const src = readFileSync(resolve(root, "scripts/checar-migrations.mjs"), "utf8");
+  assert.match(src, /carregarPg\(\)/, "precisa usar o carregador de _pg.mjs");
+  assert.doesNotMatch(
+    src, /\(\{ Client \} = await import\("pg"\)\)/,
+    'o import nu de "pg" volta a falhar fora de um diretório com node_modules/pg',
+  );
   const pgHelper = readFileSync(resolve(root, "scripts/_pg.mjs"), "utf8");
   assert.match(pgHelper, /tests/, "o fallback resolve a partir de tests/node_modules");
 });
@@ -97,28 +95,40 @@ test("checar-migrations avisa que responde pelo LEDGER, não pelo schema", () =>
   assert.match(src, /LEDGER/, "precisa dizer qual pergunta ele responde");
 });
 
-test("impressao-schema não ordena no servidor (armadilha de collation)", () => {
-  // `md5(string_agg(... order by ...))` no servidor devolve hashes
-  // diferentes para conteúdo IDÊNTICO quando os dois bancos têm
-  // locales diferentes. Foi o falso alarme que quase virou "drift nas
-  // funções" nesta onda. A ordenação tem que ser no cliente.
-  const src = readFileSync(resolve(root, "scripts/impressao-schema.mjs"), "utf8");
-  assert.match(src, /\.sort\(\)/, "a ordenação acontece no cliente");
-  assert.match(src, /collation/i, "a armadilha fica documentada onde ela mora");
-
-  // Só o SQL interessa: a palavra "order by" APARECE de propósito no
-  // comentário que explica a armadilha, e não pode ser confundida com
-  // uma consulta que de fato ordena no servidor.
-  const semComentarios = src
+test("fingerprint-schema ordena com collate \"C\" (armadilha de collation)", () => {
+  // `order by item` usa o collation do BANCO. Medido em 13/09/2026:
+  // produção e demo em en_US.UTF-8, o banco local do reset-db.sh em
+  // C.UTF-8. Ordens diferentes, hash diferente, schema IDÊNTICO — o
+  // script mediria o observador, não o objeto. Sem `collate "C"` a
+  // comparação mais valiosa (o que o REPO produz × o que produção TEM)
+  // é a que quebra.
+  const src = readFileSync(resolve(root, "scripts/fingerprint-schema.sql"), "utf8");
+  // Só o SQL interessa: "order by" aparece de propósito no comentário
+  // que explica a armadilha. E um order by de hash atravessa linhas,
+  // então o espaço é normalizado antes de olhar.
+  const soSql = src
     .split("\n")
-    .filter((l) => !l.trimStart().startsWith("//"))
-    .join("\n");
-  const sqlDasConsultas = [...semComentarios.matchAll(/`([^`]*\bselect\b[^`]*)`/gis)].map((m) => m[1]);
-  assert.ok(sqlDasConsultas.length >= 5, "esperava as consultas do fingerprint");
-  for (const sql of sqlDasConsultas) {
-    assert.doesNotMatch(
-      sql, /order\s+by/i,
-      "consulta do fingerprint não pode ordenar no servidor (collation muda o hash)",
-    );
+    .map((l) => l.replace(/--.*$/, ""))
+    .join(" ")
+    .replace(/\s+/g, " ");
+  const ordenacoesDeHash = [...soSql.matchAll(/order by .{0,80}/gi)].map((m) => m[0]);
+  assert.ok(ordenacoesDeHash.length >= 2, "esperava as ordenações do string_agg");
+  for (const o of ordenacoesDeHash) {
+    assert.match(o, /collate "C"/, `ordenação sem collate "C": ${o.slice(0, 70)}`);
   }
+  assert.match(src, /COLLATION/i, "a armadilha fica documentada no cabeçalho");
 });
+
+test("fingerprint-schema exclui funções de EXTENSÃO", () => {
+  // Num Postgres vanilla `create extension` põe as funções em `public`
+  // (pgcrypto, uuid-ossp...); no Supabase elas vivem em `extensions`.
+  // Sem excluir, eram 98 funções no local contra 62 em produção —
+  // nenhuma delas do produto.
+  const src = readFileSync(resolve(root, "scripts/fingerprint-schema.sql"), "utf8");
+  const ocorrencias = [...src.matchAll(/deptype = 'e'/g)];
+  assert.ok(
+    ocorrencias.length >= 2,
+    "as categorias funcoes e acl_funcoes precisam excluir o que pertence a extensão",
+  );
+});
+
