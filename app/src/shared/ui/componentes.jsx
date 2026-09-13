@@ -534,12 +534,37 @@ export function BotaoMini({ children, onClick, destaque, perigo, disabled }) {
    só o `.fade` consertaria por tabela e voltaria a quebrar no dia
    que alguém puser outro transform em qualquer ancestral.
    ============================================================ */
+// T45: seletor de focáveis do trap de Tab — mesma lista que qualquer
+// implementação de focus trap usa (não há API nativa pra "elementos
+// alcançáveis por Tab"). `[tabindex]:not([tabindex="-1"])` cobre o que os
+// seletores de tag não alcançam (ex.: o <div className="fade"> de outro
+// modal aninhado, hipoteticamente); os `:not([disabled])` evitam parar
+// num controle que está lá mas não é alcançável de verdade.
+const SELETOR_FOCAVEL = 'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
+
 export function Modal({ titulo, sub, children, aoFechar, larguraMax = 440, focoRef, rotulo }) {
   const T = useTema();
   const ref = React.useRef(null);
+  const idTitulo = React.useId();
   React.useEffect(() => {
     const ativoAntes = typeof document !== "undefined" ? document.activeElement : null;
-    const onKey = (e) => { if (e.key === "Escape") aoFechar?.(); };
+    const onKey = (e) => {
+      if (e.key === "Escape") { aoFechar?.(); return; }
+      // T45: trap de Tab. Sem isto o 3º Tab (ou Shift+Tab a partir do
+      // primeiro controle) sai do diálogo e cai na PÁGINA DE TRÁS — ela
+      // está coberta pelo overlay, mas continua no DOM (o portal só muda
+      // ONDE o modal renderiza, não remove o resto da árvore).
+      if (e.key !== "Tab" || !ref.current) return;
+      const focaveis = ref.current.querySelectorAll(SELETOR_FOCAVEL);
+      if (focaveis.length === 0) { e.preventDefault(); return; }
+      const primeiro = focaveis[0];
+      const ultimo = focaveis[focaveis.length - 1];
+      if (e.shiftKey && document.activeElement === primeiro) {
+        e.preventDefault(); ultimo.focus();
+      } else if (!e.shiftKey && document.activeElement === ultimo) {
+        e.preventDefault(); primeiro.focus();
+      }
+    };
     window.addEventListener("keydown", onKey);
     const corpo = typeof document !== "undefined" ? document.body : null;
     const overflowAntes = corpo ? corpo.style.overflow : "";
@@ -556,12 +581,22 @@ export function Modal({ titulo, sub, children, aoFechar, larguraMax = 440, focoR
     <div
       onMouseDown={(e) => { if (e.target === e.currentTarget) aoFechar?.(); }}
       style={{ position: "fixed", inset: 0, zIndex: 80, background: "#000a", display: "flex", alignItems: "center", justifyContent: "center", padding: 18 }}>
+      {/* T45: aria-labelledby de verdade quando existe título visível (o
+          <h2> abaixo ganha o id) — melhor que aria-label string porque
+          acompanha o texto do título sem duplicar. aria-label só entra
+          como reserva quando NÃO há título (hoje nenhum dos dois
+          consumidores do repo — confirmar()/prompt() — cai nesse caso,
+          os dois sempre passam `titulo` com valor padrão; fica documentado
+          pra quem usar Modal sem título no futuro e esquecer o rótulo). */}
       <div
-        ref={ref} role="dialog" aria-modal="true" aria-label={rotulo ?? titulo} tabIndex={-1} className="fade"
+        ref={ref} role="dialog" aria-modal="true"
+        aria-labelledby={titulo ? idTitulo : undefined}
+        aria-label={titulo ? undefined : rotulo}
+        tabIndex={-1} className="fade"
         style={{ width: "100%", maxWidth: larguraMax, background: T.card, border: `1px solid ${T.line}`, borderTop: `3px solid ${T.gold}`, borderRadius: 16, boxShadow: "0 24px 64px #000b", outline: "none", maxHeight: "calc(100vh - 36px)", overflowY: "auto" }}>
         {(titulo || sub) && (
           <div style={{ padding: "16px 18px 12px" }}>
-            {titulo && <h2 className="disp" style={{ margin: 0, fontSize: 17, fontWeight: 700, color: T.ink, lineHeight: 1.25 }}>{titulo}</h2>}
+            {titulo && <h2 id={idTitulo} className="disp" style={{ margin: 0, fontSize: 17, fontWeight: 700, color: T.ink, lineHeight: 1.25 }}>{titulo}</h2>}
             {sub && <div style={{ fontSize: 13, color: T.sub, marginTop: 6, lineHeight: 1.55 }}>{sub}</div>}
           </div>
         )}

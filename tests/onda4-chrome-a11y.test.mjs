@@ -364,3 +364,45 @@ test("Botao aceita e repassa atributos extras (aria-*) — é o que viabiliza o 
   assert.match(src, /<button className="ui-button" type=\{type\} onClick=\{onClick\} disabled=\{disabled\} \{\.\.\.resto\}/,
     "Botao não espalha ...resto no <button>");
 });
+
+// ============================================================
+// BLOCO 7 — focus trap do Modal (T45)
+// ============================================================
+// Diferente dos demais blocos: T45 foi conferido também com o Chromium
+// pré-instalado (/opt/pw-browsers), não só por inspeção de fonte — é
+// interação de teclado, verificável sem login. Via Playwright, num
+// harness isolado (Modal real + BrandingProvider, 4 focáveis dentro):
+//   - ANTES do fix: o 5º Tab escapava do diálogo pra "gatilho"/"fora-1"/
+//     "fora-2" (a página coberta atrás); Shift+Tab do 1º focável ia
+//     direto pro ÚLTIMO botão de FORA do modal.
+//   - DEPOIS: Tab e Shift+Tab ciclam só entre os 4 focáveis internos,
+//     em 2 voltas completas, sem nunca visitar o que está atrás;
+//     aria-labelledby aponta pro id do <h2>, cujo texto bate com o
+//     título visível; Escape continua fechando e devolvendo o foco.
+// O harness (app/src/dev/modal-harness.jsx + modal-harness.html) foi
+// deletado depois — não é parte do produto. Os testes abaixo travam a
+// IMPLEMENTAÇÃO (fonte), que é o que o registro de verificação a preservar.
+
+test("T45: existe handler de Tab (trap) no Modal, com as duas direções (Tab e Shift+Tab)", () => {
+  const src = lerCodigo("app/src/shared/ui/componentes.jsx");
+  assert.match(src, /SELETOR_FOCAVEL/, "sem seletor de elementos focáveis");
+  assert.match(src, /e\.key !== "Tab" \|\| !ref\.current/, "sem guarda de tecla Tab no handler");
+  assert.match(src, /e\.shiftKey && document\.activeElement === primeiro/, "sem tratamento de Shift+Tab a partir do primeiro focável");
+  assert.match(src, /!e\.shiftKey && document\.activeElement === ultimo/, "sem tratamento de Tab a partir do último focável");
+  assert.match(src, /e\.preventDefault\(\); ultimo\.focus\(\)/, "Shift+Tab não força foco pro último");
+  assert.match(src, /e\.preventDefault\(\); primeiro\.focus\(\)/, "Tab não força foco pro primeiro");
+});
+
+test("T45: Escape continua fechando o modal (não foi quebrado pelo handler novo de Tab)", () => {
+  const src = lerCodigo("app/src/shared/ui/componentes.jsx");
+  assert.match(src, /if \(e\.key === "Escape"\) \{ aoFechar\?\.\(\); return; \}/);
+});
+
+test("T45: aria-labelledby real — o <h2> ganha id e o diálogo aponta pra ele quando há título", () => {
+  const src = lerCodigo("app/src/shared/ui/componentes.jsx");
+  assert.match(src, /const idTitulo = React\.useId\(\);/, "sem id gerado para o título");
+  assert.match(src, /aria-labelledby=\{titulo \? idTitulo : undefined\}/, "aria-labelledby não depende de titulo/idTitulo");
+  assert.match(src, /<h2 id=\{idTitulo\} className="disp"/, "o <h2> do Modal não recebeu o id");
+  // aria-label vira reserva só quando NÃO há título (mesma prioridade da ARIA spec)
+  assert.match(src, /aria-label=\{titulo \? undefined : rotulo\}/);
+});
