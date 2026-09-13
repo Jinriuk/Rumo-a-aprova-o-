@@ -11,7 +11,7 @@ import { ResumoResponsavel } from "../../modules/desempenho/ResumoResponsavel.js
 import { useTrilha } from "../../modules/conteudo/useTrilha.js";
 import { calcularMetricas } from "../../modules/desempenho/metricas.js";
 import { diasParaProva } from "../../modules/conteudo/concursos.js";
-import { semanaAtual, fmtBR } from "../../shared/regras/regras.js";
+import { semanaAtual, estadoDoCiclo, fmtBR } from "../../shared/regras/regras.js";
 import { mensagemAmigavel } from "../../shared/lib/erros.js";
 import { useTema } from "../../shared/branding/BrandingContext.jsx";
 import * as db from "../../shared/data/index.js";
@@ -73,12 +73,14 @@ export default function AreaResponsavel({ perfil }) {
         if (!vivo) return;
         setDados({ metas, registros, simulados });
 
-        let semanasTrilha = null;
-        if (aluno.trilha_id) semanasTrilha = (await db.carregarTrilha(aluno.trilha_id)).semanas;
+        // Onda 3 / T27: a data da prova vem do ALUNO, não do fim da
+        // trilha (ver concursos.js). Some com isso a carga extra da
+        // trilha que existia aqui só para ler a última semana — a
+        // `trilha` já desce por prop para as métricas.
         const c = await db.concursoPorId(aluno.concurso_id);
         if (!vivo) return;
         setConcurso(c);
-        setProva(diasParaProva({ semanasTrilha, concurso: c }));
+        setProva(diasParaProva({ dataProvaAlvo: aluno.data_prova_alvo ?? null, concurso: c }));
       } catch (e) { if (vivo) setErro(mensagemAmigavel(e, "carregar")); }
     })();
     return () => { vivo = false; };
@@ -90,6 +92,10 @@ export default function AreaResponsavel({ perfil }) {
     [trilha],
   );
   const semanaAtiva = semanasRegras.length ? semanaAtual(semanasRegras) : null;
+  // T28: `semanaAtiva` gruda na última semana depois do fim da trilha.
+  // Quem sabe que o ciclo acabou é estadoDoCiclo — ver regras.js.
+  const ciclo = semanasRegras.length ? estadoDoCiclo(semanasRegras) : { estado: "sem_semanas" };
+  const fimDoCiclo = semanasRegras.length ? semanasRegras[semanasRegras.length - 1].fim : null;
   const meta = dados?.metas.find((x) => x.status === "ativa") ?? dados?.metas[0] ?? null;
 
   const m = useMemo(() => {
@@ -109,7 +115,7 @@ export default function AreaResponsavel({ perfil }) {
 
   return (
     <div>
-      <Cabecalho subtitulo={subtitulo} diasProva={prova?.dias ?? null} diasProvaMedia={prova?.media}
+      <Cabecalho subtitulo={subtitulo} diasProva={prova?.dias ?? null} provaRealizada={prova?.realizada ?? false} diasProvaMedia={prova?.media}
         nomeUsuario={perfil.usuario.nome} rotuloPapel="Responsável" />
       <main style={{ maxWidth: 760, margin: "0 auto", padding: "18px max(16px, env(safe-area-inset-right)) calc(88px + env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left))" }}>
         {erro && <ErroComRetry aoTentar={recarregar}>{erro}</ErroComRetry>}
@@ -141,7 +147,8 @@ export default function AreaResponsavel({ perfil }) {
         {aluno === null && <Empty txt="Nenhum aluno vinculado a este acesso. Fale com a escola." />}
         {aluno && m && trilha && (
           <ResumoResponsavel aluno={aluno} m={m} meta={meta} trilha={trilha}
-            simulados={dados.simulados} semanaAtiva={semanaAtiva} concurso={concurso} />
+            simulados={dados.simulados} semanaAtiva={semanaAtiva} concurso={concurso}
+            ciclo={ciclo.estado} fimDoCiclo={fimDoCiclo} />
         )}
         {aluno && (!m || !trilha) && <CarregandoBloco titulo="Carregando os dados do aluno…" cartoes={2} linhas={3} />}
       </main>

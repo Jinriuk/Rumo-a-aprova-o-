@@ -178,7 +178,8 @@ export function ListaAlunos({ alunos, consentimentos, concursos = [], turmas = [
             const temCons = comConsentimento.has(a.id);
             const trabalhando = ocupado === a.id;
             const r = resumoPorAluno[a.id];
-            const selMini = { background: T.bg, border: `1px solid ${T.line}`, color: T.sub, borderRadius: 7, padding: "5px 9px", fontSize: 11.5, maxWidth: "100%" };
+            // T29-tamanho: os 3 <select> por linha davam ≈26px — minHeight completa o alvo de toque.
+            const selMini = { background: T.bg, border: `1px solid ${T.line}`, color: T.sub, borderRadius: 7, padding: "5px 9px", minHeight: 32, fontSize: 11.5, maxWidth: "100%" };
             return (
               <div key={a.id} style={{ padding: "13px 15px", borderBottom: i === pagina_itens.length - 1 ? "none" : `1px solid ${T.line}` }}>
                 <div style={{ display: "flex", gap: 10, alignItems: "flex-start", flexWrap: "wrap" }}>
@@ -201,21 +202,36 @@ export function ListaAlunos({ alunos, consentimentos, concursos = [], turmas = [
                       {aguardaTroca && <StatusBadge tom="alerta">aguardando troca de senha</StatusBadge>}
                       {r?.semAtividade && <StatusBadge tom="risco">sem atividade 7d</StatusBadge>}
                     </div>
+                    {/* I8: os 3 <select> abaixo tinham só title= (tooltip visual,
+                        não é nome acessível confiável). aria-label agora inclui o nome
+                        do aluno — há 3 por linha em até ~34 linhas, "Turma" sozinho não
+                        diferencia QUAL aluno para quem navega por leitor de tela.
+                        Padrão copiado dos filtros do topo (:151/:156, já certos). */}
+                    {/* T29-comportamento: a roda do mouse sobre um <select> FOCADO troca
+                        o valor e grava na hora (onChange sem confirmação — de propósito,
+                        é decisão de produto, não bug). onWheel tira o foco antes do navegador
+                        aplicar o scroll ao valor selecionado. */}
                     <div style={{ display: "flex", gap: 7, marginTop: 8, flexWrap: "wrap" }}>
                       {turmas.length > 0 && (
-                        <select value={turmaAtual} disabled={trabalhando} onChange={(e) => trocarTurma(a, e.target.value)} title="Turma do aluno" style={selMini}>
+                        <select value={turmaAtual} disabled={trabalhando} onChange={(e) => trocarTurma(a, e.target.value)}
+                          onWheel={(e) => e.currentTarget.blur()} title="Turma do aluno"
+                          aria-label={`Turma de ${a.nome}`} style={selMini}>
                           <option value="" style={{ background: T.bg2 }}>— sem turma —</option>
                           {turmas.map((t) => <option key={t.id} value={t.id} style={{ background: T.bg2 }}>{t.nome}</option>)}
                         </select>
                       )}
                       {concursos.length > 0 && (
-                        <select value={a.concurso_id ?? ""} disabled={trabalhando} onChange={(e) => trocarConcurso(a, e.target.value)} title="Concurso do aluno" style={selMini}>
+                        <select value={a.concurso_id ?? ""} disabled={trabalhando} onChange={(e) => trocarConcurso(a, e.target.value)}
+                          onWheel={(e) => e.currentTarget.blur()} title="Concurso do aluno"
+                          aria-label={`Concurso de ${a.nome}`} style={selMini}>
                           <option value="" style={{ background: T.bg2 }}>— sem concurso —</option>
                           {concursos.map((c) => <option key={c.id} value={c.id} style={{ background: T.bg2 }}>{c.nome}</option>)}
                         </select>
                       )}
                       {trilhas.length > 1 && (
-                        <select value={a.trilha_id ?? ""} disabled={trabalhando} onChange={(e) => trocarTrilha(a, e.target.value)} title="Trilha de estudo" style={selMini}>
+                        <select value={a.trilha_id ?? ""} disabled={trabalhando} onChange={(e) => trocarTrilha(a, e.target.value)}
+                          onWheel={(e) => e.currentTarget.blur()} title="Trilha de estudo"
+                          aria-label={`Trilha de estudo de ${a.nome}`} style={selMini}>
                           <option value="" style={{ background: T.bg2 }}>— sem trilha —</option>
                           {trilhas.map((t) => <option key={t.id} value={t.id} style={{ background: T.bg2 }}>{t.nome}</option>)}
                         </select>
@@ -252,12 +268,12 @@ export function ListaAlunos({ alunos, consentimentos, concursos = [], turmas = [
       )}
       {totalPaginas > 1 && (
         <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 12, padding: "13px 15px", borderTop: `1px solid ${T.line}` }}>
-          <button onClick={() => setPagina((p) => p - 1)} disabled={paginaAtual <= 1}
+          <button type="button" onClick={() => setPagina((p) => p - 1)} disabled={paginaAtual <= 1}
             style={{ border: `1px solid ${T.line}`, background: "transparent", color: paginaAtual <= 1 ? T.sub : T.gold, borderRadius: 8, padding: "7px 14px", fontSize: 12.5, fontWeight: 700, opacity: paginaAtual <= 1 ? 0.5 : 1 }}>
             ‹ Anterior
           </button>
           <span style={{ fontSize: 12.5, color: T.sub }}>página {paginaAtual} de {totalPaginas}</span>
-          <button onClick={() => setPagina((p) => p + 1)} disabled={paginaAtual >= totalPaginas}
+          <button type="button" onClick={() => setPagina((p) => p + 1)} disabled={paginaAtual >= totalPaginas}
             style={{ border: `1px solid ${T.line}`, background: "transparent", color: paginaAtual >= totalPaginas ? T.sub : T.gold, borderRadius: 8, padding: "7px 14px", fontSize: 12.5, fontWeight: 700, opacity: paginaAtual >= totalPaginas ? 0.5 : 1 }}>
             Próxima ›
           </button>

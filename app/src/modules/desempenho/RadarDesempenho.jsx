@@ -8,7 +8,7 @@ import {
 } from "recharts";
 import { SectionCard, EmptyState, InsightCard } from "../../shared/ui/componentes.jsx";
 import { useTema } from "../../shared/branding/BrandingContext.jsx";
-import { calcularInsights } from "./metricas.js";
+import { calcularInsights, corDeAcerto } from "./metricas.js";
 
 export function RadarDesempenho({ m, trilha, aoRegistrar }) {
   const T = useTema();
@@ -22,7 +22,7 @@ export function RadarDesempenho({ m, trilha, aoRegistrar }) {
           dica="Ainda há poucos dados para mapear seu desempenho. Continue registrando seus estudos — os indicadores aparecem aqui." />
         {aoRegistrar && (
           <div style={{ textAlign: "center", marginTop: 4 }}>
-            <button onClick={aoRegistrar} style={{ border: "none", background: T.gold, color: "#0A1622", borderRadius: 9, fontWeight: 800, fontSize: 14, padding: "11px 22px", minHeight: 46 }}>
+            <button type="button" onClick={aoRegistrar} style={{ border: "none", background: T.gold, color: "#0A1622", borderRadius: 9, fontWeight: 800, fontSize: 14, padding: "11px 22px", minHeight: 46 }}>
               Registrar estudo
             </button>
           </div>
@@ -43,10 +43,23 @@ export function RadarDesempenho({ m, trilha, aoRegistrar }) {
     .sort((a, b) => b.acc - a.acc)
     .map((s) => ({ ...s, cor: trilha.porCodigo[s.id]?.cor ?? T.gold }));
 
-  const trajetoria = m.weeksData
-    .filter((w) => w.isPast || w.isNow)
+  /* T17 — a trajetória plotava todas as semanas passadas, inclusive a
+     cauda sem nenhum acerto registrado: com dado até S4 de S1 a S9, o
+     gráfico ficava 55% vazio e a área terminava num corte vertical
+     seco, como se a precisão tivesse despencado a zero.
+
+     Semana sem dado NO MEIO fica (é informação: o aluno parou aquela
+     semana e o `connectNulls` liga o traço por cima). O que sai é só a
+     CAUDA — plotar espaço vazio depois do último ponto medido não
+     informa nada e sugere queda que não existe. */
+  const semanasAteHoje = m.weeksData.filter((w) => w.isPast || w.isNow);
+  const ultimaComDado = semanasAteHoje.reduce(
+    (ultimo, w, i) => (w.acc != null ? i : ultimo), -1,
+  );
+  const trajetoria = semanasAteHoje
+    .slice(0, ultimaComDado + 1)
     .map((w) => ({ label: w.label, acc: w.acc }));
-  const temTrajetoria = trajetoria.some((x) => x.acc != null);
+  const temTrajetoria = trajetoria.length > 0;
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
@@ -82,7 +95,7 @@ export function RadarDesempenho({ m, trilha, aoRegistrar }) {
               <div key={s.id}>
                 <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12.5, marginBottom: 4 }}>
                   <span style={{ color: T.ink, fontWeight: 600 }}>{s.name}</span>
-                  <span className="num" style={{ fontWeight: 800, color: s.acc >= 70 ? T.green : s.acc >= 55 ? T.gold : T.red }}>{s.acc}%</span>
+                  <span className="num" style={{ fontWeight: 800, color: corDeAcerto(T, s.acc) }}>{s.acc}%</span>
                 </div>
                 <div style={{ height: 8, background: T.bg, borderRadius: 4, overflow: "hidden" }}>
                   <div style={{ width: `${s.acc}%`, height: "100%", background: s.acc >= 55 ? s.cor : T.red, borderRadius: 4, transition: "width .4s" }} />
@@ -100,7 +113,7 @@ export function RadarDesempenho({ m, trilha, aoRegistrar }) {
             dica="A trajetória aparece quando há acerto registrado em pelo menos uma semana." />
         ) : (
           <ResponsiveContainer width="100%" height={210}>
-            <AreaChart data={trajetoria} margin={{ top: 8, right: 8, left: -20, bottom: 0 }}>
+            <AreaChart data={trajetoria} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
               <defs>
                 <linearGradient id="gradPrecisao" x1="0" y1="0" x2="0" y2="1">
                   <stop offset="0%" stopColor={T.gold} stopOpacity={0.4} />
@@ -109,7 +122,7 @@ export function RadarDesempenho({ m, trilha, aoRegistrar }) {
               </defs>
               <CartesianGrid strokeDasharray="3 3" stroke={T.line} vertical={false} />
               <XAxis dataKey="label" tick={{ fill: T.sub, fontSize: 11 }} axisLine={{ stroke: T.line }} tickLine={false} />
-              <YAxis domain={[0, 100]} tick={{ fill: T.sub, fontSize: 10 }} axisLine={false} tickLine={false} width={34} />
+              <YAxis domain={[0, 100]} tick={{ fill: T.sub, fontSize: 10 }} axisLine={false} tickLine={false} width={36} />
               <Tooltip contentStyle={{ background: T.bg2, border: `1px solid ${T.line}`, borderRadius: 8 }} formatter={(v) => [v == null ? "—" : `${v}%`, "precisão"]} />
               <Area type="monotone" dataKey="acc" stroke={T.gold} strokeWidth={2.5} fill="url(#gradPrecisao)" dot={{ r: 3, fill: T.gold }} connectNulls />
             </AreaChart>

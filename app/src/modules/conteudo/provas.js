@@ -11,6 +11,8 @@
    liam esta tabela — subcontavam os acertos. Agora os números e as
    chaves batem 1:1 com o seed 07. Ao mexer aqui, mexa também no seed. */
 
+import { avaliarAcertos } from "./notaSimulado.js";
+
 export const PROVAS = {
   // CN — Dia 1: Mat+Ing (2,5/q). Dia 2: Por + Ciências (fís/quí/bio 6) +
   // Estudos Sociais (hist/geo 6). Redação eliminatória (tratada à parte).
@@ -92,25 +94,32 @@ export function totalQuestoes(prova) {
   return materiasDaProva(prova).reduce((s, m) => s + m.max, 0);
 }
 
-// Acertos de UMA matéria, já lendo o dado legado quando existir: se a
-// matéria não veio no simulado mas há um agregado legado que a inclui
-// (ex.: 'soc' → his/geo), rateia o legado pelas matérias do bucket.
-function acertosDaMateria(prova, acertos, k) {
-  if (acertos[k] != null && acertos[k] !== "") return +acertos[k] || 0;
-  const legado = prova.legado;
-  if (legado) {
-    for (const [chave, buckets] of Object.entries(legado)) {
-      if (buckets.includes(k) && acertos[chave] != null) {
-        // divide o agregado igualmente entre as matérias do bucket
-        return Math.floor((+acertos[chave] || 0) / buckets.length);
-      }
-    }
-  }
-  return 0;
+/* Onda 2 / I6: esta tabela deixou de pontuar por conta própria.
+   Existiam dois motores sobre o mesmo simulado (este e o
+   simuladoConcurso.js, que lê a estrutura do banco) e eles devolviam
+   números diferentes — no dado real do demo, 64 aqui contra 52 lá,
+   para um JSON que soma 74. Agora os dois delegam ao motor único em
+   notaSimulado.js, que é quem sabe expandir a chave legada 'soc',
+   distinguir "não respondida" de "zerou" e registrar o capping.
+
+   A estrutura daqui vira o shape do banco (materia_codigo/num_questoes)
+   para o motor não precisar saber de qual dos dois lados ela veio.
+   Continua sendo FALLBACK: quando a estrutura do banco existe, é ela
+   que manda. */
+function comoEstruturaDeBanco(prova) {
+  return materiasDaProva(prova).map((m) => ({
+    materia_codigo: m.k,
+    num_questoes: m.max,
+    eh_redacao: false,
+  }));
+}
+
+export function avaliarProva(prova, acertos = {}) {
+  return avaliarAcertos(comoEstruturaDeBanco(prova), acertos, { legado: prova.legado ?? {} });
 }
 
 export function totalAcertos(prova, acertos = {}) {
-  return materiasDaProva(prova).reduce((s, m) => s + Math.min(acertosDaMateria(prova, acertos, m.k), m.max), 0);
+  return avaliarProva(prova, acertos).totalAcertos;
 }
 
 // nota geral em % quando o concurso não tem fórmula própria
@@ -122,7 +131,13 @@ export function notaPct(prova, acertos) {
 /* Objetivo sugerido pós-simulado (Fase 6): olha o último resultado
    e devolve UMA meta curta e acionável. */
 export function objetivoSugerido(prova, acertos) {
-  const ms = materiasDaProva(prova).map((m) => ({ ...m, pct: Math.round((Math.min(acertosDaMateria(prova, acertos, m.k), m.max) / m.max) * 100) }));
+  const nomePorCodigo = Object.fromEntries(materiasDaProva(prova).map((m) => [m.k, m.nome]));
+  // I5: só matéria RESPONDIDA entra no objetivo — sugerir "suba
+  // Biologia de 0%" para quem nunca fez Biologia é o mesmo defeito que
+  // anunciava eliminação em matéria não prestada.
+  const ms = avaliarProva(prova, acertos).linhas
+    .filter((l) => l.respondida)
+    .map((l) => ({ ...l, nome: nomePorCodigo[l.materia] ?? l.materia }));
   const pior = [...ms].sort((a, b) => a.pct - b.pct)[0];
   const quaseGabarito = ms.find((m) => m.pct >= 85 && m.pct < 100);
   if (pior && pior.pct < 70) return `Subir ${pior.nome} de ${pior.pct}% para ≥70% no próximo simulado.`;

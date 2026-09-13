@@ -71,7 +71,7 @@ export function ConfirmacaoRegistro({
           ) : (
             <>
               <p>Este registro entrou no seu histórico. O objetivo continua em aberto até você fechá-lo.</p>
-              <button className="journey-confirmation-objective-action"
+              <button type="button" className="journey-confirmation-objective-action"
                 onClick={aoConcluirObjetivo} disabled={concluindoObjetivo}>
                 {concluindoObjetivo ? "Concluindo…" : "Concluir este objetivo"}
               </button>
@@ -82,10 +82,10 @@ export function ConfirmacaoRegistro({
       )}
 
       <div className="journey-confirmation-actions">
-        <button className="journey-confirmation-primary" onClick={aoVerMissao}>
+        <button type="button" className="journey-confirmation-primary" onClick={aoVerMissao}>
           Voltar para a missão <span aria-hidden="true">→</span>
         </button>
-        <button className="journey-confirmation-secondary" onClick={aoRegistrarOutro}>
+        <button type="button" className="journey-confirmation-secondary" onClick={aoRegistrarOutro}>
           Registrar outro estudo
         </button>
       </div>
@@ -119,7 +119,7 @@ export function FeedbackProgresso({ feedback, aoFechar }) {
     >
       <span className="reward-island-signal" aria-hidden="true">★</span>
       <span><small>Progresso confirmado</small>{partes.join(" · ")}</span>
-      <button className="reward-island-close" onClick={aoFechar} aria-label="Fechar confirmação de progresso">×</button>
+      <button type="button" className="reward-island-close" onClick={aoFechar} aria-label="Fechar confirmação de progresso">×</button>
     </div>
   );
 }

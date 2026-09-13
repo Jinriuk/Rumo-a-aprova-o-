@@ -3,6 +3,7 @@
    médio), treemap de tempo por disciplina e a linha de desempenho
    por meta. Tudo calculado dos registros que já existem. */
 import React, { useMemo, useState } from "react";
+import { corDeAcerto } from "./metricas.js";
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer, Treemap,
@@ -81,7 +82,7 @@ export function Acumulado({ registros, trilha }) {
     <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
       <Card style={{ padding: 0, overflow: "hidden" }}>
         <div style={{ padding: "12px 16px", borderBottom: `1px solid ${T.line}` }}>
-          <div className="disp" style={{ fontSize: 15, fontWeight: 700 }}>Desempenho acumulado</div>
+          <h2 className="disp" style={{ margin: 0, fontSize: 15, fontWeight: 700 }}>Desempenho acumulado</h2>
           <div style={{ fontSize: 12, color: T.sub, marginTop: 2 }}>Cada disciplina: questões resolvidas, acerto e tempo estudado.</div>
         </div>
         <div style={{ overflowX: "auto" }}>
@@ -106,7 +107,7 @@ export function Acumulado({ registros, trilha }) {
                   </td>
                   <td className="num" style={{ padding: "10px", textAlign: "right", fontSize: 13 }}>{x.acertos}</td>
                   <td className="num" style={{ padding: "10px", textAlign: "right", fontSize: 13 }}>{x.q}</td>
-                  <td className="num" style={{ padding: "10px", textAlign: "right", fontSize: 13, color: x.acc == null ? T.sub : x.acc >= 70 ? T.green : x.acc >= 55 ? T.gold : T.red, fontWeight: 700 }}>
+                  <td className="num" style={{ padding: "10px", textAlign: "right", fontSize: 13, color: corDeAcerto(T, x.acc), fontWeight: 700 }}>
                     {x.acc == null ? "—" : `${x.acc}%`}
                   </td>
                   <td className="num" style={{ padding: "10px", textAlign: "right", fontSize: 13, color: T.sub }}>{fmtH(x.minutos)}</td>
@@ -117,7 +118,7 @@ export function Acumulado({ registros, trilha }) {
                 <td className="disp" style={{ padding: "11px 10px", fontWeight: 800, fontSize: 13.5 }}>TOTAL</td>
                 <td className="num" style={{ padding: "11px 10px", textAlign: "right", fontWeight: 800 }}>{total.acertos}</td>
                 <td className="num" style={{ padding: "11px 10px", textAlign: "right", fontWeight: 800 }}>{total.q}</td>
-                <td className="num" style={{ padding: "11px 10px", textAlign: "right", fontWeight: 800, color: total.acc >= 70 ? T.green : T.gold }}>{total.acc}%</td>
+                <td className="num" style={{ padding: "11px 10px", textAlign: "right", fontWeight: 800, color: corDeAcerto(T, total.acc) }}>{total.acc}%</td>
                 <td className="num" style={{ padding: "11px 10px", textAlign: "right", fontWeight: 800, color: T.sub }}>{fmtH(total.minutos)}</td>
                 <td className="num" style={{ padding: "11px 10px", textAlign: "right", fontWeight: 800, color: T.sub }}>{fmtH(total.tempoMedio)}</td>
               </tr>
@@ -128,13 +129,13 @@ export function Acumulado({ registros, trilha }) {
 
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(300px,1fr))", gap: 16 }}>
         <Card>
-          <div className="disp" style={{ fontSize: 15, fontWeight: 700, marginBottom: 12 }}>Desempenho por meta</div>
+          <h2 className="disp" style={{ margin: 0, fontSize: 15, fontWeight: 700, marginBottom: 12 }}>Desempenho por meta</h2>
           {porMeta.every((x) => x.acc == null) ? <Empty txt="Aparece conforme as semanas passam." /> : (
             <ResponsiveContainer width="100%" height={220}>
-              <LineChart data={porMeta} margin={{ top: 6, right: 10, left: -18, bottom: 0 }}>
+              <LineChart data={porMeta} margin={{ top: 6, right: 10, left: 0, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke={T.line} />
                 <XAxis dataKey="label" tick={{ fill: T.sub, fontSize: 11 }} axisLine={{ stroke: T.line }} tickLine={false} />
-                <YAxis domain={[0, 100]} tick={{ fill: T.sub, fontSize: 10 }} axisLine={false} tickLine={false} width={32} />
+                <YAxis domain={[0, 100]} tick={{ fill: T.sub, fontSize: 10 }} axisLine={false} tickLine={false} width={36} />
                 <Tooltip contentStyle={{ background: T.bg2, border: `1px solid ${T.line}`, borderRadius: 8 }} formatter={(v) => [v == null ? "—" : `${v}%`, "acerto"]} />
                 <Line type="monotone" dataKey="acc" stroke={T.gold} strokeWidth={2.5} dot={{ r: 4, fill: T.gold }} connectNulls />
               </LineChart>
@@ -144,11 +145,12 @@ export function Acumulado({ registros, trilha }) {
 
         <Card>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 8, marginBottom: 12 }}>
-            <div className="disp" style={{ fontSize: 15, fontWeight: 700 }}>Desempenho por disciplina</div>
+            <h2 className="disp" style={{ margin: 0, fontSize: 15, fontWeight: 700 }}>Desempenho por disciplina</h2>
             <div style={{ display: "flex", background: T.bg, borderRadius: 8, padding: 3, border: `1px solid ${T.line}` }}>
               {[["tempo", "Tempo"], ["questoes", "Questões"]].map(([k, lb]) => (
-                <button key={k} onClick={() => setVistaTreemap(k)}
-                  style={{ border: "none", background: vistaTreemap === k ? T.gold : "transparent", color: vistaTreemap === k ? "#0A1622" : T.sub, fontWeight: 600, fontSize: 12, padding: "6px 11px", borderRadius: 6 }}>
+                // T1: minHeight explícito — o padding sozinho dava ≈28px.
+                <button key={k} type="button" onClick={() => setVistaTreemap(k)}
+                  style={{ border: "none", background: vistaTreemap === k ? T.gold : "transparent", color: vistaTreemap === k ? "#0A1622" : T.sub, fontWeight: 600, fontSize: 12, padding: "6px 11px", minHeight: 32, borderRadius: 6 }}>
                   {lb}
                 </button>
               ))}

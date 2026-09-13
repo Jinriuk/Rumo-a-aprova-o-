@@ -83,7 +83,7 @@ export function Conquistas({ nome, xp, m, metas, simulados }) {
         <div style={{ fontSize: 13, color: T.sub, marginTop: 4 }}>
           nível {p.nivel} de {PATENTES.length} · {p.faixa === "oficial" ? "Oficialato" : "Praças"}
         </div>
-        {p.lema && <div style={{ fontSize: 12.5, color: T.gold, marginTop: 6, fontStyle: "italic", maxWidth: 360, marginInline: "auto" }}>"{p.lema}"</div>}
+        {p.lema && <div style={{ fontSize: 12.5, color: T.gold, marginTop: 6, fontStyle: "italic", maxWidth: 360, marginInline: "auto" }}>&quot;{p.lema}&quot;</div>}
 
         {p.proxXp != null && (
           <div style={{ maxWidth: 420, margin: "14px auto 0" }}>
@@ -136,8 +136,10 @@ export function Conquistas({ nome, xp, m, metas, simulados }) {
           })}
         </div>
         <div style={{ padding: "11px 18px", borderTop: `1px solid ${T.line}` }}>
-          <button onClick={() => setVerCarreira((v) => !v)}
-            style={{ border: "none", background: "transparent", color: T.gold, fontSize: 13, fontWeight: 700, padding: 0, cursor: "pointer" }}>
+          {/* T1: mesmo padrão de componentes.jsx:318 — padding e minHeight
+              no próprio botão, não só no <div> pai. */}
+          <button type="button" onClick={() => setVerCarreira((v) => !v)}
+            style={{ border: "none", background: "transparent", color: T.gold, fontSize: 13, fontWeight: 700, padding: "9px 4px", minHeight: 32, cursor: "pointer" }}>
             {verCarreira ? `▴ Mostrar só minha posição` : `▾ Ver carreira completa (${PATENTES.length} patentes)`}
           </button>
         </div>
@@ -194,13 +196,14 @@ export function Conquistas({ nome, xp, m, metas, simulados }) {
             </div>
             {(restantes > 0 || expandido) && (
               <div style={{ padding: "11px 18px", borderTop: `1px solid ${T.line}` }}>
-                <button
+                {/* T1: idem — padding e minHeight no botão. */}
+                <button type="button"
                   onClick={() => setGruposExpandidos((prev) => {
                     const next = new Set(prev);
                     if (next.has(g)) next.delete(g); else next.add(g);
                     return next;
                   })}
-                  style={{ border: "none", background: "transparent", color: T.gold, fontSize: 13, fontWeight: 700, padding: 0, cursor: "pointer" }}>
+                  style={{ border: "none", background: "transparent", color: T.gold, fontSize: 13, fontWeight: 700, padding: "9px 4px", minHeight: 32, cursor: "pointer" }}>
                   {expandido ? "▴ Ver menos" : `▾ Ver mais (${restantes} ${restantes === 1 ? "conquista" : "conquistas"})`}
                 </button>
               </div>

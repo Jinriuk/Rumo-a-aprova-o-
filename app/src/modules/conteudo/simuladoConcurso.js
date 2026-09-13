@@ -9,45 +9,46 @@
    O simulado é insumo para nível (15.3) e missão (15.4).
    ============================================================ */
 
-import { materiasObjetivas, materiaRedacao } from "./estruturaProva.js";
+import { materiaRedacao } from "./estruturaProva.js";
 import { ELIMINACAO, REDACAO, STATUS_DADO } from "./pedagogia.js";
+import { avaliarAcertos, LEGADO_PADRAO } from "./notaSimulado.js";
 
 // Proxy conservador de "segurança" para o piso RELATIVO (mediana).
 // NÃO é a regra oficial — só heurística de risco (doc §6.3).
 export const PROXY_MEDIANA_PCT = 60;
 
-const num = (v) => (Number.isFinite(+v) ? +v : 0);
+// (o capping e a coerção numérica vivem no motor único, notaSimulado.js)
 
 /* Valida os acertos contra o máximo de cada matéria. Devolve os
    acertos "capados" no máximo e a lista de violações (informou mais
-   que o total de questões da matéria). */
+   que o total de questões da matéria).
+
+   Onda 2 / I6: delega ao motor único (notaSimulado.js). O que mudou:
+   a chave legada 'soc' agora é EXPANDIDA em his/geo antes da conta —
+   antes ela era simplesmente ignorada aqui, e por isso esta tela dava
+   52 num simulado que a tela do responsável dava 64. Matéria não
+   respondida também deixou de virar 0: sai de `capados` e entra em
+   `naoRespondidas`, senão o alerta de eliminação a trata como zerada. */
 export function validarAcertos(materias = [], acertos = {}) {
-  const objetivas = materiasObjetivas(materias);
+  const r = avaliarAcertos(materias, acertos, { legado: LEGADO_PADRAO });
   const capados = {};
-  const violacoes = [];
-  for (const m of objetivas) {
-    const informado = num(acertos[m.materia_codigo]);
-    const max = num(m.num_questoes);
-    if (informado > max) violacoes.push({ materia: m.materia_codigo, informado, max });
-    capados[m.materia_codigo] = Math.max(0, Math.min(informado, max));
-  }
-  return { capados, violacoes, valido: violacoes.length === 0 };
+  for (const l of r.linhas) if (l.respondida) capados[l.materia] = l.acertos;
+  return {
+    capados,
+    violacoes: r.violacoes,
+    valido: r.violacoes.length === 0,
+    naoRespondidas: r.naoRespondidas,
+    expansoes: r.expansoes,
+  };
 }
 
 /* Nota por matéria: acertos, máximo, % e pontos. Pontos usam o
    valor por questão quando o edital dá (ex.: CN 2,5/q) ou o peso
    (ex.: EsPCEx); senão, caem no % puro. */
 export function notaPorMateria(materias = [], acertos = {}) {
-  const objetivas = materiasObjetivas(materias);
-  return objetivas.map((m) => {
-    const max = num(m.num_questoes);
-    const ac = Math.max(0, Math.min(num(acertos[m.materia_codigo]), max));
-    const pct = max > 0 ? Math.round((ac / max) * 100) : 0;
-    const valor = m.valor_questao != null ? num(m.valor_questao) : null;
-    const peso = m.peso != null ? num(m.peso) : null;
-    const pontos = valor != null ? ac * valor : peso != null ? (pct / 100) * peso * max : ac;
-    return { materia: m.materia_codigo, dia: m.dia_numero ?? null, acertos: ac, max, pct, peso, valor, pontos: Math.round(pontos * 100) / 100 };
-  });
+  // Onda 2 / I6: motor único. Cada linha agora carrega `respondida`, e
+  // `pct` é null (não 0) para matéria que o aluno não prestou.
+  return avaliarAcertos(materias, acertos, { legado: LEGADO_PADRAO }).linhas;
 }
 
 // Nota agregada por dia/bloco (quando o concurso separa por dia).
@@ -80,13 +81,25 @@ export function avaliarRedacao(redacaoRole, redacaoNota, { minimo = null } = {})
 export function avaliarEliminacao(eliminationModel, linhasNota = []) {
   const modelo = ELIMINACAO[eliminationModel];
   if (!modelo) return { tipo: "desconhecido", emRisco: [], status: STATUS_DADO.VALIDAR };
+
+  /* I5 — eliminação fabricada. O alerta só olha matéria que o aluno
+     REALMENTE prestou. Antes, matéria ausente do JSON vinha como
+     pct 0 e caía direto no filtro "abaixo do piso": o sistema
+     anunciava eliminação em Biologia, História e Geografia para quem
+     nunca fez essas provas, e disparava em 100% dos simulados.
+
+     Cuidado de JS que o filtro precisa: com pct null, `null < 50` é
+     TRUE (null coage para 0 na comparação relacional). Filtrar por
+     `respondida` é obrigatório — trocar 0 por null não bastaria. */
+  const prestadas = linhasNota.filter((l) => l.respondida && l.pct != null);
+
   if (modelo.tipo === "absoluto") {
     const pisoPct = eliminationModel === "absoluto_50" ? 50 : 50; // 5,0/10 = 50%
-    const emRisco = linhasNota.filter((l) => l.pct < pisoPct).map((l) => ({ materia: l.materia, pct: l.pct, alvo: pisoPct }));
-    return { tipo: "absoluto", pisoPct, emRisco, status: STATUS_DADO.OFICIAL };
+    const emRisco = prestadas.filter((l) => l.pct < pisoPct).map((l) => ({ materia: l.materia, pct: l.pct, alvo: pisoPct }));
+    return { tipo: "absoluto", pisoPct, emRisco, naoPrestadas: linhasNota.filter((l) => !l.respondida).map((l) => l.materia), status: STATUS_DADO.OFICIAL };
   }
   // mediana: sem corte absoluto oficial
-  const emRisco = linhasNota.filter((l) => l.pct < PROXY_MEDIANA_PCT).map((l) => ({ materia: l.materia, pct: l.pct, proxy: PROXY_MEDIANA_PCT }));
+  const emRisco = prestadas.filter((l) => l.pct < PROXY_MEDIANA_PCT).map((l) => ({ materia: l.materia, pct: l.pct, proxy: PROXY_MEDIANA_PCT }));
   return {
     tipo: "relativo",
     aviso: "Piso relativo à mediana da turma: não há corte absoluto oficial. O alerta usa um proxy conservador.",
@@ -98,23 +111,28 @@ export function avaliarEliminacao(eliminationModel, linhasNota = []) {
 
 // Objetivo curto e acionável a partir do resultado (doc §6 / 15.2).
 export function objetivoSugerido(linhasNota = [], eliminationModel) {
-  if (!linhasNota.length) return "Registrar um simulado completo para o diagnóstico começar.";
-  const pior = [...linhasNota].sort((a, b) => a.pct - b.pct)[0];
+  // I5: só matéria prestada vira objetivo (ver avaliarEliminacao).
+  const prestadas = linhasNota.filter((l) => l.respondida && l.pct != null);
+  if (!prestadas.length) return "Registrar um simulado completo para o diagnóstico começar.";
+  const pior = [...prestadas].sort((a, b) => a.pct - b.pct)[0];
   const relativo = ELIMINACAO[eliminationModel]?.tipo === "relativo";
   if (pior.pct < 70) {
     return relativo
       ? `Subir ${pior.materia.toUpperCase()} (hoje ${pior.pct}%) para ficar acima do campo — é a sua parte mais frágil.`
       : `Subir ${pior.materia.toUpperCase()} de ${pior.pct}% para ≥70% no próximo simulado.`;
   }
-  const quase = linhasNota.find((l) => l.pct >= 85 && l.pct < 100);
+  const quase = prestadas.find((l) => l.pct >= 85 && l.pct < 100);
   if (quase) return `Gabaritar ${quase.materia.toUpperCase()} — você já está em ${quase.pct}%.`;
   return "Manter o nível e melhorar a nota geral em relação a este simulado.";
 }
 
 // Compara a nota geral (% objetivas) com a meta da escola/aluno.
 export function compararComMeta(linhasNota = [], metaPct = null) {
-  const totalMax = linhasNota.reduce((s, l) => s + l.max, 0);
-  const totalAc = linhasNota.reduce((s, l) => s + l.acertos, 0);
+  // I5: o denominador é o que foi PRESTADO. Dividir pelo total da prova
+  // quando o aluno não fez 3 matérias transformaria ausência em erro.
+  const prestadas = linhasNota.filter((l) => l.respondida !== false);
+  const totalMax = prestadas.reduce((s, l) => s + l.max, 0);
+  const totalAc = prestadas.reduce((s, l) => s + l.acertos, 0);
   const geralPct = totalMax > 0 ? Math.round((totalAc / totalMax) * 100) : 0;
   if (metaPct == null) return { geralPct, meta: null, atingiu: null, diferenca: null };
   return { geralPct, meta: metaPct, atingiu: geralPct >= metaPct, diferenca: geralPct - metaPct };
@@ -135,7 +153,11 @@ export function alertasDeRisco({ eliminacao, redacao }) {
    no formato que niveisAluno.classificarPorDesempenho consome. */
 export function insumoParaNivel(linhasNota = []) {
   const out = {};
-  for (const l of linhasNota) out[l.materia] = { acertoPct: l.pct, questoes: l.max };
+  // I5: matéria não prestada não vira "0% de acerto" no cálculo de nível.
+  for (const l of linhasNota) {
+    if (l.respondida === false || l.pct == null) continue;
+    out[l.materia] = { acertoPct: l.pct, questoes: l.max };
+  }
   return out;
 }
 

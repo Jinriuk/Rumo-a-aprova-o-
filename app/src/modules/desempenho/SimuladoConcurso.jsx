@@ -189,7 +189,7 @@ export function SimuladoConcurso({ aluno, simulados, podeEditar, semanaAtiva, co
       {/* REGISTRO no formato do concurso */}
       {podeEditar && objetivas.length > 0 && (
         <Card>
-          <div className="disp" style={{ fontSize: 15, fontWeight: 700, marginBottom: 4 }}>Registrar simulado — formato {concurso?.codigo?.toUpperCase()}</div>
+          <h2 className="disp" style={{ margin: 0, fontSize: 15, fontWeight: 700, marginBottom: 4 }}>Registrar simulado — formato {concurso?.codigo?.toUpperCase()}</h2>
           <div style={{ fontSize: 11.5, color: T.sub, marginBottom: 12 }}>
             Acertos por matéria, com o máximo de cada prova. {temRedacao ? "Inclua a nota da redação." : ""}
           </div>
@@ -230,7 +230,7 @@ export function SimuladoConcurso({ aluno, simulados, podeEditar, semanaAtiva, co
               ⚠ {estouros.map((m) => `${nomeMateria(m.materia_codigo)} tem no máximo ${m.num_questoes} questões`).join(" · ")}
             </div>
           )}
-          <button onClick={adicionar} disabled={estouros.length > 0 || ocupado}
+          <button type="button" onClick={adicionar} disabled={estouros.length > 0 || ocupado}
             style={{ background: estouros.length || ocupado ? T.line : T.gold, color: estouros.length || ocupado ? T.sub : "#0A1622", border: "none", borderRadius: 8, padding: "13px 20px", minHeight: 48, fontWeight: 700, fontSize: 15, width: "100%" }}>
             {ocupado ? "Salvando…" : "+ Salvar simulado"}
           </button>
@@ -240,7 +240,7 @@ export function SimuladoConcurso({ aluno, simulados, podeEditar, semanaAtiva, co
 
       {/* HISTÓRICO */}
       <Card>
-        <div className="disp" style={{ fontSize: 15, fontWeight: 700, marginBottom: 10 }}>Histórico</div>
+        <h2 className="disp" style={{ margin: 0, fontSize: 15, fontWeight: 700, marginBottom: 10 }}>Histórico</h2>
         {meus.length === 0 ? <Empty txt="Nenhum simulado registrado ainda. Registre o primeiro acima." /> : (
           <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
             {[...meus].reverse().map((s) => {
@@ -265,7 +265,7 @@ export function SimuladoConcurso({ aluno, simulados, podeEditar, semanaAtiva, co
                       {emRisco > 0 ? <StatusBadge tom="risco">{emRisco} risco{emRisco > 1 ? "s" : ""}</StatusBadge> : <StatusBadge tom="ok">sem risco</StatusBadge>}
                     </div>
                   </div>
-                  {podeEditar && <button onClick={() => apagar(s.id)} disabled={ocupado} aria-label="Apagar simulado" style={{ background: "transparent", border: "none", color: T.sub, fontSize: 22, width: 44, height: 44, flexShrink: 0, lineHeight: 1 }}>×</button>}
+                  {podeEditar && <button type="button" onClick={() => apagar(s.id)} disabled={ocupado} aria-label="Apagar simulado" style={{ background: "transparent", border: "none", color: T.sub, fontSize: 22, width: 44, height: 44, flexShrink: 0, lineHeight: 1 }}>×</button>}
                 </div>
               );
             })}

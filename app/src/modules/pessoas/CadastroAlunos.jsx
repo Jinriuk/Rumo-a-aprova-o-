@@ -3,6 +3,7 @@
    em lote (um nome por linha ou via CSV). O consentimento entra no mesmo
    passo: é termo no cadastro, não burocracia separada. */
 import React, { useId, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { Card, Botao, BotaoMini, Erro, useInputStyle } from "../../shared/ui/componentes.jsx";
 import { useTema } from "../../shared/branding/BrandingContext.jsx";
 import { limparNome, nomeValido } from "../../shared/validacao.js";
@@ -309,8 +310,8 @@ export function NovosAlunos({ turmas, trilhas = [], concursos = [], aoMudar }) {
   return (
     <div>
       <div style={{ display: "flex", gap: 0, marginBottom: 14, borderBottom: `1px solid ${T.line}` }}>
-        <button style={tabS(modo === "texto")} onClick={() => { setModo("texto"); setFeito(null); }}>Nomes em texto</button>
-        <button style={tabS(modo === "csv")} onClick={() => { setModo("csv"); setFeito(null); }}>Importar CSV</button>
+        <button type="button" style={tabS(modo === "texto")} onClick={() => { setModo("texto"); setFeito(null); }}>Nomes em texto</button>
+        <button type="button" style={tabS(modo === "csv")} onClick={() => { setModo("csv"); setFeito(null); }}>Importar CSV</button>
       </div>
 
       {/* Configurações comuns: turma, concurso */}
@@ -483,7 +484,7 @@ export function PainelCadastroAlunos({ turmas, trilhas = [], concursos = [], aoM
 
   return (
     <Card>
-      <button onClick={() => setAberto((v) => !v)} aria-expanded={aberto}
+      <button type="button" onClick={() => setAberto((v) => !v)} aria-expanded={aberto}
         style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, width: "100%", border: "none", background: "transparent", textAlign: "left", padding: 0, color: T.ink, cursor: "pointer", minHeight: 40 }}>
         <span>
           <span className="disp" style={{ fontSize: 15, fontWeight: 700 }}>Cadastrar alunos</span>
@@ -498,8 +499,8 @@ export function PainelCadastroAlunos({ turmas, trilhas = [], concursos = [], aoM
       {aberto && (
         <div style={{ marginTop: 14 }}>
           <div style={{ display: "flex", gap: 0, marginBottom: 14, borderBottom: `1px solid ${T.line}` }}>
-            <button style={tabS(aba === "individual")} onClick={() => setAba("individual")}>Individual</button>
-            <button style={tabS(aba === "lote")} onClick={() => setAba("lote")}>Em lote</button>
+            <button type="button" style={tabS(aba === "individual")} onClick={() => setAba("individual")}>Individual</button>
+            <button type="button" style={tabS(aba === "lote")} onClick={() => setAba("lote")}>Em lote</button>
           </div>
           {aba === "individual"
             ? <NovoAluno turmas={turmas} trilhas={trilhas} concursos={concursos} aoMudar={aoMudar} />
@@ -540,12 +541,16 @@ export function CredencialGerada({ credencial, aoFechar }) {
   // z-index 70: acima do modal de VinculosResponsavel (60) — resetar/
   // reativar credencial de um responsável pode disparar isto com o
   // outro modal ainda aberto por trás; este precisa ficar visível.
-  return (
+  // B2: portal em document.body. `.fade` (tema.js) anima transform e
+  // vira containing block para position:fixed — sem o portal este
+  // modal resolve contra o wrapper da aba (altura do documento) e
+  // nasce fora de alcance na lista cheia. Ver componentes.jsx/Modal.
+  return createPortal(
     <div style={{ position: "fixed", inset: 0, background: "#000a", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 70, padding: 18 }}>
       <Card style={{ maxWidth: 420, width: "100%", textAlign: "center" }}>
-        <div className="disp" style={{ fontSize: 17, fontWeight: 700, marginBottom: 6 }}>
+        <h2 className="disp" style={{ margin: 0, fontSize: 17, fontWeight: 700, marginBottom: 6 }}>
           {TITULOS_CREDENCIAL[credencial.estado] ?? (credencial.papel === "aluno" ? "Credencial de aluno" : "Credencial de responsável")}
-        </div>
+        </h2>
         <div style={{ fontSize: 13, color: T.sub, marginBottom: 14 }}>{credencial.nome}</div>
 
         {temCodigo && (
@@ -576,7 +581,8 @@ export function CredencialGerada({ credencial, aoFechar }) {
           <Botao onClick={aoFechar}>Entreguei, fechar</Botao>
         </div>
       </Card>
-    </div>
+    </div>,
+    document.body,
   );
 }
 
@@ -597,7 +603,7 @@ export function NovaTurma({ aoMudar }) {
 
   return (
     <Card>
-      <div className="disp" style={{ fontSize: 15, fontWeight: 700, marginBottom: 10 }}>Nova turma</div>
+      <h2 className="disp" style={{ margin: 0, fontSize: 15, fontWeight: 700, marginBottom: 10 }}>Nova turma</h2>
       <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "flex-end" }}>
         <div style={{ flex: 1, minWidth: 200 }}>
           <label htmlFor={`${uid}-turma`} style={lbl}>Nome da turma</label>

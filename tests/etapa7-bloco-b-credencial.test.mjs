@@ -126,8 +126,26 @@ describe("Edge Function trocar-senha — contrato (inspeção de fonte)", () => 
   let src;
   before(() => { src = ler("supabase/functions/trocar-senha/index.ts"); });
 
-  it("existe e é auto-contida (sem import de _shared/)", () => {
-    assert.ok(!src.includes('from "../_shared'), "deveria ser auto-contida, como as outras funções");
+  // INVERTIDO na segunda passada da Onda 1. Este teste exigia o
+  // CONTRÁRIO — que a função fosse auto-contida — e com isso congelava
+  // em regra um contorno operacional: o MCP publicava um arquivo só e
+  // não resolvia import relativo, então cada função copiava o CORS.
+  // O contorno virou defeito: a correção de B1 em _shared/cors.ts (os
+  // domínios da marca) não alcançava nenhuma das quatro funções com
+  // cópia, e esta trava garantia que continuasse assim.
+  // A premissa caiu, e foi MEDIDA: gerar-meta, lgpd-titular e
+  // virar-semana estão publicadas nos dois ambientes pelo MCP com os
+  // arquivos _shared/ no payload, e o import relativo resolve.
+  it("lê o CORS de _shared/cors.ts — sem cópia própria da allowlist", () => {
+    assert.match(
+      src,
+      /from\s+"\.\.\/_shared\/cors\.ts"/,
+      "cópia inline da allowlist volta a deixar a função fora da correção de B1",
+    );
+    assert.ok(
+      !/DEFAULT_ORIGINS\s*=\s*\[/.test(src),
+      "DEFAULT_ORIGINS redeclarado aqui: é a cópia inline de volta",
+    );
   });
 
   it("NÃO exige senha_atual — posse da sessão já autoriza (mesmo padrão do link de recovery)", () => {

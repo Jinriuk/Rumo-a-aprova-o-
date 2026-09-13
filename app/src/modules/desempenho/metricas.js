@@ -5,6 +5,30 @@
    `correct === ""` (registro sem acerto lançado). */
 import { todayISO, notaProjetadaDia1 } from "../../shared/regras/regras.js";
 
+/* ============================================================
+   T9 — semáforo de acerto, FONTE ÚNICA.
+   ------------------------------------------------------------
+   A escala 70/55 estava copiada em 5 telas, e uma das cópias
+   (a linha TOTAL do Acumulado) tinha perdido o ramo vermelho:
+   `acc >= 70 ? verde : dourado`. O resultado era o semáforo se
+   contradizendo na MESMA tabela — Química com 53,8% em vermelho e
+   o TOTAL com 53,1% em dourado, o número menor recebendo a cor
+   melhor. Com uma cópia só, isso não tem como divergir de novo.
+
+   Escalas com OUTRA semântica (nota /100, % de meta da semana)
+   continuam separadas de propósito: unificá-las seria esconder
+   que são medidas diferentes.
+   ============================================================ */
+export const ACERTO_BOM = 70;
+export const ACERTO_ATENCAO = 55;
+
+export function corDeAcerto(T, acc) {
+  if (acc == null) return T.sub;
+  if (acc >= ACERTO_BOM) return T.green;
+  if (acc >= ACERTO_ATENCAO) return T.gold;
+  return T.red;
+}
+
 export function calcularMetricas({ registros, simulados, semanas, semanaAtiva, disciplinas, metaQuestoes }) {
   const t = todayISO();
   const logs = registros.map((r) => ({ ...r, data: String(r.data) }));

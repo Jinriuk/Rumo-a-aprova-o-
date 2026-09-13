@@ -1,6 +1,7 @@
 /* Componentes do sistema de design — portados da versão atual.
    Recebem o tema via contexto de branding (useTema). */
 import React from "react";
+import { createPortal } from "react-dom";
 import { useTema } from "../branding/BrandingContext.jsx";
 
 export function Card({ children, style, className = "", onClick }) {
@@ -79,12 +80,15 @@ export function Empty({ txt }) {
   return <div style={{ padding: "24px 0", textAlign: "center", color: T.sub, fontSize: 13 }}>{txt}</div>;
 }
 
-export function Botao({ children, onClick, disabled, secundario, perigo, style, type = "button" }) {
+export function Botao({ children, onClick, disabled, secundario, perigo, style, type = "button", ...resto }) {
   const T = useTema();
   const fundo = disabled ? T.line : perigo ? T.red : secundario ? T.card : T.gold;
   const cor = disabled ? T.sub : secundario ? T.ink : "#0A1622";
+  // T13: `...resto` deixa passar aria-describedby/aria-disabled etc. sem
+  // precisar de uma prop nova por atributo — usado por Registrar.jsx para
+  // ligar "Confirmar estudo" à explicação de por que está desabilitado.
   return (
-    <button className="ui-button" type={type} onClick={onClick} disabled={disabled}
+    <button className="ui-button" type={type} onClick={onClick} disabled={disabled} {...resto}
       style={{ background: fundo, color: cor, border: secundario ? `1px solid ${T.line}` : "none", borderRadius: 8, padding: "13px 20px", minHeight: 48, fontWeight: 700, fontSize: 15, ...style }}>
       {children}
     </button>
@@ -122,7 +126,7 @@ export function ErroComRetry({ children, aoTentar, rotulo = "Tentar de novo" }) 
         <span style={{ lineHeight: 1.5 }}>{String(children)}</span>
       </div>
       {aoTentar && (
-        <button onClick={aoTentar}
+        <button type="button" onClick={aoTentar}
           style={{ border: `1px solid ${T.gold}`, background: `${T.gold}14`, color: T.gold, borderRadius: 8, padding: "8px 16px", minHeight: 40, fontWeight: 700, fontSize: 13, cursor: "pointer" }}>
           ↻ {rotulo}
         </button>
@@ -293,7 +297,10 @@ export function SectionCard({ titulo, sub, acao, children, style, semPadding }) 
       {(titulo || acao) && (
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, padding: "13px 16px", borderBottom: `1px solid ${T.line}`, flexWrap: "wrap" }}>
           <div style={{ minWidth: 0 }}>
-            {titulo && <h3 className="disp" style={{ margin: 0, fontSize: 15.5, fontWeight: 700, lineHeight: 1.2, color: T.ink }}>{titulo}</h3>}
+            {/* T3/T24: SectionCard é o título de seção mais usado do app —
+                era h3 direto sob o h1 do Cabecalho, sem h2 nenhum entre os
+                dois. Vira h2: um nível por vez. */}
+            {titulo && <h2 className="disp" style={{ margin: 0, fontSize: 15.5, fontWeight: 700, lineHeight: 1.2, color: T.ink }}>{titulo}</h2>}
             {sub && <div style={{ fontSize: 12, color: T.sub, marginTop: 2 }}>{sub}</div>}
           </div>
           {acao && <div style={{ flexShrink: 0 }}>{acao}</div>}
@@ -312,7 +319,7 @@ export function Tabs({ abas, ativo, aoTrocar }) {
       {abas.map(([k, lb, badge]) => {
         const on = ativo === k;
         return (
-          <button key={k} className="tab" onClick={() => aoTrocar(k)}
+          <button type="button" key={k} className="tab" onClick={() => aoTrocar(k)}
             style={{ border: "none", background: "transparent", color: on ? T.gold : T.sub, fontWeight: 600, fontSize: 13.5, padding: "12px 13px", minHeight: 46, whiteSpace: "nowrap", borderBottom: on ? `2px solid ${T.gold}` : "2px solid transparent", display: "inline-flex", alignItems: "center", gap: 6 }}>
             {lb}
             {badge != null && badge !== 0 && (
@@ -400,19 +407,35 @@ export function StatusBadge({ tom = "neutro", children }) {
 export function MaisAcoes({ acoes }) {
   const T = useTema();
   const [aberto, setAberto] = React.useState(false);
+  // T48: o painel abria sempre para BAIXO, sem checar se cabia. Com 8
+  // ações (~320px) a última — "Excluir dados (LGPD)", a mais destrutiva
+  // — saía da viewport quando o gatilho estava perto do rodapé da tela.
+  const [abrirParaCima, setAbrirParaCima] = React.useState(false);
   // AV2 MEL-P3-003: o menu fechava de forma instável. Fecha só por clique
   // fora (camada fixa) ou Esc — nunca por hover. Esc devolve o foco ao gatilho.
   const gatilhoRef = React.useRef(null);
+  const painelRef = React.useRef(null);
   React.useEffect(() => {
     if (!aberto) return;
     const onKey = (e) => { if (e.key === "Escape") { setAberto(false); gatilhoRef.current?.focus(); } };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [aberto]);
+  // Mede DEPOIS de montado — a altura real depende de quantas ações e de
+  // quanto texto quebra linha, não dá pra estimar sem renderizar. Decide
+  // abrir pra cima só quando falta espaço embaixo E sobra espaço em cima
+  // (nunca os dois virados por engano numa tela minúscula).
+  React.useLayoutEffect(() => {
+    if (!aberto || !painelRef.current || !gatilhoRef.current) return;
+    const gRect = gatilhoRef.current.getBoundingClientRect();
+    const alturaPainel = painelRef.current.offsetHeight;
+    const espacoAbaixo = window.innerHeight - gRect.bottom;
+    setAbrirParaCima(alturaPainel > espacoAbaixo && gRect.top > alturaPainel);
+  }, [aberto, acoes.length]);
   if (!acoes?.length) return null;
   return (
     <div style={{ position: "relative" }}>
-      <button ref={gatilhoRef} onClick={() => setAberto((v) => !v)}
+      <button type="button" ref={gatilhoRef} onClick={() => setAberto((v) => !v)}
         aria-haspopup="menu" aria-expanded={aberto} aria-label="Mais ações"
         style={{ border: `1px solid ${T.line}`, background: "transparent", color: T.sub, borderRadius: 7, fontSize: 12, fontWeight: 600, padding: "6px 10px", minHeight: 32 }}>
         ⋯ Mais
@@ -420,9 +443,18 @@ export function MaisAcoes({ acoes }) {
       {aberto && (
         <>
           <div onClick={() => setAberto(false)} style={{ position: "fixed", inset: 0, zIndex: 30 }} />
-          <div role="menu" style={{ position: "absolute", right: 0, top: "calc(100% + 4px)", zIndex: 31, background: T.bg2, border: `1px solid ${T.line}`, borderRadius: 10, padding: 4, minWidth: 180, boxShadow: "0 8px 24px #0007" }}>
+          <div ref={painelRef} role="menu"
+            style={{
+              position: "absolute", right: 0, zIndex: 31, background: T.bg2, border: `1px solid ${T.line}`, borderRadius: 10, padding: 4, minWidth: 180,
+              // rede de segurança: mesmo com o flip, uma viewport baixíssima
+              // (celular deitado) ainda cabe — rola dentro do painel, nunca
+              // estoura por cima ou por baixo da tela.
+              maxHeight: "min(360px, calc(100vh - 24px))", overflowY: "auto",
+              boxShadow: "0 8px 24px #0007",
+              ...(abrirParaCima ? { bottom: "calc(100% + 4px)" } : { top: "calc(100% + 4px)" }),
+            }}>
             {acoes.map((a, i) => (
-              <button key={i} role="menuitem" onClick={() => { setAberto(false); a.aoClicar(); }} disabled={a.desabilitado}
+              <button type="button" key={i} role="menuitem" onClick={() => { setAberto(false); a.aoClicar(); }} disabled={a.desabilitado}
                 style={{ display: "block", width: "100%", textAlign: "left", border: "none", background: "transparent", color: a.perigo ? T.red : T.ink, borderRadius: 7, fontSize: 13, padding: "9px 11px", minHeight: 38, opacity: a.desabilitado ? 0.4 : 1 }}>
                 {a.rotulo}
               </button>
@@ -471,7 +503,7 @@ export function BotaoMini({ children, onClick, destaque, perigo, disabled }) {
   const T = useTema();
   const cor = perigo ? T.red : destaque ? T.gold : T.sub;
   return (
-    <button onClick={onClick} disabled={disabled}
+    <button type="button" onClick={onClick} disabled={disabled}
       style={{ border: `1px solid ${destaque ? T.gold : T.line}`, background: destaque ? `${T.gold}14` : "transparent", color: cor, borderRadius: 7, fontSize: 12, fontWeight: 600, padding: "6px 10px", minHeight: 32, opacity: disabled ? 0.5 : 1, whiteSpace: "nowrap" }}>
       {children}
     </button>
@@ -484,13 +516,55 @@ export function BotaoMini({ children, onClick, destaque, perigo, disabled }) {
    identidade visual e davam má UX no mobile. role=dialog +
    aria-modal, fecha com Esc/clique-fora, trava o scroll do corpo,
    devolve o foco a quem abriu e respeita prefers-reduced-motion.
+
+   B2 (catálogo de defeitos): vai por PORTAL em document.body.
+   O CSS daqui sempre esteve certo (fixed + inset:0 + maxHeight
+   100vh); o que quebrava era o ANCESTRAL. `.fade` (tema.js) anima
+   `transform`, e um elemento com animação de transform vira
+   containing block para descendentes `position: fixed` — eles
+   passam a resolver contra ele em vez da viewport. As três áreas
+   envolvem o conteúdo de aba em <div className="fade">, então na
+   lista com 60 alunos o modal centralizava dentro de 6.010px e
+   nascia em top ~2.933px, fora de alcance (com a lista filtrada em
+   1 aluno o wrapper encolhia e o modal aparecia — mesmo botão,
+   mesmo modal, comportamento diferente).
+
+   O portal é a correção ESTRUTURAL: renderizando em document.body
+   nenhum CSS de ancestral alcança o modal, hoje ou depois. Corrigir
+   só o `.fade` consertaria por tabela e voltaria a quebrar no dia
+   que alguém puser outro transform em qualquer ancestral.
    ============================================================ */
+// T45: seletor de focáveis do trap de Tab — mesma lista que qualquer
+// implementação de focus trap usa (não há API nativa pra "elementos
+// alcançáveis por Tab"). `[tabindex]:not([tabindex="-1"])` cobre o que os
+// seletores de tag não alcançam (ex.: o <div className="fade"> de outro
+// modal aninhado, hipoteticamente); os `:not([disabled])` evitam parar
+// num controle que está lá mas não é alcançável de verdade.
+const SELETOR_FOCAVEL = 'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
+
 export function Modal({ titulo, sub, children, aoFechar, larguraMax = 440, focoRef, rotulo }) {
   const T = useTema();
   const ref = React.useRef(null);
+  const idTitulo = React.useId();
   React.useEffect(() => {
     const ativoAntes = typeof document !== "undefined" ? document.activeElement : null;
-    const onKey = (e) => { if (e.key === "Escape") aoFechar?.(); };
+    const onKey = (e) => {
+      if (e.key === "Escape") { aoFechar?.(); return; }
+      // T45: trap de Tab. Sem isto o 3º Tab (ou Shift+Tab a partir do
+      // primeiro controle) sai do diálogo e cai na PÁGINA DE TRÁS — ela
+      // está coberta pelo overlay, mas continua no DOM (o portal só muda
+      // ONDE o modal renderiza, não remove o resto da árvore).
+      if (e.key !== "Tab" || !ref.current) return;
+      const focaveis = ref.current.querySelectorAll(SELETOR_FOCAVEL);
+      if (focaveis.length === 0) { e.preventDefault(); return; }
+      const primeiro = focaveis[0];
+      const ultimo = focaveis[focaveis.length - 1];
+      if (e.shiftKey && document.activeElement === primeiro) {
+        e.preventDefault(); ultimo.focus();
+      } else if (!e.shiftKey && document.activeElement === ultimo) {
+        e.preventDefault(); primeiro.focus();
+      }
+    };
     window.addEventListener("keydown", onKey);
     const corpo = typeof document !== "undefined" ? document.body : null;
     const overflowAntes = corpo ? corpo.style.overflow : "";
@@ -503,22 +577,33 @@ export function Modal({ titulo, sub, children, aoFechar, larguraMax = 440, focoR
       ativoAntes?.focus?.();
     };
   }, [aoFechar, focoRef]);
-  return (
+  return createPortal(
     <div
       onMouseDown={(e) => { if (e.target === e.currentTarget) aoFechar?.(); }}
       style={{ position: "fixed", inset: 0, zIndex: 80, background: "#000a", display: "flex", alignItems: "center", justifyContent: "center", padding: 18 }}>
+      {/* T45: aria-labelledby de verdade quando existe título visível (o
+          <h2> abaixo ganha o id) — melhor que aria-label string porque
+          acompanha o texto do título sem duplicar. aria-label só entra
+          como reserva quando NÃO há título (hoje nenhum dos dois
+          consumidores do repo — confirmar()/prompt() — cai nesse caso,
+          os dois sempre passam `titulo` com valor padrão; fica documentado
+          pra quem usar Modal sem título no futuro e esquecer o rótulo). */}
       <div
-        ref={ref} role="dialog" aria-modal="true" aria-label={rotulo ?? titulo} tabIndex={-1} className="fade"
+        ref={ref} role="dialog" aria-modal="true"
+        aria-labelledby={titulo ? idTitulo : undefined}
+        aria-label={titulo ? undefined : rotulo}
+        tabIndex={-1} className="fade"
         style={{ width: "100%", maxWidth: larguraMax, background: T.card, border: `1px solid ${T.line}`, borderTop: `3px solid ${T.gold}`, borderRadius: 16, boxShadow: "0 24px 64px #000b", outline: "none", maxHeight: "calc(100vh - 36px)", overflowY: "auto" }}>
         {(titulo || sub) && (
           <div style={{ padding: "16px 18px 12px" }}>
-            {titulo && <h2 className="disp" style={{ margin: 0, fontSize: 17, fontWeight: 700, color: T.ink, lineHeight: 1.25 }}>{titulo}</h2>}
+            {titulo && <h2 id={idTitulo} className="disp" style={{ margin: 0, fontSize: 17, fontWeight: 700, color: T.ink, lineHeight: 1.25 }}>{titulo}</h2>}
             {sub && <div style={{ fontSize: 13, color: T.sub, marginTop: 6, lineHeight: 1.55 }}>{sub}</div>}
           </div>
         )}
         <div style={{ padding: (titulo || sub) ? "0 18px 18px" : 18 }}>{children}</div>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }
 

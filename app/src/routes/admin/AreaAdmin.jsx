@@ -5,6 +5,7 @@
    via RPC/Edge Function com porteiro. Credencial de admin nunca no navegador.
    D1B: backoffice substitui os scripts manuais de provisionamento. */
 import React, { useEffect, useId, useMemo, useState } from "react";
+import { createPortal } from "react-dom";
 import {
   SectionCard, Erro, ErroComRetry, EmptyState, StatCard, StatusBadge,
   Botao, BotaoMini, useInputStyle, CarregandoBloco, Tabs,
@@ -50,7 +51,10 @@ export default function AreaAdmin() {
 
   return (
     <div>
-      <header style={{ borderBottom: `1px solid ${T.line}`, background: T.bg2, position: "sticky", top: 0, zIndex: 10 }}>
+      {/* I3: mesma compensação de Cabecalho.jsx — FaixaDemo cobre a
+          árvore inteira (App.jsx), este header também precisa ceder
+          espaço quando ela existe. */}
+      <header style={{ borderBottom: `1px solid ${T.line}`, background: T.bg2, position: "sticky", top: "var(--altura-faixa-demo, 0px)", zIndex: 10 }}>
         <div style={{ maxWidth: 1080, margin: "0 auto", padding: "14px 16px", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
             <div className="disp" style={{ width: 34, height: 34, borderRadius: 8, background: `linear-gradient(135deg,${T.gold},#9c7d2e)`, display: "flex", alignItems: "center", justifyContent: "center", color: "#0A1622", fontWeight: 800, fontSize: 17 }}>⚓</div>
@@ -59,7 +63,7 @@ export default function AreaAdmin() {
               <div style={{ fontSize: 11.5, color: T.sub }}>Operação interna · super_admin</div>
             </div>
           </div>
-          <button onClick={() => db.sair().catch(console.error)}
+          <button type="button" onClick={() => db.sair().catch(console.error)}
             style={{ border: `1px solid ${T.line}`, background: T.card, color: T.sub, borderRadius: 8, padding: "8px 14px", fontSize: 13, fontWeight: 600 }}>
             Sair
           </button>
@@ -105,12 +109,15 @@ export default function AreaAdmin() {
 /* ---------- Dashboard ---------- */
 function Dashboard({ dash, lista = [] }) {
   const T = useTema();
-  if (!dash) return null;
-  const semCoord = Number(dash.escolas_sem_coordenador || 0);
-  const suspensas = Number(dash.escolas_suspensas || 0);
+  // Hook antes do "if (!dash) return null" abaixo: dash chega async
+  // (useRecurso) e pode virar null→objeto entre renders sem remontar
+  // o componente — a ordem dos hooks não pode depender disso.
   // Resumo de risco/categoria derivado da LISTA (puro). Separa demo/teste/
   // real/individual e conta pendências para o painel de saúde (ADM2 t.36/38).
   const risco = useMemo(() => resumoRisco(lista), [lista]);
+  if (!dash) return null;
+  const semCoord = Number(dash.escolas_sem_coordenador || 0);
+  const suspensas = Number(dash.escolas_suspensas || 0);
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(150px,1fr))", gap: 10 }}>
@@ -240,7 +247,7 @@ function ListaEscolas({ lista, aoAbrir }) {
             const semCoord = Number(e.coordenadores) === 0;
             const sev = severidadeMaxima(avisosRisco(e, null));
             return (
-              <button key={e.escola_id} className="row" onClick={() => aoAbrir(e.escola_id)}
+              <button type="button" key={e.escola_id} className="row" onClick={() => aoAbrir(e.escola_id)}
                 style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 15px", borderBottom: i === filtrada.length - 1 ? "none" : `1px solid ${T.line}`, flexWrap: "wrap", width: "100%", textAlign: "left", border: "none", background: "transparent", color: T.ink }}>
                 <span style={{ width: 8, height: 8, borderRadius: "50%", flexShrink: 0, background: sev === "risco" ? T.red : sev === "alerta" ? T.gold : T.green }} title={sev === "ok" ? "sem pendências" : `${sev} aberto`} />
                 <div style={{ flex: 1, minWidth: 180 }}>
@@ -562,7 +569,7 @@ function AtividadeAdmin({ logs, nomePorEscola }) {
           ))}
           {lista.length > limite && (
             <div style={{ textAlign: "center", padding: 12, borderTop: `1px solid ${T.line}` }}>
-              <button onClick={() => setLimite((n) => n + POR_PAGINA)}
+              <button type="button" onClick={() => setLimite((n) => n + POR_PAGINA)}
                 style={{ border: `1px solid ${T.line}`, background: T.bg, color: T.gold, borderRadius: 8, padding: "8px 16px", fontSize: 13, fontWeight: 700, minHeight: 38 }}>
                 Ver mais · {limite} de {lista.length}
               </button>
@@ -800,7 +807,7 @@ function AcoesStatus({ escola, aoMudar }) {
     <SectionCard titulo="Ações de operação" sub="Mudanças de status são reversíveis e ficam registradas na auditoria.">
       <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
         {acoes.map((a) => (
-          <button key={a.status + a.rotulo} onClick={() => { setErro(null); setConfirma(a); }}
+          <button type="button" key={a.status + a.rotulo} onClick={() => { setErro(null); setConfirma(a); }}
             style={{ border: `1px solid ${a.perigo ? T.red + "88" : T.line}`, background: a.perigo ? `${T.red}12` : "transparent", color: a.perigo ? T.red : T.gold, borderRadius: 9, fontSize: 13, fontWeight: 700, padding: "10px 16px", minHeight: 44 }}>
             {a.rotulo}
           </button>
@@ -820,7 +827,11 @@ function AcoesStatus({ escola, aoMudar }) {
 /* ---------- Modal de confirmação ---------- */
 function ConfirmacaoModal({ titulo, corpo, perigo, ocupado, rotuloConfirmar = "Confirmar", aoConfirmar, aoCancelar }) {
   const T = useTema();
-  return (
+  // B2: portal em document.body. O backoffice também envolve o
+  // conteúdo de aba em <div className="fade">, e `.fade` anima
+  // transform — vira containing block para position:fixed. Ver
+  // componentes.jsx/Modal para o diagnóstico completo.
+  return createPortal(
     <div onClick={aoCancelar} style={{ position: "fixed", inset: 0, zIndex: 50, background: "#0A1622cc", display: "flex", alignItems: "center", justifyContent: "center", padding: 18 }}>
       <div onClick={(ev) => ev.stopPropagation()} style={{ width: "100%", maxWidth: 420, background: T.bg2, border: `1px solid ${perigo ? T.red + "66" : T.line}`, borderRadius: 14, padding: 20, boxShadow: "0 18px 50px #0009" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
@@ -831,17 +842,18 @@ function ConfirmacaoModal({ titulo, corpo, perigo, ocupado, rotuloConfirmar = "C
         <div className="disp" style={{ fontSize: 17, fontWeight: 800, color: T.ink, marginBottom: 8 }}>{titulo}</div>
         <div style={{ fontSize: 13.5, color: T.sub, lineHeight: 1.55, marginBottom: 18 }}>{corpo}</div>
         <div style={{ display: "flex", gap: 10, justifyContent: "flex-end", flexWrap: "wrap" }}>
-          <button onClick={aoCancelar} disabled={ocupado}
+          <button type="button" onClick={aoCancelar} disabled={ocupado}
             style={{ border: `1px solid ${T.line}`, background: T.card, color: T.sub, borderRadius: 8, padding: "11px 18px", minHeight: 44, fontWeight: 700, fontSize: 14, opacity: ocupado ? 0.5 : 1 }}>
             Cancelar
           </button>
-          <button onClick={aoConfirmar} disabled={ocupado}
+          <button type="button" onClick={aoConfirmar} disabled={ocupado}
             style={{ border: "none", background: ocupado ? T.line : (perigo ? T.red : T.gold), color: ocupado ? T.sub : "#0A1622", borderRadius: 8, padding: "11px 18px", minHeight: 44, fontWeight: 800, fontSize: 14 }}>
             {ocupado ? "Aplicando…" : rotuloConfirmar}
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }
 
@@ -931,7 +943,7 @@ function ChecklistGoLive({ d }) {
         <div style={{ fontSize: 11.5, color: T.sub, padding: "10px 15px", borderTop: `1px solid ${T.line}`, lineHeight: 1.5, background: T.bg2 }}>
           ◌ itens <b>manuais</b> (backup, smoke, SMTP, termo) são confirmados pelo operador fora do sistema —
           ver <span style={{ color: T.gold }}>docs/operacao/checklist-go-live-escola.md</span>. Eles não fecham
-          automaticamente para não dar falso "pronto".
+          automaticamente para não dar falso &quot;pronto&quot;.
         </div>
       )}
     </SectionCard>
@@ -1030,7 +1042,7 @@ function Coordenadores({ d, escolaId, aoMudar }) {
                 {!c.email && <div style={{ fontSize: 12, color: T.sub, marginTop: 2 }}>E-mail não registrado (re-provisione para atualizar)</div>}
               </div>
               {c.email && (
-                <button onClick={() => reenviar(c)} disabled={ocupado}
+                <button type="button" onClick={() => reenviar(c)} disabled={ocupado}
                   style={{ border: `1px solid ${T.line}`, background: T.card, color: T.gold, borderRadius: 8, fontSize: 12.5, fontWeight: 700, padding: "8px 14px", minHeight: 38, opacity: ocupado ? 0.5 : 1 }}>
                   {ocupado ? "Enviando…" : "↻ Reenviar acesso"}
                 </button>
@@ -1065,7 +1077,7 @@ function Coordenadores({ d, escolaId, aoMudar }) {
           </div>
           <div style={{ display: "flex", gap: 10, marginTop: 14 }}>
             <Botao onClick={provisionar} disabled={!pronto}>{ocupado ? "Criando…" : "Criar acesso"}</Botao>
-            <button onClick={() => { setCriando(false); setErro(null); setF({ nome: "", email: "" }); }}
+            <button type="button" onClick={() => { setCriando(false); setErro(null); setF({ nome: "", email: "" }); }}
               style={{ border: `1px solid ${T.line}`, background: T.card, color: T.sub, borderRadius: 8, padding: "10px 18px", fontWeight: 600, fontSize: 13 }}>
               Cancelar
             </button>
@@ -1081,7 +1093,7 @@ function Coordenadores({ d, escolaId, aoMudar }) {
 function BotaoVoltar({ aoVoltar }) {
   const T = useTema();
   return (
-    <button onClick={aoVoltar} style={{ alignSelf: "flex-start", border: `1px solid ${T.line}`, background: T.card, color: T.sub, borderRadius: 8, padding: "8px 14px", fontSize: 13, fontWeight: 600 }}>
+    <button type="button" onClick={aoVoltar} style={{ alignSelf: "flex-start", border: `1px solid ${T.line}`, background: T.card, color: T.sub, borderRadius: 8, padding: "8px 14px", fontSize: 13, fontWeight: 600 }}>
       ← voltar às escolas
     </button>
   );

@@ -49,7 +49,7 @@ export function MetaSemana({ meta, trilha, podeEditar, aoMudar, aoAbrirDesempenh
           </div>
           <div style={{ display: "flex", gap: 10, marginTop: 14, flexWrap: "wrap" }}>
             {aoAbrirDesempenho && (
-              <button onClick={aoAbrirDesempenho}
+              <button type="button" onClick={aoAbrirDesempenho}
                 style={{ border: `1px solid ${T.gold}`, background: `${T.gold}14`, color: T.gold, borderRadius: 9, fontWeight: 700, fontSize: 13, padding: "10px 16px", minHeight: 42 }}>
                 Ver meu desempenho
               </button>
@@ -105,7 +105,7 @@ export function MetaSemana({ meta, trilha, podeEditar, aoMudar, aoAbrirDesempenh
       </div>
       {ocultos > 0 && (
         <div className="objective-list-more">
-          <button onClick={() => setMostrarTodos(true)}>
+          <button type="button" onClick={() => setMostrarTodos(true)}>
             Ver todos os {itens.length} objetivos <span aria-hidden="true">↓</span>
           </button>
         </div>
@@ -154,15 +154,15 @@ function ObjetivoItem({ item, trilha, podeEditar, ocupado, ultimo, aoPraticar, a
           {podeEditar && (
             <div className="objective-actions">
               {!concluida && !adiada && aoPraticar && (
-                <button className="objective-practice" onClick={aoPraticar} disabled={ocupado}>
+                <button type="button" className="objective-practice" onClick={aoPraticar} disabled={ocupado}>
                   Praticar agora <span aria-hidden="true">→</span>
                 </button>
               )}
-              <button className="objective-secondary" onClick={aoConcluir} disabled={ocupado}>
+              <button type="button" className="objective-secondary" onClick={aoConcluir} disabled={ocupado}>
                 {concluida ? "↺ Reabrir" : `✓ ${L.concluir}`}
               </button>
               {!concluida && (
-                <button className="objective-secondary" onClick={aoAdiar} disabled={ocupado}>
+                <button type="button" className="objective-secondary" onClick={aoAdiar} disabled={ocupado}>
                   {adiada ? "Retomar" : L.adiar}
                 </button>
               )}

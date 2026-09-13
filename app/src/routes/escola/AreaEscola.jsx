@@ -99,16 +99,22 @@ export default function AreaEscola({ perfil }) {
     <div>
       <Cabecalho subtitulo="Painel de gestão" nomeUsuario={perfil.usuario.nome} rotuloPapel="Coordenação" />
       <main className="com-sidebar" style={{ maxWidth: 1080, margin: "0 auto", padding: "16px max(16px, env(safe-area-inset-right)) calc(88px + env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left))" }}>
+        {/* C2: alunoAberto é um terceiro estado de tela que não está em
+            nenhuma aba — sem rotuloExtra o título da aba do navegador
+            continuaria preso na última aba visitada enquanto a tela
+            mostra a ficha de um aluno específico. */}
         <MenuPrincipal abas={ABAS} ativo={tab} aoTrocar={irPara}
-          usuario={{ nome: perfil.usuario.nome, sub: "Coordenação" }} />
+          usuario={{ nome: perfil.usuario.nome, sub: "Coordenação" }}
+          rotuloExtra={alunoAberto ? `Ficha de ${alunoAberto.nome}` : undefined} />
 
-        <div className="fade" key={tab + (alunoAberto?.id ?? "")}>
+        {/* T25: alvo do skip-link renderizado por <MenuPrincipal> acima. */}
+        <div id="conteudo-principal" tabIndex={-1} className="fade" key={tab + (alunoAberto?.id ?? "")}>
           {erro && <ErroComRetry aoTentar={recarregarTudo}>{erro}</ErroComRetry>}
           {carregando && <CarregandoBloco titulo="Carregando dados da escola…" cartoes={4} linhas={4} />}
 
           {!carregando && alunoAberto && (
             <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-              <button onClick={() => { despacharNav({ tipo: "fecharAluno" }); aoTopo(); }} style={{ alignSelf: "flex-start", border: `1px solid ${T.line}`, background: T.card, color: T.sub, borderRadius: 8, padding: "8px 14px", fontSize: 13, fontWeight: 600 }}>← voltar ao painel</button>
+              <button type="button" onClick={() => { despacharNav({ tipo: "fecharAluno" }); aoTopo(); }} style={{ alignSelf: "flex-start", border: `1px solid ${T.line}`, background: T.card, color: T.sub, borderRadius: 8, padding: "8px 14px", fontSize: 13, fontWeight: 600 }}>← voltar ao painel</button>
               <FichaAluno aluno={alunoAberto} concurso={concursoDoAluno} />
             </div>
           )}
@@ -261,8 +267,10 @@ function Turmas({ turmas, alunos, porAluno, aoMudar, aoVerRanking, aoVerAluno })
               const aberta = turmaAberta === t.id;
               return (
                 <div key={t.id} style={{ padding: "13px 15px", borderBottom: i === turmas.length - 1 ? "none" : `1px solid ${T.line}`, background: aberta ? `${T.gold}06` : "transparent" }}>
-                  <button onClick={() => setTurmaAberta(aberta ? null : t.id)}
-                    style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, flexWrap: "wrap", width: "100%", border: "none", background: "transparent", textAlign: "left", padding: 0, color: T.ink }}>
+                  {/* T1: o padding vivia só no <div> pai (não-clicável);
+                      o botão em si tinha padding:0. */}
+                  <button type="button" onClick={() => setTurmaAberta(aberta ? null : t.id)}
+                    style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, flexWrap: "wrap", width: "100%", border: "none", background: "transparent", textAlign: "left", padding: "8px 0", minHeight: 44, color: T.ink }}>
                     <div className="disp" style={{ fontSize: 15, fontWeight: 700 }}>
                       {t.nome} <span style={{ fontSize: 11, color: T.gold, fontWeight: 700, marginLeft: 6 }}>{aberta ? "fechar alunos ▴" : "ver alunos ▾"}</span>
                     </div>
@@ -282,7 +290,7 @@ function Turmas({ turmas, alunos, porAluno, aoMudar, aoVerRanking, aoVerAluno })
                       ) : alunosDaTurma(t.id).map((a, j, arr) => {
                         const r = porAluno[a.id];
                         return (
-                          <button key={a.id} className="row" onClick={() => aoVerAluno(a)}
+                          <button type="button" key={a.id} className="row" onClick={() => aoVerAluno(a)}
                             style={{ display: "flex", alignItems: "center", gap: 11, width: "100%", textAlign: "left", border: "none", background: "transparent", padding: "11px 13px", borderBottom: j === arr.length - 1 ? "none" : `1px solid ${T.line}`, color: T.ink }}>
                             <div className="disp" style={{ width: 32, height: 32, borderRadius: "50%", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center", background: T.cardHi, border: `1px solid ${T.line}`, color: T.gold, fontWeight: 800, fontSize: 12 }}>
                               {a.nome.split(" ").filter(Boolean).slice(0, 2).map((p) => p[0].toUpperCase()).join("")}
@@ -304,13 +312,13 @@ function Turmas({ turmas, alunos, porAluno, aoMudar, aoVerRanking, aoVerAluno })
                   )}
 
                   <div style={{ display: "flex", gap: 8, marginTop: 10, flexWrap: "wrap" }}>
-                    <button onClick={aoVerRanking} style={{ border: `1px solid ${T.line}`, background: "transparent", color: T.gold, borderRadius: 8, fontSize: 12.5, fontWeight: 700, padding: "7px 14px", minHeight: 36 }}>
+                    <button type="button" onClick={aoVerRanking} style={{ border: `1px solid ${T.line}`, background: "transparent", color: T.gold, borderRadius: 8, fontSize: 12.5, fontWeight: 700, padding: "7px 14px", minHeight: 36 }}>
                       Ver classificação ›
                     </button>
-                    <button onClick={() => renomear(t)} style={{ border: `1px solid ${T.line}`, background: "transparent", color: T.sub, borderRadius: 8, fontSize: 12.5, fontWeight: 600, padding: "7px 14px", minHeight: 36 }}>
+                    <button type="button" onClick={() => renomear(t)} style={{ border: `1px solid ${T.line}`, background: "transparent", color: T.sub, borderRadius: 8, fontSize: 12.5, fontWeight: 600, padding: "7px 14px", minHeight: 36 }}>
                       ✎ Renomear
                     </button>
-                    <button onClick={() => excluir(t, s.n)} style={{ border: `1px solid ${s.n ? T.line : T.red + "66"}`, background: "transparent", color: s.n ? T.sub : T.red, borderRadius: 8, fontSize: 12.5, fontWeight: 600, padding: "7px 14px", minHeight: 36, opacity: s.n ? 0.6 : 1 }}>
+                    <button type="button" onClick={() => excluir(t, s.n)} style={{ border: `1px solid ${s.n ? T.line : T.red + "66"}`, background: "transparent", color: s.n ? T.sub : T.red, borderRadius: 8, fontSize: 12.5, fontWeight: 600, padding: "7px 14px", minHeight: 36, opacity: s.n ? 0.6 : 1 }}>
                       × Excluir
                     </button>
                   </div>
