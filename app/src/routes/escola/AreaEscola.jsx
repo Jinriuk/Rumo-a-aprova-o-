@@ -361,11 +361,13 @@ function Turmas({ turmas, alunos, porAluno, aoMudar, aoVerRanking, aoVerAluno })
                       ✎ Renomear
                     </button>
                     {/* I10: mesmo com a turma ainda tendo alunos (visualmente
-                        inerte, opacity 0.6), o botão precisa de uma cor de
-                        aviso — antes era idêntico ao "Renomear" (T.line/
-                        T.sub) ao lado. T.gold aqui, T.red pleno fica
-                        reservado para o caso realmente ativo (s.n === 0). */}
-                    <button type="button" onClick={() => excluir(t, s.n)} style={{ border: `1px solid ${s.n ? T.gold + "66" : T.red + "66"}`, background: "transparent", color: s.n ? T.gold : T.red, borderRadius: 8, fontSize: 12.5, fontWeight: 600, padding: "7px 14px", minHeight: 36, opacity: s.n ? 0.6 : 1 }}>
+                        inerte, opacity 0.6), o botão precisa de cor de aviso —
+                        antes era idêntico ao "Renomear" (T.line/T.sub) ao
+                        lado. Fica na família de PERIGO nos dois estados, só
+                        rebaixada quando inerte (borda mais fraca + a opacity
+                        de 0.6 que já existia): dourado aqui competiria com o
+                        dourado de ação principal do "Ver classificação ›". */}
+                    <button type="button" onClick={() => excluir(t, s.n)} style={{ border: `1px solid ${T.red}${s.n ? "33" : "66"}`, background: "transparent", color: T.red, borderRadius: 8, fontSize: 12.5, fontWeight: 600, padding: "7px 14px", minHeight: 36, opacity: s.n ? 0.6 : 1 }}>
                       × Excluir
                     </button>
                   </div>

@@ -338,10 +338,18 @@ test("I10: o botão Excluir turma (s.n > 0) não é mais idêntico ao Renomear",
     /color:\s*s\.n\s*\?\s*T\.sub\s*:/,
     "voltou a usar T.sub (a mesma cor neutra do Renomear) quando a turma ainda tem alunos",
   );
+  // Fica na família de perigo nos dois estados, só rebaixada quando inerte
+  // (borda mais fraca + a opacity 0.6 que já existia). Dourado competiria
+  // com o dourado de ação principal do "Ver classificação ›" ao lado.
   assert.match(
     linhaExcluir,
-    /color:\s*s\.n\s*\?\s*T\.gold\s*:\s*T\.red/,
-    "precisa de uma cor de aviso quando desabilitado (T.gold), reservando T.red pleno para o caso ativo (s.n === 0)",
+    /color:\s*T\.red/,
+    "o Excluir precisa continuar na família de perigo mesmo quando inerte",
+  );
+  assert.match(
+    linhaExcluir,
+    /border:\s*`1px solid \$\{T\.red\}\$\{s\.n \? "33" : "66"\}`/,
+    "a diferença entre inerte e ativo precisa estar na intensidade da borda, não na troca de família de cor",
   );
 });
 

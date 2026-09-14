@@ -16,7 +16,7 @@ import { HistoricoProgresso } from "./HistoricoProgresso.jsx";
 import { ListaRegistros } from "../../shared/ui/ListaRegistros.jsx";
 import { VinculosResponsavel } from "../pessoas/VinculosResponsavel.jsx";
 import { calcularXP, patente, fmtHoras } from "../motor/jargao.js";
-import { semanaAtual } from "../../shared/regras/regras.js";
+import { semanaAtual, estadoDoCiclo } from "../../shared/regras/regras.js";
 import * as db from "../../shared/data/index.js";
 
 // T39/T40: as três trocas de linha + gerar credencial já existem em
@@ -88,6 +88,14 @@ export function FichaAluno({ aluno, concurso, turmas = [], concursos = [], trilh
     [trilha],
   );
   const semanaAtiva = semanasRegras.length ? semanaAtual(semanasRegras) : null;
+  // T28/T31: a ficha nunca passou `ciclo` adiante, então ResumoResponsavel
+  // lia a última semana da trilha como se fosse a corrente e a coordenação
+  // via "Precisa de atenção — ainda não estudou nesta semana" para um aluno
+  // cujo ciclo acabou. Com o Bloco 2 desta onda isso virou contradição
+  // aberta: o Painel para de listá-lo como sem atividade e a ficha dele
+  // continua alertando. Mesmo cálculo de AreaResponsavel.jsx.
+  const ciclo = semanasRegras.length ? estadoDoCiclo(semanasRegras) : { estado: "sem_semanas" };
+  const fimDoCiclo = semanasRegras.length ? semanasRegras[semanasRegras.length - 1].fim : null;
 
   const m = useMemo(() => {
     if (!trilha || !semanaAtiva) return null;
@@ -187,7 +195,8 @@ export function FichaAluno({ aluno, concurso, turmas = [], concursos = [], trilh
       {/* o corpo condensado: mesmo formato do responsável, com copy
           factual de terceira pessoa (a coordenação não é o pai/mãe). */}
       <ResumoResponsavel aluno={aluno} m={m} meta={meta} trilha={trilha}
-        simulados={dados.simulados} semanaAtiva={semanaAtiva} concurso={concurso} publico="coordenacao" />
+        simulados={dados.simulados} semanaAtiva={semanaAtiva} concurso={concurso}
+        ciclo={ciclo.estado} fimDoCiclo={fimDoCiclo} publico="coordenacao" />
 
       {/* trilha/missões REAIS do concurso-alvo (Fase 15.4 ligada): a
           coordenação vê o plano por prova do aluno, não uma trilha fixa. */}
