@@ -343,3 +343,18 @@ test("I10: o botão Excluir turma (s.n > 0) não é mais idêntico ao Renomear",
     "precisa de uma cor de aviso quando desabilitado (T.gold), reservando T.red pleno para o caso ativo (s.n === 0)",
   );
 });
+
+// ── Bloco 10 (T42): mesmo nível de perigo em "Revogar credencial"/"acesso" ──
+test("T42: 'Revogar credencial' e 'Revogar acesso' têm o mesmo destaque de perigo", () => {
+  const codigo = src("app/src/modules/pessoas/VinculosResponsavel.jsx");
+  assert.match(
+    codigo,
+    /<BotaoMini perigo onClick=\{\(\) => setConfirmando\(\{ id: v\.id, tipo: "credencial" \}\)\}>Revogar credencial<\/BotaoMini>/,
+    "Revogar credencial precisa continuar com perigo",
+  );
+  assert.match(
+    codigo,
+    /<BotaoMini perigo onClick=\{\(\) => setConfirmando\(\{ id: v\.id, tipo: "vinculo" \}\)\}>Revogar acesso<\/BotaoMini>/,
+    "Revogar acesso precisa ganhar o mesmo perigo — as duas ações são igualmente irreversíveis por ação simples",
+  );
+});
