@@ -397,3 +397,44 @@ test("T37: AreaAdmin.jsx sanitiza e.logo_url antes de usá-lo como href no backo
   assert.match(codigo, /\{logoSeguro && <InfoLinha rotulo="Logo" valor="ver imagem ↗" href=\{logoSeguro\} \/>\}/);
   assert.doesNotMatch(codigo, /href=\{e\.logo_url\}/, "não pode sobrar o href cru — um link malicioso salvo pela escola viraria clicável no backoffice");
 });
+
+// ── Bloco 12 (T38): TrilhaConcurso.jsx sem código cru de matéria ────────────
+test("T38: carregarRecorrenciaDoConcurso traz o nome real da matéria (prova_materias.nome)", () => {
+  const codigo = src("app/src/shared/data/index.js");
+  assert.match(
+    codigo,
+    /supabase\.from\("prova_materias"\)\.select\("materia_codigo, nome, peso, num_questoes"\)/,
+    "a query de recorrência precisa trazer .nome junto de materia_codigo",
+  );
+});
+
+test("T38: carregarPlanoConcurso anexa materia_nome a cada missão", () => {
+  const codigo = src("app/src/shared/data/index.js");
+  assert.match(codigo, /async function carregarNomesMateria\(examTag\)/, "precisa de um helper pra montar código → nome");
+  const trecho = codigo.slice(codigo.indexOf("export async function carregarPlanoConcurso"));
+  assert.match(trecho, /carregarNomesMateria\(examTag\)/, "carregarPlanoConcurso precisa buscar os nomes junto");
+  assert.match(
+    trecho,
+    /materia_nome:\s*m\.materia_codigo\s*\?\s*\(nomePorMateria\[m\.materia_codigo\]\s*\?\?\s*null\)\s*:\s*null/,
+    "cada missão precisa ganhar materia_nome",
+  );
+});
+
+test("T38: TrilhaConcurso.jsx mostra o nome real da matéria, não o código cru", () => {
+  const codigo = src("app/src/modules/conteudo/TrilhaConcurso.jsx");
+  assert.match(
+    codigo,
+    /materia:\s*a\.materia_codigo\s*\?\s*\(nomeMateriaPorCodigo\[a\.materia_codigo\]\s*\?\?\s*a\.materia_codigo\)\s*:\s*null/,
+    "recorrência por assunto precisa mostrar o nome (com fallback pro código só se faltar o nome)",
+  );
+  assert.match(
+    codigo,
+    /\{mi\.materia_nome \?\? mi\.materia_codigo\}/,
+    "a missão precisa mostrar materia_nome, caindo pro código só se faltar",
+  );
+  assert.doesNotMatch(
+    codigo,
+    /const NOME_MATERIA/,
+    "não pode introduzir uma quarta cópia hardcoded do catálogo — a rota escolhida foi estender as queries",
+  );
+});

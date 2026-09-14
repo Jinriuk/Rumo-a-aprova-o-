@@ -262,7 +262,9 @@ export async function carregarRecorrenciaDoConcurso(examTag) {
   try {
     const [assuntos, materias, recorrencia, medida] = await Promise.all([
       supabase.from("assuntos").select("*").eq("exam_tag", examTag).order("ordem"),
-      supabase.from("prova_materias").select("materia_codigo, peso, num_questoes").eq("exam_tag", examTag),
+      // T38: `nome` entra aqui para a tela mostrar o nome real da matéria
+      // (prova_materias.nome) em vez do código cru (qui, mat…).
+      supabase.from("prova_materias").select("materia_codigo, nome, peso, num_questoes").eq("exam_tag", examTag),
       supabase.from("recorrencia_assunto").select("*").eq("exam_tag", examTag),
       supabase.from("vw_recorrencia_medida").select("*").eq("exam_tag", examTag),
     ]);
@@ -377,6 +379,14 @@ export async function carregarMissoes(examTag, { nivel } = {}) {
   return data;
 }
 
+// T38: nome real da matéria (prova_materias) por código, para anexar às
+// missões — evita mostrar o código cru (qui, mat…) na trilha do concurso.
+async function carregarNomesMateria(examTag) {
+  const { data, error } = await supabase.from("prova_materias").select("materia_codigo, nome").eq("exam_tag", examTag);
+  if (error) throw falha("matérias da prova", error);
+  return Object.fromEntries((data ?? []).map((m) => [m.materia_codigo, m.nome]));
+}
+
 // Plano pedagógico COMPLETO de um concurso (Fase 15.4), por exam_tag:
 // horizontes (trilha_planos), missões oficiais e os ajustes da escola
 // (estes isolados por RLS). É o ponto único que a UI usa para mostrar a
@@ -385,12 +395,19 @@ export async function carregarMissoes(examTag, { nivel } = {}) {
 // (lógica pura), não aqui: o seam só busca.
 export async function carregarPlanoConcurso(examTag) {
   if (!examTag) return { planos: [], missoes: [], ajustesEscola: [] };
-  const [planos, missoes, ajustesEscola] = await Promise.all([
+  const [planos, missoes, ajustesEscola, nomePorMateria] = await Promise.all([
     carregarTrilhaPlanos(examTag),
     carregarMissoes(examTag),
     carregarMissoesEscola(examTag),
+    carregarNomesMateria(examTag),
   ]);
-  return { planos, missoes, ajustesEscola };
+  // T38: cada missão ganha o nome real da matéria (materia_nome) ao lado
+  // do código já existente (materia_codigo) — a UI passa a mostrar o nome.
+  const missoesComNome = missoes.map((m) => ({
+    ...m,
+    materia_nome: m.materia_codigo ? (nomePorMateria[m.materia_codigo] ?? null) : null,
+  }));
+  return { planos, missoes: missoesComNome, ajustesEscola };
 }
 
 // Ajustes de missão da escola do usuário (isolado por RLS).
