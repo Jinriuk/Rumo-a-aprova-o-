@@ -21,7 +21,7 @@ import { navReducer, NAV_INICIAL } from "./navegacaoEscola.js";
 import * as db from "../../shared/data/index.js";
 
 const VAZIO_NUCLEO = { turmas: [], alunos: [], concursos: [], resumo: [], trilhas: [], consentimentos: [] };
-const VAZIO_EXTRA = { logs: [], simuladosEscola: [] };
+const VAZIO_EXTRA = { logs: [], simuladosEscola: [], logsTotal: 0 };
 
 export default function AreaEscola({ perfil }) {
   const T = useTema();
@@ -57,8 +57,8 @@ export default function AreaEscola({ perfil }) {
   );
   const { dados: carregadoExtra, carregando: carregandoExtra, recarregar: recarregarExtra } = useRecurso(
     (signal) => Promise.all([
-      db.listarLogsAcesso(100, { signal }), db.listarSimuladosEscola({ signal }),
-    ]).then(([logs, simuladosEscola]) => ({ logs, simuladosEscola })),
+      db.listarLogsAcesso(100, { signal }), db.listarSimuladosEscola({ signal }), db.contarLogsAcesso({ signal }),
+    ]).then(([logs, simuladosEscola, logsTotal]) => ({ logs, simuladosEscola, logsTotal })),
     [],
   );
   const dados = { ...VAZIO_NUCLEO, ...VAZIO_EXTRA, ...(carregado ?? {}), ...(carregadoExtra ?? {}) };
@@ -163,7 +163,7 @@ export default function AreaEscola({ perfil }) {
           )}
 
           {!carregando && !alunoAberto && tab === "conformidade" && !carregandoExtra && (
-            <PainelConformidade consentimentos={dados.consentimentos} logs={dados.logs} alunosPorId={alunosPorId} />
+            <PainelConformidade consentimentos={dados.consentimentos} logs={dados.logs} logsTotal={dados.logsTotal} alunosPorId={alunosPorId} />
           )}
 
           {!carregando && !alunoAberto && tab === "marca" && (

@@ -13,7 +13,7 @@ const ACAO_ROTULO = {
   "provisionou-responsavel": "Credencial de responsável gerada",
 };
 
-export function PainelConformidade({ consentimentos, logs, alunosPorId }) {
+export function PainelConformidade({ consentimentos, logs, logsTotal, alunosPorId }) {
   const T = useTema();
   const acoesLgpd = logs.filter((l) => l.acao === "exportacao-lgpd" || l.acao === "exclusao-lgpd").length;
   const ultimoAcesso = logs.length ? new Date(logs[0].em).toLocaleString("pt-BR") : "—";
@@ -35,7 +35,7 @@ export function PainelConformidade({ consentimentos, logs, alunosPorId }) {
       {/* RESUMO */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(150px,1fr))", gap: 10 }}>
         <StatCard rotulo="Consentimentos" valor={consentimentos.length} icone="📝" tom="ok" />
-        <StatCard rotulo="Acessos registrados" valor={logs.length} icone="🛡" />
+        <StatCard rotulo="Acessos registrados" valor={logsTotal} icone="🛡" />
         <StatCard rotulo="Ações LGPD" valor={acoesLgpd} sub="exportações / exclusões" icone="⚖" />
         <StatCard rotulo="Último acesso" valor={logs.length ? "registrado" : "—"} sub={ultimoAcesso} icone="🕘" />
       </div>

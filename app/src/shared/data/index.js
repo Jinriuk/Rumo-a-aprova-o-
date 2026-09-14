@@ -905,6 +905,18 @@ export async function listarLogsAcesso(limite = 100, { signal } = {}) {
   return data;
 }
 
+// I9: contagem EXATA de acessos da escola, independente do limite de
+// `listarLogsAcesso` (hoje 100). `head: true` não traz linha nenhuma —
+// só o total do count(*) via RLS, mais barato que baixar o array inteiro.
+export async function contarLogsAcesso({ signal } = {}) {
+  const { count, error } = await comSinal(
+    supabase.from("logs_acesso").select("*", { count: "exact", head: true }),
+    signal,
+  );
+  if (error) throw falha("contagem de acessos", error);
+  return count ?? 0;
+}
+
 // Trilha de acesso (LGPD): quem lê dado de aluno registra o acesso.
 // Falhar em logar não pode DERRUBAR a tela (é efeito colateral de uma
 // leitura), mas não pode sumir em silêncio — a trilha LGPD é exigência
