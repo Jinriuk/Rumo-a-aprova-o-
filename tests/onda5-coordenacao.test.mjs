@@ -200,3 +200,19 @@ test("T33: o título 'Alertas de risco' some quando os três estão zerados", ()
     "o bloco inteiro (título + alertas) precisa desaparecer quando todos os três estão em zero",
   );
 });
+
+// ── Bloco 5 (T32): "Destaques da semana" — janela mista no critério acerto ──
+test("T32: o critério 'acerto' de Destaques da semana usa accSem (7d), não acc (vida inteira)", () => {
+  const codigo = src("app/src/modules/desempenho/PainelGestao.jsx");
+  const linhaAcerto = codigo.match(/acerto:\s*\{[^}]*\}/)[0];
+  assert.match(
+    linhaAcerto,
+    /x\.accSem/,
+    "os outros três critérios do mesmo seletor já são de 7 dias — acerto não pode ser o único de janela geral",
+  );
+  assert.doesNotMatch(
+    linhaAcerto,
+    /x\.acc\b/,
+    "não pode sobrar nenhum x.acc (geral) no critério de acerto — só x.accSem",
+  );
+});

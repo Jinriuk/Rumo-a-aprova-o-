@@ -40,7 +40,10 @@ export function PainelGestao({ resumo, aoIr, aoIrFiltrado }) {
 
   // Destaques: a escola escolhe o critério (Fase 9 do doc central)
   const CRITERIOS = {
-    acerto: { rotulo: "Melhor acerto", v: (x) => x.acc ?? -1, fmt: (x) => (x.acc == null ? "—" : `${x.acc}%`), sub: "acerto" },
+    // T32: os outros três critérios já são todos de 7 dias — "acerto" usava
+    // x.acc (acumulado da vida inteira do aluno), uma janela diferente
+    // misturada no mesmo seletor. x.accSem é a mesma métrica em 7 dias.
+    acerto: { rotulo: "Melhor acerto (7d)", v: (x) => x.accSem ?? -1, fmt: (x) => (x.accSem == null ? "—" : `${x.accSem}%`), sub: "acerto 7d" },
     questoes: { rotulo: "Mais questões (7d)", v: (x) => x.qSem, fmt: (x) => x.qSem, sub: "questões 7d" },
     tempo: { rotulo: "Mais tempo (7d)", v: (x) => x.minSem, fmt: (x) => fmtHorasCurto(x.minSem), sub: "tempo 7d" },
     dias: { rotulo: "Mais dias (7d)", v: (x) => x.diasSem, fmt: (x) => `${x.diasSem}d`, sub: "dias 7d" },
