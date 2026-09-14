@@ -9,6 +9,7 @@ import { Card, Empty } from "../../shared/ui/componentes.jsx";
 import { useTema } from "../../shared/branding/BrandingContext.jsx";
 import { fmtBR } from "../../shared/regras/regras.js";
 import { provaDoConcurso, notaPct, totalAcertos, totalQuestoes } from "../conteudo/provas.js";
+import { LIMIAR } from "../conteudo/niveisAluno.js";
 
 const MEDALHAS = ["🥇", "🥈", "🥉"];
 const fmtH = (min) => {
@@ -27,19 +28,30 @@ const CRITERIOS_ESTUDO = {
 export function ClassificacaoTurma({ alunos, turmas, resumoPorAluno = {}, simulados = [], concursosPorId }) {
   const T = useTema();
   const [modo, setModo] = useState("estudos"); // estudos | simulados (Fase 11: dois rankings)
-  const [criterio, setCriterio] = useState("questoes");
+  // T34/T35: "acerto" é o critério padrão desta tela (era "questoes") —
+  // acerto só compara quem já passou do piso de volume (abaixo, ver
+  // LIMIAR.VOLUME_MINIMO), então não corre o risco de abrir com um
+  // aluno de 1 questão e 100% no topo.
+  const [criterio, setCriterio] = useState("acerto");
   const [turmaId, setTurmaId] = useState("");
   const [janela, setJanela] = useState("semana"); // semana (últimos 7 dias) | geral
 
   // O agregado por aluno já vem pronto do banco; aqui só escolhemos a
   // janela (geral/7d) e ordenamos. Sem varrer registros no cliente.
-  const ranking = useMemo(() => {
+  //
+  // T34/T35: nem todo mundo tem volume pra ser COMPARADO — um aluno com
+  // 2 questões e 100% de acerto não é "melhor" que um com 80 questões e
+  // 85%, é só pouco dado. `comparaveis` (q >= LIMIAR.VOLUME_MINIMO na
+  // janela ativa) entra na lista numerada; o resto vai para
+  // `semDadosSuficientes`, sem posição — ordenados por nome, nunca por
+  // um critério que não têm volume pra sustentar.
+  const { comparaveis, semDadosSuficientes } = useMemo(() => {
     const geral = janela === "geral";
     const visiveis = alunos.filter(
       (a) => !turmaId || (a.alunos_turmas ?? []).some((v) => v.turma_id === turmaId),
     );
 
-    return visiveis.map((a) => {
+    const linhas = visiveis.map((a) => {
       const r = resumoPorAluno[a.id];
       return {
         aluno: a,
@@ -51,10 +63,16 @@ export function ClassificacaoTurma({ alunos, turmas, resumoPorAluno = {}, simula
         feitas: r?.feitas ?? 0,
         consideradas: r?.consideradas ?? 0,
       };
-    }).sort((x, y) => {
-      const c = CRITERIOS_ESTUDO[criterio];
-      return (c.v(y) - c.v(x)) || (y.q - x.q) || ((y.acc ?? -1) - (x.acc ?? -1)) || (y.minutos - x.minutos);
     });
+
+    const c = CRITERIOS_ESTUDO[criterio];
+    const comp = linhas
+      .filter((x) => x.q >= LIMIAR.VOLUME_MINIMO)
+      .sort((x, y) => (c.v(y) - c.v(x)) || (y.q - x.q) || ((y.acc ?? -1) - (x.acc ?? -1)) || (y.minutos - x.minutos));
+    const semDados = linhas
+      .filter((x) => x.q < LIMIAR.VOLUME_MINIMO)
+      .sort((x, y) => x.aluno.nome.localeCompare(y.aluno.nome, "pt-BR"));
+    return { comparaveis: comp, semDadosSuficientes: semDados };
   }, [alunos, resumoPorAluno, turmaId, janela, criterio]);
 
   // RANKING 2 — Simulados: a nota como a PROVA classificaria (melhor
@@ -84,7 +102,7 @@ export function ClassificacaoTurma({ alunos, turmas, resumoPorAluno = {}, simula
     }).sort((x, y) => (y.nota ?? -1) - (x.nota ?? -1) || (y.tot ?? -1) - (x.tot ?? -1));
   }, [alunos, simulados, turmaId, concursosPorId]);
 
-  const maxQ = Math.max(1, ...ranking.map((r) => r.q));
+  const maxQ = Math.max(1, ...comparaveis.map((r) => r.q), ...semDadosSuficientes.map((r) => r.q));
 
   const seletor = (valor, setValor, opcoes) => (
     <div style={{ display: "flex", background: T.bg, borderRadius: 8, padding: 3, border: `1px solid ${T.line}` }}>
@@ -154,42 +172,63 @@ export function ClassificacaoTurma({ alunos, turmas, resumoPorAluno = {}, simula
             })}
           </div>
         )
-      ) : ranking.length === 0 ? <Empty txt="Nenhum aluno nesta seleção." /> : (
+      ) : comparaveis.length === 0 && semDadosSuficientes.length === 0 ? <Empty txt="Nenhum aluno nesta seleção." /> : (
         <div style={{ display: "flex", flexDirection: "column", gap: 2, marginTop: 12 }}>
-          {ranking.map((r, i) => {
-            const concurso = concursosPorId?.[r.aluno.concurso_id];
-            const destaque = i < 3 && r.q > 0;
-            return (
-              <div key={r.aluno.id} className="row" style={{
-                display: "flex", alignItems: "center", gap: 12, padding: "11px 10px", borderRadius: 10,
-                border: `1px solid ${destaque ? T.gold : "transparent"}`,
-                background: destaque ? T.cardHi : "transparent",
-                borderBottom: `1px solid ${T.line}`, flexWrap: "wrap",
-              }}>
-                <div className="num disp" style={{ width: 36, textAlign: "center", fontSize: destaque ? 20 : 14, fontWeight: 800, color: destaque ? T.gold : T.sub, flexShrink: 0 }}>
-                  {destaque ? MEDALHAS[i] : `${i + 1}º`}
-                </div>
-                <div style={{ flex: 1, minWidth: 150 }}>
-                  <div style={{ fontSize: 14, fontWeight: 700 }}>{r.aluno.nome}</div>
-                  <div style={{ fontSize: 11, color: T.sub, marginTop: 1 }}>
-                    {concurso ? concurso.nome.split(" (")[0] : "sem concurso"}
-                    {r.metaPct !== null && <> · meta da semana: <b style={{ color: r.metaPct >= 80 ? T.green : r.metaPct >= 40 ? T.gold : T.red }}>{r.feitas}/{r.consideradas} ({r.metaPct}%)</b></>}
-                  </div>
-                  <div style={{ height: 5, background: T.bg, borderRadius: 3, overflow: "hidden", marginTop: 6, maxWidth: 360 }}>
-                    <div style={{ width: `${(r.q / maxQ) * 100}%`, height: "100%", background: `linear-gradient(90deg,${T.gold},${T.green})` }} />
-                  </div>
-                </div>
-                <div style={{ display: "flex", gap: 14, fontSize: 12, color: T.sub, flexShrink: 0, textAlign: "right" }}>
-                  <span><b className="num" style={{ color: T.ink, fontSize: 15 }}>{r.q}</b><br />questões</span>
-                  <span><b className="num" style={{ color: corDeAcerto(T, r.acc), fontSize: 15 }}>{r.acc == null ? "—" : `${r.acc}%`}</b><br />acerto</span>
-                  <span><b className="num" style={{ color: T.ink, fontSize: 15 }}>{fmtH(r.minutos)}</b><br />tempo</span>
-                  <span><b className="num" style={{ color: T.ink, fontSize: 15 }}>{r.dias}</b><br />dias</span>
-                </div>
+          {comparaveis.map((r, i) => (
+            <LinhaEstudo key={r.aluno.id} r={r} posicao={i} maxQ={maxQ} concursosPorId={concursosPorId} T={T} />
+          ))}
+          {semDadosSuficientes.length > 0 && (
+            <>
+              <div style={{ fontSize: 11, color: T.sub, fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.6, margin: comparaveis.length ? "14px 2px 0" : "2px 2px 0" }}>
+                Ainda sem dados suficientes
               </div>
-            );
-          })}
+              <div style={{ fontSize: 11.5, color: T.sub, margin: "0 2px 4px", lineHeight: 1.4 }}>
+                Menos de {LIMIAR.VOLUME_MINIMO} questões na janela ativa — sem volume para comparar por {CRITERIOS_ESTUDO[criterio].rotulo.toLowerCase()}.
+              </div>
+              {semDadosSuficientes.map((r) => (
+                <LinhaEstudo key={r.aluno.id} r={r} posicao={null} maxQ={maxQ} concursosPorId={concursosPorId} T={T} />
+              ))}
+            </>
+          )}
         </div>
       )}
     </Card>
+  );
+}
+
+// Linha do ranking de estudos — `posicao` null é o grupo "ainda sem
+// dados suficientes" (T34/T35): sem medalha, sem Nº, só o nome e os
+// números crus (não inventa posição pra quem não tem volume pra ser
+// comparado).
+function LinhaEstudo({ r, posicao, maxQ, concursosPorId, T }) {
+  const concurso = concursosPorId?.[r.aluno.concurso_id];
+  const destaque = posicao != null && posicao < 3 && r.q > 0;
+  return (
+    <div className="row" style={{
+      display: "flex", alignItems: "center", gap: 12, padding: "11px 10px", borderRadius: 10,
+      border: `1px solid ${destaque ? T.gold : "transparent"}`,
+      background: destaque ? T.cardHi : "transparent",
+      borderBottom: `1px solid ${T.line}`, flexWrap: "wrap",
+    }}>
+      <div className="num disp" style={{ width: 36, textAlign: "center", fontSize: destaque ? 20 : 14, fontWeight: 800, color: destaque ? T.gold : T.sub, flexShrink: 0 }}>
+        {posicao == null ? "" : destaque ? MEDALHAS[posicao] : `${posicao + 1}º`}
+      </div>
+      <div style={{ flex: 1, minWidth: 150 }}>
+        <div style={{ fontSize: 14, fontWeight: 700 }}>{r.aluno.nome}</div>
+        <div style={{ fontSize: 11, color: T.sub, marginTop: 1 }}>
+          {concurso ? concurso.nome.split(" (")[0] : "sem concurso"}
+          {r.metaPct !== null && <> · meta da semana: <b style={{ color: r.metaPct >= 80 ? T.green : r.metaPct >= 40 ? T.gold : T.red }}>{r.feitas}/{r.consideradas} ({r.metaPct}%)</b></>}
+        </div>
+        <div style={{ height: 5, background: T.bg, borderRadius: 3, overflow: "hidden", marginTop: 6, maxWidth: 360 }}>
+          <div style={{ width: `${(r.q / maxQ) * 100}%`, height: "100%", background: `linear-gradient(90deg,${T.gold},${T.green})` }} />
+        </div>
+      </div>
+      <div style={{ display: "flex", gap: 14, fontSize: 12, color: T.sub, flexShrink: 0, textAlign: "right" }}>
+        <span><b className="num" style={{ color: T.ink, fontSize: 15 }}>{r.q}</b><br />questões</span>
+        <span><b className="num" style={{ color: corDeAcerto(T, r.acc), fontSize: 15 }}>{r.acc == null ? "—" : `${r.acc}%`}</b><br />acerto</span>
+        <span><b className="num" style={{ color: T.ink, fontSize: 15 }}>{fmtH(r.minutos)}</b><br />tempo</span>
+        <span><b className="num" style={{ color: T.ink, fontSize: 15 }}>{r.dias}</b><br />dias</span>
+      </div>
+    </div>
   );
 }

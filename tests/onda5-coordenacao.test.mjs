@@ -216,3 +216,57 @@ test("T32: o critério 'acerto' de Destaques da semana usa accSem (7d), não acc
     "não pode sobrar nenhum x.acc (geral) no critério de acerto — só x.accSem",
   );
 });
+
+// ── Bloco 6 (T34/T35): ranking de ClassificacaoTurma.jsx ────────────────────
+test("T34/T35: ClassificacaoTurma importa LIMIAR de niveisAluno.js", () => {
+  const codigo = src("app/src/modules/desempenho/ClassificacaoTurma.jsx");
+  assert.match(
+    codigo,
+    /import\s*\{\s*LIMIAR\s*\}\s*from\s*"\.\.\/conteudo\/niveisAluno\.js"/,
+    "precisa importar o limiar de volume mínimo já exportado por niveisAluno.js",
+  );
+});
+
+test("T34/T35: o critério padrão de ClassificacaoTurma passa a ser 'acerto' (era 'questoes')", () => {
+  const codigo = src("app/src/modules/desempenho/ClassificacaoTurma.jsx");
+  assert.match(codigo, /useState\("acerto"\)/, "o padrão do ranking da coordenação precisa ser acerto");
+  assert.doesNotMatch(codigo, /useState\("questoes"\)/, "não pode sobrar o antigo padrão 'questoes'");
+});
+
+test("T34/T35: o ranking separa quem tem volume (>= LIMIAR.VOLUME_MINIMO) de quem não tem", () => {
+  const codigo = src("app/src/modules/desempenho/ClassificacaoTurma.jsx");
+  assert.match(
+    codigo,
+    /\.filter\(\(x\)\s*=>\s*x\.q\s*>=\s*LIMIAR\.VOLUME_MINIMO\)/,
+    "lista numerada: só quem já passou do piso de volume na janela ativa",
+  );
+  assert.match(
+    codigo,
+    /\.filter\(\(x\)\s*=>\s*x\.q\s*<\s*LIMIAR\.VOLUME_MINIMO\)/,
+    "grupo 'ainda sem dados suficientes': quem não passou",
+  );
+});
+
+test("T34/T35: quem não tem volume suficiente é ordenado por nome, não pelo critério escolhido", () => {
+  const codigo = src("app/src/modules/desempenho/ClassificacaoTurma.jsx");
+  assert.match(
+    codigo,
+    /x\.q\s*<\s*LIMIAR\.VOLUME_MINIMO\)\s*\n?\s*\.sort\(\(x,\s*y\)\s*=>\s*x\.aluno\.nome\.localeCompare\(y\.aluno\.nome/,
+    "o grupo sem dados suficientes precisa ordenar por nome (nunca inventar posição por um critério sem volume que a sustente)",
+  );
+});
+
+test("T34/T35: a seção 'Ainda sem dados suficientes' existe e não numera essas linhas", () => {
+  const codigo = src("app/src/modules/desempenho/ClassificacaoTurma.jsx");
+  assert.match(codigo, /Ainda sem dados suficientes/, "precisa de um título discreto para o segundo grupo");
+  assert.match(
+    codigo,
+    /posicao == null \? "" :/,
+    "a linha sem posição não pode inventar um Nº nem cair numa medalha",
+  );
+});
+
+test("T34/T35: PainelGestao.jsx não muda de critério padrão (já era 'acerto' antes deste bloco)", () => {
+  const codigo = src("app/src/modules/desempenho/PainelGestao.jsx");
+  assert.match(codigo, /useState\("acerto"\)/);
+});
