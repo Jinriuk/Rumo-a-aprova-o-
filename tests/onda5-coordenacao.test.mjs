@@ -270,3 +270,34 @@ test("T34/T35: PainelGestao.jsx não muda de critério padrão (já era 'acerto'
   const codigo = src("app/src/modules/desempenho/PainelGestao.jsx");
   assert.match(codigo, /useState\("acerto"\)/);
 });
+
+// ── Bloco 7 (I11): badge de credencial em ClassificacaoTurma e AreaEscola ──
+const PADRAO_CRED_STATUS = /a\.usuarios\?\.credencial_status === "revogada"/;
+const PADRAO_CRED_TROCA = /a\.usuarios\?\.must_change_password === true/;
+
+test("I11: ListaAlunos.jsx continua a fonte do padrão (mesma leitura de dado)", () => {
+  const codigo = src("app/src/modules/pessoas/ListaAlunos.jsx");
+  assert.match(codigo, PADRAO_CRED_STATUS);
+  assert.match(codigo, PADRAO_CRED_TROCA);
+});
+
+test("I11: ClassificacaoTurma.jsx replica o mesmo padrão de leitura + StatusBadge", () => {
+  const codigo = src("app/src/modules/desempenho/ClassificacaoTurma.jsx");
+  assert.match(codigo, /import\s*\{[^}]*StatusBadge[^}]*\}\s*from\s*"\.\.\/\.\.\/shared\/ui\/componentes\.jsx"/);
+  assert.match(codigo, /aluno\.usuarios\?\.credencial_status === "revogada"/, "mesma leitura de dado que ListaAlunos.jsx");
+  assert.match(codigo, /aluno\.usuarios\?\.must_change_password === true/);
+  assert.match(codigo, /<StatusBadge tom="risco">credencial revogada<\/StatusBadge>/);
+  assert.match(codigo, /<StatusBadge tom="alerta">aguardando troca de senha<\/StatusBadge>/);
+  // usado nos dois modos (estudos via LinhaEstudo e simulados inline)
+  const usos = codigo.match(/<CredencialBadges aluno=\{r\.aluno\} \/>/g) ?? [];
+  assert.equal(usos.length, 2, "precisa aparecer nos dois modos (estudos e simulados)");
+});
+
+test("I11: AreaEscola.jsx (card de aluno na turma expandida) replica o mesmo padrão", () => {
+  const codigo = src("app/src/routes/escola/AreaEscola.jsx");
+  assert.match(codigo, /import\s*\{[^}]*StatusBadge[^}]*\}\s*from\s*"\.\.\/\.\.\/shared\/ui\/componentes\.jsx"/);
+  assert.match(codigo, PADRAO_CRED_STATUS, "mesma leitura de dado que ListaAlunos.jsx");
+  assert.match(codigo, PADRAO_CRED_TROCA);
+  assert.match(codigo, /<StatusBadge tom="risco">credencial revogada<\/StatusBadge>/);
+  assert.match(codigo, /<StatusBadge tom="alerta">aguardando troca de senha<\/StatusBadge>/);
+});

@@ -5,7 +5,7 @@
    entre alunos é Fase 3, travada nos documentos). */
 import React, { useMemo, useState } from "react";
 import { corDeAcerto } from "./metricas.js";
-import { Card, Empty } from "../../shared/ui/componentes.jsx";
+import { Card, Empty, StatusBadge } from "../../shared/ui/componentes.jsx";
 import { useTema } from "../../shared/branding/BrandingContext.jsx";
 import { fmtBR } from "../../shared/regras/regras.js";
 import { provaDoConcurso, notaPct, totalAcertos, totalQuestoes } from "../conteudo/provas.js";
@@ -160,6 +160,7 @@ export function ClassificacaoTurma({ alunos, turmas, resumoPorAluno = {}, simula
                     <div style={{ fontSize: 11, color: T.sub, marginTop: 1 }}>
                       {r.prova.rotulo}{r.melhor ? <> · {r.melhor.nome} · {fmtBR(String(r.melhor.data))} · {r.n} {r.n === 1 ? "simulado" : "simulados"}</> : " · nenhum simulado ainda"}
                     </div>
+                    <CredencialBadges aluno={r.aluno} />
                   </div>
                   {r.melhor && (
                     <div style={{ display: "flex", gap: 14, fontSize: 12, color: T.sub, flexShrink: 0, textAlign: "right" }}>
@@ -196,6 +197,22 @@ export function ClassificacaoTurma({ alunos, turmas, resumoPorAluno = {}, simula
   );
 }
 
+// I11: mesma leitura de dado e mesmo componente que ListaAlunos.jsx já
+// usa para o selo de credencial — replicado aqui (modos estudos e
+// simulados) porque a coordenação também decide ações a partir daqui.
+function CredencialBadges({ aluno }) {
+  const temCred = !!aluno.usuario_id;
+  const credRevogada = temCred && aluno.usuarios?.credencial_status === "revogada";
+  const aguardaTroca = temCred && !credRevogada && aluno.usuarios?.must_change_password === true;
+  if (!credRevogada && !aguardaTroca) return null;
+  return (
+    <div style={{ display: "flex", gap: 5, marginTop: 4, flexWrap: "wrap" }}>
+      {credRevogada && <StatusBadge tom="risco">credencial revogada</StatusBadge>}
+      {aguardaTroca && <StatusBadge tom="alerta">aguardando troca de senha</StatusBadge>}
+    </div>
+  );
+}
+
 // Linha do ranking de estudos — `posicao` null é o grupo "ainda sem
 // dados suficientes" (T34/T35): sem medalha, sem Nº, só o nome e os
 // números crus (não inventa posição pra quem não tem volume pra ser
@@ -219,6 +236,7 @@ function LinhaEstudo({ r, posicao, maxQ, concursosPorId, T }) {
           {concurso ? concurso.nome.split(" (")[0] : "sem concurso"}
           {r.metaPct !== null && <> · meta da semana: <b style={{ color: r.metaPct >= 80 ? T.green : r.metaPct >= 40 ? T.gold : T.red }}>{r.feitas}/{r.consideradas} ({r.metaPct}%)</b></>}
         </div>
+        <CredencialBadges aluno={r.aluno} />
         <div style={{ height: 5, background: T.bg, borderRadius: 3, overflow: "hidden", marginTop: 6, maxWidth: 360 }}>
           <div style={{ width: `${(r.q / maxQ) * 100}%`, height: "100%", background: `linear-gradient(90deg,${T.gold},${T.green})` }} />
         </div>

@@ -2,7 +2,7 @@
    Painel / Alunos / Ranking / Turmas / LGPD / Marca. */
 import React, { useEffect, useMemo, useReducer, useState } from "react";
 import { Cabecalho } from "../../shared/ui/Cabecalho.jsx";
-import { SectionCard, Erro, ErroComRetry, EmptyState, CarregandoBloco, useDialogo } from "../../shared/ui/componentes.jsx";
+import { SectionCard, Erro, ErroComRetry, EmptyState, CarregandoBloco, StatusBadge, useDialogo } from "../../shared/ui/componentes.jsx";
 import { nomeValido, limparNome } from "../../shared/validacao.js";
 import { MenuPrincipal } from "../../shared/ui/MenuPrincipal.jsx";
 import { useTema } from "../../shared/branding/BrandingContext.jsx";
@@ -310,6 +310,11 @@ function Turmas({ turmas, alunos, porAluno, aoMudar, aoVerRanking, aoVerAluno })
                         <div style={{ padding: "14px", fontSize: 12.5, color: T.sub, textAlign: "center" }}>Nenhum aluno nesta turma ainda — vincule na aba Alunos.</div>
                       ) : alunosDaTurma(t.id).map((a, j, arr) => {
                         const r = porAluno[a.id];
+                        // I11: mesma leitura de dado e mesmo componente que
+                        // ListaAlunos.jsx já usa para o selo de credencial.
+                        const temCred = !!a.usuario_id;
+                        const credRevogada = temCred && a.usuarios?.credencial_status === "revogada";
+                        const aguardaTroca = temCred && !credRevogada && a.usuarios?.must_change_password === true;
                         return (
                           <button type="button" key={a.id} className="row" onClick={() => aoVerAluno(a)}
                             style={{ display: "flex", alignItems: "center", gap: 11, width: "100%", textAlign: "left", border: "none", background: "transparent", padding: "11px 13px", borderBottom: j === arr.length - 1 ? "none" : `1px solid ${T.line}`, color: T.ink }}>
@@ -322,6 +327,12 @@ function Turmas({ turmas, alunos, porAluno, aoMudar, aoVerRanking, aoVerAluno })
                                 <div className="num" style={{ fontSize: 11, color: T.sub, marginTop: 1 }}>
                                   {r.qSem} questões (7d) · acerto <b style={{ color: r.accSem == null ? T.sub : r.accSem >= 70 ? T.green : T.gold }}>{r.accSem == null ? "—" : `${r.accSem}%`}</b> · {r.diasSem} dias
                                   {r.semAtividade && <b style={{ color: T.red }}> · sem atividade</b>}
+                                </div>
+                              )}
+                              {(credRevogada || aguardaTroca) && (
+                                <div style={{ display: "flex", gap: 5, marginTop: 4, flexWrap: "wrap" }}>
+                                  {credRevogada && <StatusBadge tom="risco">credencial revogada</StatusBadge>}
+                                  {aguardaTroca && <StatusBadge tom="alerta">aguardando troca de senha</StatusBadge>}
                                 </div>
                               )}
                             </div>
