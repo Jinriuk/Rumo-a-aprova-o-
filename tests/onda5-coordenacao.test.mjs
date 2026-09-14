@@ -301,3 +301,29 @@ test("I11: AreaEscola.jsx (card de aluno na turma expandida) replica o mesmo pad
   assert.match(codigo, /<StatusBadge tom="risco">credencial revogada<\/StatusBadge>/);
   assert.match(codigo, /<StatusBadge tom="alerta">aguardando troca de senha<\/StatusBadge>/);
 });
+
+// ── Bloco 8 (T29): confirmação nos selects de linha (turma/concurso/trilha) ─
+test("T29: trocarTurma/trocarConcurso/trocarTrilha passam por dialogo.confirmar antes de gravar", () => {
+  const codigo = src("app/src/modules/pessoas/ListaAlunos.jsx");
+  for (const nome of ["trocarTurma", "trocarConcurso", "trocarTrilha"]) {
+    const inicio = codigo.indexOf(`const ${nome} = async (a,`);
+    assert.ok(inicio >= 0, `${nome} precisa ser uma função async (para poder aguardar a confirmação)`);
+    const corpo = codigo.slice(inicio, codigo.indexOf("\n  };", inicio));
+    assert.match(corpo, /await dialogo\.confirmar\(/, `${nome} precisa confirmar antes de gravar`);
+    assert.match(corpo, /if \(!ok\) return;/, `${nome} precisa abortar a gravação se a coordenação cancelar`);
+  }
+});
+
+test("T29: as mensagens de confirmação dizem o que muda, não um 'tem certeza?' genérico", () => {
+  const codigo = src("app/src/modules/pessoas/ListaAlunos.jsx");
+  assert.match(codigo, /Mover \$\{a\.nome\} para a turma \$\{turma\.nome\}\?/);
+  assert.match(codigo, /Trocar o concurso-alvo de \$\{a\.nome\} para \$\{concurso\.nome\}\?/);
+  assert.match(codigo, /Trocar a trilha de estudo de \$\{a\.nome\} para \$\{trilha\.nome\}\?/);
+});
+
+test("T29: os três selects de linha continuam chamando as mesmas funções no onChange (zero mudança de API)", () => {
+  const codigo = src("app/src/modules/pessoas/ListaAlunos.jsx");
+  assert.match(codigo, /onChange=\{\(e\) => trocarTurma\(a, e\.target\.value\)\}/);
+  assert.match(codigo, /onChange=\{\(e\) => trocarConcurso\(a, e\.target\.value\)\}/);
+  assert.match(codigo, /onChange=\{\(e\) => trocarTrilha\(a, e\.target\.value\)\}/);
+});

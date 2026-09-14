@@ -78,9 +78,40 @@ export function ListaAlunos({ alunos, consentimentos, concursos = [], turmas = [
     if (!nome) return;
     return comAcao(a, () => db.registrarConsentimento(a.id, limparNome(nome)));
   };
-  const trocarConcurso = (a, concursoId) => comAcao(a, () => db.atualizarAluno(a.id, { concurso_id: concursoId || null }));
-  const trocarTurma = (a, turmaId) => comAcao(a, () => db.definirTurma(a.id, turmaId || null));
-  const trocarTrilha = (a, trilhaId) => comAcao(a, () => db.atualizarAluno(a.id, { trilha_id: trilhaId || null }));
+  // T29: as três trocas de linha gravavam direto no onChange, sem
+  // confirmação — ao contrário de revogarCredencial/excluir, que já
+  // passam por dialogo.confirmar. A mensagem diz o que muda, não um
+  // "tem certeza?" genérico.
+  const trocarTurma = async (a, turmaId) => {
+    const turma = turmas.find((t) => t.id === turmaId);
+    const ok = await dialogo.confirmar({
+      titulo: "Trocar turma",
+      mensagem: turma ? `Mover ${a.nome} para a turma ${turma.nome}?` : `Remover ${a.nome} de sua turma atual?`,
+      rotuloConfirmar: "Mover",
+    });
+    if (!ok) return;
+    return comAcao(a, () => db.definirTurma(a.id, turmaId || null));
+  };
+  const trocarConcurso = async (a, concursoId) => {
+    const concurso = concursos.find((c) => c.id === concursoId);
+    const ok = await dialogo.confirmar({
+      titulo: "Trocar concurso",
+      mensagem: concurso ? `Trocar o concurso-alvo de ${a.nome} para ${concurso.nome}?` : `Remover o concurso-alvo de ${a.nome}?`,
+      rotuloConfirmar: "Trocar",
+    });
+    if (!ok) return;
+    return comAcao(a, () => db.atualizarAluno(a.id, { concurso_id: concursoId || null }));
+  };
+  const trocarTrilha = async (a, trilhaId) => {
+    const trilha = trilhas.find((t) => t.id === trilhaId);
+    const ok = await dialogo.confirmar({
+      titulo: "Trocar trilha de estudo",
+      mensagem: trilha ? `Trocar a trilha de estudo de ${a.nome} para ${trilha.nome}?` : `Remover a trilha de estudo de ${a.nome}?`,
+      rotuloConfirmar: "Trocar",
+    });
+    if (!ok) return;
+    return comAcao(a, () => db.atualizarAluno(a.id, { trilha_id: trilhaId || null }));
+  };
   const renomear = async (a) => {
     const nome = await pedirNome("Renomear aluno", "Escolha o novo nome do aluno.", a.nome);
     if (!nome || limparNome(nome) === a.nome) return;
