@@ -179,3 +179,24 @@ test("T31: o badge 'em risco' usa a proporção (emRisco), não mais qualquer co
   assert.match(codigo, /\{s\.emRisco\s*&&\s*<span/, "o badge precisa depender de emRisco (proporção), não de s.risco > 0");
   assert.doesNotMatch(codigo, /\{s\.risco\s*>\s*0\s*&&\s*<span/, "voltou a disparar com qualquer contagem > 0");
 });
+
+// ── Bloco 4 (T33): cards de alerta zerados somem, e o título junto ──────────
+test("T33: os três <Alerta> só renderizam quando a contagem é > 0", () => {
+  const codigo = src("app/src/modules/desempenho/PainelGestao.jsx");
+  for (const variavel of ["semAtividade", "semCredencial", "metaPendente"]) {
+    assert.match(
+      codigo,
+      new RegExp(`\\{${variavel} > 0 && \\(\\s*<Alerta`),
+      `o <Alerta> de ${variavel} precisa estar condicionado a ${variavel} > 0`,
+    );
+  }
+});
+
+test("T33: o título 'Alertas de risco' some quando os três estão zerados", () => {
+  const codigo = src("app/src/modules/desempenho/PainelGestao.jsx");
+  assert.match(
+    codigo,
+    /\{\(semAtividade > 0 \|\| semCredencial > 0 \|\| metaPendente > 0\) && \(/,
+    "o bloco inteiro (título + alertas) precisa desaparecer quando todos os três estão em zero",
+  );
+});
