@@ -187,6 +187,12 @@ export default function AreaEscola({ perfil }) {
   );
 }
 
+// T31 (Bloco 3): a turma só acende "em risco" quando a PROPORÇÃO de
+// alunos sem atividade (entre os que ainda estão em ciclo ativo —
+// ver adaptarResumoEscola) passa deste limiar. Qualquer contagem > 0
+// disparava o badge mesmo numa turma de 40 alunos com 1 só inativo.
+const PROPORCAO_TURMA_EM_RISCO = 0.3;
+
 /* Turmas com indicadores: alunos, acerto, questões e alunos em risco.
    Clicar na turma abre a lista de alunos dela; clicar no aluno abre o
    desempenho individual (Fase 10 do doc). */
@@ -199,7 +205,7 @@ function Turmas({ turmas, alunos, porAluno, aoMudar, aoVerRanking, aoVerAluno })
   // a cada render (inclusive ao só abrir/fechar uma turma) — O(turmas
   // × alunos) repetido sem necessidade. Agora é uma passada só por turma.
   const porTurma = useMemo(() => {
-    const mapa = new Map(turmas.map((t) => [t.id, { alunos: [], n: 0, questoes: 0, acerto: null, risco: 0 }]));
+    const mapa = new Map(turmas.map((t) => [t.id, { alunos: [], n: 0, questoes: 0, acerto: null, risco: 0, emRisco: false }]));
     for (const a of alunos) {
       for (const v of a.alunos_turmas ?? []) {
         const entrada = mapa.get(v.turma_id);
@@ -209,14 +215,19 @@ function Turmas({ turmas, alunos, porAluno, aoMudar, aoVerRanking, aoVerAluno })
     for (const entrada of mapa.values()) {
       const linhas = entrada.alunos.map((a) => porAluno[a.id]).filter(Boolean);
       const comAcc = linhas.filter((x) => x.acc != null);
+      // T31: numerador (risco) e denominador (emCicloAtivo) excluem ciclo
+      // encerrado do MESMO jeito — senão uma turma toda formada, ou com
+      // parte dela formada, dilui a proporção dos que ainda estudam.
+      const emCicloAtivo = linhas.filter((x) => !x.cicloEncerrado);
       entrada.n = entrada.alunos.length;
       entrada.questoes = linhas.reduce((s, x) => s + x.q, 0);
       entrada.acerto = comAcc.length ? Math.round(comAcc.reduce((s, x) => s + x.acc, 0) / comAcc.length) : null;
       entrada.risco = linhas.filter((x) => x.semAtividade).length;
+      entrada.emRisco = emCicloAtivo.length > 0 && entrada.risco / emCicloAtivo.length > PROPORCAO_TURMA_EM_RISCO;
     }
     return mapa;
   }, [turmas, alunos, porAluno]);
-  const vazia = { alunos: [], n: 0, questoes: 0, acerto: null, risco: 0 };
+  const vazia = { alunos: [], n: 0, questoes: 0, acerto: null, risco: 0, emRisco: false };
   const alunosDaTurma = (turmaId) => (porTurma.get(turmaId) ?? vazia).alunos;
   const statsTurma = (turmaId) => porTurma.get(turmaId) ?? vazia;
 
@@ -284,7 +295,7 @@ function Turmas({ turmas, alunos, porAluno, aoMudar, aoVerRanking, aoVerAluno })
                     <div className="disp" style={{ fontSize: 15, fontWeight: 700 }}>
                       {t.nome} <span style={{ fontSize: 11, color: T.gold, fontWeight: 700, marginLeft: 6 }}>{aberta ? "fechar alunos ▴" : "ver alunos ▾"}</span>
                     </div>
-                    {s.risco > 0 && <span style={{ fontSize: 11, fontWeight: 700, color: T.red, background: `${T.red}14`, border: `1px solid ${T.red}44`, borderRadius: 6, padding: "2px 8px" }}>{s.risco} em risco</span>}
+                    {s.emRisco && <span style={{ fontSize: 11, fontWeight: 700, color: T.red, background: `${T.red}14`, border: `1px solid ${T.red}44`, borderRadius: 6, padding: "2px 8px" }}>{s.risco} em risco</span>}
                   </button>
                   <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(90px,1fr))", gap: 8, marginTop: 10 }}>
                     <Mini rotulo="Alunos" valor={s.n} />

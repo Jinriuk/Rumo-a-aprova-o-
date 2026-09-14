@@ -141,3 +141,41 @@ test("T31: AreaEscola.jsx monta o mapa de semanas por trilha e alimenta adaptarR
     "resumoLista precisa considerar o estado do ciclo de cada aluno (Painel, Turmas e Ranking reusam este resumo)",
   );
 });
+
+test("T31: adaptarResumoEscola expõe cicloEncerrado por aluno (não só semAtividade já filtrada)", () => {
+  const [x] = adaptarResumoEscola(
+    [{ aluno_id: "a1", dias_7d: 0 }], { a1: { id: "a1", trilha_id: "t1" } },
+    { t1: [{ numero: 1, inicio: "2020-01-01", fim: "2020-01-07" }] },
+  );
+  assert.equal(x.cicloEncerrado, true, "quem monta uma proporção precisa do sinal cru, não só do semAtividade já combinado");
+});
+
+// ── Bloco 3 (T31): turma "em risco" por PROPORÇÃO, não por contagem > 0 ─────
+test("T31: existe uma constante nomeada para o limiar de turma em risco (não mágica solta)", () => {
+  const codigo = src("app/src/routes/escola/AreaEscola.jsx");
+  assert.match(
+    codigo,
+    /const\s+PROPORCAO_TURMA_EM_RISCO\s*=\s*0\.3\s*;/,
+    "o limiar de 30% precisa ser uma constante nomeada, não um 0.3 solto no meio do cálculo",
+  );
+});
+
+test("T31: o cálculo de emRisco exclui ciclo encerrado do numerador E do denominador", () => {
+  const codigo = src("app/src/routes/escola/AreaEscola.jsx");
+  assert.match(
+    codigo,
+    /emCicloAtivo\s*=\s*linhas\.filter\(\(x\)\s*=>\s*!x\.cicloEncerrado\)/,
+    "o denominador da proporção precisa excluir quem já encerrou o ciclo — senão uma turma formada dilui a proporção",
+  );
+  assert.match(
+    codigo,
+    /entrada\.emRisco\s*=\s*emCicloAtivo\.length\s*>\s*0\s*&&\s*entrada\.risco\s*\/\s*emCicloAtivo\.length\s*>\s*PROPORCAO_TURMA_EM_RISCO/,
+    "emRisco precisa ser risco/emCicloAtivo acima do limiar, guardado contra divisão por zero",
+  );
+});
+
+test("T31: o badge 'em risco' usa a proporção (emRisco), não mais qualquer contagem > 0", () => {
+  const codigo = src("app/src/routes/escola/AreaEscola.jsx");
+  assert.match(codigo, /\{s\.emRisco\s*&&\s*<span/, "o badge precisa depender de emRisco (proporção), não de s.risco > 0");
+  assert.doesNotMatch(codigo, /\{s\.risco\s*>\s*0\s*&&\s*<span/, "voltou a disparar com qualquer contagem > 0");
+});

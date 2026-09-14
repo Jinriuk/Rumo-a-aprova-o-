@@ -75,6 +75,11 @@ export function adaptarResumoEscola(linhas, alunosPorId, semanasPorTrilha = {}) 
         // sinais de risco / operação
         semCredencial: !aluno.usuario_id,
         semAtividade: diasSem === 0 && !cicloEncerrado(cicloDoAluno),
+        // T31 (Bloco 3): exposto à parte de semAtividade — quem monta uma
+        // proporção "em risco" precisa excluir ciclo encerrado tanto do
+        // numerador quanto do DENOMINADOR (a turma toda formada não pode
+        // diluir a proporção dos alunos que ainda estão em ciclo ativo).
+        cicloEncerrado: cicloEncerrado(cicloDoAluno),
       };
     })
     .filter(Boolean);
