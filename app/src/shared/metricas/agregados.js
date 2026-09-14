@@ -9,6 +9,8 @@
 // uma janela [desde, hoje]; sem ela, soma tudo. `acertos === null`
 // significa "registro sem acerto lançado": entra em questões/dias, mas
 // não no cálculo de % de acerto (nem no numerador nem no denominador).
+import { cicloEncerrado } from "../regras/regras.js";
+
 export function resumirRegistros(registros, { desde } = {}) {
   let questoes = 0, comAcertoQuestoes = 0, acertos = 0, minutos = 0;
   const datas = new Set();
@@ -34,7 +36,15 @@ export function resumirRegistros(registros, { desde } = {}) {
 // no banco) no objeto que as telas da coordenação consomem — o mesmo
 // formato que o antigo agregarEscola() devolvia, sem varrer registros
 // no cliente. `alunosPorId` liga cada linha ao aluno carregado.
-export function adaptarResumoEscola(linhas, alunosPorId) {
+//
+// T31: `semAtividade` cruza duas vias que resumo_escola (migration
+// 0016) não conhece uma da outra — dias_7d (atividade) e estado_ciclo
+// (migration 0049, Onda 3). Um aluno cujo ciclo já encerrou não tem
+// mais missão: `diasSem === 0` sozinho o marcaria "sem atividade" para
+// sempre, um alerta que nunca faz sentido resolver. `semanasPorTrilha`
+// (id da trilha → semanas ordenadas) é opcional — sem ele, o
+// comportamento é exatamente o de antes (só dias_7d).
+export function adaptarResumoEscola(linhas, alunosPorId, semanasPorTrilha = {}) {
   return (linhas ?? [])
     .map((l) => {
       const aluno = alunosPorId[l.aluno_id];
@@ -44,6 +54,7 @@ export function adaptarResumoEscola(linhas, alunosPorId) {
       const feitas = Number(l.meta_feitas) || 0;
       const consideradas = Number(l.meta_consideradas) || 0;
       const diasSem = Number(l.dias_7d) || 0;
+      const cicloDoAluno = semanasPorTrilha[aluno.trilha_id] ?? [];
       return {
         aluno,
         // geral (toda a vida do aluno)
@@ -63,7 +74,7 @@ export function adaptarResumoEscola(linhas, alunosPorId) {
         metaIncompleta: consideradas > 0 && feitas < consideradas,
         // sinais de risco / operação
         semCredencial: !aluno.usuario_id,
-        semAtividade: diasSem === 0,
+        semAtividade: diasSem === 0 && !cicloEncerrado(cicloDoAluno),
       };
     })
     .filter(Boolean);

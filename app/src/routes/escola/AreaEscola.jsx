@@ -82,9 +82,19 @@ export default function AreaEscola({ perfil }) {
 
   const alunosPorId = useMemo(() => Object.fromEntries(dados.alunos.map((a) => [a.id, a])), [dados.alunos]);
   const concursosPorId = useMemo(() => Object.fromEntries(dados.concursos.map((c) => [c.id, c])), [dados.concursos]);
+  // T31: semanas de cada trilha (já embutidas por listarTrilhas), por id —
+  // adaptarResumoEscola usa para não contar aluno de ciclo encerrado como
+  // "sem atividade" (ele não tem mais missão nenhuma).
+  const semanasPorTrilha = useMemo(
+    () => Object.fromEntries(dados.trilhas.map((t) => [t.id, t.trilha_semanas ?? []])),
+    [dados.trilhas],
+  );
   // Agregado por aluno: vem PRONTO do banco (RPC resumo_escola) e é
   // calculado uma única vez aqui — Painel, Ranking e Turmas reusam.
-  const resumoLista = useMemo(() => adaptarResumoEscola(dados.resumo, alunosPorId), [dados.resumo, alunosPorId]);
+  const resumoLista = useMemo(
+    () => adaptarResumoEscola(dados.resumo, alunosPorId, semanasPorTrilha),
+    [dados.resumo, alunosPorId, semanasPorTrilha],
+  );
   const resumoPorAluno = useMemo(() => Object.fromEntries(resumoLista.map((x) => [x.aluno.id, x])), [resumoLista]);
 
   const ABAS = [

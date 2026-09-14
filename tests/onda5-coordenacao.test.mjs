@@ -17,6 +17,8 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { resolve, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
+import { adaptarResumoEscola } from "../app/src/shared/metricas/agregados.js";
+import { todayISO } from "../app/src/shared/regras/regras.js";
 
 const __dir = dirname(fileURLToPath(import.meta.url));
 const root = resolve(__dir, "..");
@@ -70,4 +72,72 @@ test("I9: a lista de baixo continua honesta sobre mostrar só os últimos 100", 
   const codigo = src("app/src/modules/consentimento/PainelConformidade.jsx");
   assert.match(codigo, /últimos 100/, "o texto de apoio da trilha de acesso não deveria mudar");
   assert.match(codigo, /logs\.map\(/, "a lista em si continua iterando o array limitado (só o resumo usa a contagem exata)");
+});
+
+// ── Bloco 2 (T31): "sem atividade" ignora aluno de ciclo encerrado ──────────
+const addDias = (iso, n) => {
+  const d = new Date(`${iso}T00:00:00`);
+  d.setDate(d.getDate() + n);
+  return d.toISOString().slice(0, 10);
+};
+
+test("T31: sem semanasPorTrilha, adaptarResumoEscola mantém o comportamento antigo (só dias_7d)", () => {
+  const [x] = adaptarResumoEscola([{ aluno_id: "a1", dias_7d: 0 }], { a1: { id: "a1", trilha_id: "t1" } });
+  assert.equal(x.semAtividade, true, "sem dado de trilha, precisa continuar decidindo só por dias_7d (compat.)");
+});
+
+test("T31: aluno de ciclo ENCERRADO não conta como 'sem atividade' mesmo com dias_7d=0", () => {
+  const semanasPorTrilha = { t1: [
+    { numero: 1, inicio: "2020-01-01", fim: "2020-01-07" },
+    { numero: 2, inicio: "2020-01-08", fim: "2020-01-14" },
+  ] };
+  const [x] = adaptarResumoEscola(
+    [{ aluno_id: "a1", dias_7d: 0 }], { a1: { id: "a1", trilha_id: "t1" } }, semanasPorTrilha,
+  );
+  assert.equal(x.semAtividade, false, "ciclo encerrado não tem mais missão — não faz sentido contar como sem atividade");
+});
+
+test("T31: aluno com ciclo EM CURSO e dias_7d=0 continua contando como 'sem atividade'", () => {
+  const hoje = todayISO();
+  const semanasPorTrilha = { t1: [
+    { numero: 1, inicio: addDias(hoje, -30), fim: addDias(hoje, -8) },
+    { numero: 2, inicio: addDias(hoje, -7), fim: addDias(hoje, 7) },
+  ] };
+  const [x] = adaptarResumoEscola(
+    [{ aluno_id: "a1", dias_7d: 0 }], { a1: { id: "a1", trilha_id: "t1" } }, semanasPorTrilha,
+  );
+  assert.equal(x.semAtividade, true, "o ciclo ainda está em curso — o alerta continua válido");
+});
+
+test("T31: aluno de trilha SEM semanas cadastradas (sem_semanas) também não é 'encerrado' — mantém dias_7d", () => {
+  const [x] = adaptarResumoEscola(
+    [{ aluno_id: "a1", dias_7d: 0 }], { a1: { id: "a1", trilha_id: "t1" } }, { t1: [] },
+  );
+  assert.equal(x.semAtividade, true, "trilha sem semanas é dado quebrado, não fim de ciclo (estadoDoCiclo: 'sem_semanas')");
+});
+
+test("T31: aluno com atividade na semana continua sem o selo, ciclo encerrado ou não", () => {
+  const semanasPorTrilha = { t1: [{ numero: 1, inicio: "2020-01-01", fim: "2020-01-07" }] };
+  const [x] = adaptarResumoEscola(
+    [{ aluno_id: "a1", dias_7d: 3 }], { a1: { id: "a1", trilha_id: "t1" } }, semanasPorTrilha,
+  );
+  assert.equal(x.semAtividade, false);
+});
+
+test("T31: listarTrilhas embute as semanas de todas as trilhas (a coordenação precisa de todas em memória)", () => {
+  const codigo = src("app/src/shared/data/index.js");
+  assert.match(
+    codigo,
+    /trilha_semanas\(numero,\s*inicio,\s*fim\)/,
+    "precisa embutir trilha_semanas na listagem de trilhas — não buscar uma trilha de cada vez",
+  );
+});
+
+test("T31: AreaEscola.jsx monta o mapa de semanas por trilha e alimenta adaptarResumoEscola com ele", () => {
+  const codigo = src("app/src/routes/escola/AreaEscola.jsx");
+  assert.match(
+    codigo,
+    /adaptarResumoEscola\(\s*dados\.resumo,\s*alunosPorId,\s*semanasPorTrilha\s*\)/,
+    "resumoLista precisa considerar o estado do ciclo de cada aluno (Painel, Turmas e Ranking reusam este resumo)",
+  );
 });

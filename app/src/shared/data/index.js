@@ -585,9 +585,18 @@ export async function listarAlunos({ signal } = {}) {
   return data;
 }
 
+// T31: as semanas vêm embutidas (não uma trilha por vez) — a
+// coordenação precisa da trilha de TODOS os alunos em memória para
+// saber quem já encerrou o ciclo, e a escola só tem um punhado de
+// trilhas (catálogo, não uma linha por aluno). Ordenadas por número:
+// estadoDoCiclo() (regras.js) lê semanas[0]/semanas[length-1] por
+// posição, não por busca de min/max.
 export async function listarTrilhas({ signal } = {}) {
   const { data, error } = await comSinal(
-    supabase.from("trilhas").select("id, nome, nicho, versao, publicada").order("versao", { ascending: false }),
+    supabase.from("trilhas")
+      .select("id, nome, nicho, versao, publicada, trilha_semanas(numero, inicio, fim)")
+      .order("versao", { ascending: false })
+      .order("numero", { foreignTable: "trilha_semanas" }),
     signal,
   );
   if (error) throw falha("trilhas", error);
