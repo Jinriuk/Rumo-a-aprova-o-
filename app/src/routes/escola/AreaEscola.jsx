@@ -264,7 +264,9 @@ function Turmas({ turmas, alunos, porAluno, aoMudar, aoVerRanking, aoVerAluno })
         titulo: "Não é possível excluir agora",
         mensagem: `A turma "${t.nome}" tem ${n} aluno(s). Mova os alunos para outra turma antes de excluí-la.`,
         rotuloConfirmar: "Entendi",
-        rotuloCancelar: "Fechar",
+        // T46: aviso puramente informativo (o código faz return logo
+        // abaixo, incondicional) — não uma decisão binária. Botão único.
+        rotuloCancelar: null,
       });
       return;
     }

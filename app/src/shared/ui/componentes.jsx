@@ -637,10 +637,17 @@ function DialogoHost({ estado, fechar }) {
 
 function DialogoConfirmar({ estado, fechar }) {
   const { titulo = "Confirmar", mensagem, rotuloConfirmar = "Confirmar", rotuloCancelar = "Cancelar", perigo } = estado;
+  // T46: modo de ALERTA de botão único — quem chama confirmar() passa
+  // `rotuloCancelar: null` de propósito (não simplesmente omite a opção:
+  // aí o default "Cancelar" acima continua valendo, e as chamadas
+  // existentes que confiam nele não quebram). Serve pra aviso puramente
+  // informativo — sem decisão binária — que hoje forçava dois rótulos
+  // pra uma escolha que não existe.
+  const somenteConfirmar = rotuloCancelar === null;
   return (
     <Modal titulo={titulo} sub={mensagem} aoFechar={() => fechar(false)} larguraMax={420}>
       <div style={{ display: "flex", gap: 10, justifyContent: "flex-end", flexWrap: "wrap" }}>
-        <Botao secundario onClick={() => fechar(false)}>{rotuloCancelar}</Botao>
+        {!somenteConfirmar && <Botao secundario onClick={() => fechar(false)}>{rotuloCancelar}</Botao>}
         <Botao perigo={perigo} onClick={() => fechar(true)}>{rotuloConfirmar}</Botao>
       </div>
     </Modal>

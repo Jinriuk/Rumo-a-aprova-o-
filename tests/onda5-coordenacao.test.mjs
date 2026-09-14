@@ -502,3 +502,37 @@ test("T40: AreaEscola.jsx não mostra mais o snapshot velho do aluno — relê d
     "sem isto, trocar trilha/concurso na ficha não atualiza o que a própria ficha mostra até fechar e reabrir",
   );
 });
+
+// ── Bloco 14 (T10/T43/T46): chrome de diálogo ───────────────────────────────
+test("T10: o toggle 'Preferência desta tela' vem ANTES da Missão da semana na aba Hoje", () => {
+  const codigo = src("app/src/routes/aluno/VisaoEstudo.jsx");
+  const iHoje = codigo.indexOf('tab === "hoje" && (');
+  const iToggle = codigo.indexOf('className="today-preference"', iHoje);
+  const iMissao = codigo.indexOf('aria-label="Missão da semana"', iHoje);
+  assert.ok(iHoje >= 0 && iToggle >= 0 && iMissao >= 0, "os três marcadores precisam existir na aba Hoje");
+  assert.ok(iToggle < iMissao, "o toggle precisa vir mais cedo no fluxo, antes da Missão da semana — não mais o último nó da aba");
+});
+
+test("T43: 'Fechar' do modal de vínculos usa o mesmo registro visual dos BotaoMini ao lado", () => {
+  const codigo = src("app/src/modules/pessoas/VinculosResponsavel.jsx");
+  assert.match(codigo, /<BotaoMini onClick=\{aoFechar\}>Fechar<\/BotaoMini>/, "precisa ser um BotaoMini, não um botão custom maior");
+  assert.doesNotMatch(
+    codigo,
+    /background: T\.line, border: "none", color: T\.sub, borderRadius: 9, padding: "11px", fontWeight: 700, fontSize: 13\.5/,
+    "não pode sobrar o estilo antigo (fontSize 13.5, fontWeight 700) de ação principal",
+  );
+});
+
+test("T46: DialogoConfirmar ganha um modo de alerta de botão único (rotuloCancelar: null)", () => {
+  const codigo = src("app/src/shared/ui/componentes.jsx");
+  assert.match(codigo, /const somenteConfirmar = rotuloCancelar === null;/);
+  assert.match(codigo, /\{!somenteConfirmar && <Botao secundario onClick=\{\(\) => fechar\(false\)\}>\{rotuloCancelar\}<\/Botao>\}/);
+});
+
+test("T46: AreaEscola.jsx usa o modo de botão único no aviso 'turma ainda tem alunos' (não é decisão binária)", () => {
+  const codigo = src("app/src/routes/escola/AreaEscola.jsx");
+  const inicio = codigo.indexOf('titulo: "Não é possível excluir agora"');
+  assert.ok(inicio >= 0);
+  const trecho = codigo.slice(inicio, inicio + 300);
+  assert.match(trecho, /rotuloCancelar: null,/, "é um aviso informativo (o código faz return incondicional depois) — não duas escolhas reais");
+});

@@ -282,10 +282,13 @@ export function VinculosResponsavel({ aluno, aoMudar, aoFechar, aoGerarCredencia
           </div>
         )}
 
-        <button type="button" onClick={aoFechar}
-          style={{ marginTop: 16, width: "100%", background: T.line, border: "none", color: T.sub, borderRadius: 9, padding: "11px", fontWeight: 700, fontSize: 13.5, cursor: "pointer" }}>
-          Fechar
-        </button>
+        {/* T43: "Fechar" tinha o registro visual de ação PRINCIPAL do modal
+            (width:100%, fontSize maior que qualquer BotaoMini de ação real
+            aqui dentro) — mas ele não decide nada, só sai. Mesmo componente
+            e mesmo registro dos BotaoMini ao lado (fontSize 12, minHeight 32). */}
+        <div style={{ marginTop: 16, display: "flex", justifyContent: "flex-end" }}>
+          <BotaoMini onClick={aoFechar}>Fechar</BotaoMini>
+        </div>
       </div>
     </div>,
     document.body,

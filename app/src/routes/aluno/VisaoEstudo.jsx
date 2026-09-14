@@ -297,19 +297,14 @@ export function VisaoEstudo({ aluno, podeEditar, concurso = null, contexto = "Pl
           <div style={{ display: "flex", flexDirection: "column", gap: 16, paddingTop: 4 }}>
             <FaixaAspirante nome={aluno.nome.split(" ")[0]} contexto={contexto} xp={xp} streak={m?.streak ?? 0}
               aoAbrirConquistas={() => irAba("conquistas")} />
-            <div ref={missaoRef} tabIndex={-1} aria-label="Missão da semana"
-              className={realceMissao ? "mission-impact" : undefined} style={{ scrollMarginTop: 18 }}>
-              <MissaoAtual meta={meta} trilha={trilha} m={m} metas={dados.metas} ciclo={ciclo.estado}
-                aoAvancar={podeEditar ? irAba : undefined} />
-            </div>
-            {!essencial && examTag && gam.missoes.length > 0 && <MissoesPersistidas missoes={gam.missoes} disciplinas={trilha.disciplinas} />}
-            <MetaSemana meta={meta} trilha={trilha} podeEditar={podeEditar} aoMudar={recarregar}
-              compacta aoPraticar={(alvo) => irAba("registrar", alvo)}
-              aoAbrirDesempenho={() => irAba("desempenho")} />
-            {!essencial && m && <ConquistasRecentes m={m} metas={dados.metas} simulados={dados.simulados} aoAbrir={() => irAba("conquistas")} />}
+            {/* T10: preferência de tela perto do TOPO da aba — antes era o
+                último nó, sem destaque, e quem está sobrecarregado (o
+                público que mais quer o modo essencial) tinha que rolar a
+                aba inteira pra achá-lo. Não é fixed (competiria com a
+                barra inferior no mobile): só entra mais cedo no fluxo. */}
             {essencial && (
               <div style={{ fontSize: 11.5, color: T.sub, textAlign: "center", lineHeight: 1.5 }}>
-                Modo essencial ativo — missões extras e conquistas estão recolhidas. A preferência pode ser alterada logo abaixo.
+                Modo essencial ativo — missões extras e conquistas estão recolhidas.
               </div>
             )}
             {podeEditar && (
@@ -322,6 +317,16 @@ export function VisaoEstudo({ aluno, podeEditar, concurso = null, contexto = "Pl
                 </button>
               </div>
             )}
+            <div ref={missaoRef} tabIndex={-1} aria-label="Missão da semana"
+              className={realceMissao ? "mission-impact" : undefined} style={{ scrollMarginTop: 18 }}>
+              <MissaoAtual meta={meta} trilha={trilha} m={m} metas={dados.metas} ciclo={ciclo.estado}
+                aoAvancar={podeEditar ? irAba : undefined} />
+            </div>
+            {!essencial && examTag && gam.missoes.length > 0 && <MissoesPersistidas missoes={gam.missoes} disciplinas={trilha.disciplinas} />}
+            <MetaSemana meta={meta} trilha={trilha} podeEditar={podeEditar} aoMudar={recarregar}
+              compacta aoPraticar={(alvo) => irAba("registrar", alvo)}
+              aoAbrirDesempenho={() => irAba("desempenho")} />
+            {!essencial && m && <ConquistasRecentes m={m} metas={dados.metas} simulados={dados.simulados} aoAbrir={() => irAba("conquistas")} />}
           </div>
         )}
         {tab === "concurso" && (
