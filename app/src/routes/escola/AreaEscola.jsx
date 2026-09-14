@@ -350,7 +350,12 @@ function Turmas({ turmas, alunos, porAluno, aoMudar, aoVerRanking, aoVerAluno })
                     <button type="button" onClick={() => renomear(t)} style={{ border: `1px solid ${T.line}`, background: "transparent", color: T.sub, borderRadius: 8, fontSize: 12.5, fontWeight: 600, padding: "7px 14px", minHeight: 36 }}>
                       ✎ Renomear
                     </button>
-                    <button type="button" onClick={() => excluir(t, s.n)} style={{ border: `1px solid ${s.n ? T.line : T.red + "66"}`, background: "transparent", color: s.n ? T.sub : T.red, borderRadius: 8, fontSize: 12.5, fontWeight: 600, padding: "7px 14px", minHeight: 36, opacity: s.n ? 0.6 : 1 }}>
+                    {/* I10: mesmo com a turma ainda tendo alunos (visualmente
+                        inerte, opacity 0.6), o botão precisa de uma cor de
+                        aviso — antes era idêntico ao "Renomear" (T.line/
+                        T.sub) ao lado. T.gold aqui, T.red pleno fica
+                        reservado para o caso realmente ativo (s.n === 0). */}
+                    <button type="button" onClick={() => excluir(t, s.n)} style={{ border: `1px solid ${s.n ? T.gold + "66" : T.red + "66"}`, background: "transparent", color: s.n ? T.gold : T.red, borderRadius: 8, fontSize: 12.5, fontWeight: 600, padding: "7px 14px", minHeight: 36, opacity: s.n ? 0.6 : 1 }}>
                       × Excluir
                     </button>
                   </div>

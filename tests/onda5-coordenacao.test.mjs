@@ -327,3 +327,19 @@ test("T29: os três selects de linha continuam chamando as mesmas funções no o
   assert.match(codigo, /onChange=\{\(e\) => trocarConcurso\(a, e\.target\.value\)\}/);
   assert.match(codigo, /onChange=\{\(e\) => trocarTrilha\(a, e\.target\.value\)\}/);
 });
+
+// ── Bloco 9 (I10): cor de aviso no "Excluir" de turma desabilitado ──────────
+test("I10: o botão Excluir turma (s.n > 0) não é mais idêntico ao Renomear", () => {
+  const codigo = src("app/src/routes/escola/AreaEscola.jsx");
+  const linhaExcluir = codigo.match(/<button type="button" onClick=\{\(\) => excluir\(t, s\.n\)\}[^>]*>/)[0];
+  assert.doesNotMatch(
+    linhaExcluir,
+    /color:\s*s\.n\s*\?\s*T\.sub\s*:/,
+    "voltou a usar T.sub (a mesma cor neutra do Renomear) quando a turma ainda tem alunos",
+  );
+  assert.match(
+    linhaExcluir,
+    /color:\s*s\.n\s*\?\s*T\.gold\s*:\s*T\.red/,
+    "precisa de uma cor de aviso quando desabilitado (T.gold), reservando T.red pleno para o caso ativo (s.n === 0)",
+  );
+});
