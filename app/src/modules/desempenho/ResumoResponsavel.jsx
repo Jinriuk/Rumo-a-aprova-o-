@@ -9,8 +9,14 @@ import { fmtBR } from "../../shared/regras/regras.js";
 import { fmtHoras } from "../motor/jargao.js";
 import { provaDoConcurso, notaPct, totalAcertos, totalQuestoes } from "../conteudo/provas.js";
 
-export function ResumoResponsavel({ aluno, m, meta, trilha, simulados, semanaAtiva, concurso, ciclo, fimDoCiclo }) {
+// T39: `publico` troca a copy de segunda pessoa/conselho parental
+// (pensada para pai/mãe) pela equivalente factual de terceira pessoa,
+// sem alterar nenhum dado exibido — usada pela ficha da COORDENAÇÃO
+// (publico="coordenacao"). Ausente (default) é o comportamento
+// original, exatamente como AreaResponsavel.jsx já consome.
+export function ResumoResponsavel({ aluno, m, meta, trilha, simulados, semanaAtiva, concurso, ciclo, fimDoCiclo, publico }) {
   const T = useTema();
+  const coord = publico === "coordenacao";
 
   // T28 — CICLO ENCERRADO. Sem isto, esta tela lê a última semana da
   // trilha como se fosse a semana corrente: o pai vê "Precisa de
@@ -40,7 +46,9 @@ export function ResumoResponsavel({ aluno, m, meta, trilha, simulados, semanaAti
   const poucosDias = m.diasSemana > 0 && m.diasSemana < 3;
   const fechoMeta = metaConcluida
     ? (poucosDias
-        ? "A meta da semana foi concluída — parabéns. Como o estudo se concentrou em poucos dias, vale incentivar uma rotina mais distribuída ao longo da próxima semana. 👏"
+        ? (coord
+            ? "A meta da semana foi concluída, com o estudo concentrado em poucos dias."
+            : "A meta da semana foi concluída — parabéns. Como o estudo se concentrou em poucos dias, vale incentivar uma rotina mais distribuída ao longo da próxima semana. 👏")
         : "A meta da semana foi concluída. 🎉")
     : consideradas > 0 ? `Faltam ${pendentes} ${pendentes === 1 ? "atividade" : "atividades"} para concluir a meta.`
     : "";
@@ -62,7 +70,9 @@ export function ResumoResponsavel({ aluno, m, meta, trilha, simulados, semanaAti
   // tratado com tom positivo na frase acima — não repetimos como alerta
   // (evita assustar o responsável diante de uma semana, no fim, cumprida).
   const alertas = [];
-  if (!encerrado && m.totalDias > 0 && poucosDias && !metaConcluida) alertas.push("Poucos dias de estudo nesta semana — vale distribuir melhor a rotina.");
+  if (!encerrado && m.totalDias > 0 && poucosDias && !metaConcluida) {
+    alertas.push(coord ? "Poucos dias de estudo nesta semana." : "Poucos dias de estudo nesta semana — vale distribuir melhor a rotina.");
+  }
   if (m.accTrend && m.accTrend.delta <= -5) alertas.push(`O acerto caiu de ${m.accTrend.de}% para ${m.accTrend.para}% nas últimas semanas.`);
   const fracas = m.matStats.filter((s) => s.comAcc && s.acc < 60).map((s) => s.name);
   if (fracas.length) alertas.push(`Matérias para reforçar: ${fracas.join(", ")}.`);
@@ -87,8 +97,14 @@ export function ResumoResponsavel({ aluno, m, meta, trilha, simulados, semanaAti
         txt: "O curso chegou ao fim. Não há mais metas semanais a cumprir — a coordenação abre o próximo ciclo quando ele estiver pronto.",
       };
     }
-    if (m.diasSemana === 0)
-      return { tom: T.red, rotulo: "Precisa de atenção", txt: `${primeiroNome} ainda não estudou nesta semana — um incentivo ajuda a retomar.` };
+    if (m.diasSemana === 0) {
+      return {
+        tom: T.red, rotulo: "Precisa de atenção",
+        txt: coord
+          ? `${primeiroNome} ainda não estudou nesta semana.`
+          : `${primeiroNome} ainda não estudou nesta semana — um incentivo ajuda a retomar.`,
+      };
+    }
     if ((m.acerto > 0 && m.acerto < 55) || (m.diasSemana < 3 && pendentes > 0))
       return { tom: T.gold, rotulo: "Vale acompanhar", txt: "Há sinais para acompanhar de perto nesta semana (veja os pontos de atenção abaixo)." };
     if ((metaConcluida && m.diasSemana >= 3) || (m.diasSemana >= 5 && (m.acerto === 0 || m.acerto >= 70)))

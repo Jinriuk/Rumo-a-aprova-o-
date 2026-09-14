@@ -103,7 +103,13 @@ export default function AreaEscola({ perfil }) {
     ["conformidade", "LGPD", null, "escudo"], ["marca", "Marca", null, "pincel"],
   ];
 
-  const concursoDoAluno = alunoAberto ? concursosPorId[alunoAberto.concurso_id] : null;
+  // T39/T40: a ficha agora tem ações que mudam trilha/concurso/turma do
+  // próprio aluno aberto — sem reler de alunosPorId, a ficha continuaria
+  // mostrando os valores de ANTES da troca (o snapshot que abrirAluno
+  // guardou) até fechar e abrir de novo. alunosPorId já é o dado fresco
+  // pós-recarregarTudo(); cai no snapshot só enquanto ele ainda não chegou.
+  const alunoAbertoFresco = alunoAberto ? (alunosPorId[alunoAberto.id] ?? alunoAberto) : null;
+  const concursoDoAluno = alunoAbertoFresco ? concursosPorId[alunoAbertoFresco.concurso_id] : null;
 
   return (
     <div>
@@ -125,7 +131,9 @@ export default function AreaEscola({ perfil }) {
           {!carregando && alunoAberto && (
             <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
               <button type="button" onClick={() => { despacharNav({ tipo: "fecharAluno" }); aoTopo(); }} style={{ alignSelf: "flex-start", border: `1px solid ${T.line}`, background: T.card, color: T.sub, borderRadius: 8, padding: "8px 14px", fontSize: 13, fontWeight: 600 }}>← voltar ao painel</button>
-              <FichaAluno aluno={alunoAberto} concurso={concursoDoAluno} />
+              <FichaAluno aluno={alunoAbertoFresco} concurso={concursoDoAluno}
+                turmas={dados.turmas} concursos={dados.concursos} trilhas={dados.trilhas}
+                aoMudar={recarregarTudo} aoGerarCredencial={setCredencial} />
             </div>
           )}
 

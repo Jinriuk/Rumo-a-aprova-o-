@@ -438,3 +438,67 @@ test("T38: TrilhaConcurso.jsx mostra o nome real da matéria, não o código cru
     "não pode introduzir uma quarta cópia hardcoded do catálogo — a rota escolhida foi estender as queries",
   );
 });
+
+// ── Bloco 13 (T39/T40): copy factual + ações reais na ficha do aluno ───────
+test("T39: ResumoResponsavel ganha o prop `publico`, default ausente = comportamento atual", () => {
+  const codigo = src("app/src/modules/desempenho/ResumoResponsavel.jsx");
+  assert.match(
+    codigo,
+    /export function ResumoResponsavel\(\{[^}]*publico[^}]*\}\)/,
+    "precisa aceitar publico sem quebrar a assinatura existente",
+  );
+  assert.match(codigo, /const coord = publico === "coordenacao";/);
+});
+
+test("T39: AreaResponsavel.jsx não muda — continua sem passar publico (comportamento parental preservado)", () => {
+  const codigo = src("app/src/routes/responsavel/AreaResponsavel.jsx");
+  assert.doesNotMatch(codigo, /publico=/, "a tela do responsável não pode passar publico — zero mudança pra ela");
+});
+
+test("T39: as três frases de conselho parental/segunda pessoa têm equivalente factual sob publico=coordenacao", () => {
+  const codigo = src("app/src/modules/desempenho/ResumoResponsavel.jsx");
+  // 1) semáforo "Precisa de atenção"
+  assert.match(codigo, /coord\s*\n?\s*\?\s*`\$\{primeiroNome\} ainda não estudou nesta semana\.`/);
+  // 2) fechoMeta com poucos dias
+  assert.match(codigo, /coord\s*\n?\s*\?\s*"A meta da semana foi concluída, com o estudo concentrado em poucos dias\."/);
+  // 3) alerta de poucos dias
+  assert.match(codigo, /coord \? "Poucos dias de estudo nesta semana\." :/);
+  // as frases originais (parentais) continuam existindo pro caso default
+  assert.match(codigo, /um incentivo ajuda a retomar/);
+  assert.match(codigo, /vale incentivar uma rotina mais distribuída/);
+  assert.match(codigo, /vale distribuir melhor a rotina/);
+});
+
+test("T40: FichaAluno.jsx ganha uma barra de ações reais no cabeçalho", () => {
+  const codigo = src("app/src/modules/desempenho/FichaAluno.jsx");
+  assert.match(codigo, /titulo="Ações rápidas"/, "precisa de uma seção visível de ações, não só o Editar do onboarding");
+  for (const nome of ["trocarTurma", "trocarConcurso", "trocarTrilha"]) {
+    assert.match(codigo, new RegExp(`const ${nome} = async \\(`), `${nome} precisa existir na ficha`);
+  }
+  assert.match(codigo, /await dialogo\.confirmar\(/, "as trocas da ficha também confirmam antes de gravar (mesmo padrão do Bloco 8)");
+  assert.match(codigo, /const credencialAluno = \(\) => comAcao\(async \(\) => aoGerarCredencial\?\.\(await db\.provisionarAluno\(aluno\.id\)\)\);/);
+  assert.match(codigo, /import \{ VinculosResponsavel \} from "\.\.\/pessoas\/VinculosResponsavel\.jsx";/);
+  assert.match(codigo, /setVinculosAbertos\(true\)/, "\"Ver vínculos\" precisa abrir o mesmo modal que ListaAlunos.jsx usa");
+});
+
+test("T40: a ficha passa publico=\"coordenacao\" para ResumoResponsavel", () => {
+  const codigo = src("app/src/modules/desempenho/FichaAluno.jsx");
+  assert.match(codigo, /<ResumoResponsavel[\s\S]*?publico="coordenacao"/);
+});
+
+test("T40: AreaEscola.jsx passa turmas/concursos/trilhas/aoMudar/aoGerarCredencial para a ficha", () => {
+  const codigo = src("app/src/routes/escola/AreaEscola.jsx");
+  assert.match(
+    codigo,
+    /<FichaAluno aluno=\{alunoAbertoFresco\} concurso=\{concursoDoAluno\}\s*\n\s*turmas=\{dados\.turmas\} concursos=\{dados\.concursos\} trilhas=\{dados\.trilhas\}\s*\n\s*aoMudar=\{recarregarTudo\} aoGerarCredencial=\{setCredencial\} \/>/,
+  );
+});
+
+test("T40: AreaEscola.jsx não mostra mais o snapshot velho do aluno — relê de alunosPorId após mudanças", () => {
+  const codigo = src("app/src/routes/escola/AreaEscola.jsx");
+  assert.match(
+    codigo,
+    /const alunoAbertoFresco = alunoAberto \? \(alunosPorId\[alunoAberto\.id\] \?\? alunoAberto\) : null;/,
+    "sem isto, trocar trilha/concurso na ficha não atualiza o que a própria ficha mostra até fechar e reabrir",
+  );
+});

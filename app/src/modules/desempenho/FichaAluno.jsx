@@ -2,23 +2,77 @@
    página condensada, sem os menus do aluno. A escola vê o que
    importa: a semana na trilha, o desempenho e o histórico recente —
    no mesmo formato enxuto do responsável. Tudo leitura. */
-import React, { useId, useMemo, useState } from "react";
-import { SectionCard, Empty, Erro, EmptyState, Botao, useInputStyle, CarregandoBloco } from "../../shared/ui/componentes.jsx";
+import React, { useId, useMemo, useRef, useState } from "react";
+import { SectionCard, Empty, Erro, EmptyState, Botao, BotaoMini, useInputStyle, CarregandoBloco, useDialogo } from "../../shared/ui/componentes.jsx";
 import { useTema } from "../../shared/branding/BrandingContext.jsx";
 import { useTrilha } from "../conteudo/useTrilha.js";
 import { useRecurso } from "../../shared/hooks/useRecurso.js";
 import { mensagemAmigavel } from "../../shared/lib/erros.js";
+import { criarTrava } from "../../shared/lib/travaEnvio.js";
 import { calcularMetricas } from "./metricas.js";
 import { ResumoResponsavel } from "./ResumoResponsavel.jsx";
 import { TrilhaConcurso } from "../conteudo/TrilhaConcurso.jsx";
 import { HistoricoProgresso } from "./HistoricoProgresso.jsx";
 import { ListaRegistros } from "../../shared/ui/ListaRegistros.jsx";
+import { VinculosResponsavel } from "../pessoas/VinculosResponsavel.jsx";
 import { calcularXP, patente, fmtHoras } from "../motor/jargao.js";
 import { semanaAtual } from "../../shared/regras/regras.js";
 import * as db from "../../shared/data/index.js";
 
-export function FichaAluno({ aluno, concurso }) {
+// T39/T40: as três trocas de linha + gerar credencial já existem em
+// ListaAlunos.jsx (com confirmação, Bloco 8 desta onda) — duplicadas
+// aqui porque a extração para um módulo compartilhado se mostrou
+// arriscada demais para o escopo do bloco (ListaAlunos.jsx amarra
+// essas ações a uma trava de LISTA inteira; a ficha trabalha com um
+// aluno só). São ~10 linhas cada, já finas: dialogo.confirmar + uma
+// chamada a db.*.
+export function FichaAluno({ aluno, concurso, turmas = [], concursos = [], trilhas = [], aoMudar, aoGerarCredencial }) {
   const T = useTema();
+  const dialogo = useDialogo();
+  const [ocupado, setOcupado] = useState(false);
+  const [erroAcao, setErroAcao] = useState(null);
+  const [vinculosAbertos, setVinculosAbertos] = useState(false);
+  const travaRef = useRef(null);
+  if (travaRef.current === null) travaRef.current = criarTrava();
+
+  async function comAcao(fn) {
+    if (!travaRef.current.tentar()) return;
+    setOcupado(true); setErroAcao(null);
+    try { await fn(); aoMudar?.(); } catch (e) { setErroAcao(mensagemAmigavel(e, "acao")); }
+    finally { travaRef.current.liberar(); }
+    setOcupado(false);
+  }
+  const trocarTurma = async (turmaId) => {
+    const turma = turmas.find((t) => t.id === turmaId);
+    const ok = await dialogo.confirmar({
+      titulo: "Trocar turma",
+      mensagem: turma ? `Mover ${aluno.nome} para a turma ${turma.nome}?` : `Remover ${aluno.nome} de sua turma atual?`,
+      rotuloConfirmar: "Mover",
+    });
+    if (!ok) return;
+    return comAcao(() => db.definirTurma(aluno.id, turmaId || null));
+  };
+  const trocarConcurso = async (concursoId) => {
+    const c = concursos.find((x) => x.id === concursoId);
+    const ok = await dialogo.confirmar({
+      titulo: "Trocar concurso",
+      mensagem: c ? `Trocar o concurso-alvo de ${aluno.nome} para ${c.nome}?` : `Remover o concurso-alvo de ${aluno.nome}?`,
+      rotuloConfirmar: "Trocar",
+    });
+    if (!ok) return;
+    return comAcao(() => db.atualizarAluno(aluno.id, { concurso_id: concursoId || null }));
+  };
+  const trocarTrilha = async (trilhaId) => {
+    const trilha = trilhas.find((t) => t.id === trilhaId);
+    const ok = await dialogo.confirmar({
+      titulo: "Trocar trilha de estudo",
+      mensagem: trilha ? `Trocar a trilha de estudo de ${aluno.nome} para ${trilha.nome}?` : `Remover a trilha de estudo de ${aluno.nome}?`,
+      rotuloConfirmar: "Trocar",
+    });
+    if (!ok) return;
+    return comAcao(() => db.atualizarAluno(aluno.id, { trilha_id: trilhaId || null }));
+  };
+  const credencialAluno = () => comAcao(async () => aoGerarCredencial?.(await db.provisionarAluno(aluno.id)));
   const { dados: carregado, carregando: carregandoDados, erro: erroDados } = useRecurso(
     () => (aluno
       ? Promise.all([db.listarMetas(aluno.id), db.listarRegistros(aluno.id), db.listarSimulados(aluno.id), db.carregarXpPersistido(aluno.id)])
@@ -58,8 +112,12 @@ export function FichaAluno({ aluno, concurso }) {
   const turma = (aluno.alunos_turmas ?? []).map((v) => v.turmas?.nome).filter(Boolean)[0];
   const recentes = dados.registros.slice(0, 8);
 
+  const turmaAtual = (aluno.alunos_turmas ?? [])[0]?.turma_id ?? "";
+  const selMini = { background: T.bg, border: `1px solid ${T.line}`, color: T.sub, borderRadius: 7, padding: "5px 9px", minHeight: 32, fontSize: 11.5, maxWidth: "100%" };
+
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+      {dialogo.elemento}
       {/* cabeçalho da ficha */}
       <div style={{ display: "flex", alignItems: "center", gap: 13, background: `linear-gradient(135deg, ${T.cardHi}, ${T.card})`, border: `1px solid ${T.line}`, borderRadius: 14, padding: "14px 16px", flexWrap: "wrap" }}>
         <div className="disp" style={{ width: 48, height: 48, borderRadius: "50%", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center", background: `linear-gradient(135deg, ${T.gold}, #9c7d2e)`, color: "#0A1622", fontWeight: 800, fontSize: 17, border: `2px solid ${T.gold}` }}>
@@ -83,9 +141,53 @@ export function FichaAluno({ aluno, concurso }) {
         </div>
       </div>
 
-      {/* o corpo condensado: mesmo formato do responsável */}
+      {/* T39/T40: barra de ações reais — até aqui a única ação visível na
+          ficha inteira era o "Editar" discreto do onboarding lá embaixo;
+          trocar trilha/concurso, gerar credencial e vínculos ficavam só
+          na lista (atrás do "···Mais"), longe de quem já está vendo o
+          desempenho do aluno. */}
+      <SectionCard titulo="Ações rápidas" semPadding>
+        <div style={{ display: "flex", flexWrap: "wrap", gap: 8, alignItems: "center", padding: "12px 14px" }}>
+          {turmas.length > 0 && (
+            <select value={turmaAtual} disabled={ocupado} onChange={(e) => trocarTurma(e.target.value)}
+              onWheel={(e) => e.currentTarget.blur()} title="Turma do aluno"
+              aria-label={`Turma de ${aluno.nome}`} style={selMini}>
+              <option value="">— sem turma —</option>
+              {turmas.map((t) => <option key={t.id} value={t.id}>{t.nome}</option>)}
+            </select>
+          )}
+          {concursos.length > 0 && (
+            <select value={aluno.concurso_id ?? ""} disabled={ocupado} onChange={(e) => trocarConcurso(e.target.value)}
+              onWheel={(e) => e.currentTarget.blur()} title="Concurso do aluno"
+              aria-label={`Concurso de ${aluno.nome}`} style={selMini}>
+              <option value="">— sem concurso —</option>
+              {concursos.map((c) => <option key={c.id} value={c.id}>{c.nome}</option>)}
+            </select>
+          )}
+          {trilhas.length > 1 && (
+            <select value={aluno.trilha_id ?? ""} disabled={ocupado} onChange={(e) => trocarTrilha(e.target.value)}
+              onWheel={(e) => e.currentTarget.blur()} title="Trilha de estudo"
+              aria-label={`Trilha de estudo de ${aluno.nome}`} style={selMini}>
+              <option value="">— sem trilha —</option>
+              {trilhas.map((t) => <option key={t.id} value={t.id}>{t.nome}</option>)}
+            </select>
+          )}
+          {!aluno.usuario_id && (
+            <BotaoMini destaque disabled={ocupado} onClick={credencialAluno}>{ocupado ? "…" : "Gerar credencial"}</BotaoMini>
+          )}
+          <BotaoMini onClick={() => setVinculosAbertos(true)}>Ver vínculos</BotaoMini>
+        </div>
+        {erroAcao && <div style={{ padding: "0 14px 12px" }}><Erro>{erroAcao}</Erro></div>}
+      </SectionCard>
+
+      {vinculosAbertos && (
+        <VinculosResponsavel aluno={aluno} aoMudar={aoMudar} aoFechar={() => setVinculosAbertos(false)} aoGerarCredencial={aoGerarCredencial} />
+      )}
+
+      {/* o corpo condensado: mesmo formato do responsável, com copy
+          factual de terceira pessoa (a coordenação não é o pai/mãe). */}
       <ResumoResponsavel aluno={aluno} m={m} meta={meta} trilha={trilha}
-        simulados={dados.simulados} semanaAtiva={semanaAtiva} concurso={concurso} />
+        simulados={dados.simulados} semanaAtiva={semanaAtiva} concurso={concurso} publico="coordenacao" />
 
       {/* trilha/missões REAIS do concurso-alvo (Fase 15.4 ligada): a
           coordenação vê o plano por prova do aluno, não uma trilha fixa. */}
