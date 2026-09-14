@@ -225,7 +225,13 @@ export function VinculosResponsavel({ aluno, aoMudar, aoFechar, aoGerarCredencia
                             <BotaoMini perigo onClick={() => setConfirmando({ id: v.id, tipo: "credencial" })}>Revogar credencial</BotaoMini>
                           </>
                         )}
-                        <BotaoMini onClick={() => setConfirmando({ id: v.id, tipo: "vinculo" })}>Revogar acesso</BotaoMini>
+                        {/* T42: as duas ações são igualmente difíceis de
+                            desfazer — a credencial tem "Reativar", mas o
+                            vínculo removido só volta pelo fluxo separado de
+                            "+ Vincular responsável existente" (precisa
+                            saber o id do responsável). Mesmo nível de
+                            destaque visual para os dois: perigo nos dois. */}
+                        <BotaoMini perigo onClick={() => setConfirmando({ id: v.id, tipo: "vinculo" })}>Revogar acesso</BotaoMini>
                       </>
                     )}
                   </div>
@@ -276,10 +282,13 @@ export function VinculosResponsavel({ aluno, aoMudar, aoFechar, aoGerarCredencia
           </div>
         )}
 
-        <button type="button" onClick={aoFechar}
-          style={{ marginTop: 16, width: "100%", background: T.line, border: "none", color: T.sub, borderRadius: 9, padding: "11px", fontWeight: 700, fontSize: 13.5, cursor: "pointer" }}>
-          Fechar
-        </button>
+        {/* T43: "Fechar" tinha o registro visual de ação PRINCIPAL do modal
+            (width:100%, fontSize maior que qualquer BotaoMini de ação real
+            aqui dentro) — mas ele não decide nada, só sai. Mesmo componente
+            e mesmo registro dos BotaoMini ao lado (fontSize 12, minHeight 32). */}
+        <div style={{ marginTop: 16, display: "flex", justifyContent: "flex-end" }}>
+          <BotaoMini onClick={aoFechar}>Fechar</BotaoMini>
+        </div>
       </div>
     </div>,
     document.body,

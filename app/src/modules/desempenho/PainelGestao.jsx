@@ -40,7 +40,10 @@ export function PainelGestao({ resumo, aoIr, aoIrFiltrado }) {
 
   // Destaques: a escola escolhe o critério (Fase 9 do doc central)
   const CRITERIOS = {
-    acerto: { rotulo: "Melhor acerto", v: (x) => x.acc ?? -1, fmt: (x) => (x.acc == null ? "—" : `${x.acc}%`), sub: "acerto" },
+    // T32: os outros três critérios já são todos de 7 dias — "acerto" usava
+    // x.acc (acumulado da vida inteira do aluno), uma janela diferente
+    // misturada no mesmo seletor. x.accSem é a mesma métrica em 7 dias.
+    acerto: { rotulo: "Melhor acerto (7d)", v: (x) => x.accSem ?? -1, fmt: (x) => (x.accSem == null ? "—" : `${x.accSem}%`), sub: "acerto 7d" },
     questoes: { rotulo: "Mais questões (7d)", v: (x) => x.qSem, fmt: (x) => x.qSem, sub: "questões 7d" },
     tempo: { rotulo: "Mais tempo (7d)", v: (x) => x.minSem, fmt: (x) => fmtHorasCurto(x.minSem), sub: "tempo 7d" },
     dias: { rotulo: "Mais dias (7d)", v: (x) => x.diasSem, fmt: (x) => `${x.diasSem}d`, sub: "dias 7d" },
@@ -91,22 +94,32 @@ export function PainelGestao({ resumo, aoIr, aoIrFiltrado }) {
         <StatCard rotulo="Questões (7 dias)" valor={questoesSemana} icone="📈" />
       </div>
 
-      {/* ALERTAS DE RISCO */}
-      <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-        <div style={{ fontSize: 11, color: T.sub, fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.6, margin: "2px 2px 0" }}>⚠ Alertas de risco</div>
-        <Alerta tom="risco" icone="💤" titulo="Sem atividade" sub="Nenhum registro nos últimos 7 dias" n={semAtividade}
-          ir={semAtividade ? () => aoIrFiltrado ? aoIrFiltrado("alunos", "sem-atividade") : aoIr("ranking") : null}
-          rotuloCta="Ver lista filtrada"
-          nomes={ag.filter((x) => x.semAtividade).map((x) => x.aluno.nome.split(" ")[0])} />
-        <Alerta tom="alerta" icone="🔑" titulo="Sem credencial" sub="Acesso ainda não liberado" n={semCredencial}
-          ir={semCredencial ? () => aoIrFiltrado ? aoIrFiltrado("alunos", "sem-credencial") : aoIr("alunos") : null}
-          rotuloCta="Liberar credenciais"
-          nomes={ag.filter((x) => x.semCredencial).map((x) => x.aluno.nome.split(" ")[0])} />
-        <Alerta tom="neutro" icone="🏁" titulo="Pendências da semana" sub="Missão desta semana ainda em aberto (semana em curso)" n={metaPendente}
-          ir={metaPendente ? () => aoIrFiltrado ? aoIrFiltrado("alunos", "meta-atrasada") : aoIr("ranking") : null}
-          rotuloCta="Ver alunos com pendências"
-          nomes={ag.filter((x) => x.metaIncompleta).map((x) => x.aluno.nome.split(" ")[0])} />
-      </div>
+      {/* ALERTAS DE RISCO — T33: card zerado não informa nada (nem "0
+          alunos"); o título da seção também some quando os três estão
+          em zero, senão sobra como cabeçalho vazio. */}
+      {(semAtividade > 0 || semCredencial > 0 || metaPendente > 0) && (
+        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+          <div style={{ fontSize: 11, color: T.sub, fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.6, margin: "2px 2px 0" }}>⚠ Alertas de risco</div>
+          {semAtividade > 0 && (
+            <Alerta tom="risco" icone="💤" titulo="Sem atividade" sub="Nenhum registro nos últimos 7 dias" n={semAtividade}
+              ir={() => aoIrFiltrado ? aoIrFiltrado("alunos", "sem-atividade") : aoIr("ranking")}
+              rotuloCta="Ver lista filtrada"
+              nomes={ag.filter((x) => x.semAtividade).map((x) => x.aluno.nome.split(" ")[0])} />
+          )}
+          {semCredencial > 0 && (
+            <Alerta tom="alerta" icone="🔑" titulo="Sem credencial" sub="Acesso ainda não liberado" n={semCredencial}
+              ir={() => aoIrFiltrado ? aoIrFiltrado("alunos", "sem-credencial") : aoIr("alunos")}
+              rotuloCta="Liberar credenciais"
+              nomes={ag.filter((x) => x.semCredencial).map((x) => x.aluno.nome.split(" ")[0])} />
+          )}
+          {metaPendente > 0 && (
+            <Alerta tom="neutro" icone="🏁" titulo="Pendências da semana" sub="Missão desta semana ainda em aberto (semana em curso)" n={metaPendente}
+              ir={() => aoIrFiltrado ? aoIrFiltrado("alunos", "meta-atrasada") : aoIr("ranking")}
+              rotuloCta="Ver alunos com pendências"
+              nomes={ag.filter((x) => x.metaIncompleta).map((x) => x.aluno.nome.split(" ")[0])} />
+          )}
+        </div>
+      )}
 
       {/* RANKING RESUMIDO — critério escolhido pela escola */}
       <SectionCard titulo="Destaques da semana" acao={

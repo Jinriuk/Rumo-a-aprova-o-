@@ -2,7 +2,7 @@
    Painel / Alunos / Ranking / Turmas / LGPD / Marca. */
 import React, { useEffect, useMemo, useReducer, useState } from "react";
 import { Cabecalho } from "../../shared/ui/Cabecalho.jsx";
-import { SectionCard, Erro, ErroComRetry, EmptyState, CarregandoBloco, useDialogo } from "../../shared/ui/componentes.jsx";
+import { SectionCard, Erro, ErroComRetry, EmptyState, CarregandoBloco, StatusBadge, useDialogo } from "../../shared/ui/componentes.jsx";
 import { nomeValido, limparNome } from "../../shared/validacao.js";
 import { MenuPrincipal } from "../../shared/ui/MenuPrincipal.jsx";
 import { useTema } from "../../shared/branding/BrandingContext.jsx";
@@ -21,7 +21,7 @@ import { navReducer, NAV_INICIAL } from "./navegacaoEscola.js";
 import * as db from "../../shared/data/index.js";
 
 const VAZIO_NUCLEO = { turmas: [], alunos: [], concursos: [], resumo: [], trilhas: [], consentimentos: [] };
-const VAZIO_EXTRA = { logs: [], simuladosEscola: [] };
+const VAZIO_EXTRA = { logs: [], simuladosEscola: [], logsTotal: 0 };
 
 export default function AreaEscola({ perfil }) {
   const T = useTema();
@@ -57,8 +57,8 @@ export default function AreaEscola({ perfil }) {
   );
   const { dados: carregadoExtra, carregando: carregandoExtra, recarregar: recarregarExtra } = useRecurso(
     (signal) => Promise.all([
-      db.listarLogsAcesso(100, { signal }), db.listarSimuladosEscola({ signal }),
-    ]).then(([logs, simuladosEscola]) => ({ logs, simuladosEscola })),
+      db.listarLogsAcesso(100, { signal }), db.listarSimuladosEscola({ signal }), db.contarLogsAcesso({ signal }),
+    ]).then(([logs, simuladosEscola, logsTotal]) => ({ logs, simuladosEscola, logsTotal })),
     [],
   );
   const dados = { ...VAZIO_NUCLEO, ...VAZIO_EXTRA, ...(carregado ?? {}), ...(carregadoExtra ?? {}) };
@@ -82,9 +82,19 @@ export default function AreaEscola({ perfil }) {
 
   const alunosPorId = useMemo(() => Object.fromEntries(dados.alunos.map((a) => [a.id, a])), [dados.alunos]);
   const concursosPorId = useMemo(() => Object.fromEntries(dados.concursos.map((c) => [c.id, c])), [dados.concursos]);
+  // T31: semanas de cada trilha (já embutidas por listarTrilhas), por id —
+  // adaptarResumoEscola usa para não contar aluno de ciclo encerrado como
+  // "sem atividade" (ele não tem mais missão nenhuma).
+  const semanasPorTrilha = useMemo(
+    () => Object.fromEntries(dados.trilhas.map((t) => [t.id, t.trilha_semanas ?? []])),
+    [dados.trilhas],
+  );
   // Agregado por aluno: vem PRONTO do banco (RPC resumo_escola) e é
   // calculado uma única vez aqui — Painel, Ranking e Turmas reusam.
-  const resumoLista = useMemo(() => adaptarResumoEscola(dados.resumo, alunosPorId), [dados.resumo, alunosPorId]);
+  const resumoLista = useMemo(
+    () => adaptarResumoEscola(dados.resumo, alunosPorId, semanasPorTrilha),
+    [dados.resumo, alunosPorId, semanasPorTrilha],
+  );
   const resumoPorAluno = useMemo(() => Object.fromEntries(resumoLista.map((x) => [x.aluno.id, x])), [resumoLista]);
 
   const ABAS = [
@@ -93,7 +103,13 @@ export default function AreaEscola({ perfil }) {
     ["conformidade", "LGPD", null, "escudo"], ["marca", "Marca", null, "pincel"],
   ];
 
-  const concursoDoAluno = alunoAberto ? concursosPorId[alunoAberto.concurso_id] : null;
+  // T39/T40: a ficha agora tem ações que mudam trilha/concurso/turma do
+  // próprio aluno aberto — sem reler de alunosPorId, a ficha continuaria
+  // mostrando os valores de ANTES da troca (o snapshot que abrirAluno
+  // guardou) até fechar e abrir de novo. alunosPorId já é o dado fresco
+  // pós-recarregarTudo(); cai no snapshot só enquanto ele ainda não chegou.
+  const alunoAbertoFresco = alunoAberto ? (alunosPorId[alunoAberto.id] ?? alunoAberto) : null;
+  const concursoDoAluno = alunoAbertoFresco ? concursosPorId[alunoAbertoFresco.concurso_id] : null;
 
   return (
     <div>
@@ -115,7 +131,9 @@ export default function AreaEscola({ perfil }) {
           {!carregando && alunoAberto && (
             <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
               <button type="button" onClick={() => { despacharNav({ tipo: "fecharAluno" }); aoTopo(); }} style={{ alignSelf: "flex-start", border: `1px solid ${T.line}`, background: T.card, color: T.sub, borderRadius: 8, padding: "8px 14px", fontSize: 13, fontWeight: 600 }}>← voltar ao painel</button>
-              <FichaAluno aluno={alunoAberto} concurso={concursoDoAluno} />
+              <FichaAluno aluno={alunoAbertoFresco} concurso={concursoDoAluno}
+                turmas={dados.turmas} concursos={dados.concursos} trilhas={dados.trilhas}
+                aoMudar={recarregarTudo} aoGerarCredencial={setCredencial} />
             </div>
           )}
 
@@ -163,7 +181,7 @@ export default function AreaEscola({ perfil }) {
           )}
 
           {!carregando && !alunoAberto && tab === "conformidade" && !carregandoExtra && (
-            <PainelConformidade consentimentos={dados.consentimentos} logs={dados.logs} alunosPorId={alunosPorId} />
+            <PainelConformidade consentimentos={dados.consentimentos} logs={dados.logs} logsTotal={dados.logsTotal} alunosPorId={alunosPorId} />
           )}
 
           {!carregando && !alunoAberto && tab === "marca" && (
@@ -177,6 +195,12 @@ export default function AreaEscola({ perfil }) {
   );
 }
 
+// T31 (Bloco 3): a turma só acende "em risco" quando a PROPORÇÃO de
+// alunos sem atividade (entre os que ainda estão em ciclo ativo —
+// ver adaptarResumoEscola) passa deste limiar. Qualquer contagem > 0
+// disparava o badge mesmo numa turma de 40 alunos com 1 só inativo.
+const PROPORCAO_TURMA_EM_RISCO = 0.3;
+
 /* Turmas com indicadores: alunos, acerto, questões e alunos em risco.
    Clicar na turma abre a lista de alunos dela; clicar no aluno abre o
    desempenho individual (Fase 10 do doc). */
@@ -189,7 +213,7 @@ function Turmas({ turmas, alunos, porAluno, aoMudar, aoVerRanking, aoVerAluno })
   // a cada render (inclusive ao só abrir/fechar uma turma) — O(turmas
   // × alunos) repetido sem necessidade. Agora é uma passada só por turma.
   const porTurma = useMemo(() => {
-    const mapa = new Map(turmas.map((t) => [t.id, { alunos: [], n: 0, questoes: 0, acerto: null, risco: 0 }]));
+    const mapa = new Map(turmas.map((t) => [t.id, { alunos: [], n: 0, questoes: 0, acerto: null, risco: 0, emRisco: false }]));
     for (const a of alunos) {
       for (const v of a.alunos_turmas ?? []) {
         const entrada = mapa.get(v.turma_id);
@@ -199,14 +223,19 @@ function Turmas({ turmas, alunos, porAluno, aoMudar, aoVerRanking, aoVerAluno })
     for (const entrada of mapa.values()) {
       const linhas = entrada.alunos.map((a) => porAluno[a.id]).filter(Boolean);
       const comAcc = linhas.filter((x) => x.acc != null);
+      // T31: numerador (risco) e denominador (emCicloAtivo) excluem ciclo
+      // encerrado do MESMO jeito — senão uma turma toda formada, ou com
+      // parte dela formada, dilui a proporção dos que ainda estudam.
+      const emCicloAtivo = linhas.filter((x) => !x.cicloEncerrado);
       entrada.n = entrada.alunos.length;
       entrada.questoes = linhas.reduce((s, x) => s + x.q, 0);
       entrada.acerto = comAcc.length ? Math.round(comAcc.reduce((s, x) => s + x.acc, 0) / comAcc.length) : null;
       entrada.risco = linhas.filter((x) => x.semAtividade).length;
+      entrada.emRisco = emCicloAtivo.length > 0 && entrada.risco / emCicloAtivo.length > PROPORCAO_TURMA_EM_RISCO;
     }
     return mapa;
   }, [turmas, alunos, porAluno]);
-  const vazia = { alunos: [], n: 0, questoes: 0, acerto: null, risco: 0 };
+  const vazia = { alunos: [], n: 0, questoes: 0, acerto: null, risco: 0, emRisco: false };
   const alunosDaTurma = (turmaId) => (porTurma.get(turmaId) ?? vazia).alunos;
   const statsTurma = (turmaId) => porTurma.get(turmaId) ?? vazia;
 
@@ -235,7 +264,9 @@ function Turmas({ turmas, alunos, porAluno, aoMudar, aoVerRanking, aoVerAluno })
         titulo: "Não é possível excluir agora",
         mensagem: `A turma "${t.nome}" tem ${n} aluno(s). Mova os alunos para outra turma antes de excluí-la.`,
         rotuloConfirmar: "Entendi",
-        rotuloCancelar: "Fechar",
+        // T46: aviso puramente informativo (o código faz return logo
+        // abaixo, incondicional) — não uma decisão binária. Botão único.
+        rotuloCancelar: null,
       });
       return;
     }
@@ -274,7 +305,7 @@ function Turmas({ turmas, alunos, porAluno, aoMudar, aoVerRanking, aoVerAluno })
                     <div className="disp" style={{ fontSize: 15, fontWeight: 700 }}>
                       {t.nome} <span style={{ fontSize: 11, color: T.gold, fontWeight: 700, marginLeft: 6 }}>{aberta ? "fechar alunos ▴" : "ver alunos ▾"}</span>
                     </div>
-                    {s.risco > 0 && <span style={{ fontSize: 11, fontWeight: 700, color: T.red, background: `${T.red}14`, border: `1px solid ${T.red}44`, borderRadius: 6, padding: "2px 8px" }}>{s.risco} em risco</span>}
+                    {s.emRisco && <span style={{ fontSize: 11, fontWeight: 700, color: T.red, background: `${T.red}14`, border: `1px solid ${T.red}44`, borderRadius: 6, padding: "2px 8px" }}>{s.risco} em risco</span>}
                   </button>
                   <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(90px,1fr))", gap: 8, marginTop: 10 }}>
                     <Mini rotulo="Alunos" valor={s.n} />
@@ -289,6 +320,11 @@ function Turmas({ turmas, alunos, porAluno, aoMudar, aoVerRanking, aoVerAluno })
                         <div style={{ padding: "14px", fontSize: 12.5, color: T.sub, textAlign: "center" }}>Nenhum aluno nesta turma ainda — vincule na aba Alunos.</div>
                       ) : alunosDaTurma(t.id).map((a, j, arr) => {
                         const r = porAluno[a.id];
+                        // I11: mesma leitura de dado e mesmo componente que
+                        // ListaAlunos.jsx já usa para o selo de credencial.
+                        const temCred = !!a.usuario_id;
+                        const credRevogada = temCred && a.usuarios?.credencial_status === "revogada";
+                        const aguardaTroca = temCred && !credRevogada && a.usuarios?.must_change_password === true;
                         return (
                           <button type="button" key={a.id} className="row" onClick={() => aoVerAluno(a)}
                             style={{ display: "flex", alignItems: "center", gap: 11, width: "100%", textAlign: "left", border: "none", background: "transparent", padding: "11px 13px", borderBottom: j === arr.length - 1 ? "none" : `1px solid ${T.line}`, color: T.ink }}>
@@ -301,6 +337,12 @@ function Turmas({ turmas, alunos, porAluno, aoMudar, aoVerRanking, aoVerAluno })
                                 <div className="num" style={{ fontSize: 11, color: T.sub, marginTop: 1 }}>
                                   {r.qSem} questões (7d) · acerto <b style={{ color: r.accSem == null ? T.sub : r.accSem >= 70 ? T.green : T.gold }}>{r.accSem == null ? "—" : `${r.accSem}%`}</b> · {r.diasSem} dias
                                   {r.semAtividade && <b style={{ color: T.red }}> · sem atividade</b>}
+                                </div>
+                              )}
+                              {(credRevogada || aguardaTroca) && (
+                                <div style={{ display: "flex", gap: 5, marginTop: 4, flexWrap: "wrap" }}>
+                                  {credRevogada && <StatusBadge tom="risco">credencial revogada</StatusBadge>}
+                                  {aguardaTroca && <StatusBadge tom="alerta">aguardando troca de senha</StatusBadge>}
                                 </div>
                               )}
                             </div>
@@ -318,7 +360,14 @@ function Turmas({ turmas, alunos, porAluno, aoMudar, aoVerRanking, aoVerAluno })
                     <button type="button" onClick={() => renomear(t)} style={{ border: `1px solid ${T.line}`, background: "transparent", color: T.sub, borderRadius: 8, fontSize: 12.5, fontWeight: 600, padding: "7px 14px", minHeight: 36 }}>
                       ✎ Renomear
                     </button>
-                    <button type="button" onClick={() => excluir(t, s.n)} style={{ border: `1px solid ${s.n ? T.line : T.red + "66"}`, background: "transparent", color: s.n ? T.sub : T.red, borderRadius: 8, fontSize: 12.5, fontWeight: 600, padding: "7px 14px", minHeight: 36, opacity: s.n ? 0.6 : 1 }}>
+                    {/* I10: mesmo com a turma ainda tendo alunos (visualmente
+                        inerte, opacity 0.6), o botão precisa de cor de aviso —
+                        antes era idêntico ao "Renomear" (T.line/T.sub) ao
+                        lado. Fica na família de PERIGO nos dois estados, só
+                        rebaixada quando inerte (borda mais fraca + a opacity
+                        de 0.6 que já existia): dourado aqui competiria com o
+                        dourado de ação principal do "Ver classificação ›". */}
+                    <button type="button" onClick={() => excluir(t, s.n)} style={{ border: `1px solid ${T.red}${s.n ? "33" : "66"}`, background: "transparent", color: T.red, borderRadius: 8, fontSize: 12.5, fontWeight: 600, padding: "7px 14px", minHeight: 36, opacity: s.n ? 0.6 : 1 }}>
                       × Excluir
                     </button>
                   </div>

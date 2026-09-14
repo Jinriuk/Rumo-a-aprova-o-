@@ -175,6 +175,10 @@ function montarRecorrenciaPorAssunto(rec) {
   if (!recorrencia.length && !medida.length) return vazio;
 
   const pesoPorMateria = Object.fromEntries(materias.map((m) => [m.materia_codigo, m.peso != null ? Number(m.peso) : null]));
+  // T38: nome real da matéria (prova_materias.nome) — a UI não mostra
+  // mais o código cru (qui, mat…); cai de volta pro código só se faltar
+  // o nome (dado incompleto), nunca inventa um "Assunto" genérico aqui.
+  const nomeMateriaPorCodigo = Object.fromEntries(materias.map((m) => [m.materia_codigo, m.nome]));
   const nomePorAssunto = Object.fromEntries(assuntos.map((a) => [a.id, a]));
   const medidaPorAssunto = Object.fromEntries(medida.map((m) => [m.assunto_id, m]));
 
@@ -195,7 +199,7 @@ function montarRecorrenciaPorAssunto(rec) {
     linhas.push({
       assunto_id: assuntoId,
       nome: a.nome ?? "Assunto",
-      materia: a.materia_codigo ?? null,
+      materia: a.materia_codigo ? (nomeMateriaPorCodigo[a.materia_codigo] ?? a.materia_codigo) : null,
       consolidado,
       sugestao,
       questoesMedidas: medidaPorAssunto[assuntoId]?.num_questoes_medidas ?? null,
@@ -248,8 +252,11 @@ function MissaoConcurso({ mi, ultima, compacto, T }) {
     <div style={{ padding: "12px 14px", borderBottom: ultima ? "none" : `1px solid ${T.line}` }}>
       <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
         <span className="disp" style={{ fontSize: 14, fontWeight: 700 }}>{mi.nome}</span>
+        {/* T38: nome real da matéria (carregarPlanoConcurso anexa
+            materia_nome a partir de prova_materias) — cai pro código só
+            se faltar o nome, nunca esconde a matéria por completo. */}
         {mi.materia_codigo && (
-          <span className="num" style={{ fontSize: 10.5, color: T.sub, textTransform: "uppercase", letterSpacing: 0.4 }}>{mi.materia_codigo}</span>
+          <span className="num" style={{ fontSize: 10.5, color: T.sub, textTransform: "uppercase", letterSpacing: 0.4 }}>{mi.materia_nome ?? mi.materia_codigo}</span>
         )}
         <StatusBadge tom={tom}>prioridade {mi.prioridade}</StatusBadge>
         {mi.desvioDoEdital && <StatusBadge tom="alerta">ajuste da escola</StatusBadge>}

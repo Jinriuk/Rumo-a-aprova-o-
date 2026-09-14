@@ -7,6 +7,7 @@ import { useTema, useBranding } from "../../shared/branding/BrandingContext.jsx"
 import { BASE, precisaClarear, garantirLegivel, SUPERFICIE_CRITICA, RAZAO_MINIMA } from "../../shared/ui/tema.js";
 import { razaoContraste, paraOklch } from "../../shared/ui/contraste.js";
 import { mensagemAmigavel } from "../../shared/lib/erros.js";
+import { sanitizarUrlLogo } from "../../shared/lib/sanitizarUrlLogo.js";
 import * as db from "../../shared/data/index.js";
 
 export function Marca({ escola, aoMudar }) {
@@ -49,8 +50,21 @@ export function Marca({ escola, aoMudar }) {
 
   async function salvar() {
     setOcupado(true); setErro(null); setOk(false);
+    // T37: o valor salvo no banco nunca passava por sanitizarUrlLogo — só o
+    // preview (abaixo) e o consumo em BrandingContext.jsx eram protegidos.
+    // Um valor malicioso salvo aqui virava um link cru clicado depois no
+    // backoffice (AreaAdmin.jsx). Uma URL não vazia que a sanitização
+    // rejeita (javascript:, formato não suportado…) barra o salvamento em
+    // vez de virar silenciosamente "" no banco.
+    const logoBruto = logo.trim();
+    const logoSeguro = logoBruto ? sanitizarUrlLogo(logoBruto) : "";
+    if (logoBruto && !logoSeguro) {
+      setErro("URL do logo inválida ou não permitida — use um link http(s) direto para a imagem.");
+      setOcupado(false);
+      return;
+    }
     try {
-      const marca = { nome: nome.trim() || escola.nome, logo_url: logo.trim() || null, cor_acento: corValida ? cor : null };
+      const marca = { nome: nome.trim() || escola.nome, logo_url: logoSeguro || null, cor_acento: corValida ? cor : null };
       await db.atualizarMarca(escola.id, marca);
       aplicarMarca(marca); // aplica em TODO o sistema na hora, sem recarregar
       setOk(true);
@@ -69,7 +83,11 @@ export function Marca({ escola, aoMudar }) {
           </div>
           <div>
             <label htmlFor={id("logo")} style={lbl}>URL do logo (quadrado, opcional)</label>
-            <input id={id("logo")} value={logo} onChange={(e) => setLogo(e.target.value)} placeholder="https://…/logo.png" style={inputS} />
+            <input id={id("logo")} type="url" value={logo} onChange={(e) => setLogo(e.target.value)} placeholder="https://…/logo.png" style={inputS} />
+            <div style={{ fontSize: 11.5, color: T.sub, marginTop: 5, lineHeight: 1.4 }}>
+              Cole o link direto de uma imagem já publicada em algum lugar (ex.: o link de “copiar
+              endereço da imagem” de um arquivo hospedado). Upload de arquivo ainda não é suportado aqui.
+            </div>
           </div>
           <div>
             <label htmlFor={id("cor")} style={lbl}>Cor de destaque</label>
@@ -102,19 +120,6 @@ export function Marca({ escola, aoMudar }) {
       </SectionCard>
     </div>
   );
-}
-
-// Sanitiza a URL do logo antes de usá-la como `src` de <img>
-// (autofix CodeQL js/xss-through-dom): aceita só data:image em base64 de
-// formatos sem script (SVG fica de fora de propósito) OU URL absoluta
-// http(s); qualquer outra coisa (javascript:, malformada…) vira "".
-function sanitizarUrlLogo(valor) {
-  const v = String(valor ?? "").trim();
-  if (/^data:image\/(?:png|jpe?g|webp|gif);base64,[a-z0-9+/=]+$/i.test(v)) return v;
-  try {
-    const u = new URL(v);
-    return (u.protocol === "https:" || u.protocol === "http:") ? u.toString() : "";
-  } catch { return ""; }
 }
 
 // Preview ESTÁTICO (não usa o tema da sessão — mostra a cor escolhida AGORA).
