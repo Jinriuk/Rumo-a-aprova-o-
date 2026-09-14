@@ -14,6 +14,7 @@ import { useTema } from "../../shared/branding/BrandingContext.jsx";
 import { useRecurso } from "../../shared/hooks/useRecurso.js";
 import { useEnvioUnico } from "../../shared/hooks/useEnvioUnico.js";
 import { nomeValido, limparNome } from "../../shared/validacao.js";
+import { sanitizarUrlLogo } from "../../shared/lib/sanitizarUrlLogo.js";
 import * as db from "../../shared/data/index.js";
 import {
   categoriaEscola, avisosRisco, severidadeMaxima,
@@ -618,6 +619,11 @@ function DetalheEscola({ escolaId, aoVoltar, aoMudar }) {
   if (carregando) return <CarregandoBloco titulo="Carregando escola…" cartoes={3} linhas={5} />;
   if (erro) return <><BotaoVoltar aoVoltar={aoVoltar} /><Erro>{erro}</Erro></>;
   const e = d.escola ?? {};
+  // T37: e.logo_url vem do banco sem passar por sanitização em nenhum
+  // lugar antes daqui — sanitizarUrlLogo() protege o href para que um
+  // valor malicioso salvo por uma escola não vire um link cru clicado
+  // pelo super-admin.
+  const logoSeguro = sanitizarUrlLogo(e.logo_url);
   const logsEscola = (logs ?? []).filter((l) => l.escola_id === escolaId);
   const recarregarLocal = () => { recarregar(); recLogs(); aoMudar?.(); };
 
@@ -640,7 +646,7 @@ function DetalheEscola({ escolaId, aoVoltar, aoMudar }) {
           {e.email_institucional && <InfoLinha rotulo="E-mail institucional" valor={e.email_institucional} href={`mailto:${e.email_institucional}`} />}
           {e.telefone_contato && <InfoLinha rotulo="Telefone/WhatsApp" valor={e.telefone_contato} />}
           <InfoLinha rotulo="Cor de acento" valor={e.cor_acento ?? "—"} swatch={e.cor_acento} />
-          {e.logo_url && <InfoLinha rotulo="Logo" valor="ver imagem ↗" href={e.logo_url} />}
+          {logoSeguro && <InfoLinha rotulo="Logo" valor="ver imagem ↗" href={logoSeguro} />}
         </div>
         {e.observacao && <div style={{ marginTop: 10, fontSize: 12.5, color: T.sub, background: T.bg, border: `1px solid ${T.line}`, borderRadius: 8, padding: "8px 10px", lineHeight: 1.5 }}><b style={{ color: T.ink }}>Obs. interna:</b> {e.observacao}</div>}
         {e.contato_observacao && <div style={{ marginTop: 8, fontSize: 12.5, color: T.sub, background: T.bg, border: `1px solid ${T.line}`, borderRadius: 8, padding: "8px 10px", lineHeight: 1.5 }}><b style={{ color: T.ink }}>Obs. de contato:</b> {e.contato_observacao}</div>}

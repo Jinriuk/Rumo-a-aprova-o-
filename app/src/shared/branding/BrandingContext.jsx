@@ -2,6 +2,7 @@
    nome e cor de acento da escola POR CIMA do design fixo. */
 import React, { createContext, useContext, useMemo, useState } from "react";
 import { BASE, tema as temaDaEscola } from "../ui/tema.js";
+import { sanitizarUrlLogo } from "../lib/sanitizarUrlLogo.js";
 
 const BrandingContext = createContext({ escola: null, tema: BASE, aplicarMarca: () => {} });
 
@@ -32,18 +33,6 @@ export function BrandingProvider({ escola, children }) {
 
 export const useBranding = () => useContext(BrandingContext);
 export const useTema = () => useContext(BrandingContext).tema;
-
-// Sanitiza a URL do logo antes do <img src> (autofix CodeQL
-// js/xss-through-dom): só data:image em base64 (formatos sem script) ou
-// URL absoluta http(s); o resto (javascript:, malformada…) vira "".
-function sanitizarUrlLogo(valor) {
-  const v = String(valor ?? "").trim();
-  if (/^data:image\/(?:png|jpe?g|webp|gif);base64,[a-z0-9+/=]+$/i.test(v)) return v;
-  try {
-    const u = new URL(v);
-    return (u.protocol === "https:" || u.protocol === "http:") ? u.toString() : "";
-  } catch { return ""; }
-}
 
 // O selo da escola no topo: logo dela se houver, senão a âncora
 // sobre o gradiente de acento (mesma assinatura visual da versão atual).

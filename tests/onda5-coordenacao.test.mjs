@@ -19,6 +19,7 @@ import { resolve, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { adaptarResumoEscola } from "../app/src/shared/metricas/agregados.js";
 import { todayISO } from "../app/src/shared/regras/regras.js";
+import { sanitizarUrlLogo } from "../app/src/shared/lib/sanitizarUrlLogo.js";
 
 const __dir = dirname(fileURLToPath(import.meta.url));
 const root = resolve(__dir, "..");
@@ -357,4 +358,42 @@ test("T42: 'Revogar credencial' e 'Revogar acesso' têm o mesmo destaque de peri
     /<BotaoMini perigo onClick=\{\(\) => setConfirmando\(\{ id: v\.id, tipo: "vinculo" \}\)\}>Revogar acesso<\/BotaoMini>/,
     "Revogar acesso precisa ganhar o mesmo perigo — as duas ações são igualmente irreversíveis por ação simples",
   );
+});
+
+// ── Bloco 11 (T37): sanitizarUrlLogo aplicado no save e no href do admin ────
+test("T37: sanitizarUrlLogo rejeita javascript: e aceita http(s)/data:image", () => {
+  assert.equal(sanitizarUrlLogo("javascript:alert(1)"), "");
+  assert.equal(sanitizarUrlLogo("not a url"), "");
+  assert.equal(sanitizarUrlLogo("https://escola.example/logo.png"), "https://escola.example/logo.png");
+  assert.equal(sanitizarUrlLogo("data:image/png;base64,aGVsbG8="), "data:image/png;base64,aGVsbG8=");
+});
+
+test("T37: Marca.jsx e BrandingContext.jsx importam o módulo compartilhado (sem cópia local)", () => {
+  const marca = src("app/src/modules/escola/Marca.jsx");
+  const branding = src("app/src/shared/branding/BrandingContext.jsx");
+  assert.match(marca, /import\s*\{\s*sanitizarUrlLogo\s*\}\s*from\s*"\.\.\/\.\.\/shared\/lib\/sanitizarUrlLogo\.js"/);
+  assert.match(branding, /import\s*\{\s*sanitizarUrlLogo\s*\}\s*from\s*"\.\.\/lib\/sanitizarUrlLogo\.js"/);
+  assert.doesNotMatch(marca, /function sanitizarUrlLogo/, "não pode sobrar uma cópia local em Marca.jsx");
+  assert.doesNotMatch(branding, /function sanitizarUrlLogo/, "não pode sobrar uma cópia local em BrandingContext.jsx");
+});
+
+test("T37: Marca.jsx sanitiza antes de gravar e rejeita o salvamento se a URL for maliciosa/inválida", () => {
+  const codigo = src("app/src/modules/escola/Marca.jsx");
+  assert.match(codigo, /const logoSeguro = logoBruto \? sanitizarUrlLogo\(logoBruto\) : "";/);
+  assert.match(codigo, /if \(logoBruto && !logoSeguro\)/, "precisa barrar o salvamento quando a URL não vazia é rejeitada");
+  assert.match(codigo, /logo_url: logoSeguro \|\| null/, "o que é gravado no banco precisa ser o valor sanitizado, não logo.trim() cru");
+  assert.doesNotMatch(codigo, /logo_url: logo\.trim\(\) \|\| null/, "voltou a gravar o valor cru sem sanitizar");
+});
+
+test("T37: o <input> de logo vira type=\"url\" com texto de ajuda", () => {
+  const codigo = src("app/src/modules/escola/Marca.jsx");
+  assert.match(codigo, /<input id=\{id\("logo"\)\} type="url"/);
+});
+
+test("T37: AreaAdmin.jsx sanitiza e.logo_url antes de usá-lo como href no backoffice", () => {
+  const codigo = src("app/src/routes/admin/AreaAdmin.jsx");
+  assert.match(codigo, /import\s*\{\s*sanitizarUrlLogo\s*\}\s*from\s*"\.\.\/\.\.\/shared\/lib\/sanitizarUrlLogo\.js"/);
+  assert.match(codigo, /const logoSeguro = sanitizarUrlLogo\(e\.logo_url\);/);
+  assert.match(codigo, /\{logoSeguro && <InfoLinha rotulo="Logo" valor="ver imagem ↗" href=\{logoSeguro\} \/>\}/);
+  assert.doesNotMatch(codigo, /href=\{e\.logo_url\}/, "não pode sobrar o href cru — um link malicioso salvo pela escola viraria clicável no backoffice");
 });
