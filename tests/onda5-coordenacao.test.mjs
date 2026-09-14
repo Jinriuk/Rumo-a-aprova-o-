@@ -536,3 +536,12 @@ test("T46: AreaEscola.jsx usa o modo de botão único no aviso 'turma ainda tem 
   const trecho = codigo.slice(inicio, inicio + 300);
   assert.match(trecho, /rotuloCancelar: null,/, "é um aviso informativo (o código faz return incondicional depois) — não duas escolhas reais");
 });
+
+// ── Bloco 15 (T30): altura da lista — POR_PAGINA reduzido ───────────────────
+test("T30: POR_PAGINA cai de 50 para algo entre 20 e 25", () => {
+  const codigo = src("app/src/modules/pessoas/ListaAlunos.jsx");
+  const m = codigo.match(/const POR_PAGINA = (\d+);/);
+  assert.ok(m, "POR_PAGINA precisa continuar existindo como constante nomeada");
+  const valor = Number(m[1]);
+  assert.ok(valor >= 20 && valor <= 25, `POR_PAGINA=${valor} — precisa estar entre 20 e 25 (era 50)`);
+});

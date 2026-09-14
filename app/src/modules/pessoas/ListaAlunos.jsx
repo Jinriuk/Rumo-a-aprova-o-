@@ -12,7 +12,12 @@ import { paginar } from "../../shared/lib/paginacao.js";
 import { VinculosResponsavel } from "./VinculosResponsavel.jsx";
 import * as db from "../../shared/data/index.js";
 
-const POR_PAGINA = 50; // Fase B-min, B.2 — escola com 300–500 alunos não renderiza tudo de uma vez
+// T30: eram 50 — a ~123px por linha (medido no relato), 50 linhas
+// davam ~6.173px de altura só na página. 25 corta isso quase pela
+// metade sem tocar no layout da linha (redesenho da linha é maior,
+// fora do escopo desta onda — ver nota no PR). Fase B-min, B.2 segue
+// valendo: escola com 300–500 alunos não renderiza tudo de uma vez.
+const POR_PAGINA = 25;
 
 export function ListaAlunos({ alunos, consentimentos, concursos = [], turmas = [], trilhas = [], resumoPorAluno = {}, aoMudar, aoGerarCredencial, aoVerAluno, filtroStatusInicial = "" }) {
   const T = useTema();
