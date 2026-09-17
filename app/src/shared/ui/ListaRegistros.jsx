@@ -14,6 +14,15 @@ export function RegistroRow({ registro: l, disciplina, aoApagar, rotuloAcerto = 
   // corrida, difícil de escanear numa lista de dezenas de linhas. Cada
   // um vira um selo próprio, como o app já faz noutros lugares (ex.:
   // "✦ ≈N questões" em MetaSemana.jsx).
+  //
+  // Os selos são NEUTROS de propósito. Colorir o acerto aqui exigiria
+  // um limiar, e o limiar do app é o de `corDeAcerto` (70 bom / 55
+  // atenção, metricas.js) — que vive em modules/desempenho e não é
+  // importável daqui sem inverter a camada. Inventar um corte local
+  // reproduziria o defeito que esta onda corrige (o mesmo dado com
+  // duas leituras: ver T6/T7). Além disso o acerto de UM registro de
+  // 10 questões não tem o mesmo peso do acumulado que `corDeAcerto`
+  // interpreta.
   const selo = { fontSize: 11, fontWeight: 700, color: T.sub, border: `1px solid ${T.line}`, borderRadius: 6, padding: "1px 7px" };
   return (
     <div className="row" style={{ display: "flex", alignItems: "center", gap: 10, padding: "11px 14px", borderBottom: ultima ? "none" : `1px solid ${T.line}` }}>
@@ -26,9 +35,7 @@ export function RegistroRow({ registro: l, disciplina, aoApagar, rotuloAcerto = 
           <span className="num" style={{ fontSize: 11.5, color: T.sub }}>{fmtBR(String(l.data))}</span>
           <span className="num" style={selo}>{l.questoes} questões</span>
           {acc !== null && (
-            <span className="num" style={{ ...selo, color: acc >= 60 ? T.green : T.red, borderColor: `${acc >= 60 ? T.green : T.red}55` }}>
-              {acc}%{rotuloAcerto ? " acerto" : ""}
-            </span>
+            <span className="num" style={selo}>{acc}%{rotuloAcerto ? " acerto" : ""}</span>
           )}
           {l.minutos ? <span className="num" style={selo}>{l.minutos}min</span> : null}
         </div>

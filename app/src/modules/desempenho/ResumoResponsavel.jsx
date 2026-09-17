@@ -144,7 +144,7 @@ export function ResumoResponsavel({ aluno, m, meta, trilha, simulados, semanaAti
           que falta (T20) em vez de repetir o semáforo (T19) */}
       {!encerrado && m.diasSemana === 0 && pendentesDaSemana.length > 0 ? (
         <div style={{ background: `linear-gradient(160deg, ${T.cardHi}, ${T.card})`, border: `1px solid ${T.line}`, borderLeft: `4px solid ${T.gold}`, borderRadius: 12, padding: "14px 16px" }}>
-          <button type="button" onClick={() => setVerPendencias((v) => !v)}
+          <button type="button" onClick={() => setVerPendencias((v) => !v)} aria-expanded={verPendencias}
             style={{ display: "flex", width: "100%", justifyContent: "space-between", alignItems: "center", gap: 10, background: "transparent", border: "none", padding: 0, minHeight: 32, cursor: "pointer", textAlign: "left" }}>
             <span style={{ fontSize: 14.5, color: T.ink, lineHeight: 1.5 }}>
               Há {pendentesDaSemana.length} {pendentesDaSemana.length === 1 ? "atividade pendente" : "atividades pendentes"} nesta semana.
