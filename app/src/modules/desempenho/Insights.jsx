@@ -12,8 +12,15 @@ export function InsightsDesempenho({ m }) {
   const ins = calcularInsights(m);
   if (!ins.temDados) return null;
 
+  // T7: `delta >= 0` incluía delta === 0, e "▲ 0 pts" (seta de alta pra
+  // uma variação nula) é a inconsistência exata que o relatório mediu.
+  // Sem mudança vira "▪ 0 pts", tom neutro — nem alta nem queda.
   const seta = m.accTrend
-    ? { txt: `${m.accTrend.delta >= 0 ? "▲" : "▼"} ${Math.abs(m.accTrend.delta)} pts`, sub: `de ${m.accTrend.de}% para ${m.accTrend.para}%`, tom: m.accTrend.delta >= 0 ? "ok" : "risco" }
+    ? {
+        txt: `${m.accTrend.delta > 0 ? "▲" : m.accTrend.delta < 0 ? "▼" : "▪"} ${Math.abs(m.accTrend.delta)} pts`,
+        sub: `de ${m.accTrend.de}% para ${m.accTrend.para}% em relação à semana anterior`,
+        tom: m.accTrend.delta > 0 ? "ok" : m.accTrend.delta < 0 ? "risco" : "neutro",
+      }
     : null;
 
   return (

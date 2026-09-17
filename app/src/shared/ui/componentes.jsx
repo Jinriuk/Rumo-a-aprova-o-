@@ -368,7 +368,11 @@ export function StatCard({ rotulo, valor, sub, icone, gradiente, tom, onClick })
 // Card de insight (leitura interpretada): borda colorida + frase curta.
 export function InsightCard({ titulo, valor, sub, tom }) {
   const T = useTema();
-  const cor = tom === "ok" ? T.green : tom === "alerta" ? T.gold : tom === "risco" ? T.red : T.gold;
+  // T7: "neutro" caía no mesmo dourado do default (sem tom passado) —
+  // um card explicitamente neutro (ex.: variação de 0 pts) saía visualmente
+  // igual a um alerta. Alinhado com StatusBadge/StatCard, onde neutro já
+  // é T.sub.
+  const cor = tom === "ok" ? T.green : tom === "alerta" ? T.gold : tom === "risco" ? T.red : tom === "neutro" ? T.sub : T.gold;
   return (
     <div style={{ background: T.bg, border: `1px solid ${T.line}`, borderLeft: `4px solid ${cor}`, borderRadius: 10, padding: "11px 13px" }}>
       <div style={{ fontSize: 10.5, color: T.sub, textTransform: "uppercase", letterSpacing: 0.4, fontWeight: 700 }}>{titulo}</div>
