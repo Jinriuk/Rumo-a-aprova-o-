@@ -24,7 +24,11 @@ export function PainelConformidade({ consentimentos, logs, logsTotal, alunosPorI
       <div style={{ background: T.card, border: `1px solid ${T.line}`, borderLeft: `4px solid ${T.gold}`, borderRadius: 12, padding: "14px 16px" }}>
         <div className="disp" style={{ fontSize: 15, fontWeight: 700 }}>🛡 Para que serve esta área</div>
         <div style={{ fontSize: 13, color: T.sub, marginTop: 6, lineHeight: 1.6 }}>
-          Os alunos são <b style={{ color: T.ink }}>menores de idade</b>, e a LGPD (Lei Geral de Proteção de Dados)
+          {/* C10: "os alunos SÃO menores de idade" é falso em concursos
+              como EsPCEx (até 21) e EsSA (até 24) — a peça de
+              conformidade não pode afirmar categoricamente o que não é
+              sempre verdade. */}
+          A maior parte dos alunos é <b style={{ color: T.ink }}>menor de idade</b>, e a LGPD (Lei Geral de Proteção de Dados)
           exige que a escola comprove duas coisas: que o <b style={{ color: T.ink }}>responsável autorizou</b> o uso dos
           dados do aluno (consentimentos, abaixo) e <b style={{ color: T.ink }}>quem acessou o quê e quando</b> (trilha
           de acesso). Se um responsável pedir os dados do filho — ou pedir para apagá-los — é daqui que sai a resposta,
