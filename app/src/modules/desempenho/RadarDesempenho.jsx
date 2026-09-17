@@ -1,12 +1,19 @@
 /* "Radar de Bordo" — leitura interpretada do desempenho do aluno
-   (ref. designs): cards de insight ANTES dos gráficos, eficiência
-   por setor (acerto por matéria) e trajetória de precisão por
-   semana. Estado vazio inteligente quando há pouco dado. */
+   (ref. designs): eficiência por setor (acerto por matéria) e
+   trajetória de precisão por semana. Estado vazio inteligente quando
+   há pouco dado.
+   T8: os cards de insight (melhor matéria/atenção/maior volume/
+   evolução) que viviam aqui foram REMOVIDOS — duplicavam, com
+   `calcularInsights` chamado uma SEGUNDA vez, exatamente os mesmos 4
+   conceitos que `InsightsDesempenho` (Insights.jsx) já mostra logo
+   acima, na mesma aba (VisaoEstudo.jsx, seções `refResumo`/`refMaterias`).
+   `calcularInsights` continua chamado aqui só para o gate `temDados`
+   (nenhuma tela deve aparecer com dado insuficiente). */
 import React from "react";
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
 } from "recharts";
-import { SectionCard, EmptyState, InsightCard } from "../../shared/ui/componentes.jsx";
+import { SectionCard, EmptyState } from "../../shared/ui/componentes.jsx";
 import { useTema } from "../../shared/branding/BrandingContext.jsx";
 import { calcularInsights, corDeAcerto } from "./metricas.js";
 
@@ -31,13 +38,6 @@ export function RadarDesempenho({ m, trilha, aoRegistrar }) {
     );
   }
 
-  // minutos por disciplina (para o "maior volume" em tempo)
-  const minutosPorMateria = (codigo) => {
-    const stat = m.matStats.find((s) => s.id === codigo);
-    return stat?.q ?? 0;
-  };
-
-  const trend = m.accTrend;
   const setores = m.matStats
     .filter((s) => s.comAcc)
     .sort((a, b) => b.acc - a.acc)
@@ -63,28 +63,6 @@ export function RadarDesempenho({ m, trilha, aoRegistrar }) {
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-      {/* CARDS DE INSIGHT */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(150px,1fr))", gap: 10 }}>
-        <InsightCard tom="ok" titulo="★ Melhor matéria"
-          valor={insights.melhor ? `${insights.melhor.acc}%` : "—"}
-          sub={insights.melhor ? insights.melhor.name : "registre acertos para ver"} />
-        <InsightCard tom={insights.atencao ? "risco" : "neutro"} titulo="⚠ Atenção"
-          valor={insights.atencao
-            ? (insights.atencao.tipo === "materia" ? `${insights.atencao.acc}%`
-              : insights.atencao.tipo === "queda" ? `↓ ${insights.atencao.para}%` : `${insights.atencao.dias} dias`)
-            : "tudo ok"}
-          sub={insights.atencao
-            ? (insights.atencao.tipo === "materia" ? insights.atencao.materia
-              : insights.atencao.tipo === "queda" ? "acerto caindo entre semanas" : "poucos dias nesta semana")
-            : "sem alertas no momento"} />
-        <InsightCard tom="neutro" titulo="▲ Maior volume"
-          valor={insights.volume ? `${insights.volume.q}` : "—"}
-          sub={insights.volume ? `questões · ${insights.volume.name}` : "—"} />
-        <InsightCard tom={trend ? (trend.delta > 0 ? "ok" : trend.delta < 0 ? "risco" : "neutro") : "neutro"} titulo="↗ Evolução geral"
-          valor={`${m.acerto}%`}
-          sub={trend ? `${trend.delta > 0 ? "+" : ""}${trend.delta}% vs. semana anterior` : "acerto acumulado"} />
-      </div>
-
       {/* EFICIÊNCIA POR SETOR */}
       <SectionCard titulo="Eficiência por setor" sub="Acerto por matéria (com volume suficiente)">
         {setores.length === 0 ? (

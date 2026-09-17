@@ -117,7 +117,11 @@ export default function AreaResponsavel({ perfil }) {
     <div>
       <Cabecalho subtitulo={subtitulo} diasProva={prova?.dias ?? null} provaRealizada={prova?.realizada ?? false} diasProvaMedia={prova?.media}
         nomeUsuario={perfil.usuario.nome} rotuloPapel="Responsável" />
-      <main style={{ maxWidth: 760, margin: "0 auto", padding: "18px max(16px, env(safe-area-inset-right)) calc(88px + env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left))" }}>
+      {/* T21: faltava a mesma classe/largura de AreaAluno.jsx e
+          AreaEscola.jsx — o conteúdo ficava travado em 760px mesmo em
+          telas largas, com a sidebar (desktop) deixando quase metade
+          da largura útil sem uso. */}
+      <main className="com-sidebar" style={{ maxWidth: 1080, margin: "0 auto", padding: "18px max(16px, env(safe-area-inset-right)) calc(88px + env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left))" }}>
         {erro && <ErroComRetry aoTentar={recarregar}>{erro}</ErroComRetry>}
 
         {/* Seletor de aluno — só aparece quando há mais de um vínculo. */}

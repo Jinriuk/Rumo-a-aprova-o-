@@ -58,6 +58,50 @@ async function cenario(fn, tentativas = 5) {
   }
 }
 
+// O retry acima só via metade dos deadlocks, e a outra metade derrubou o
+// CI da PR #111 com "deveria gerar 1 meta na escola A / 0 !== 1".
+//
+// Quando o deadlock acontece DENTRO de app.gerar_meta_protegida, o
+// `exception when others` dela (migration 0039/0049) o converte em
+// resultado='erro'. app.virar_semana conta isso em alunos_com_erro,
+// emite um WARNING e SEGUE — do lado do cliente não chega exceção
+// nenhuma, só um metas_geradas menor. O `catch (e.code === '40P01')`
+// nunca dispara e a asserção quebra como se fosse regressão do motor.
+//
+// `virar` fecha essa lacuna ouvindo o WARNING que a própria função
+// emite por aluno pulado ("virada escola %: aluno % pulado (%)") e, SÓ
+// se a causa for deadlock, re-ergue como 40P01 para o retry tratar.
+// Qualquer outro erro continua quebrando o teste — a asserção não é
+// afrouxada, só deixa de confundir falha de serialização com defeito.
+//
+// O WARNING é lido do canal de notices da conexão, não da tabela
+// virada_execucoes: `now()` é constante dentro da transação (as duas
+// viradas do teste de idempotência gravam o MESMO executado_em) e as
+// linhas de outros arquivos rodando em paralelo já estão commitadas ali
+// — ou seja, a tabela não distingue de quem é o erro. O notice, sim:
+// chega só desta chamada.
+async function virar(c, escola, data) {
+  const avisos = [];
+  const ouvir = (msg) => avisos.push(msg.message ?? "");
+  c.on("notice", ouvir);
+  let linha;
+  try {
+    linha = (await c.query("select * from app.virar_semana($1, $2::date)", [escola, data])).rows[0];
+  } finally {
+    c.removeListener("notice", ouvir);
+  }
+  if (linha.alunos_com_erro > 0) {
+    const detalhe = avisos.join(" | ") || "(nenhum warning capturado)";
+    if (!/deadlock/i.test(detalhe)) {
+      throw new Error(`virada reportou ${linha.alunos_com_erro} aluno(s) com erro que NÃO é deadlock: ${detalhe}`);
+    }
+    const err = new Error(`deadlock dentro da virada: ${detalhe}`);
+    err.code = "40P01";
+    throw err;
+  }
+  return linha;
+}
+
 async function metasDe(c, escolaId) {
   const r = await c.query(
     "select aluno_id, semana_numero, status from metas where escola_id = $1 order by aluno_id, semana_numero",
@@ -68,8 +112,8 @@ async function metasDe(c, escolaId) {
 
 test("virar_semana(escola A) gera a meta corrente do Lucas e NÃO toca a escola B", async () => {
   await cenario(async (c) => {
-    const r = await c.query("select * from app.virar_semana($1, $2::date)", [ESCOLA_A, NA_SEMANA_2]);
-    assert.equal(r.rows[0].metas_geradas, 1, "deveria gerar 1 meta na escola A");
+    const r = await virar(c, ESCOLA_A, NA_SEMANA_2);
+    assert.equal(r.metas_geradas, 1, "deveria gerar 1 meta na escola A");
 
     const a = await metasDe(c, ESCOLA_A);
     const b = await metasDe(c, ESCOLA_B);
@@ -92,7 +136,7 @@ test("virar a escola A não fecha a meta vencida da escola B (escopo do UPDATE)"
     );
 
     // virar a escola A numa data em que a meta da B já venceu
-    await c.query("select app.virar_semana($1, $2::date)", [ESCOLA_A, NA_SEMANA_3]);
+    await virar(c, ESCOLA_A, NA_SEMANA_3);
 
     const b = await metasDe(c, ESCOLA_B);
     assert.equal(b.length, 1);
@@ -108,8 +152,8 @@ test("virar a escola B fecha a meta vencida da B — e só a dela", async () => 
        from alunos where id = $1`,
       [ALUNO_BRUNO, SEMANA_1.inicio, SEMANA_1.fim],
     );
-    const r = await c.query("select * from app.virar_semana($1, $2::date)", [ESCOLA_B, NA_SEMANA_3]);
-    assert.equal(r.rows[0].metas_fechadas, 1, "a meta vencida da B deve fechar");
+    const r = await virar(c, ESCOLA_B, NA_SEMANA_3);
+    assert.equal(r.metas_fechadas, 1, "a meta vencida da B deve fechar");
 
     const b = await metasDe(c, ESCOLA_B);
     // fecha a vencida (semana 1) e gera a corrente (semana 3) — só da B
@@ -125,8 +169,8 @@ test("virar a escola B fecha a meta vencida da B — e só a dela", async () => 
 
 test("idempotência: virar a mesma escola duas vezes no mesmo dia não duplica nem reabre", async () => {
   await cenario(async (c) => {
-    await c.query("select app.virar_semana($1, $2::date)", [ESCOLA_A, NA_SEMANA_3]);
-    await c.query("select app.virar_semana($1, $2::date)", [ESCOLA_A, NA_SEMANA_3]);
+    await virar(c, ESCOLA_A, NA_SEMANA_3);
+    await virar(c, ESCOLA_A, NA_SEMANA_3);
     const a = await metasDe(c, ESCOLA_A);
     assert.equal(a.length, 1, "rodar de novo no mesmo dia não cria meta nova");
   });

@@ -546,7 +546,12 @@ function HistoriaLogin({ efeitos }) {
             transition={{ duration: .72, delay: .18, ease: [0.16, 1, 0.3, 1] }}>
             Sua prova tem um alvo.
           </m.span>
-        </span>
+        </span>{" "}
+        {/* C7: as duas linhas são blocos CSS (login-title-line: block),
+            então visualmente já quebram sem precisar de separador — e o
+            aria-label do h1 já tem o espaço certo pro leitor de tela.
+            O espaço aqui é só defensivo, para quem lê o texto bruto do
+            DOM sem respeitar `display:block` (ex.: scraping ingênuo). */}
         <span className="login-title-line">
           <m.span initial={{ y: "115%", rotate: -2 }} animate={{ y: 0, rotate: 0 }}
             transition={{ duration: .76, delay: .28, ease: [0.16, 1, 0.3, 1] }}>

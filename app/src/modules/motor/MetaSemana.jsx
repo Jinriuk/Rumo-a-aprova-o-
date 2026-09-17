@@ -36,6 +36,15 @@ export function MetaSemana({ meta, trilha, podeEditar, aoMudar, aoAbrirDesempenh
 
   const feitas = itens.filter((x) => x.estado === "concluida").length;
   const consideradas = itens.filter((x) => x.estado !== "ignorada").length;
+  const adiados = itens.length - consideradas;
+  // T18: o cabeçalho ("X de Y concluídos") usava `consideradas` (exclui
+  // adiados, correto pra fração de conclusão) enquanto "Ver todos os N
+  // objetivos" (abaixo) usa `itens.length` (inclui adiados). Com pelo
+  // menos 1 adiado, os dois números nunca batiam. Em vez de igualar as
+  // bases (esconderia o adiado do cabeçalho, ou incluiria no numerador
+  // errado), o cabeçalho passa a citar os adiados explicitamente — os
+  // dois números aparecem, e dá pra somar de cabeça e ver que fecham.
+  const subObjetivos = `${feitas} de ${consideradas} concluídos${adiados > 0 ? ` · ${adiados} ${adiados === 1 ? "adiado" : "adiados"}` : ""}`;
 
   // Semana 100% concluída: mostrar card de parabenização com próximos passos
   if (podeEditar && consideradas > 0 && feitas >= consideradas) {
@@ -60,7 +69,7 @@ export function MetaSemana({ meta, trilha, podeEditar, aoMudar, aoAbrirDesempenh
           </div>
         </div>
         {/* ainda mostra a lista completa abaixo do card, para referência */}
-        <SectionCard titulo={L.objetivos} sub={`${feitas} de ${consideradas} concluídos`} semPadding>
+        <SectionCard titulo={L.objetivos} sub={subObjetivos} semPadding>
           <div style={{ display: "flex", flexDirection: "column" }}>
             {itens.map((item, i) => (
               <ObjetivoItem key={item.id} item={item} trilha={trilha} podeEditar={false}
@@ -93,7 +102,7 @@ export function MetaSemana({ meta, trilha, podeEditar, aoMudar, aoAbrirDesempenh
   const ocultos = Math.max(0, itens.length - visiveis.length);
 
   return (
-    <SectionCard titulo={L.objetivos} sub={`${feitas} de ${consideradas} concluídos`} semPadding>
+    <SectionCard titulo={L.objetivos} sub={subObjetivos} semPadding>
       <div style={{ display: "flex", flexDirection: "column" }}>
         {visiveis.map((item, i) => (
           <ObjetivoItem key={item.id} item={item} trilha={trilha} podeEditar={podeEditar}
@@ -153,12 +162,19 @@ function ObjetivoItem({ item, trilha, podeEditar, ocupado, ultimo, aoPraticar, a
 
           {podeEditar && (
             <div className="objective-actions">
+              {/* T4: a hierarquia era invertida — "Praticar agora" (só
+                  navega, não muda estado) tinha o peso visual sólido, e
+                  "Concluir" (a ação que de fato grava progresso, via
+                  aoConcluir → definirEstadoAtividade) era o texto apagado.
+                  Concluir vira a ação com peso; Praticar agora vira
+                  contorno. "Reabrir" mantém o registro discreto de
+                  .objective-secondary — desfazer não precisa de destaque. */}
               {!concluida && !adiada && aoPraticar && (
                 <button type="button" className="objective-practice" onClick={aoPraticar} disabled={ocupado}>
                   Praticar agora <span aria-hidden="true">→</span>
                 </button>
               )}
-              <button type="button" className="objective-secondary" onClick={aoConcluir} disabled={ocupado}>
+              <button type="button" className={concluida ? "objective-secondary" : "objective-confirm"} onClick={aoConcluir} disabled={ocupado}>
                 {concluida ? "↺ Reabrir" : `✓ ${L.concluir}`}
               </button>
               {!concluida && (

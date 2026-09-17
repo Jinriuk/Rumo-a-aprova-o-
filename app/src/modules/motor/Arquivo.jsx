@@ -2,7 +2,7 @@
    contagem por estado e o sinal de pendência. Tudo leitura: o
    passado não se edita; quem fecha meta é a virada no servidor. */
 import React, { useState } from "react";
-import { Card, Empty } from "../../shared/ui/componentes.jsx";
+import { Card, Empty, StatusBadge } from "../../shared/ui/componentes.jsx";
 import { useTema } from "../../shared/branding/BrandingContext.jsx";
 import { fmtBR } from "../../shared/regras/regras.js";
 
@@ -18,7 +18,7 @@ export function Arquivo({ metas, trilha, registros }) {
     <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
       <Card>
         <div className="disp" style={{ fontSize: 16, fontWeight: 700, marginBottom: 2 }}>Histórico da jornada</div>
-        <div style={{ fontSize: 12.5, color: T.sub, marginBottom: 14 }}>Semana a semana: o que foi a missão, o que você cumpriu e o que rendeu. Toque numa semana para ver os detalhes.</div>
+        <div style={{ fontSize: 12.5, color: T.sub, marginBottom: 14 }}>Semana a semana: o que foi a missão, o que você cumpriu e o que rendeu. Selecione uma semana para ver os detalhes.</div>
 
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(210px,1fr))", gap: 10 }}>
           {metas.map((meta) => {
@@ -27,7 +27,12 @@ export function Arquivo({ metas, trilha, registros }) {
             const ignoradas = itens.filter((x) => x.estado === "ignorada").length;
             const pendentes = itens.length - feitas - ignoradas;
             const ativa = meta.status === "ativa";
-            const comPendencia = !ativa && pendentes > 0;
+            // T16: "PARCIAL" cobria dois casos bem diferentes — uma
+            // semana com metade cumprida e uma semana NUNCA aberta (0
+            // feitas, 0 adiadas). Separando: nada iniciado vira estado
+            // próprio, e "PARCIAL" passa a significar só o que o nome diz.
+            const naoIniciada = !ativa && itens.length > 0 && feitas === 0 && ignoradas === 0;
+            const comPendencia = !ativa && !naoIniciada && pendentes > 0;
             const sel = aberta === meta.id;
             const semana = trilha.semanas.find((s) => s.numero === meta.semana_numero);
 
@@ -45,11 +50,13 @@ export function Arquivo({ metas, trilha, registros }) {
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 6 }}>
                   <span className="disp" style={{ fontWeight: 700, fontSize: 14.5 }}>Semana {meta.semana_numero}</span>
                   {ativa ? (
-                    <span style={{ fontSize: 9.5, fontWeight: 800, color: "#0A1622", background: T.gold, borderRadius: 5, padding: "2px 7px" }}>AGORA</span>
+                    <StatusBadge tom="alerta">AGORA</StatusBadge>
+                  ) : naoIniciada ? (
+                    <StatusBadge tom="neutro">NÃO INICIADA</StatusBadge>
                   ) : comPendencia ? (
-                    <span style={{ fontSize: 9.5, fontWeight: 800, color: "#0A1622", background: T.red, borderRadius: 5, padding: "2px 7px" }}>PARCIAL</span>
+                    <StatusBadge tom="risco">PARCIAL</StatusBadge>
                   ) : (
-                    <span style={{ fontSize: 9.5, fontWeight: 800, color: "#0A1622", background: T.green, borderRadius: 5, padding: "2px 7px" }}>CONCLUÍDA</span>
+                    <StatusBadge tom="ok">CONCLUÍDA</StatusBadge>
                   )}
                 </div>
                 {semana?.foco && <div style={{ fontSize: 11.5, color: T.sub, fontStyle: "italic", marginTop: 5, lineHeight: 1.35, display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>{semana.foco}</div>}

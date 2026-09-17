@@ -16,7 +16,12 @@ export const L = {
   cumprido: "Cumprido",
   precisao: "Precisão",
   horas: "Horas de instrução",
-  alvos: "Alvos atingidos",
+  // T6: era "Alvos atingidos" — mesmo dado (m.totDone) que a aba
+  // Desempenho chama de "Questões no total" (Insights.jsx), e "alvo" já
+  // significa OUTRA coisa em MetaHero.jsx ("alvos abatidos" = objetivos
+  // da missão cumpridos, não questões respondidas). Renomeado pra sair
+  // da colisão, mantendo o registro terso da aba Hoje.
+  questoesTotal: "Questões resolvidas",
   ritmo: "Ritmo diário",
   radar: "Radar de desempenho",
   tempoProva: "Tempo p/ a prova",

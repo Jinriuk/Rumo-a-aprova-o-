@@ -260,7 +260,7 @@ export function MissaoAtual({ meta, trilha, m, metas, ciclo, aoAvancar }) {
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(150px,1fr))", gap: 10 }}>
             <StatCard rotulo={L.precisao} valor={`${m.acerto}%`} sub="acerto geral" icone="◎" tom={m.acerto >= 70 ? "ok" : m.acerto > 0 ? "alerta" : "neutro"} />
             <StatCard rotulo={L.horas} valor={fmtHoras(m.minutosTotais ?? 0)} sub="tempo registrado" icone="◷" />
-            <StatCard rotulo={L.alvos} valor={m.totDone} sub={`${m.qSem} nesta semana`} icone="✦" />
+            <StatCard rotulo={L.questoesTotal} valor={m.totDone} sub={`${m.qSem} nesta semana`} icone="✦" />
             <StatCard rotulo={L.ritmo} valor={fmtHorasCurto(m.mediaMinutosDia ?? 0)} sub={m.streak > 0 ? `ofensiva: ${m.streak} 🔥` : "retomando o ritmo"} icone="⧗" />
           </div>
         </div>
@@ -291,8 +291,17 @@ export function MissaoAtual({ meta, trilha, m, metas, ciclo, aoAvancar }) {
           </div>
         );
       })() : (
+        // T5: esta é a última semana da trilha (não há `proxima`). Antes,
+        // este bloco sempre dizia "Boa prova!" — inclusive quando a
+        // MESMA missão está `atrasada` (bloco vermelho logo acima, mesmo
+        // card). As duas condições vêm de fontes independentes
+        // (meta.fim vs. trilha.semanas) e nunca se checavam: o aluno via
+        // "atrasada, conclua antes de avançar" e, 20px abaixo, "boa
+        // prova!" — vermelho e comemoração juntos, sem nenhuma ligação.
         <div style={{ background: T.card, border: `1px solid ${T.line}`, borderRadius: 12, padding: "12px 14px", textAlign: "center", fontSize: 12.5, color: T.sub }}>
-          🏁 Última missão do plano — reta final. Boa prova!
+          {atrasada
+            ? "🏁 Última missão do plano — ainda há pendências. Conclua os objetivos acima antes da prova."
+            : "🏁 Última missão do plano — reta final. Boa prova!"}
         </div>
       )}
     </div>

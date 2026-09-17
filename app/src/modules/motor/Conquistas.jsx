@@ -41,7 +41,13 @@ export function catalogoConquistas({ m, metas, simulados }) {
 }
 
 // medalhão circular: anel dourado quando desbloqueado, cadeado quando não
-function Medalhao({ icone, ok, T, tam = 58 }) {
+// T11: o cadeado era binário — 0% e 88% de progresso pareciam a mesma
+// conquista, sem nenhuma pista de proximidade. O anel externo agora
+// preenche conforme `pct` (conic-gradient, sem inventar escala de cor
+// nova: é o mesmo dourado do estado desbloqueado, só que parcial), e
+// perto do alvo (≥66%) o cadeado e a borda tracejada acompanham em tom
+// dourado em vez do cinza uniforme.
+function Medalhao({ icone, ok, T, tam = 58, pct = 0 }) {
   if (ok) {
     return (
       <div style={{ width: tam, height: tam, borderRadius: "50%", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center", background: `linear-gradient(135deg, ${T.gold}, #9c7d2e)`, color: "#0A1622", boxShadow: `0 4px 16px ${T.gold}55, inset 0 1px 0 #ffffff66`, border: `2.5px solid ${T.gold}` }}>
@@ -49,9 +55,12 @@ function Medalhao({ icone, ok, T, tam = 58 }) {
       </div>
     );
   }
+  const quaseLa = pct >= 66;
   return (
-    <div style={{ width: tam, height: tam, borderRadius: "50%", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center", background: T.bg, color: T.sub, border: `2px dashed ${T.line}`, opacity: 0.85 }}>
-      <Icone nome="cadeado" tam={tam * 0.38} />
+    <div style={{ width: tam, height: tam, borderRadius: "50%", flexShrink: 0, padding: 2.5, background: pct > 0 ? `conic-gradient(${T.gold} ${pct}%, ${T.line} ${pct}%)` : T.line }}>
+      <div style={{ width: "100%", height: "100%", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", background: T.bg, color: quaseLa ? T.gold : T.sub, border: `2px dashed ${quaseLa ? T.gold + "99" : T.line}`, opacity: quaseLa ? 1 : 0.85 }}>
+        <Icone nome="cadeado" tam={tam * 0.38} />
+      </div>
     </div>
   );
 }
@@ -172,7 +181,7 @@ export function Conquistas({ nome, xp, m, metas, simulados }) {
                 const pct = Math.min(100, Math.round((c.atual / c.alvo) * 100));
                 return (
                   <div key={c.nome} style={{ display: "flex", gap: 14, alignItems: "center", padding: "16px 18px", borderBottom: `1px solid ${T.line}` }}>
-                    <Medalhao icone={c.icone} ok={ok} T={T} />
+                    <Medalhao icone={c.icone} ok={ok} T={T} pct={pct} />
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div className="disp" style={{ fontSize: 15, fontWeight: 700, color: ok ? T.gold : T.ink, display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
                         {c.nome} {ok && <Icone nome="check" tam={14} grosso={3} />}
@@ -252,18 +261,21 @@ export function ConquistasRecentes({ m, metas, simulados, aoAbrir }) {
             </div>
           ))}
         </div>
-      ) : proxima ? (
-        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-          <Medalhao icone={proxima.icone} ok={false} T={T} tam={44} />
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ fontSize: 12.5, color: T.sub }}>Mais perto de desbloquear</div>
-            <div className="disp" style={{ fontSize: 14, fontWeight: 700 }}>{proxima.nome}</div>
-            <div style={{ marginTop: 5 }}>
-              <BarraXP pct={Math.min(100, Math.round((proxima.atual / proxima.alvo) * 100))} alt={5} brilho={false} />
+      ) : proxima ? (() => {
+        const pctProxima = Math.min(100, Math.round((proxima.atual / proxima.alvo) * 100));
+        return (
+          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+            <Medalhao icone={proxima.icone} ok={false} T={T} tam={44} pct={pctProxima} />
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontSize: 12.5, color: T.sub }}>Mais perto de desbloquear</div>
+              <div className="disp" style={{ fontSize: 14, fontWeight: 700 }}>{proxima.nome}</div>
+              <div style={{ marginTop: 5 }}>
+                <BarraXP pct={pctProxima} alt={5} brilho={false} />
+              </div>
             </div>
           </div>
-        </div>
-      ) : null}
+        );
+      })() : null}
     </div>
   );
 }
