@@ -16,10 +16,15 @@ export function Cabecalho({ titulo, subtitulo, diasProva, diasProvaMedia, provaR
       <div style={{ padding: "10px max(18px, env(safe-area-inset-right)) 10px max(18px, env(safe-area-inset-left))", display: "flex", alignItems: "center", gap: 11 }}>
         <MarcaEscola tamanho={34} />
         <div style={{ flex: 1, minWidth: 0 }}>
-          <h1 className="disp hdr-title" style={{ margin: 0, fontSize: 17, fontWeight: 700, lineHeight: 1.1, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", color: T.ink }}>
+          {/* T26: os três campos truncam com ellipsis (nome da escola,
+              subtítulo com nome do aluno/concurso/prova, nome do
+              usuário logado) mas nenhum tinha `title` — nome cortado
+              sem jeito nenhum de ver o texto inteiro. `Cabecalho` é
+              compartilhado pelas 3 áreas, então o gap valia pros 3. */}
+          <h1 className="disp hdr-title" title={escola?.nome ?? titulo} style={{ margin: 0, fontSize: 17, fontWeight: 700, lineHeight: 1.1, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", color: T.ink }}>
             {escola?.nome ?? titulo}
           </h1>
-          {subtitulo && <div style={{ fontSize: 11, color: T.sub, marginTop: 2, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{subtitulo}</div>}
+          {subtitulo && <div title={subtitulo} style={{ fontSize: 11, color: T.sub, marginTop: 2, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{subtitulo}</div>}
         </div>
 
         {rotuloPapel && (
@@ -43,7 +48,7 @@ export function Cabecalho({ titulo, subtitulo, diasProva, diasProvaMedia, provaR
           </div>
         )}
 
-        <span className="hdr-user" style={{ fontSize: 12, color: T.sub, whiteSpace: "nowrap", flexShrink: 0, maxWidth: 120, overflow: "hidden", textOverflow: "ellipsis" }}>{nomeUsuario}</span>
+        <span className="hdr-user" title={nomeUsuario} style={{ fontSize: 12, color: T.sub, whiteSpace: "nowrap", flexShrink: 0, maxWidth: 120, overflow: "hidden", textOverflow: "ellipsis" }}>{nomeUsuario}</span>
         <button type="button" onClick={() => db.sair().catch((e) => console.error(e))} title="Sair" aria-label="Sair"
           style={{ border: `1px solid ${T.line}`, background: T.card, color: T.sub, borderRadius: 8, padding: "7px 11px", minHeight: 38, fontSize: 12.5, fontWeight: 600, flexShrink: 0 }}>
           Sair
