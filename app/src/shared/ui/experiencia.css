@@ -186,7 +186,10 @@ textarea:focus-visible,
   flex-wrap: wrap;
 }
 
-.objective-practice,
+/* T4: esta é a ação que MOVE PROGRESSO de verdade (marca o objetivo
+   concluído) — fica com o mesmo peso visual sólido que antes era do
+   botão que só navegava para outra aba. */
+.objective-confirm,
 .journey-confirmation-primary {
   min-height: 40px;
   border: 1px solid var(--ui-accent);
@@ -200,15 +203,35 @@ textarea:focus-visible,
   transition: transform .16s ease, filter .16s ease, box-shadow .16s ease;
 }
 
-.objective-practice:hover,
+.objective-confirm:hover,
 .journey-confirmation-primary:hover {
   filter: brightness(1.07);
   transform: translateY(-1px);
   box-shadow: 0 12px 26px color-mix(in srgb, var(--ui-accent) 24%, transparent);
 }
 
-.objective-practice:active,
+.objective-confirm:active,
 .journey-confirmation-primary:active { transform: translateY(1px); }
+
+/* T4: "Praticar agora" só LEVA a outra aba — não move progresso
+   sozinho. Continua visível (contorno + cor de destaque), mas não
+   compete em peso com a confirmação real. */
+.objective-practice {
+  min-height: 38px;
+  border: 1px solid var(--ui-line);
+  border-radius: 9px;
+  color: var(--ui-accent);
+  background: transparent;
+  font-size: 12.5px;
+  font-weight: 700;
+  padding: 8px 14px;
+  transition: border-color .16s ease, background .16s ease;
+}
+
+.objective-practice:hover {
+  border-color: var(--ui-accent);
+  background: color-mix(in srgb, var(--ui-accent) 8%, transparent);
+}
 
 .objective-secondary {
   min-height: 38px;
@@ -512,7 +535,7 @@ textarea:focus-visible,
 
 @media (max-width: 600px) {
   .objective-actions { gap: 5px; }
-  .objective-practice { flex-basis: 100%; }
+  .objective-confirm { flex-basis: 100%; }
   .journey-context { grid-template-columns: 42px minmax(0, 1fr); padding: 13px; }
   .journey-context-marker { width: 38px; height: 38px; }
   .journey-context > button { grid-column: 2; justify-self: start; min-height: 32px; padding: 5px 8px; }
