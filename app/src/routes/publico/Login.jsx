@@ -242,7 +242,7 @@ export default function Login() {
                   <IconeCampo tipo="chave" />
                   <input className="login-input login-input--icone" id={idCodigo} value={codigo} autoComplete="off" autoCapitalize="characters"
                     onChange={(e) => { setCodigo(e.target.value.toUpperCase()); setCodigoDoDispositivo(false); setErr(""); }}
-                    placeholder="Ex.: LUCASDEMO2026"
+                    placeholder="Ex.: NOME2026"
                     style={{ ...inputS, letterSpacing: 1.5, textAlign: "center", fontFamily: "monospace" }} />
                 </div>
                 {codigoDoDispositivo && (
