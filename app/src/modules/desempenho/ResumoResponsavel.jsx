@@ -1,7 +1,7 @@
 /* Resumo do responsável — experiência PRÓPRIA, simples e objetiva
    (ref. spec). Linguagem clara para o pai/mãe, sem jargão de jogo e
    sem controles administrativos. Tudo leitura. */
-import React from "react";
+import React, { useState } from "react";
 import { corDeAcerto } from "./metricas.js";
 import { SectionCard, StatCard, EmptyState, StatusBadge, InsightCard } from "../../shared/ui/componentes.jsx";
 import { useTema } from "../../shared/branding/BrandingContext.jsx";
@@ -17,6 +17,7 @@ import { provaDoConcurso, notaPct, totalAcertos, totalQuestoes } from "../conteu
 export function ResumoResponsavel({ aluno, m, meta, trilha, simulados, semanaAtiva, concurso, ciclo, fimDoCiclo, publico }) {
   const T = useTema();
   const coord = publico === "coordenacao";
+  const [verPendencias, setVerPendencias] = useState(false);
 
   // T28 — CICLO ENCERRADO. Sem isto, esta tela lê a última semana da
   // trilha como se fosse a semana corrente: o pai vê "Precisa de
@@ -38,6 +39,19 @@ export function ResumoResponsavel({ aluno, m, meta, trilha, simulados, semanaAti
   const consideradas = itens.filter((x) => x.estado !== "ignorada").length;
   const pendentes = consideradas - feitas;
   const metaConcluida = consideradas > 0 && pendentes === 0;
+
+  // T20: a tela do responsável não tinha NENHUM jeito de ver o que
+  // falta — só a promessa vaga de que "um incentivo ajuda a retomar",
+  // sem dizer em quê. O detalhamento é só leitura (mesmo dado de
+  // `itens`, já usado na lista "Atividades da semana" abaixo), sem
+  // criar controle novo nem escrita nova.
+  const pendentesDaSemana = itens.filter((x) => x.estado === "pendente");
+  const pendentesPorMateria = pendentesDaSemana.reduce((acc, item) => {
+    const disc = trilha.porCodigo[item.atividade.disciplina_codigo];
+    const nome = disc?.nome ?? "Outras atividades";
+    (acc[nome] ??= []).push(item.atividade.texto);
+    return acc;
+  }, {});
 
   // frase interpretativa. QA1.7: quando a meta foi concluída MAS em
   // poucos dias, o tom reconhece o mérito e orienta sem alarmar — em vez
@@ -126,13 +140,41 @@ export function ResumoResponsavel({ aluno, m, meta, trilha, simulados, semanaAti
         </div>
       </div>
 
-      {/* frase interpretativa */}
-      <div style={{ background: `linear-gradient(160deg, ${T.cardHi}, ${T.card})`, border: `1px solid ${T.line}`, borderLeft: `4px solid ${encerrado || metaConcluida ? T.green : T.gold}`, borderRadius: 12, padding: "14px 16px" }}>
-        <div style={{ fontSize: 14.5, color: T.ink, lineHeight: 1.55 }}>{frase}</div>
-      </div>
+      {/* frase interpretativa — ou, na semana zerada, o detalhamento do
+          que falta (T20) em vez de repetir o semáforo (T19) */}
+      {!encerrado && m.diasSemana === 0 && pendentesDaSemana.length > 0 ? (
+        <div style={{ background: `linear-gradient(160deg, ${T.cardHi}, ${T.card})`, border: `1px solid ${T.line}`, borderLeft: `4px solid ${T.gold}`, borderRadius: 12, padding: "14px 16px" }}>
+          <button type="button" onClick={() => setVerPendencias((v) => !v)}
+            style={{ display: "flex", width: "100%", justifyContent: "space-between", alignItems: "center", gap: 10, background: "transparent", border: "none", padding: 0, minHeight: 32, cursor: "pointer", textAlign: "left" }}>
+            <span style={{ fontSize: 14.5, color: T.ink, lineHeight: 1.5 }}>
+              Há {pendentesDaSemana.length} {pendentesDaSemana.length === 1 ? "atividade pendente" : "atividades pendentes"} nesta semana.
+            </span>
+            <span style={{ fontSize: 12.5, color: T.gold, fontWeight: 700, flexShrink: 0 }}>{verPendencias ? "fechar ▴" : "ver o que falta ▾"}</span>
+          </button>
+          {verPendencias && (
+            <div style={{ marginTop: 12, display: "flex", flexDirection: "column", gap: 8, borderTop: `1px solid ${T.line}`, paddingTop: 10 }}>
+              {Object.entries(pendentesPorMateria).map(([materia, textos]) => (
+                <div key={materia}>
+                  <div style={{ fontSize: 12.5, fontWeight: 700, color: T.ink }}>{materia}</div>
+                  <div style={{ fontSize: 12, color: T.sub, marginTop: 2, lineHeight: 1.4 }}>{textos.join(" · ")}</div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      ) : (
+        <div style={{ background: `linear-gradient(160deg, ${T.cardHi}, ${T.card})`, border: `1px solid ${T.line}`, borderLeft: `4px solid ${encerrado || metaConcluida ? T.green : T.gold}`, borderRadius: 12, padding: "14px 16px" }}>
+          <div style={{ fontSize: 14.5, color: T.ink, lineHeight: 1.55 }}>{frase}</div>
+        </div>
+      )}
 
-      {/* resumo da semana */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(150px,1fr))", gap: 10 }}>
+      {/* resumo da semana — T22: 5 cartões em auto-fit(150px) sobravam
+          órfãos numa coluna sozinha quando o contêiner ficava estreito
+          demais para caber os 5 lado a lado. A raiz é a mesma do T21
+          (AreaResponsavel.jsx sem "com-sidebar"/1080px); com o
+          contêiner mais largo e o mínimo reduzido, os 5 cabem junto com
+          mais folga nas larguras de desktop comuns. */}
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(140px,1fr))", gap: 10 }}>
         <StatCard rotulo="Meta da semana" valor={`${feitas}/${consideradas || "—"}`} sub="atividades concluídas" icone="🎯"
           tom={metaConcluida ? "ok" : pendentes > 0 ? "alerta" : "neutro"} />
         <StatCard rotulo="Questões" valor={m.qSem} sub="nesta semana" icone="✦" />
