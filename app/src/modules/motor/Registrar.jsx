@@ -202,9 +202,12 @@ export function Registrar({
 
         {/* alvo de toque de 32px: acima do mínimo de 24px do WCAG 2.5.8,
             sem ganhar peso visual de ação concorrente. */}
-        <button type="button" onClick={() => setMaisCampos((v) => !v)}
+        {/* C4: "+"/"−" não é affordance de disclosure reconhecível — o
+            resto do app usa chevron (ex.: "ver detalhes ▾"/"fechar ▴"
+            em Arquivo.jsx). `aria-expanded` some no mesmo movimento. */}
+        <button type="button" onClick={() => setMaisCampos((v) => !v)} aria-expanded={maisCampos}
           style={{ marginTop: 12, border: "none", background: "transparent", color: T.gold, fontSize: 12.5, fontWeight: 600, padding: "6px 8px", minHeight: 32, marginLeft: -8 }}>
-          {maisCampos ? "− Menos campos" : "+ Observação e data"}
+          {maisCampos ? "Menos campos ▴" : "Observação e data ▾"}
         </button>
         {maisCampos && (
           <div style={{ display: "grid", gap: 12, marginTop: 4 }}>

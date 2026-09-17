@@ -47,6 +47,12 @@ export function NiveisPorMateria({ m, trilha, diasParaProva }) {
 
   const comDado = linhas.filter((l) => l.nivel);
   const temFirme = linhas.some((l) => l.confianca === CONFIANCA.ALTA);
+  // C5: o título prometia "inicial" pra sempre, mesmo quando cada linha
+  // já mostrava confiança ALTA (sem sufixo "estimativa") — 441 questões
+  // depois, a tela ainda se descrevia como ponto de partida. O título
+  // muda quando TODAS as matérias com dado já firmaram; enquanto sobrar
+  // qualquer uma com confiança parcial, o "inicial" continua honesto.
+  const todasFirmes = comDado.length > 0 && comDado.every((l) => l.confianca === CONFIANCA.ALTA);
   if (!comDado.length) {
     return (
       <SectionCard titulo="Estimativa inicial de nível por matéria" sub="Baseada em acerto e volume de questões resolvidas">
@@ -57,8 +63,8 @@ export function NiveisPorMateria({ m, trilha, diasParaProva }) {
   }
 
   return (
-    <SectionCard titulo="Estimativa inicial de nível por matéria"
-      sub="Estimativa por acerto e volume — firma conforme o aluno acumula registros"
+    <SectionCard titulo={todasFirmes ? "Nível por matéria" : "Estimativa inicial de nível por matéria"}
+      sub={todasFirmes ? "Baseado em acerto e volume consolidado de questões" : "Estimativa por acerto e volume — firma conforme o aluno acumula registros"}
       acao={geral.nivel
         ? <StatusBadge tom={TOM_NIVEL[geral.nivel] ?? "neutro"}>Geral: {ROTULO_NIVEL[geral.nivel]}</StatusBadge>
         : <StatusBadge tom="neutro">Geral: a acompanhar</StatusBadge>}>

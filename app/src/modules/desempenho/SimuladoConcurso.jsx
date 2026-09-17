@@ -221,7 +221,10 @@ export function SimuladoConcurso({ aluno, simulados, podeEditar, semanaAtiva, co
               <div style={{ fontSize: 11, color: T.gold, fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 8 }}>Redação ({rotuloRedacao(cfg.redacao_role)})</div>
               <div style={{ maxWidth: 180 }}>
                 <label htmlFor={id("redacao")} style={lbl}>Nota da redação</label>
-                <input id={id("redacao")} type="number" inputMode="decimal" min="0" step="0.5" value={f.redacao} onChange={(e) => set("redacao", e.target.value)} placeholder="—" style={inputS} />
+                {/* C3: "—" não é dica de formato nenhuma; os campos de
+                    acertos ao lado já usam "0" como placeholder — mesmo
+                    padrão aqui. */}
+                <input id={id("redacao")} type="number" inputMode="decimal" min="0" step="0.5" value={f.redacao} onChange={(e) => set("redacao", e.target.value)} placeholder="0" style={inputS} />
               </div>
             </div>
           )}
