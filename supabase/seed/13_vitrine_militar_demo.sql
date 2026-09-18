@@ -365,10 +365,19 @@ begin
       -- tempo é derivado do volume: 1,6 a 2,4 min por questão.
       v_min := round(v_qtd * (1.6 + (i % 3) * 0.4));
 
+      -- Onda 8: sem guarda, cada reexecução DUPLICAVA o volume de estudo
+      -- da vitrine (registros_estudo só tem PK, e o id vinha de
+      -- gen_random_uuid()). O cabeçalho promete "reexecução não
+      -- duplica"; era o quinto lugar onde isso não era verdade. O par
+      -- (aluno, data, disciplina) identifica a linha gerada aqui.
       insert into registros_estudo (id, escola_id, aluno_id, data, disciplina_codigo, topico, questoes, acertos, minutos)
-      values (gen_random_uuid(), v_esc, v_aluno, v_dat,
-              v_disc[1 + (i % 4)], 'Revisão dirigida — bateria de questões',
-              v_qtd, v_acc, v_min);
+      select gen_random_uuid(), v_esc, v_aluno, v_dat,
+             v_disc[1 + (i % 4)], 'Revisão dirigida — bateria de questões',
+             v_qtd, v_acc, v_min
+       where not exists (
+         select 1 from registros_estudo re
+          where re.aluno_id = v_aluno and re.data = v_dat
+            and re.disciplina_codigo = v_disc[1 + (i % 4)]);
     end loop;
   end loop;
 end $$;
