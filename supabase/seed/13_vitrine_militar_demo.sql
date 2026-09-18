@@ -138,23 +138,23 @@ select '11111111-1111-4111-8111-111111111111',
   from _vit_base b
 on conflict do nothing;
 
--- A13 (Onda 8): `data_prova_alvo` estava nulo em TODOS os alunos — era
--- a causa raiz que a Onda 3 apontou para T27 e C9. Sem ela o app cai na
--- data ESTIMADA do concurso (média histórica), que é o certo como
--- fallback mas não como regra. Aqui a vitrine passa a ter data real,
--- derivada do mês/dia do concurso e sempre no FUTURO: se a data deste
--- ano já passou, vai para o ano que vem. Assim a contagem regressiva da
--- demonstração nunca nasce negativa nem zerada.
-update alunos a
-   set data_prova_alvo = case
-         when make_date(extract(year from app.hoje_local())::int, c.mes_prova, c.dia_prova) >= app.hoje_local()
-           then make_date(extract(year from app.hoje_local())::int,     c.mes_prova, c.dia_prova)
-           else make_date(extract(year from app.hoje_local())::int + 1, c.mes_prova, c.dia_prova)
-       end
-  from concursos c
- where c.id = a.concurso_id
-   and a.escola_id = '11111111-1111-4111-8111-111111111111'
-   and c.mes_prova is not null and c.dia_prova is not null;
+-- A13 — NÃO preencher data_prova_alvo. (Onda 8, correção ao catálogo.)
+--
+-- O catálogo lista "data_prova_alvo nula em todos os 69 alunos" como
+-- defeito. Depois da Onda 3, NULA É A RESPOSTA CERTA — e preencher é
+-- que quebra o produto.
+--
+-- `diasParaProva` (concursos.js) tem duas vias, nesta precedência:
+--   1. aluno.data_prova_alvo → uma OCORRÊNCIA específica. Quando passa,
+--      vira "prova realizada" e PARA ALI. Não rola.
+--   2. mes_prova/dia_prova do concurso → data RECORRENTE. `proximaProva`
+--      rola sozinha para o ano seguinte, e nunca diz "realizada",
+--      porque para uma data anual o que existe é sempre a próxima.
+--
+-- Preencher a via 1 tira o aluno do automático e o prende numa data que
+-- vence. Foi exatamente o T27 ("0 dias p/ prova" para prova passada) que
+-- a Onda 3 corrigiu. A coluna existe para a escola que SABE a data
+-- publicada daquele ano — é exceção, não preenchimento em massa.
 
 -- ------------------------------------------------------------
 -- SEÇÃO 0 (auxiliar) — ROSTER dos 38 alunos NOVOS (temp, esta sessão)
