@@ -102,18 +102,37 @@ async function virar(c, escola, data) {
   return linha;
 }
 
+// Onda 8: escopado aos DOIS alunos do teste (Lucas/Bruno). Antes lia a
+// escola inteira, o que só funcionava enquanto a escola de vitrine
+// tinha um aluno só. Agora o seed 13 roda no CI e ela tem 60 — a
+// virada passa a gerar dezenas de metas legítimas e as contagens
+// absolutas deixam de dizer qualquer coisa. O que este arquivo testa é
+// ISOLAMENTO ENTRE ESCOLAS, e isso se prova melhor com os dois alunos
+// conhecidos do que com um total que depende do tamanho do seed.
 async function metasDe(c, escolaId) {
   const r = await c.query(
-    "select aluno_id, semana_numero, status from metas where escola_id = $1 order by aluno_id, semana_numero",
-    [escolaId],
+    `select aluno_id, semana_numero, status from metas
+      where escola_id = $1 and aluno_id = any($2)
+      order by aluno_id, semana_numero`,
+    [escolaId, ALUNOS],
   );
   return r.rows;
+}
+
+// metas do Lucas especificamente — o sujeito das asserções de geração
+async function metasGeradasDoLucas(c) {
+  const r = await c.query(
+    "select count(*)::int as n from metas where aluno_id = $1 and status = 'ativa'",
+    [ALUNO_LUCAS],
+  );
+  return r.rows[0].n;
 }
 
 test("virar_semana(escola A) gera a meta corrente do Lucas e NÃO toca a escola B", async () => {
   await cenario(async (c) => {
     const r = await virar(c, ESCOLA_A, NA_SEMANA_2);
-    assert.equal(r.metas_geradas, 1, "deveria gerar 1 meta na escola A");
+    assert.ok(r.metas_geradas >= 1, "a virada da escola A precisa gerar meta");
+    assert.equal(await metasGeradasDoLucas(c), 1, "o Lucas precisa ficar com exatamente 1 meta ativa");
 
     const a = await metasDe(c, ESCOLA_A);
     const b = await metasDe(c, ESCOLA_B);
@@ -163,7 +182,7 @@ test("virar a escola B fecha a meta vencida da B — e só a dela", async () => 
     ].sort());
 
     const a = await metasDe(c, ESCOLA_A);
-    assert.equal(a.length, 0, "a escola A não pode ganhar meta na virada da B");
+    assert.equal(a.length, 0, "o Lucas (escola A) não pode ganhar meta na virada da B");
   });
 });
 
@@ -172,7 +191,7 @@ test("idempotência: virar a mesma escola duas vezes no mesmo dia não duplica n
     await virar(c, ESCOLA_A, NA_SEMANA_3);
     await virar(c, ESCOLA_A, NA_SEMANA_3);
     const a = await metasDe(c, ESCOLA_A);
-    assert.equal(a.length, 1, "rodar de novo no mesmo dia não cria meta nova");
+    assert.equal(a.length, 1, "rodar de novo no mesmo dia não cria meta nova para o Lucas");
   });
 });
 
