@@ -9,6 +9,7 @@ import { useTema } from "../../shared/branding/BrandingContext.jsx";
 import { NovaTurma, PainelCadastroAlunos, CredencialGerada } from "../../modules/pessoas/CadastroAlunos.jsx";
 import { ListaAlunos } from "../../modules/pessoas/ListaAlunos.jsx";
 import { Marca } from "../../modules/escola/Marca.jsx";
+import { ProximoCiclo } from "../../modules/escola/ProximoCiclo.jsx";
 import { PainelConformidade } from "../../modules/consentimento/PainelConformidade.jsx";
 import { ClassificacaoTurma } from "../../modules/desempenho/ClassificacaoTurma.jsx";
 import { Relatorios } from "../../modules/desempenho/Relatorios.jsx";
@@ -85,6 +86,10 @@ export default function AreaEscola({ perfil }) {
   // T31: semanas de cada trilha (já embutidas por listarTrilhas), por id —
   // adaptarResumoEscola usa para não contar aluno de ciclo encerrado como
   // "sem atividade" (ele não tem mais missão nenhuma).
+  const trilhasPorId = useMemo(
+    () => Object.fromEntries(dados.trilhas.map((t) => [t.id, t])),
+    [dados.trilhas],
+  );
   const semanasPorTrilha = useMemo(
     () => Object.fromEntries(dados.trilhas.map((t) => [t.id, t.trilha_semanas ?? []])),
     [dados.trilhas],
@@ -97,9 +102,19 @@ export default function AreaEscola({ perfil }) {
   );
   const resumoPorAluno = useMemo(() => Object.fromEntries(resumoLista.map((x) => [x.aluno.id, x])), [resumoLista]);
 
+  // quantos alunos estão parados no fim do plano. Vira selo na aba
+  // "Ciclo": sem ele, a única forma de descobrir que uma turma inteira
+  // terminou seria abrir a aba por acaso — e a tela do responsável já
+  // prometeu ao pai que a coordenação abriria o próximo ciclo.
+  const encerrados = useMemo(
+    () => resumoLista.filter((x) => x.cicloEncerrado).length,
+    [resumoLista],
+  );
+
   const ABAS = [
     ["painel", "Painel", null, "painel"], ["alunos", "Alunos", null, "alunos"],
     ["ranking", "Ranking", null, "trofeu"], ["turmas", "Turmas", null, "turmas"],
+    ["ciclo", "Ciclo", encerrados || null, "relogio"],
     ["conformidade", "LGPD", null, "escudo"], ["marca", "Marca", null, "pincel"],
   ];
 
@@ -173,6 +188,14 @@ export default function AreaEscola({ perfil }) {
             <Turmas turmas={dados.turmas} alunos={dados.alunos} porAluno={resumoPorAluno}
               aoMudar={recarregarTudo} aoVerRanking={() => irPara("ranking")}
               aoVerAluno={verAluno} />
+          )}
+
+          {/* A porta do próximo ciclo (0051). Fica em aba própria porque
+              é ação de coordenação com consequência estrutural — mover
+              aluno de edição — e não um indicador do painel. */}
+          {!carregando && !alunoAberto && tab === "ciclo" && (
+            <ProximoCiclo resumo={resumoLista} trilhasPorId={trilhasPorId}
+              concursosPorId={concursosPorId} aoMudar={recarregarTudo} />
           )}
 
           {/* LGPD depende dos logs de acesso, que vêm na onda extra. */}
