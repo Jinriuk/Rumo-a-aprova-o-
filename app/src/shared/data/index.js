@@ -350,6 +350,28 @@ export async function salvarOnboarding(alunoId, campos) {
 // aluno_onboarding só deixa a coordenação escrever; este RPC SECURITY
 // DEFINER grava apenas a linha do aluno logado (app.meu_aluno_id()),
 // sem enfraquecer a política. Usado pela tela de diagnóstico inicial.
+/* Abre a PRÓXIMA EDIÇÃO da trilha e move os alunos escolhidos (0051).
+   É a ação que a tela do responsável já prometia ("a coordenação abre o
+   próximo ciclo quando ele estiver pronto") e que não existia.
+
+   `ancora` é a data da próxima prova: a última semana da edição nova
+   termina nela, e as outras andam junto, preservando a forma do plano.
+
+   O histórico NÃO vem junto, e é de propósito: metas é unique por
+   (aluno, trilha, semana), então as metas antigas ficam presas à edição
+   anterior — intactas. Registros, simulados e XP são presos ao aluno e
+   nunca à trilha, então totais, acerto, streak e patente seguem
+   inteiros. O que zera é o ciclo, não a vida do aluno. */
+export async function abrirProximoCiclo({ trilhaId, ancora, alunoIds = null }) {
+  const { data, error } = await supabase.rpc("abrir_proximo_ciclo", {
+    p_trilha: trilhaId,
+    p_ancora: ancora,
+    p_alunos: alunoIds,
+  });
+  if (error) throw falha("abrir próximo ciclo", error);
+  return data;
+}
+
 export async function salvarOnboardingAluno({ experiencia, disponibilidade, dificuldade, objetivo }) {
   const { data, error } = await supabase.rpc("salvar_onboarding_aluno", {
     p_experiencia: experiencia ?? null,
