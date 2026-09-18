@@ -17,7 +17,7 @@ import { useTema } from "../../shared/branding/BrandingContext.jsx";
 import { useEnvioUnico } from "../../shared/hooks/useEnvioUnico.js";
 import { todayISO, fmtBR } from "../../shared/regras/regras.js";
 import { materiasObjetivas, materiasPorDia } from "../conteudo/estruturaProva.js";
-import { avaliarSimulado } from "../conteudo/simuladoConcurso.js";
+import { avaliarSimulado, segregarPorFormato } from "../conteudo/simuladoConcurso.js";
 import { rotuloRedacao, rotuloEliminacao } from "../conteudo/pedagogia.js";
 import * as db from "../../shared/data/index.js";
 
@@ -45,14 +45,25 @@ export function SimuladoConcurso({ aluno, simulados, podeEditar, semanaAtiva, co
   const temRedacao = cfg?.redacao_role && cfg.redacao_role !== "ausente";
   const grupos = materiasPorDia(objetivas, dias);
 
-  // só os simulados deste concurso entram no diagnóstico por formato.
-  const meus = useMemo(
-    () => (simulados ?? []).filter((s) => !s.exam_tag || s.exam_tag === concurso?.codigo),
+  /* A9 (resíduo da Onda 2) — `exam_tag` NULL não é "deste concurso".
+     É simulado anterior à migration 0014, quando o formato nem era
+     gravado: o formato dele é DESCONHECIDO, não o atual. A condição
+     antiga (`!s.exam_tag || ...`) dobrava esse histórico no concurso
+     vigente, então o mesmo simulado virava CN para quem estuda CN e
+     EsPCEx no dia em que o aluno trocasse de alvo — o passado sendo
+     reescrito pela configuração do presente. Aqui ele é segregado:
+     continua visível no histórico (apagar o registro do aluno seria
+     pior), mas não entra no diagnóstico por formato nem é reavaliado
+     sob regras de prova que talvez nunca tenham valido para ele. */
+  const { doConcurso, semFormato } = useMemo(
+    () => segregarPorFormato(simulados, concurso?.codigo),
     [simulados, concurso?.codigo],
   );
 
   const blank = {
-    nome: semanaAtiva?.simulado || proximoNome(meus),
+    // o nome não pode colidir com NENHUM simulado do aluno, inclusive
+    // os sem formato — por isso a numeração olha a lista inteira.
+    nome: semanaAtiva?.simulado || proximoNome(simulados),
     data: todayISO(),
     redacao: "",
     ...Object.fromEntries(objetivas.map((m) => [m.materia_codigo, ""])),
@@ -81,7 +92,7 @@ export function SimuladoConcurso({ aluno, simulados, podeEditar, semanaAtiva, co
         redacao_nota: temRedacao && f.redacao !== "" ? +f.redacao : null,
         acertos: Object.fromEntries(objetivas.map((m) => [m.materia_codigo, Math.min(+f[m.materia_codigo] || 0, m.num_questoes ?? 0)])),
       });
-      setF({ ...blank, nome: semanaAtiva?.simulado || proximoNome([...meus, { nome: f.nome }]) });
+      setF({ ...blank, nome: semanaAtiva?.simulado || proximoNome([...(simulados ?? []), { nome: f.nome }]) });
       aoMudar?.();
     });
   }
@@ -103,8 +114,8 @@ export function SimuladoConcurso({ aluno, simulados, podeEditar, semanaAtiva, co
   }
 
   // diagnóstico do ÚLTIMO simulado do concurso, no formato real.
-  const ultimo = meus.length
-    ? [...meus].sort((a, b) => String(a.data).localeCompare(String(b.data)))[meus.length - 1]
+  const ultimo = doConcurso.length
+    ? [...doConcurso].sort((a, b) => String(a.data).localeCompare(String(b.data)))[doConcurso.length - 1]
     : null;
   const aval = useMemo(() => {
     if (!ultimo) return null;
@@ -244,9 +255,9 @@ export function SimuladoConcurso({ aluno, simulados, podeEditar, semanaAtiva, co
       {/* HISTÓRICO */}
       <Card>
         <h2 className="disp" style={{ margin: 0, fontSize: 15, fontWeight: 700, marginBottom: 10 }}>Histórico</h2>
-        {meus.length === 0 ? <Empty txt="Nenhum simulado registrado ainda. Registre o primeiro acima." /> : (
+        {doConcurso.length === 0 && semFormato.length === 0 ? <Empty txt="Nenhum simulado registrado ainda. Registre o primeiro acima." /> : (
           <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
-            {[...meus].reverse().map((s) => {
+            {[...doConcurso].reverse().map((s) => {
               const r = avaliarSimulado({
                 materias, acertos: s.acertos ?? {},
                 redacaoNota: s.redacao_nota != null ? Number(s.redacao_nota) : null,
@@ -272,6 +283,45 @@ export function SimuladoConcurso({ aluno, simulados, podeEditar, semanaAtiva, co
                 </div>
               );
             })}
+          </div>
+        )}
+
+        {/* A9 — simulados sem formato registrado. Ficam à parte, com
+            acertos brutos e SEM veredito de eliminação: o total só faz
+            sentido contra o número de questões da prova que ele de fato
+            era, e essa informação não existe nesta linha. Dizer "sem
+            risco" aqui seria inventar uma prova para o passado. */}
+        {semFormato.length > 0 && (
+          <div style={{ marginTop: doConcurso.length ? 14 : 0 }}>
+            <div style={{ fontSize: 11, color: T.sub, fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.4, marginBottom: 2 }}>
+              Formato não registrado
+            </div>
+            <div style={{ fontSize: 11.5, color: T.sub, lineHeight: 1.5, marginBottom: 8 }}>
+              {semFormato.length === 1 ? "Este simulado é anterior" : "Estes simulados são anteriores"} ao registro do formato da prova.
+              Como não dá para saber em qual formato {semFormato.length === 1 ? "ele foi feito" : "foram feitos"}, {semFormato.length === 1 ? "ele fica" : "eles ficam"} fora do
+              diagnóstico de {concurso?.codigo?.toUpperCase() ?? "concurso"} em vez de {semFormato.length === 1 ? "ser contado" : "serem contados"} como se fosse{semFormato.length === 1 ? "" : "m"} dele.
+            </div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+              {[...semFormato].reverse().map((s) => {
+                const brutos = Object.values(s.acertos ?? {}).reduce((a, v) => a + (Number(v) || 0), 0);
+                return (
+                  <div key={s.id} className="row" style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 8px", borderRadius: 8, borderBottom: `1px solid ${T.line}` }}>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ display: "flex", gap: 4, alignItems: "baseline", overflow: "hidden" }}>
+                        <span style={{ fontSize: 13.5, fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", minWidth: 0, flex: 1 }}>{s.nome}</span>
+                        <span style={{ fontSize: 13.5, color: T.sub, fontWeight: 400, flexShrink: 0 }}>· {fmtBR(String(s.data))}</span>
+                      </div>
+                      <div style={{ fontSize: 11.5, color: T.sub, marginTop: 2, display: "flex", gap: 6, flexWrap: "wrap", alignItems: "center" }}>
+                        <span>{brutos} acerto{brutos === 1 ? "" : "s"}</span>
+                        {s.redacao_nota != null && <span>· redação {Number(s.redacao_nota)}</span>}
+                        <StatusBadge tom="neutro">formato não registrado</StatusBadge>
+                      </div>
+                    </div>
+                    {podeEditar && <button type="button" onClick={() => apagar(s.id)} disabled={ocupado} aria-label={`Apagar simulado ${s.nome}`} style={{ background: "transparent", border: "none", color: T.sub, fontSize: 22, width: 44, height: 44, flexShrink: 0, lineHeight: 1 }}>×</button>}
+                  </div>
+                );
+              })}
+            </div>
           </div>
         )}
       </Card>

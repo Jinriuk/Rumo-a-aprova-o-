@@ -60,6 +60,103 @@ update alunos
    and escola_id = '11111111-1111-4111-8111-111111111111';
 
 -- ------------------------------------------------------------
+-- SEÇÃO 1c (Onda 8) — AS TURMAS DA VITRINE
+-- ------------------------------------------------------------
+-- Nenhum seed criava estas turmas: elas existiam só no banco do demo,
+-- feitas à mão, e os seeds 13 e 17 as referenciavam como se fossem
+-- dadas. O seed nunca foi auto-contido — num ambiente novo (ou no CI,
+-- agora que ele roda aqui) o insert quebrava na FK
+-- `alunos_turmas_turma_id_fkey`. Mesmo vício do concurso do EsSA logo
+-- abaixo: estado de ambiente tratado como estado de seed.
+--
+-- Os nomes são os que o demo já usa, para os dois ambientes baterem.
+-- `on conflict do nothing` sem alvo cobre tanto a colisão de id quanto
+-- a de (escola_id, nome), que é a unique de turmas.
+insert into turmas (id, escola_id, nome) values
+  ('aa000000-0000-4000-8000-000000000001', '11111111-1111-4111-8111-111111111111', 'CN/EPCAR — Manhã'),
+  ('aa000000-0000-4000-8000-000000000002', '11111111-1111-4111-8111-111111111111', 'CN/EPCAR — Tarde'),
+  ('aa000000-0000-4000-8000-000000000003', '11111111-1111-4111-8111-111111111111', 'EsSA/EEAr 2026'),
+  ('aa000000-0000-4000-8000-000000000004', '11111111-1111-4111-8111-111111111111', 'EsPCEx 2026'),
+  ('aa000000-0000-4000-8000-000000000005', '22222222-2222-4222-8222-222222222222', 'Beta CN — Noite')
+  on conflict do nothing;
+
+-- ------------------------------------------------------------
+-- SEÇÃO 1d (Onda 8) — OS 21 ALUNOS BASE DA VITRINE (002–022)
+-- ------------------------------------------------------------
+-- Terceira camada do mesmo vício das duas seções acima, e a mais
+-- profunda: este seed tratava os alunos 002–022 como "existentes",
+-- mas NENHUM seed os criava — eles nasceram à mão no banco do demo.
+-- Ou seja, o 13 não era um construtor da vitrine: era um patch
+-- incremental que só rodava sobre um banco que já se parecia com o
+-- demo de junho/2026. Em ambiente novo quebrava na FK
+-- `alunos_turmas_aluno_id_fkey`.
+--
+-- Com estes 21 aqui, o seed passa a montar a vitrine inteira do zero —
+-- que é o que faz dele um seed, e o que permite ao CI exercitá-lo.
+-- Os nomes e vínculos são os que o demo já tem, para os dois ambientes
+-- convergirem. O concurso sai do `codigo` (ver nota do EsSA adiante),
+-- nunca de um id de ambiente.
+drop table if exists _vit_base;
+create temp table _vit_base (
+  num int primary key, nome text not null, examtag text not null, turma_id uuid not null
+);
+insert into _vit_base (num, nome, examtag, turma_id) values
+  (2, 'Maria Eduarda Santana',                 'cn',    'aa000000-0000-4000-8000-000000000001'),
+  (3, 'Joao Guilherme Vasconcelos',            'cn',    'aa000000-0000-4000-8000-000000000001'),
+  (4, 'Ana Beatriz Figueiredo',                'epcar', 'aa000000-0000-4000-8000-000000000001'),
+  (5, 'Lucas Gabriel Monteiro da Silva',       'cn',    'aa000000-0000-4000-8000-000000000001'),
+  (6, 'Isabela Cristina Nogueira',             'epcar', 'aa000000-0000-4000-8000-000000000001'),
+  (7, 'Matheus Oliveira Brandao',              'cn',    'aa000000-0000-4000-8000-000000000001'),
+  (8, 'Sofia Almeida Castelo Branco',          'epcar', 'aa000000-0000-4000-8000-000000000001'),
+  (9, 'Davi Luiz Carvalho Pinto',              'cn',    'aa000000-0000-4000-8000-000000000002'),
+  (10,'Larissa Mendes Sarmento',               'cn',    'aa000000-0000-4000-8000-000000000002'),
+  (11,'Gustavo Henrique de Souza Lima',        'epcar', 'aa000000-0000-4000-8000-000000000002'),
+  (12,'Julia Apolinario dos Santos Oliveira',  'cn',    'aa000000-0000-4000-8000-000000000002'),
+  (13,'Enzo Rafael Cavalcanti',                'epcar', 'aa000000-0000-4000-8000-000000000002'),
+  (14,'Valentina Duarte Magalhaes',            'cn',    'aa000000-0000-4000-8000-000000000002'),
+  (15,'Miguel Angelo Barros Correia',          'esa',   'aa000000-0000-4000-8000-000000000003'),
+  (16,'Helena Vitoria Dantas',                 'eear',  'aa000000-0000-4000-8000-000000000003'),
+  (17,'Arthur Felipe Rodrigues do Nascimento', 'esa',   'aa000000-0000-4000-8000-000000000003'),
+  (18,'Laura Camargo Bittencourt',             'eear',  'aa000000-0000-4000-8000-000000000003'),
+  (19,'Bernardo Luca Teixeira',                'esa',   'aa000000-0000-4000-8000-000000000003'),
+  (20,'Alice Fernandes Quintanilha',           'espcex','aa000000-0000-4000-8000-000000000004'),
+  (21,'Rafael Augusto Vilanova',               'espcex','aa000000-0000-4000-8000-000000000004'),
+  (22,'Manuela Castro e Silva',                'espcex','aa000000-0000-4000-8000-000000000004');
+
+insert into alunos (id, escola_id, nome, trilha_id, concurso_id)
+select ('a0000000-0000-4000-8000-' || lpad(b.num::text, 12, '0'))::uuid,
+       '11111111-1111-4111-8111-111111111111',
+       b.nome,
+       'b1388388-c660-4b4b-811c-b58358689e92',
+       c.id
+  from _vit_base b join concursos c on c.codigo = b.examtag
+on conflict (id) do nothing;
+
+insert into alunos_turmas (escola_id, aluno_id, turma_id)
+select '11111111-1111-4111-8111-111111111111',
+       ('a0000000-0000-4000-8000-' || lpad(b.num::text, 12, '0'))::uuid, b.turma_id
+  from _vit_base b
+on conflict do nothing;
+
+-- A13 — NÃO preencher data_prova_alvo. (Onda 8, correção ao catálogo.)
+--
+-- O catálogo lista "data_prova_alvo nula em todos os 69 alunos" como
+-- defeito. Depois da Onda 3, NULA É A RESPOSTA CERTA — e preencher é
+-- que quebra o produto.
+--
+-- `diasParaProva` (concursos.js) tem duas vias, nesta precedência:
+--   1. aluno.data_prova_alvo → uma OCORRÊNCIA específica. Quando passa,
+--      vira "prova realizada" e PARA ALI. Não rola.
+--   2. mes_prova/dia_prova do concurso → data RECORRENTE. `proximaProva`
+--      rola sozinha para o ano seguinte, e nunca diz "realizada",
+--      porque para uma data anual o que existe é sempre a próxima.
+--
+-- Preencher a via 1 tira o aluno do automático e o prende numa data que
+-- vence. Foi exatamente o T27 ("0 dias p/ prova" para prova passada) que
+-- a Onda 3 corrigiu. A coluna existe para a escola que SABE a data
+-- publicada daquele ano — é exceção, não preenchimento em massa.
+
+-- ------------------------------------------------------------
 -- SEÇÃO 0 (auxiliar) — ROSTER dos 38 alunos NOVOS (temp, esta sessão)
 -- num: sufixo do UUID do aluno (a0000000-…-0000000000NN)
 -- ------------------------------------------------------------
@@ -124,17 +221,39 @@ insert into _vit_novos (num, nome, examtag, concurso_id, turma_id, perfil) value
   -- Turma CN 2026 (turma a0000000-…-011)
   (60,'Aline Cristina Borges',   'cn',   'c0c00000-0000-4000-8000-000000000001','a0000000-0000-4000-8000-000000000011','MEDIANO');
 
+-- Onda 8: os `concurso_id` acima são apenas um valor inicial. O do EsSA
+-- estava cravado como '822b1ccf-…', um id que só existia no banco do
+-- demo — num ambiente novo (ou no CI, agora que este seed roda lá) o
+-- insert quebrava na FK `alunos_concurso_id_fkey`. O seed carregava um
+-- id de AMBIENTE, e isso nunca apareceu porque o arquivo não era
+-- exercitado. O roster já tem o `examtag`, que é a chave estável: a
+-- resolução passa a ser por ele, e qualquer id da lista vira irrelevante.
+update _vit_novos n
+   set concurso_id = c.id
+  from concursos c
+ where c.codigo = n.examtag;
+
 -- ------------------------------------------------------------
--- SEÇÃO 2 — CONTAS DE ACESSO p/ TODOS os alunos da vitrine
+-- SEÇÃO 2 — REGISTRO DE APP p/ TODOS os alunos da vitrine
 -- (existentes 002–022 + novos 023–060). Lucas (001) já tem conta.
--- usuarios (registro de app) + auth.users + auth.identities, mesmo id.
+--
+-- Onda 8: esta seção criava `usuarios` E `auth.users`/`auth.identities`
+-- no mesmo laço. Como `auth.*` não existe no Postgres vanilla, o
+-- reset-db.sh precisava PULAR este seed inteiro — e com ele sumia do CI
+-- toda a base da vitrine: 60 alunos, registros, metas e simulados, sem
+-- um único teste. Foi por isso que as datas cravadas em junho passaram
+-- três meses congeladas sem ninguém notar.
+--
+-- A parte de Auth saiu para `21_vitrine_contas_auth.sql`, que é o único
+-- pulado agora. Este arquivo passou a ser 100% schema público e roda no
+-- CI junto com o resto.
 -- Login por CÓDIGO: VITRINE0NN  →  vitrine0NN@codigo.acesso.local
 -- ------------------------------------------------------------
 do $$
 declare
   r record;
   v_escola uuid := '11111111-1111-4111-8111-111111111111';
-  v_uid uuid; v_email text; v_codigo text; v_nome text;
+  v_uid uuid; v_nome text;   -- Onda 8: e-mail/código foram com o Auth p/ o seed 21
 begin
   for r in
     -- existentes (já têm linha em alunos): pega o nome de lá
@@ -156,34 +275,11 @@ begin
     -- id de usuário/auth determinístico a partir do node do aluno
     v_uid   := ('aaaaaaaa-1111-4111-8111-' || r.node)::uuid;
     v_nome  := r.nome;
-    -- código a partir dos 2 últimos dígitos do node (NN)
-    v_codigo := 'VITRINE0' || lpad(ltrim(right(r.node, 3), '0'), 2, '0');
-    v_email  := lower(v_codigo) || '@codigo.acesso.local';
 
     insert into usuarios (id, escola_id, papel, nome)
       values (v_uid, v_escola, 'aluno', v_nome)
       on conflict (id) do nothing;
 
-    insert into auth.users (
-      instance_id, id, aud, role, email, encrypted_password, email_confirmed_at,
-      raw_app_meta_data, raw_user_meta_data, created_at, updated_at,
-      confirmation_token, recovery_token, email_change, email_change_token_new, is_sso_user
-    ) values (
-      '00000000-0000-0000-0000-000000000000', v_uid, 'authenticated', 'authenticated',
-      v_email, crypt(v_codigo, gen_salt('bf')), now(),
-      jsonb_build_object('provider','email','providers', jsonb_build_array('email'),
-                         'escola_id', v_escola::text, 'papel', 'aluno'),
-      jsonb_build_object('nome', v_nome),
-      now(), now(), '', '', '', '', false
-    ) on conflict (id) do nothing;
-
-    insert into auth.identities (
-      id, user_id, provider_id, identity_data, provider, last_sign_in_at, created_at, updated_at
-    ) values (
-      gen_random_uuid(), v_uid, v_uid::text,
-      jsonb_build_object('sub', v_uid::text, 'email', v_email, 'email_verified', true),
-      'email', now(), now(), now()
-    ) on conflict (provider_id, provider) do nothing;
   end loop;
 end $$;
 
@@ -237,7 +333,7 @@ declare
   v_aluno uuid;
   v_esc uuid := '11111111-1111-4111-8111-111111111111';
   v_disc text[] := array['mat','por','ing','fis'];
-  v_qtd int; v_acc int; v_dat date; i int;
+  v_qtd int; v_acc int; v_min int; v_dat date; i int;
 begin
   for r in select * from _vit_novos loop
     v_aluno := ('a0000000-0000-4000-8000-' || lpad(r.num::text, 12, '0'))::uuid;
@@ -246,21 +342,42 @@ begin
     end if;
 
     for i in 1 .. (case r.perfil when 'FORTE' then 12 when 'MEDIANO' then 7 else 3 end) loop
+      -- CALENDÁRIO ROLANTE (Onda 8): estas datas eram fixas em junho/2026,
+      -- e por isso a vitrine envelheceu — em 17/09 havia 455 de 457
+      -- registros com mais de 90 dias. Os deslocamentos abaixo preservam
+      -- a intenção original medida a partir do dia em que o seed foi
+      -- escrito (2026-06-19): RISCO defasado >10 dias, MEDIANO ontem-2,
+      -- FORTE ontem. Agora andam com o calendário, como o seed 02 já faz.
       if r.perfil = 'RISCO' then
-        v_dat := date '2026-06-07' - (i * 2);          -- defasados (>10 dias até 2026-06-19)
+        v_dat := app.hoje_local() - 12 - (i * 2);       -- defasados (>10 dias)
         v_qtd := 10; v_acc := 4;                        -- baixo desempenho
       elsif r.perfil = 'MEDIANO' then
-        v_dat := date '2026-06-17' - (i * 2);
+        v_dat := app.hoje_local() - 2 - (i * 2);
         v_qtd := 15; v_acc := 10;
       else  -- FORTE
-        v_dat := date '2026-06-18' - i;
+        v_dat := app.hoje_local() - 1 - i;
         v_qtd := 20; v_acc := 17;
       end if;
 
+      -- A6: os minutos eram `45 + (i%3)*15` INDEPENDENTE do número de
+      -- questões — o aluno RISCO gastava os mesmos 45-75 min em 10
+      -- questões que o FORTE em 20, dando até 7,5 min/questão. Agora o
+      -- tempo é derivado do volume: 1,6 a 2,4 min por questão.
+      v_min := round(v_qtd * (1.6 + (i % 3) * 0.4));
+
+      -- Onda 8: sem guarda, cada reexecução DUPLICAVA o volume de estudo
+      -- da vitrine (registros_estudo só tem PK, e o id vinha de
+      -- gen_random_uuid()). O cabeçalho promete "reexecução não
+      -- duplica"; era o quinto lugar onde isso não era verdade. O par
+      -- (aluno, data, disciplina) identifica a linha gerada aqui.
       insert into registros_estudo (id, escola_id, aluno_id, data, disciplina_codigo, topico, questoes, acertos, minutos)
-      values (gen_random_uuid(), v_esc, v_aluno, v_dat,
-              v_disc[1 + (i % 4)], 'Revisão dirigida — bateria de questões',
-              v_qtd, v_acc, 45 + (i % 3) * 15);
+      select gen_random_uuid(), v_esc, v_aluno, v_dat,
+             v_disc[1 + (i % 4)], 'Revisão dirigida — bateria de questões',
+             v_qtd, v_acc, v_min
+       where not exists (
+         select 1 from registros_estudo re
+          where re.aluno_id = v_aluno and re.data = v_dat
+            and re.disciplina_codigo = v_disc[1 + (i % 4)]);
     end loop;
   end loop;
 end $$;
@@ -293,78 +410,106 @@ declare
   s2 uuid[] := array['30110914-4749-430b-8adb-ae156dc2781a','ac0cd585-7144-4a16-8762-088e6a5bc679','831105ee-80c7-4459-8165-a8a0de7e55ab','39837ab3-cd60-4ffe-8a30-6b8abe67276e']::uuid[];
   s3 uuid[] := array['a715740b-b86a-49d9-8543-05a4d42bac66','a595c0d3-42de-4159-8785-77feeca3d1f6','9466de09-7b52-4dc3-8ab1-f93f81c3e43b','068a773b-8dba-4374-86fc-44341609ef19','05478d01-a9ca-4ad7-8582-63fe50a3e612','07356a80-0705-44c7-8bb3-a92777c7ebaf']::uuid[];
   v_meta uuid; i int; v_ats uuid[]; v_nconcl int;
+  -- Onda 8: as semanas vinham cravadas ('2026-05-30' etc). Agora saem da
+  -- trilha_semanas, que o seed 02 reancora na semana corrente a cada
+  -- execução — uma fonte de verdade só, em vez de duas que divergem.
+  w1_ini date; w1_fim date; w2_ini date; w2_fim date; w3_ini date; w3_fim date;
 begin
+  select inicio, fim into w1_ini, w1_fim from trilha_semanas where trilha_id = v_trilha and numero = 1;
+  select inicio, fim into w2_ini, w2_fim from trilha_semanas where trilha_id = v_trilha and numero = 2;
+  select inicio, fim into w3_ini, w3_fim from trilha_semanas where trilha_id = v_trilha and numero = 3;
   for r in select * from _vit_novos loop
     v_aluno := ('a0000000-0000-4000-8000-' || lpad(r.num::text, 12, '0'))::uuid;
 
     if r.perfil = 'FORTE' then
       -- S1 fechada — todas concluídas
-      v_meta := gen_random_uuid();
       insert into metas (id, escola_id, aluno_id, trilha_id, semana_numero, inicio, fim, status)
-        values (v_meta, v_esc, v_aluno, v_trilha, 1, '2026-05-30','2026-06-07','fechada');
+        values (gen_random_uuid(), v_esc, v_aluno, v_trilha, 1, w1_ini, w1_fim, 'fechada')
+        on conflict (aluno_id, trilha_id, semana_numero) do nothing;
+      select id into v_meta from metas
+       where aluno_id = v_aluno and trilha_id = v_trilha and semana_numero = 1;
       v_ats := s1; v_nconcl := array_length(s1,1);
       for i in 1 .. array_length(v_ats,1) loop
         insert into meta_atividades (id, escola_id, meta_id, atividade_modelo_id, estado)
-        values (gen_random_uuid(), v_esc, v_meta, v_ats[i], case when i <= v_nconcl then 'concluida' else 'pendente' end);
+        values (gen_random_uuid(), v_esc, v_meta, v_ats[i], case when i <= v_nconcl then 'concluida' else 'pendente' end)
+        on conflict (meta_id, atividade_modelo_id) do nothing;
       end loop;
       -- S2 fechada — todas concluídas
-      v_meta := gen_random_uuid();
       insert into metas (id, escola_id, aluno_id, trilha_id, semana_numero, inicio, fim, status)
-        values (v_meta, v_esc, v_aluno, v_trilha, 2, '2026-06-08','2026-06-14','fechada');
+        values (gen_random_uuid(), v_esc, v_aluno, v_trilha, 2, w2_ini, w2_fim, 'fechada')
+        on conflict (aluno_id, trilha_id, semana_numero) do nothing;
+      select id into v_meta from metas
+       where aluno_id = v_aluno and trilha_id = v_trilha and semana_numero = 2;
       v_ats := s2; v_nconcl := array_length(s2,1);
       for i in 1 .. array_length(v_ats,1) loop
         insert into meta_atividades (id, escola_id, meta_id, atividade_modelo_id, estado)
-        values (gen_random_uuid(), v_esc, v_meta, v_ats[i], 'concluida');
+        values (gen_random_uuid(), v_esc, v_meta, v_ats[i], 'concluida')
+        on conflict (meta_id, atividade_modelo_id) do nothing;
       end loop;
       -- S3 ativa — 3 de 6 concluídas
-      v_meta := gen_random_uuid();
       insert into metas (id, escola_id, aluno_id, trilha_id, semana_numero, inicio, fim, status)
-        values (v_meta, v_esc, v_aluno, v_trilha, 3, '2026-06-15','2026-06-21','ativa');
+        values (gen_random_uuid(), v_esc, v_aluno, v_trilha, 3, w3_ini, w3_fim, 'ativa')
+        on conflict (aluno_id, trilha_id, semana_numero) do nothing;
+      select id into v_meta from metas
+       where aluno_id = v_aluno and trilha_id = v_trilha and semana_numero = 3;
       v_ats := s3; v_nconcl := 3;
       for i in 1 .. array_length(v_ats,1) loop
         insert into meta_atividades (id, escola_id, meta_id, atividade_modelo_id, estado)
-        values (gen_random_uuid(), v_esc, v_meta, v_ats[i], case when i <= v_nconcl then 'concluida' else 'pendente' end);
+        values (gen_random_uuid(), v_esc, v_meta, v_ats[i], case when i <= v_nconcl then 'concluida' else 'pendente' end)
+        on conflict (meta_id, atividade_modelo_id) do nothing;
       end loop;
 
     elsif r.perfil = 'MEDIANO' then
       -- S1 fechada — 3 concluídas de 5
-      v_meta := gen_random_uuid();
       insert into metas (id, escola_id, aluno_id, trilha_id, semana_numero, inicio, fim, status)
-        values (v_meta, v_esc, v_aluno, v_trilha, 1, '2026-05-30','2026-06-07','fechada');
+        values (gen_random_uuid(), v_esc, v_aluno, v_trilha, 1, w1_ini, w1_fim, 'fechada')
+        on conflict (aluno_id, trilha_id, semana_numero) do nothing;
+      select id into v_meta from metas
+       where aluno_id = v_aluno and trilha_id = v_trilha and semana_numero = 1;
       v_ats := s1; v_nconcl := 3;
       for i in 1 .. array_length(v_ats,1) loop
         insert into meta_atividades (id, escola_id, meta_id, atividade_modelo_id, estado)
-        values (gen_random_uuid(), v_esc, v_meta, v_ats[i], case when i <= v_nconcl then 'concluida' else 'pendente' end);
+        values (gen_random_uuid(), v_esc, v_meta, v_ats[i], case when i <= v_nconcl then 'concluida' else 'pendente' end)
+        on conflict (meta_id, atividade_modelo_id) do nothing;
       end loop;
       -- S2 fechada — 3 concluídas de 4
-      v_meta := gen_random_uuid();
       insert into metas (id, escola_id, aluno_id, trilha_id, semana_numero, inicio, fim, status)
-        values (v_meta, v_esc, v_aluno, v_trilha, 2, '2026-06-08','2026-06-14','fechada');
+        values (gen_random_uuid(), v_esc, v_aluno, v_trilha, 2, w2_ini, w2_fim, 'fechada')
+        on conflict (aluno_id, trilha_id, semana_numero) do nothing;
+      select id into v_meta from metas
+       where aluno_id = v_aluno and trilha_id = v_trilha and semana_numero = 2;
       v_ats := s2; v_nconcl := 3;
       for i in 1 .. array_length(v_ats,1) loop
         insert into meta_atividades (id, escola_id, meta_id, atividade_modelo_id, estado)
-        values (gen_random_uuid(), v_esc, v_meta, v_ats[i], case when i <= v_nconcl then 'concluida' else 'pendente' end);
+        values (gen_random_uuid(), v_esc, v_meta, v_ats[i], case when i <= v_nconcl then 'concluida' else 'pendente' end)
+        on conflict (meta_id, atividade_modelo_id) do nothing;
       end loop;
 
     elsif r.perfil = 'RISCO' then
       -- S2 fechada/atrasada — só 1 concluída, resto pendente (missão atrasada)
-      v_meta := gen_random_uuid();
       insert into metas (id, escola_id, aluno_id, trilha_id, semana_numero, inicio, fim, status)
-        values (v_meta, v_esc, v_aluno, v_trilha, 2, '2026-06-08','2026-06-14','fechada');
+        values (gen_random_uuid(), v_esc, v_aluno, v_trilha, 2, w2_ini, w2_fim, 'fechada')
+        on conflict (aluno_id, trilha_id, semana_numero) do nothing;
+      select id into v_meta from metas
+       where aluno_id = v_aluno and trilha_id = v_trilha and semana_numero = 2;
       v_ats := s2; v_nconcl := 1;
       for i in 1 .. array_length(v_ats,1) loop
         insert into meta_atividades (id, escola_id, meta_id, atividade_modelo_id, estado)
-        values (gen_random_uuid(), v_esc, v_meta, v_ats[i], case when i <= v_nconcl then 'concluida' else 'pendente' end);
+        values (gen_random_uuid(), v_esc, v_meta, v_ats[i], case when i <= v_nconcl then 'concluida' else 'pendente' end)
+        on conflict (meta_id, atividade_modelo_id) do nothing;
       end loop;
 
     else  -- SEM: plano lançado na S3 ativa, tudo pendente
-      v_meta := gen_random_uuid();
       insert into metas (id, escola_id, aluno_id, trilha_id, semana_numero, inicio, fim, status)
-        values (v_meta, v_esc, v_aluno, v_trilha, 3, '2026-06-15','2026-06-21','ativa');
+        values (gen_random_uuid(), v_esc, v_aluno, v_trilha, 3, w3_ini, w3_fim, 'ativa')
+        on conflict (aluno_id, trilha_id, semana_numero) do nothing;
+      select id into v_meta from metas
+       where aluno_id = v_aluno and trilha_id = v_trilha and semana_numero = 3;
       v_ats := s3;
       for i in 1 .. array_length(v_ats,1) loop
         insert into meta_atividades (id, escola_id, meta_id, atividade_modelo_id, estado)
-        values (gen_random_uuid(), v_esc, v_meta, v_ats[i], 'pendente');
+        values (gen_random_uuid(), v_esc, v_meta, v_ats[i], 'pendente')
+        on conflict (meta_id, atividade_modelo_id) do nothing;
       end loop;
     end if;
   end loop;
@@ -385,12 +530,21 @@ begin
     v_aluno := ('a0000000-0000-4000-8000-' || lpad(r.num::text, 12, '0'))::uuid;
     v_n := case r.perfil when 'FORTE' then 2 when 'MEDIANO' then 1 else 0 end;
     for k in 1 .. v_n loop
-      v_dat := date '2026-06-14' - (k-1) * 7;
+      v_dat := app.hoje_local() - 5 - (k-1) * 7;   -- Onda 8: era date '2026-06-14' fixo
+      -- Onda 8: `simulados` só tem PK, e o id vinha de gen_random_uuid()
+      -- — reexecutar duplicava. O cabeçalho deste seed sempre afirmou
+      -- "reexecução não duplica"; nunca foi verdade, e ninguém viu
+      -- porque quem roda o seed duas vezes é o CI, que o pulava.
+      -- O guarda é pelo par (aluno, nome do simulado), que é o que
+      -- identifica a linha na prática.
       insert into simulados (id, escola_id, aluno_id, nome, data, acertos, exam_tag, redacao_nota)
-      values (gen_random_uuid(), v_esc, v_aluno,
-              'Simulado ' || r.examtag || ' #' || k, v_dat,
-              jsonb_build_object('mat', 14 + k, 'por', 12 + k, 'ing', 10 + k),
-              r.examtag, null);
+      select gen_random_uuid(), v_esc, v_aluno,
+             'Simulado ' || r.examtag || ' #' || k, v_dat,
+             jsonb_build_object('mat', 14 + k, 'por', 12 + k, 'ing', 10 + k),
+             r.examtag, null
+       where not exists (
+         select 1 from simulados s
+          where s.aluno_id = v_aluno and s.nome = 'Simulado ' || r.examtag || ' #' || k);
     end loop;
   end loop;
 end $$;

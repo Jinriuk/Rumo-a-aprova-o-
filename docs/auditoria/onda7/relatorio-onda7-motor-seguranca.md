@@ -159,17 +159,60 @@ normalizarCodigo(codigo)` — senha = código) e estavam todas com
 O enforcement existe e é total: `App.jsx:137` prende o app inteiro atrás do
 `TrocarSenhaObrigatoria` enquanto a flag for true, para qualquer papel.
 
-### ⚠ Resíduo honesto
+### Resíduo, e uma correção a este próprio relatório
 
 `must_change_password = true` força a troca **no próximo acesso** — não
 invalida a senha conhecida para esse primeiro acesso. Quem já sabe um
 código pode logar uma vez e escolher a nova senha, o que trancaria o
 usuário legítimo para fora (visível, mas ruim).
 
-O passo mais forte é `credencial_status = 'revogada'`, que bloqueia o login
-até a coordenação re-provisionar. **Não foi aplicado**: revogar as 78
-inutiliza o demo como peça de venda até alguém re-gerar credencial uma a
-uma. Fica como decisão do dono, por credencial.
+**A primeira versão deste relatório dizia que o passo mais forte era
+`credencial_status = 'revogada'`. Isso está errado**, e o erro importa
+porque um documento de segurança com o remédio errado é pior que nenhum.
+A própria 0047 avisa:
+
+> `credencial_status` — 'ativa'/'revogada'. ESPELHA o ban do Auth
+> (`auth.admin.updateUserById` com `ban_duration`) (…) **a ENFORCEMENT real
+> do bloqueio de login é o ban no GoTrue**; esta coluna é só a fonte de
+> verdade LEGÍVEL pela coordenação.
+
+Escrever só a coluna não bloquearia login nenhum — faria a UI anunciar
+"credencial revogada" enquanto a credencial continua funcionando. Pior que
+não fazer nada.
+
+Revogar de verdade exige **os dois** lados, que é o que
+`provisionar-aluno` faz:
+
+| lado | o quê | por quê |
+|---|---|---|
+| `auth.users.banned_until` | `BAN_LONGO` = `876000h` (100 anos, idioma do GoTrue para "até segunda ordem") | é o bloqueio real do login |
+| `usuarios.credencial_status = 'revogada'` | espelho legível | é o que faz o botão **"Reativar credencial"** aparecer na coordenação (`ListaAlunos.jsx:294`) — sem ele a conta fica bloqueada e sem caminho de volta pela UI |
+
+### O que foi revogado (17/09)
+
+| conta | papel | motivo |
+|---|---|---|
+| `lucasdemo2026@codigo.acesso.local` | aluno | exposição **provada**: era o placeholder do campo de código na tela pública de login do demo |
+| `respdemo2026x@codigo.acesso.local` | responsável | credencial de papel usada na varredura de 12/09, que percorreu a área do responsável |
+
+**Não revogadas, de propósito:**
+
+- **Nenhuma conta de coordenação.** O botão de reativar mora *dentro* do
+  painel da coordenação — revogá-la seria trancar a chave do lado de fora.
+- **As demais 76.** Vivem só no seed de um repositório privado, nunca
+  estiveram numa tela pública, e já estão atrás do gate de troca
+  obrigatória. Revogar as 78 inutilizaria o demo como peça de venda até
+  alguém re-provisionar uma a uma.
+
+Recuperação: **Alunos → ··· Mais → "Reativar credencial"** na coordenação,
+que chama `provisionar-aluno` com `tipo: "reativar-credencial"`
+(`ban_duration: "none"`) e emite senha temporária nova. Um clique por conta.
+
+Nota deliberada sobre o método: **não** rotacionei a senha gerando uma nova
+e colando aqui. Seria recriar exatamente o vazamento original — o plano
+descreve o S1 como "credenciais demo **coladas em chat** durante a
+varredura". Banir não cria segredo novo; o caminho de volta emite a senha
+na UI, uma vez, para quem tem o painel.
 
 Também corrigido: `Login.jsx` exibia `LUCASDEMO2026` — código real do aluno
 de demonstração — como placeholder do campo na **tela pública**. Virou

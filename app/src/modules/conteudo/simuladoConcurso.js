@@ -181,3 +181,31 @@ export function avaliarSimulado({ materias = [], acertos = {}, redacaoNota = nul
     temRedacao: materiaRedacao(materias) != null,
   };
 }
+
+/* ============================================================
+   A9 — SEPARA O QUE TEM FORMATO DO QUE NÃO TEM
+   ------------------------------------------------------------
+   A Onda 2 corrigiu a GRAVAÇÃO (os dois formulários passaram a
+   registrar `exam_tag`) e deixou escrito que faltava o outro lado: o
+   histórico que já estava gravado com `exam_tag` nulo. Esta é a peça
+   que faltava.
+
+   `exam_tag` nulo não quer dizer "é do concurso atual". Quer dizer
+   que o formato não foi registrado — o simulado é anterior à
+   migration 0014, quando a coluna nem existia. Tratar nulo como
+   "atual" faz o passado ser reescrito pelo presente: o mesmo
+   simulado é avaliado com as regras do CN hoje e com as da EsPCEx
+   amanhã, só porque o aluno trocou de alvo (e T29 mostrou que até o
+   scroll do mouse sobre o select troca).
+
+   Devolve duas listas. `doConcurso` é o que pode ser avaliado no
+   formato da prova; `semFormato` é o que só pode ser exibido. Nenhum
+   simulado é descartado: o registro é do aluno.
+   ============================================================ */
+export function segregarPorFormato(simulados = [], codigoConcurso = null) {
+  const todos = simulados ?? [];
+  return {
+    doConcurso: todos.filter((s) => !!s?.exam_tag && s.exam_tag === codigoConcurso),
+    semFormato: todos.filter((s) => !s?.exam_tag),
+  };
+}

@@ -20,18 +20,21 @@ for f in "$DIR"/supabase/migrations/*.sql; do
   echo "migration: $(basename "$f")"
   psql -v ON_ERROR_STOP=1 -q -f "$f"
 done
-# o seed 04 (contas no Auth) só roda no Supabase real: aqui não há GoTrue.
-# Glob de dois dígitos (01,02,...,10,...) ordenado. PULADOS aqui:
-#   04 → cria contas no Auth (auth.users); só roda no Supabase real.
-#   13 → vitrine demo: também insere em auth.users (seção "CONTAS DE
-#        ACESSO"), que não existe no Postgres vanilla do CI/local —
-#        é seed de ambiente Supabase real, como o 04. Sem este skip,
-#        o passo de seed aborta e TODA a suíte de testes é pulada.
-#   14 → depende dos alunos da vitrine criados em 13; sem o 13 não há
-#        a quem prender os registros. Anda junto com o 13.
-# (15 e 16 mexem só em Lucas/higiene da base — rodam sobre 01–12.)
+# Glob de dois dígitos (01,02,...,10,...) ordenado. PULADOS aqui — e a
+# regra do corte é uma só: quem escreve no schema `auth` (GoTrue) não
+# roda no Postgres vanilla do CI/local.
+#   04 → contas de Auth do seed de dev.
+#   21 → contas de Auth dos alunos da vitrine.
+#
+# Onda 8: antes o skip era 04/13/14, porque o 13 misturava `usuarios`
+# (público) com `auth.users` no mesmo laço. O efeito colateral era
+# grave: a base INTEIRA da vitrine — 60 alunos, registros, metas e
+# simulados — ficava fora do CI, sem um único teste. Foi assim que as
+# datas cravadas em junho passaram três meses congeladas em silêncio.
+# A parte de Auth saiu para o 21; o 13 virou 100% público e o 14, que
+# nunca tocou em `auth`, voltou junto. Os dois agora são testados.
 for f in "$DIR"/supabase/seed/[0-9][0-9]_*.sql; do
-  case "$f" in */04_*|*/13_*|*/14_*) continue;; esac
+  case "$f" in */04_*|*/21_*) continue;; esac
   echo "seed: $(basename "$f")"
   psql -v ON_ERROR_STOP=1 -q -f "$f" > /dev/null
 done
@@ -39,7 +42,7 @@ done
 # o seed precisa ser idempotente: roda DUAS vezes de propósito e
 # o teste de motor confere que nada duplicou
 for f in "$DIR"/supabase/seed/[0-9][0-9]_*.sql; do
-  case "$f" in */04_*|*/13_*|*/14_*) continue;; esac
+  case "$f" in */04_*|*/21_*) continue;; esac
   psql -v ON_ERROR_STOP=1 -q -f "$f" > /dev/null
 done
 

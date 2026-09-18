@@ -1,55 +1,84 @@
 # Status Atual do Projeto
 
-**Data:** 2026-07-02 (REG1 + FIX2 — todos os números abaixo foram **medidos nesta
-data**, não copiados de relatório anterior; o comando de verificação acompanha cada um)
-**Fase encerrada:** FIX1 (PR #60) + REG1 (PR #61) + FIX2 (fecha P1-5 e P2-8)
-**Próxima fase:** decisão do dono — PED2 rodada 2 (produção de conteúdo) e/ou PR1
-(piloto real; os P0 são de operação, não de código)
+**Data:** 2026-09-18 (fechamento do programa das 8 Ondas)
+**Fase encerrada:** Ondas 0–8 + porta do ciclo seguinte
+**Próxima fase:** G3 do Plano Mestre — ver `08-plano-execucao-set-dez-2026.md`
+
+> **Como ler este documento.** Cada número abaixo está marcado com COMO
+> foi obtido. `medido` = o comando ao lado foi executado nesta data, neste
+> repositório, e o valor é o que ele imprimiu. `não verificado` = depende
+> do Supabase remoto, que não é alcançável a partir do executor desta
+> rodada — o valor anterior foi REMOVIDO em vez de repetido, porque
+> número remoto copiado de julho foi exatamente o que tornou a versão
+> anterior deste índice perigosa.
 
 ---
 
 ## Resumo executivo
 
-Sistema **liberado para piloto controlado pequeno** (desde SEG2, reafirmado pela
-SDB-AUDIT). Entre 26/06 e 02/07 a `main` recebeu **15 rodadas de trabalho**
-(REG0 → FIX2 — ver `02-linha-do-tempo.md` §4), incluindo quatro fora do pipeline
-numerado. A REG1 reconciliou estes índices; a **FIX2 fechou os dois achados de
-código da REG1**: a tabela fantasma saiu do Login (tela honesta, sem coleta de
-e-mail que caía no vazio) e a escrita duplicada de conquistas foi desligada nos
-dois motores (migration 0037, dados preservados). **Nenhum P0/P1 de segurança
-aberto; nenhum P1 de produto aberto.**
+O programa de correção das 8 Ondas está fechado no que é verificável
+dentro do repositório. **Isso não é o mesmo que liberado para piloto.**
+
+A versão anterior deste índice (02/07) dizia "liberado para piloto
+controlado pequeno" e "nenhum P0/P1 de segurança aberto". As duas frases
+foram retiradas, e não por excesso de zelo:
+
+1. Ela mesma listava, algumas linhas abaixo, "credencial do aluno =
+   código" como item ABERTO. Um documento não pode afirmar que não há P0/P1
+   de segurança aberto e listar um na mesma página.
+2. Os números (475 testes, 37 migrations, 6 Edge Functions) estavam
+   vencidos por dois meses e meio de trabalho, então quem lesse o índice
+   como estado atual decidiria sobre um sistema que não existe mais.
+3. O Plano Mestre de setembro exige **G3** antes do primeiro aluno real.
+   Concluir as Ondas não aprova G3 — G3 depende de ambiente, e-mail,
+   backup/restore, RLS em ambiente equivalente, monitoramento, E2E em
+   navegador e jurídico. Nada disso se prova daqui.
+
+O que mudou de verdade: A9 e a regressão do S1 no reseed estavam abertos
+e foram fechados; a vitrine parou de envelhecer sozinha; o ciclo seguinte
+ganhou motor **e** porta na coordenação.
 
 ---
 
-## Números verificados (2026-07-02)
+## Números verificados (2026-09-18)
 
-| Métrica | Valor | Comando/evidência |
+| Métrica | Valor | Como foi obtido |
 |---|---|---|
-| Testes | **475 / 475 verdes** | `cd tests && bash reset-db.sh && npm test` (Postgres 16 local, migrations + seed 2×) |
-| Build de produção | **verde**, sem warning de chunk | `cd app && npm run build` — principal 434 kB (gzip 124 kB), áreas em chunks lazy |
-| Migrations no repo | **37** | `ls supabase/migrations \| wc -l` |
-| Migrations no ledger remoto | **37** (paridade, drift 0) | `list_migrations` (MCP) — última: 0037 (FIX2) aplicada 02/07 |
-| Tabelas públicas remotas | **46, todas com RLS** | `list_tables` (MCP, projeto `bdjkgrzfzoamchdpobbl`) |
-| Edge Functions | **6/6 ACTIVE** | `list_edge_functions` (MCP) — versões abaixo |
-| TypeScript em `app/src` | 0 arquivos (dívida conhecida) | `find app/src -name '*.ts*' \| wc -l` |
+| Testes | **956 / 956 verdes** | medido — `bash reset-db.sh && npm test` em Postgres 16 local dedicado (migrations + seed 2×) |
+| Arquivos de teste | **91** (93 `.mjs` em `tests/`) | medido — `grep -l 'node:test' tests/*.mjs \| wc -l` |
+| Lint | **0 errors / 256 warnings** | medido — `cd app && npm run lint` |
+| Build de produção | **verde** | medido — `cd app && npm run build` |
+| Migrations no repo | **52** (última: `0051_proxima_edicao_trilha`) | medido — `ls supabase/migrations/*.sql \| wc -l` |
+| Seeds no repo | **21** (o 04 e o 21 só rodam em Supabase real — escrevem em `auth`) | medido — `ls supabase/seed/*.sql \| wc -l` |
+| Edge Functions no repo | **7** | medido — `ls -d supabase/functions/*/ \| grep -v _shared` |
+| TypeScript em `app/src` | 0 arquivos (dívida conhecida; `supabase/functions` é TS) | medido — `find app/src -name '*.ts*' \| wc -l` |
+| Migrations no ledger remoto | — | **não verificado** nesta rodada |
+| Tabelas públicas remotas / RLS | — | **não verificado** nesta rodada |
+| Edge Functions ACTIVE no remoto | — | **não verificado** nesta rodada |
+
+> As duas `0047` (`0047_credencial_senha_temporaria` e
+> `0047_revogar_execute_rls_auto_enable`) coexistem de propósito: a Onda
+> 2.5 decidiu não renomear migration já aplicada só por estética. A regra
+> de não multiplicar prefixo ambíguo vale para as novas.
 
 ## Estado do Supabase remoto
 
-**Projeto:** `bdjkgrzfzoamchdpobbl` (us-east-1, Free — PostgreSQL 17.6)
+**Não verificado nesta rodada.** O executor desta rodada não alcança o
+projeto Supabase, então a tabela de versões de Edge Function, a paridade
+do ledger de migrations e a contagem de tabelas com RLS foram REMOVIDAS
+em vez de recopiadas de julho.
 
-| Função | Versão | verify_jwt |
-|--------|--------|-----------|
-| `provisionar-aluno` | v3 | true |
-| `backoffice-coordenador` | v5 | true |
-| `revogar-responsavel` | v2 | true |
-| `gerar-meta` | v2 | true |
-| `virar-semana` | v2 | false (gate por token de serviço, comparação timing-safe) |
-| `lgpd-titular` | v2 | true |
+O que se pode afirmar do repositório: as 7 funções em
+`supabase/functions/` usam a allowlist de CORS compartilhada
+(`_shared/cors.ts`) — a Onda 1 centralizou 3 e a Onda 1 complementar
+(#103) descobriu que as outras 4 ainda tinham cópia inline e as trouxe
+junto. Que o deploy remoto reflita isso é outra pergunta, e continua sem
+resposta aqui.
 
-CORS por allowlist nas 6 (SEG2). Auditoria completa do banco em
-`auditoria/sdb-audit/relatorio-final-sdb-audit.md` (29/06) — ressalvas P2
-(storage sem restrição, 13 FKs sem índice, credenciais demo em produção)
-seguem válidas.
+A auditoria do banco em
+`auditoria/sdb-audit/relatorio-final-sdb-audit.md` (29/06) é de junho. As
+ressalvas P2 que ela levanta (storage sem restrição, FKs sem índice,
+credenciais demo em produção) não foram reverificadas nesta rodada.
 
 ---
 
@@ -69,35 +98,37 @@ seguem válidas.
 | SDB-AUDIT (#58) / SDB-FIX1 (#59) | Auditoria do banco remoto; drift 0034–0036 aplicado, paridade 36==36 |
 | FIX1 (#60) | 5 achados da RC1: responsável multi-filhos com seletor, log de auth esperada rebaixado, branch morto removido, contextos de erro, code-splitting por área |
 
-## Fios soltos conhecidos e ABERTOS (verificados hoje no código)
+## Fios soltos conhecidos e ABERTOS (conferidos no código em 18/09)
 
-| Item | Severidade | Evidência |
+| Item | Severidade | Evidência / o que mudou |
 |---|---|---|
-| ~~Tabela fantasma `solicitacoes_acesso`~~ | ✅ **fechado (FIX2)** | Tela "esqueci meu código" agora é orientação estática honesta; `solicitarRecuperacaoCodigo` removida do seam |
-| ~~Motor de XP/conquistas duplicado~~ | ✅ **fechado (FIX2 0037)** | Escritores no-op nos 2 motores (provado por `tests/fix2-conquistas-deprecadas.test.mjs`); 4 tabelas deprecadas com dados preservados; remoção física = DB3 (P4) |
-| Observabilidade sem destino — captura instalada, `VITE_ERROR_REPORT_URL` indefinida em todo lugar | P2 (antes de aluno real) | `observabilidade.js:9`; ausente de `.env.production`/CI |
-| E2E nunca roda — 6 specs Playwright pulados sem secrets `E2E_SUPABASE_*` | P2 | `ci.yml` (job `e2e-guard`) |
-| Credencial do aluno = código (email/senha derivados) — modelo opaco **documentado** na SEC3, não implementado | P2 | `provisionar-aluno/index.ts:205` (`password: codigo`) |
+| ~~Credencial do aluno = código~~ | ✅ **fechado** | `provisionar-aluno/index.ts` gera `novaSenhaTemporaria()` independente do código, com `must_change_password: true`. A versão anterior deste índice ainda apontava `password: codigo` — **essa linha estava errada** e foi corrigida aqui. |
+| ~~Reseed recriava senha = código~~ | ✅ **fechado (Onda 8)** | O seed 13 escrevia `crypt(v_codigo, …)` em `auth.users` e o `reset-db.sh` o pulava, então o CI nunca via. A parte de Auth saiu para o seed 21 e o 13 virou 100% público: agora o 13 e o 14 rodam no CI. |
+| ~~A9 — histórico sem `exam_tag` reetiquetado pelo concurso atual~~ | ✅ **fechado** | `segregarPorFormato` em `modules/conteudo/simuladoConcurso.js`; contrafactual executado em `tests/onda8-a9-historico-sem-formato.test.mjs`. |
+| ~~Ciclo encerrado sem saída~~ | ✅ **fechado** | Motor em `0051_proxima_edicao_trilha.sql` e porta na aba "Ciclo" da Área da Escola. |
+| Proteção contra senhas vazadas no Auth (S1/S2) | **P1 — antes do primeiro aluno** | Configuração do Supabase Auth, não código. Não verificável daqui: exige abrir as settings de demo e produção. Revogação no app (`credencial_status='revogada'`) **não** basta sozinha para bloquear login no GoTrue — precisa de ban no Auth (corrigido no relatório da Onda 7 pela #113). |
+| Observabilidade sem destino — `VITE_ERROR_REPORT_URL` indefinida | P2 (antes de aluno real) | `observabilidade.js`; ausente de `.env.production`/CI |
+| E2E nunca roda — specs Playwright pulados sem secrets `E2E_SUPABASE_*` | P2 | `ci.yml`, job `e2e-guard`. Os testes de tela deste repo são inspeção de fonte e lógica pura; **não** substituem navegador. |
+| Revisão visual das mudanças de contraste/cor não executada | P2 (antes da demo) | O token vermelho é calculado em runtime (`clarearAteRazao("#D9695E", …, 4.5)` em `shared/ui/tema.js`) e também é fundo e borda, então o raio da mudança é maior que "texto vermelho". Precisa de olho humano em 1366×768 e 390×844. |
 | `.env.production` versionado (só chaves públicas) | P4 | `ls app/.env.production` |
 
-> **Atenção de processo:** o doc de fechamento (28/06) afirma que a tabela
-> fantasma e o motor duplicado tinham sido "corrigidos" antes dele. A REG1
-> verificou: **não estão corrigidos na `main` nem no remoto** — nenhum commit no
-> histórico toca esses pontos. Tratar essa alegação como incorreta (detalhe em
-> `auditoria/reg1/relatorio-reg1-reconciliacao-pos-fechamento.md`).
+> **Atenção de processo (mantida, e agora com um segundo caso).** O doc de
+> fechamento de 28/06 afirmou corrigidos dois itens que não estavam — a REG1
+> verificou e refutou. O mesmo padrão se repetiu na Onda 1: a PR #100
+> declarou B1 fechado com teste verde, e a #103 mostrou que 4 das 7 funções
+> continuavam com allowlist inline — **o teste passava porque inspecionava o
+> helper, não os consumidores**. Declaração de fechamento vale o que vale a
+> evidência; teste verde sobre o arquivo errado não é evidência.
 
 ---
 
 ## Escolas cadastradas (remoto)
 
-| Escola | Tipo |
-|--------|------|
-| Colégio e Curso Ícone | Real (piloto candidata) |
-| Escola Piloto I1 | Ambiente de testes |
-| Curso Beta Preparatório | Demo / semente |
-| Matriz Educação RM | Demo / semente |
+**Não verificado nesta rodada** (a contagem anterior era de 02/07 via
+`list_tables`). O repositório semeia 2 escolas no banco local de teste;
+isso não diz nada sobre o remoto.
 
-(4 escolas, 68 alunos, 76 usuários — `list_tables` 02/07.)
+---
 
 ## Pendências (resumo)
 

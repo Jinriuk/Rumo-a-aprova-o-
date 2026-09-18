@@ -9,13 +9,27 @@
 -- app_metadata — os claims que a RLS lê. Alternativa equivalente:
 -- scripts/seed-auth-usuarios.mjs (via API admin).
 --
--- Credenciais de demonstração (troque ao apresentar):
+-- CÓDIGO NÃO É SENHA (S1, Onda 7). Até a Onda 8 este seed gravava
+-- `crypt(codigo, …)` — quem soubesse o código de acesso tinha a senha
+-- junto. Era a mesma falha que o provisionar-aluno pré-#95 tinha em
+-- produção, e ela renascia a cada reseed, mesmo depois de a produção
+-- ter sido corrigida.
+--
+-- Agora o seed segue o mesmo modelo do provisionar-aluno pós-#95:
+-- o código IDENTIFICA, a senha AUTENTICA, e as contas de login de
+-- demonstração nascem com `must_change_password` (seed 01) — a troca
+-- é forçada no primeiro acesso por App.jsx.
+--
+-- Credenciais de demonstração — o código é público (vai na tela de
+-- login), a senha inicial não:
 --   coordenação vitrine:  coordenacao@vitrine.demo / vitrine-coord-2026
---   aluno Lucas (código): LUCASDEMO2026
---   responsável (código): RESPDEMO2026X
---   coordenação beta:     coordenacao@beta.demo / beta-coord-2026
---   aluno Bruno (código): BRUNODEMO2026
---   responsável (código): RESPBETA2026XX
+--   coordenação beta:     coordenacao@beta.demo   / beta-coord-2026
+--   aluno Lucas:          código LUCASDEMO2026  + SENHA_DEMO_INICIAL
+--   responsável do Lucas: código RESPDEMO2026X  + SENHA_DEMO_INICIAL
+--   aluno Bruno:          código BRUNODEMO2026  + SENHA_DEMO_INICIAL
+--   responsável do Bruno: código RESPBETA2026XX + SENHA_DEMO_INICIAL
+-- onde SENHA_DEMO_INICIAL = 'triliva-primeiro-acesso-2026'. Ela serve
+-- só para o primeiro login; o app exige trocá-la em seguida.
 -- ============================================================
 
 create extension if not exists pgcrypto;
@@ -28,15 +42,17 @@ begin
     select * from (values
       ('aaaaaaaa-0000-4000-8000-000000000001'::uuid, 'coordenacao@vitrine.demo',              'vitrine-coord-2026',
        '11111111-1111-4111-8111-111111111111', 'coordenacao', 'Coordenação Vitrine'),
-      ('aaaaaaaa-0000-4000-8000-000000000002'::uuid, 'lucasdemo2026@codigo.acesso.local',     'LUCASDEMO2026',
+      -- as 4 contas por código recebem a MESMA senha inicial, que não é
+      -- o código: quem lê o código na tela de login não ganha o acesso.
+      ('aaaaaaaa-0000-4000-8000-000000000002'::uuid, 'lucasdemo2026@codigo.acesso.local',     'triliva-primeiro-acesso-2026',
        '11111111-1111-4111-8111-111111111111', 'aluno',       'Lucas'),
-      ('aaaaaaaa-0000-4000-8000-000000000003'::uuid, 'respdemo2026x@codigo.acesso.local',     'RESPDEMO2026X',
+      ('aaaaaaaa-0000-4000-8000-000000000003'::uuid, 'respdemo2026x@codigo.acesso.local',     'triliva-primeiro-acesso-2026',
        '11111111-1111-4111-8111-111111111111', 'responsavel', 'Responsável do Lucas'),
       ('bbbbbbbb-0000-4000-8000-000000000001'::uuid, 'coordenacao@beta.demo',                 'beta-coord-2026',
        '22222222-2222-4222-8222-222222222222', 'coordenacao', 'Coordenação Beta'),
-      ('bbbbbbbb-0000-4000-8000-000000000002'::uuid, 'brunodemo2026@codigo.acesso.local',     'BRUNODEMO2026',
+      ('bbbbbbbb-0000-4000-8000-000000000002'::uuid, 'brunodemo2026@codigo.acesso.local',     'triliva-primeiro-acesso-2026',
        '22222222-2222-4222-8222-222222222222', 'aluno',       'Bruno'),
-      ('bbbbbbbb-0000-4000-8000-000000000003'::uuid, 'respbeta2026xx@codigo.acesso.local',    'RESPBETA2026XX',
+      ('bbbbbbbb-0000-4000-8000-000000000003'::uuid, 'respbeta2026xx@codigo.acesso.local',    'triliva-primeiro-acesso-2026',
        '22222222-2222-4222-8222-222222222222', 'responsavel', 'Responsável do Bruno')
     ) as t(id, email, senha, escola_id, papel, nome)
   loop

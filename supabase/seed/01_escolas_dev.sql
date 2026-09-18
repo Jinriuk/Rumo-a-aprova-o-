@@ -17,13 +17,18 @@ insert into escolas (id, nome, slug, logo_url, cor_acento) values
   on conflict (slug) do nothing;
 
 -- usuários (mesmos ids que as contas do Auth recebem no seed real)
-insert into usuarios (id, escola_id, papel, nome) values
-  ('aaaaaaaa-0000-4000-8000-000000000001', '11111111-1111-4111-8111-111111111111', 'coordenacao', 'Coordenação Vitrine'),
-  ('aaaaaaaa-0000-4000-8000-000000000002', '11111111-1111-4111-8111-111111111111', 'aluno',       'Lucas'),
-  ('aaaaaaaa-0000-4000-8000-000000000003', '11111111-1111-4111-8111-111111111111', 'responsavel', 'Responsável do Lucas'),
-  ('bbbbbbbb-0000-4000-8000-000000000001', '22222222-2222-4222-8222-222222222222', 'coordenacao', 'Coordenação Beta'),
-  ('bbbbbbbb-0000-4000-8000-000000000002', '22222222-2222-4222-8222-222222222222', 'aluno',       'Bruno'),
-  ('bbbbbbbb-0000-4000-8000-000000000003', '22222222-2222-4222-8222-222222222222', 'responsavel', 'Responsável do Bruno')
+-- S1 (Onda 8): as contas que se logam por CÓDIGO nascem exigindo troca
+-- de senha no primeiro acesso, igual ao provisionar-aluno pós-#95. São
+-- exatamente as credenciais que circulam em apresentação e print — as
+-- que têm risco de vazar. A coordenação entra por e-mail+senha própria
+-- e fica de fora: não tem a propriedade "senha derivável do código".
+insert into usuarios (id, escola_id, papel, nome, must_change_password) values
+  ('aaaaaaaa-0000-4000-8000-000000000001', '11111111-1111-4111-8111-111111111111', 'coordenacao', 'Coordenação Vitrine', false),
+  ('aaaaaaaa-0000-4000-8000-000000000002', '11111111-1111-4111-8111-111111111111', 'aluno',       'Lucas',               true),
+  ('aaaaaaaa-0000-4000-8000-000000000003', '11111111-1111-4111-8111-111111111111', 'responsavel', 'Responsável do Lucas', true),
+  ('bbbbbbbb-0000-4000-8000-000000000001', '22222222-2222-4222-8222-222222222222', 'coordenacao', 'Coordenação Beta',    false),
+  ('bbbbbbbb-0000-4000-8000-000000000002', '22222222-2222-4222-8222-222222222222', 'aluno',       'Bruno',               true),
+  ('bbbbbbbb-0000-4000-8000-000000000003', '22222222-2222-4222-8222-222222222222', 'responsavel', 'Responsável do Bruno', true)
   on conflict (id) do nothing;
 
 insert into turmas (id, escola_id, nome) values
