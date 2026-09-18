@@ -1,4 +1,11 @@
-# Mantém o projeto Supabase de PRODUÇÃO acordado.
+# Mantém os projetos Supabase acordados — PRODUÇÃO e DEMO.
+#
+# A4 (Onda 8): até aqui só produção era coberta. A VITRINE ficava de
+# fora, e ela é a peça de venda: o prospecto que abre o demo numa
+# segunda-feira é justamente quem pagaria os segundos de despausar.
+# O heartbeat diário da virada NÃO resolve isso — é pg_cron, trabalho
+# interno do banco, e o contador de inatividade do Supabase só olha
+# REQUISIÇÃO DE API (ver a nota logo abaixo).
 #
 # POR QUE ISTO EXISTE
 # Projeto no plano free do Supabase é PAUSADO após 7 dias sem atividade de
@@ -67,6 +74,58 @@ jobs:
           # explícita. Nunca fingir que o seguro está ativo quando não está.
           if [ -z "${URL:-}" ] || [ -z "${ANON:-}" ]; then
             echo "::warning::PULADO — sem PROD_SUPABASE_URL / PROD_SUPABASE_ANON_KEY. O projeto de produção NÃO está sendo mantido acordado, e pode pausar após 7 dias sem uso. Ver docs/operacao/manter-banco-acordado.md."
+            exit 0
+          fi
+
+          alvo="${URL%/}/rest/v1/concursos?select=id&limit=1"
+
+          # Três tentativas: uma falha de rede isolada não pode gastar a
+          # batida do dia. Espera crescente entre elas.
+          for tentativa in 1 2 3; do
+            # A atribuição vem primeiro e o fallback DEPOIS, fora do $( ):
+            # em falha de rede o próprio curl já imprime "000", então um
+            # `|| echo 000` dentro da substituição concatenaria os dois.
+            codigo=$(curl -sS -o /dev/null -w '%{http_code}' \
+              --max-time 30 \
+              -H "apikey: ${ANON}" \
+              -H "Authorization: Bearer ${ANON}" \
+              "$alvo") || codigo="000"
+
+            echo "tentativa ${tentativa}: HTTP ${codigo}"
+
+            # 2xx e 4xx servem: os dois provam que a requisição chegou ao
+            # projeto e contam como atividade. Só 000 (sem resposta) e 5xx
+            # significam que a batida não chegou.
+            case "$codigo" in
+              2*|4*)
+                echo "Banco acordado — resposta ${codigo}."
+                exit 0
+                ;;
+            esac
+
+            [ "$tentativa" -lt 3 ] && sleep $((tentativa * 10))
+          done
+
+          echo "::error::A batida NÃO chegou ao projeto após 3 tentativas (última: HTTP ${codigo}). O projeto pode pausar se isso persistir por 7 dias."
+          exit 1
+
+      - name: Bater no REST do demo (vitrine)
+        env:
+          # A chave anon é PUBLICÁVEL por design (ela já viaja no bundle para
+          # todo visitante; a segurança é a RLS). Está como secret aqui só
+          # para não aparecer no log — não porque o segredo importe.
+          # Configure em Settings > Secrets and variables > Actions:
+          #   DEMO_SUPABASE_URL       ex.: https://SEU-REF.supabase.co
+          #   DEMO_SUPABASE_ANON_KEY  a chave anon do projeto de DEMO (vitrine)
+          URL: ${{ secrets.DEMO_SUPABASE_URL }}
+          ANON: ${{ secrets.DEMO_SUPABASE_ANON_KEY }}
+        run: |
+          set -uo pipefail
+
+          # Mesma regra do e2e-guard: sem ambiente configurado, PULA de forma
+          # explícita. Nunca fingir que o seguro está ativo quando não está.
+          if [ -z "${URL:-}" ] || [ -z "${ANON:-}" ]; then
+            echo "::warning::PULADO — sem DEMO_SUPABASE_URL / DEMO_SUPABASE_ANON_KEY. A VITRINE não está sendo mantida acordada, e pode pausar após 7 dias sem uso. Ver docs/operacao/manter-banco-acordado.md."
             exit 0
           fi
 
