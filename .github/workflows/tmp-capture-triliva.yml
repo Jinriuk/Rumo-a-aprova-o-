@@ -1,0 +1,258 @@
+name: tmp-capture-triliva
+
+on:
+  push:
+    branches:
+      - tmp/triliva-pack-build-20260919
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  capture:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: 1ac7c6429968ef6ebafea34d7c539ef772e67a8a
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: app/package-lock.json
+      - name: Install app dependencies
+        working-directory: app
+        env:
+          PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: '1'
+        run: npm ci
+      - name: Build exact production source against demo
+        working-directory: app
+        run: |
+          cp .env.production .env.production.local
+          npm run build
+      - name: Locate preinstalled Chromium/Chrome
+        id: browser
+        run: |
+          CHROME="$(command -v google-chrome-stable || command -v google-chrome || command -v chromium || command -v chromium-browser || true)"
+          if [ -z "$CHROME" ]; then
+            echo "::error::No preinstalled Chromium/Chrome found. Browser install is intentionally disabled."
+            exit 1
+          fi
+          echo "chrome=$CHROME" >> "$GITHUB_OUTPUT"
+          "$CHROME" --version
+      - name: Write capture runner
+        working-directory: app
+        run: |
+          mkdir -p .capture
+          cat > .capture/capture.mjs <<'EOF'
+          import { chromium } from '@playwright/test';
+          import { createClient } from '@supabase/supabase-js';
+          import fs from 'node:fs/promises';
+          import path from 'node:path';
+
+          const ROOT = path.resolve('.capture/out/pack-triliva');
+          const BASE = 'http://127.0.0.1:4173';
+          const PROJECT_REF = 'bdjkgrzfzoamchdpobbl';
+          const SUPABASE_URL = `https://${PROJECT_REF}.supabase.co`;
+          const envText = await fs.readFile('.env.production.local','utf8');
+          const ANON = envText.match(/^VITE_SUPABASE_ANON_KEY=(.+)$/m)?.[1]?.trim();
+          if (!ANON) throw new Error('anon key missing');
+          const storageKey = `sb-${PROJECT_REF}-auth-token`;
+          const AUD = 'triliva-capture-20260919';
+          const EDGE = `${SUPABASE_URL}/functions/v1/capture-oidc-20260919`;
+          const manifest = [];
+          const missing = [];
+          const captured = new Set();
+          const school = 'Instituto Meridiano';
+          const hero = 'Helena Vasconcelos';
+
+          await Promise.all(['00-publico','01-aluno','02-coordenacao','03-responsavel','04-estados'].map(d=>fs.mkdir(path.join(ROOT,d),{recursive:true})));
+
+          async function oidcToken(){
+            const u = new URL(process.env.ACTIONS_ID_TOKEN_REQUEST_URL);
+            u.searchParams.set('audience', AUD);
+            const r = await fetch(u, { headers: { Authorization: `Bearer ${process.env.ACTIONS_ID_TOKEN_REQUEST_TOKEN}` }});
+            if (!r.ok) throw new Error(`OIDC ${r.status}`);
+            return (await r.json()).value;
+          }
+          const oidc = await oidcToken();
+
+          async function sessionFor(profile){
+            const r = await fetch(EDGE, { method:'POST', headers:{
+              'content-type':'application/json', apikey:ANON, Authorization:`Bearer ${ANON}`, 'x-capture-oidc':oidc,
+            }, body: JSON.stringify({profile}) });
+            if (!r.ok) throw new Error(`edge ${profile} ${r.status} ${await r.text()}`);
+            const {token_hash} = await r.json();
+            const sb = createClient(SUPABASE_URL, ANON, {auth:{persistSession:false,autoRefreshToken:false,detectSessionInUrl:false}});
+            const {data,error} = await sb.auth.verifyOtp({token_hash,type:'magiclink'});
+            if (error || !data.session) throw new Error(`verifyOtp ${profile}: ${error?.message}`);
+            return data.session;
+          }
+
+          const [studentSession, coordSession, respSession] = await Promise.all([
+            sessionFor('aluno'), sessionFor('coordenacao'), sessionFor('responsavel')
+          ]);
+
+          const browser = await chromium.launch({executablePath:process.env.CHROME_PATH, headless:true, args:['--no-sandbox','--disable-dev-shm-usage']});
+
+          const devices = {
+            desktop:{viewport:{width:1440,height:900},deviceScaleFactor:2,isMobile:false,hasTouch:false},
+            mobile:{viewport:{width:390,height:844},deviceScaleFactor:3,isMobile:true,hasTouch:true},
+            mobile360:{viewport:{width:360,height:800},deviceScaleFactor:3,isMobile:true,hasTouch:true},
+          };
+
+          async function ctx(device, session=null){
+            const c = await browser.newContext({...devices[device], locale:'pt-BR', timezoneId:'America/Sao_Paulo'});
+            if (session) await c.addInitScript(({k,s})=>{ try { if(location.origin.startsWith('http://127.0.0.1')) localStorage.setItem(k,JSON.stringify(s)); } catch{} },{k:storageKey,s:session});
+            return c;
+          }
+          async function settle(page, marker=null){
+            if (marker) await marker(page).waitFor({state:'visible',timeout:20000}).catch(()=>{});
+            await page.waitForLoadState('domcontentloaded').catch(()=>{});
+            await page.waitForLoadState('networkidle',{timeout:5000}).catch(()=>{});
+            for(let i=0;i<20;i++){
+              const busy = await page.locator('[aria-busy="true"], [data-carregando="true"], .skeleton, [class*="skeleton"]').filter({visible:true}).count().catch(()=>0);
+              if(!busy) break;
+              await page.waitForTimeout(250);
+            }
+            await page.waitForTimeout(800);
+          }
+          function visibleButton(page,name){return page.getByRole('button',{name,exact:true}).filter({visible:true}).first();}
+          async function tab(page,name){
+            const direct=visibleButton(page,name), more=visibleButton(page,'Mais');
+            await direct.or(more).first().waitFor({state:'visible',timeout:15000});
+            if(await direct.count()) await direct.click(); else { await more.click(); await visibleButton(page,name).click(); }
+            await settle(page);
+          }
+          async function focusShot(page, anchor, out){
+            let loc;
+            if (typeof anchor === 'string') loc=page.getByText(anchor,{exact:false}).filter({visible:true}).first();
+            else loc=anchor(page);
+            if(!(await loc.count().catch(()=>0))) loc=page.locator('main').first();
+            await loc.scrollIntoViewIfNeeded().catch(()=>{});
+            const handle=await loc.evaluateHandle((el)=>{
+              const vw=document.documentElement.clientWidth;
+              let n=el;
+              while(n && n!==document.body){
+                const r=n.getBoundingClientRect();
+                const cs=getComputedStyle(n);
+                const hasBox=(parseFloat(cs.borderTopWidth)>0 || cs.boxShadow!=='none' || cs.backgroundColor!=='rgba(0, 0, 0, 0)');
+                if(r.width>=Math.min(300,vw-32) && r.height>=90 && r.height<=760 && hasBox) return n;
+                n=n.parentElement;
+              }
+              return el;
+            });
+            const el=handle.asElement();
+            if(el) await el.screenshot({path:out,animations:'disabled'}); else await page.screenshot({path:out});
+            await handle.dispose();
+          }
+          async function snap({page,folder,base,screen,role,device,anchor,student='',note=''}){
+            await settle(page);
+            const p=path.join(ROOT,folder,`${base}-${device}.png`);
+            const c=path.join(ROOT,folder,`${base}-${device}-recorte.png`);
+            await page.screenshot({path:p,fullPage:true,animations:'disabled'});
+            await focusShot(page,anchor,c);
+            captured.add(screen);
+            manifest.push({screen,file:path.relative(ROOT,p),crop:path.relative(ROOT,c),role,device,viewport:`${devices[device].viewport.width}x${devices[device].viewport.height}`,dpr:devices[device].deviceScaleFactor,school,student,note});
+          }
+          async function safe(label,fn){try{await fn(); console.log(`OK ${label}`);}catch(e){missing.push({label,error:String(e).slice(0,600)}); console.log(`MISS ${label}: ${String(e).slice(0,250)}`);}}
+          async function openAuthed(device,session,marker){const c=await ctx(device,session); const p=await c.newPage(); await p.goto(BASE,{waitUntil:'domcontentloaded',timeout:30000}); await settle(p,marker); return {c,p};}
+
+          // Public/access states
+          for (const device of ['desktop','mobile']) await safe(`01 ${device}`,async()=>{
+            const c=await ctx(device),p=await c.newPage(); await p.goto(BASE,{waitUntil:'domcontentloaded'}); await settle(p,pg=>pg.getByRole('button',{name:'Entrar'}));
+            await snap({page:p,folder:'00-publico',base:'01-portal',screen:1,role:'publico',device,anchor:pg=>pg.getByRole('button',{name:'Entrar'}),note:'Portal público; campos vazios'}); await c.close();
+          });
+          for (const device of ['desktop','mobile']) await safe(`02 ${device}`,async()=>{
+            const c=await ctx(device),p=await c.newPage(); await p.goto(BASE,{waitUntil:'domcontentloaded'}); await settle(p,pg=>pg.getByRole('button',{name:'Entrar'}));
+            await p.getByRole('button',{name:/Coordenação/}).click(); await settle(p);
+            await snap({page:p,folder:'00-publico',base:'02-login-coordenacao',screen:2,role:'publico',device,anchor:'E-mail',note:'Login da coordenação sem credenciais preenchidas'}); await c.close();
+          });
+          await safe('03 mobile',async()=>{
+            const c=await ctx('mobile'),p=await c.newPage(); await p.goto(BASE,{waitUntil:'domcontentloaded'}); await settle(p,pg=>pg.getByRole('button',{name:'Entrar'}));
+            const forgot=p.getByText(/Esqueci meu código de acesso/i).filter({visible:true}).first(); await forgot.click(); await settle(p);
+            await snap({page:p,folder:'04-estados',base:'03-recuperacao-acesso',screen:3,role:'publico',device:'mobile',anchor:'Como recuperar',note:'Recuperação orienta procurar a coordenação; sem código exposto'}); await c.close();
+          });
+
+          // Student screens
+          for (const device of ['mobile','desktop']) await safe(`05 ${device}`,async()=>{const {c,p}=await openAuthed(device,studentSession,pg=>visibleButton(pg,'Hoje')); await tab(p,'Hoje'); await snap({page:p,folder:'01-aluno',base:'05-hoje',screen:5,role:'aluno',device,anchor:pg=>pg.getByText(/Meta da semana|Missão atual/i).filter({visible:true}).first(),student:hero,note:'Semana corrente viva'}); await c.close();});
+          for (const device of ['desktop','mobile']) await safe(`06 ${device}`,async()=>{const {c,p}=await openAuthed(device,studentSession,pg=>visibleButton(pg,'Hoje')); await tab(p,'Trilha'); await snap({page:p,folder:'01-aluno',base:'06-trilha',screen:6,role:'aluno',device,anchor:pg=>pg.getByText(/Geometria pesada|Semana 4/i).filter({visible:true}).first(),student:hero}); await c.close();});
+          await safe('07 mobile',async()=>{const {c,p}=await openAuthed('mobile',studentSession,pg=>visibleButton(pg,'Hoje')); await tab(p,'Registrar'); await snap({page:p,folder:'01-aluno',base:'07-registrar',screen:7,role:'aluno',device:'mobile',anchor:pg=>pg.getByText(/Registrar|Questões/i).filter({visible:true}).first(),student:hero,note:'Formulário sem submissão durante a captura'}); await c.close();});
+          for (const device of ['desktop','mobile']) await safe(`08 ${device}`,async()=>{const {c,p}=await openAuthed(device,studentSession,pg=>visibleButton(pg,'Hoje')); await tab(p,'Desempenho'); await snap({page:p,folder:'01-aluno',base:'08-desempenho',screen:8,role:'aluno',device,anchor:pg=>pg.getByText(/Radar|por matéria|Desempenho/i).filter({visible:true}).first(),student:hero}); await c.close();});
+          for (const device of ['desktop','mobile']) await safe(`09 ${device}`,async()=>{const {c,p}=await openAuthed(device,studentSession,pg=>visibleButton(pg,'Hoje')); await tab(p,'Simulados'); await snap({page:p,folder:'01-aluno',base:'09-simulados',screen:9,role:'aluno',device,anchor:pg=>pg.getByText(/redação|Simulados/i).filter({visible:true}).first(),student:hero,note:'Resultados registrados; não é prova dentro da plataforma'}); await c.close();});
+          await safe('10 mobile',async()=>{const {c,p}=await openAuthed('mobile',studentSession,pg=>visibleButton(pg,'Hoje')); await tab(p,'Conquistas'); await snap({page:p,folder:'01-aluno',base:'10-conquistas',screen:10,role:'aluno',device:'mobile',anchor:pg=>pg.getByText(/Conquistas|XP|Patente/i).filter({visible:true}).first(),student:hero}); await c.close();});
+          for (const device of ['desktop','mobile']) await safe(`11 ${device}`,async()=>{const {c,p}=await openAuthed(device,studentSession,pg=>visibleButton(pg,'Hoje')); await tab(p,'Histórico'); await snap({page:p,folder:'01-aluno',base:'11-historico',screen:11,role:'aluno',device,anchor:pg=>pg.getByText(/Histórico|Acumulado/i).filter({visible:true}).first(),student:hero}); await c.close();});
+          for (const device of ['desktop','mobile']) await safe(`12 ${device}`,async()=>{const {c,p}=await openAuthed(device,studentSession,pg=>visibleButton(pg,'Hoje')); await tab(p,'Plano'); await snap({page:p,folder:'01-aluno',base:'12-plano',screen:12,role:'aluno',device,anchor:pg=>pg.getByText(/Semana 4|Sua jornada|Plano/i).filter({visible:true}).first(),student:hero}); await c.close();});
+
+          // Responsible
+          for (const device of ['mobile','desktop']) await safe(`13 ${device}`,async()=>{const {c,p}=await openAuthed(device,respSession,pg=>pg.getByRole('button',{name:'Sair'})); await snap({page:p,folder:'03-responsavel',base:'13-responsavel',screen:13,role:'responsavel',device,anchor:pg=>pg.getByText(/Helena|Resumo|acerto|semana/i).filter({visible:true}).first(),student:hero,note:'Mesmo aluno da área do aluno e ficha'}); await c.close();});
+
+          async function coord(device){return openAuthed(device,coordSession,pg=>pg.getByText('Painel de gestão'));}
+          for (const device of ['desktop','mobile']) await safe(`14 ${device}`,async()=>{const {c,p}=await coord(device); await tab(p,'Painel'); await snap({page:p,folder:'02-coordenacao',base:'14-painel',screen:14,role:'coordenacao',device,anchor:pg=>pg.getByText('Alertas de risco').filter({visible:true}).first()}); await c.close();});
+          for (const device of ['desktop','mobile']) await safe(`15 ${device}`,async()=>{const {c,p}=await coord(device); await tab(p,'Alunos'); await snap({page:p,folder:'02-coordenacao',base:'15-alunos',screen:15,role:'coordenacao',device,anchor:'Alunos da escola'}); await c.close();});
+          await safe('16 desktop',async()=>{const {c,p}=await coord('desktop'); await tab(p,'Ranking'); await snap({page:p,folder:'02-coordenacao',base:'16-ranking',screen:16,role:'coordenacao',device:'desktop',anchor:pg=>pg.getByText(/Ranking —/).filter({visible:true}).first(),note:'Critério visível; ranking é recurso secundário'}); await c.close();});
+          for (const device of ['desktop','mobile']) await safe(`17 ${device}`,async()=>{const {c,p}=await coord(device); await tab(p,'Turmas'); await snap({page:p,folder:'02-coordenacao',base:'17-turmas',screen:17,role:'coordenacao',device,anchor:'Visão rápida do desempenho de cada turma'}); await c.close();});
+          await safe('18 desktop',async()=>{const {c,p}=await coord('desktop'); await tab(p,'LGPD'); await snap({page:p,folder:'02-coordenacao',base:'18-lgpd',screen:18,role:'coordenacao',device:'desktop',anchor:'Para que serve esta área',note:'Painel operacional; não prova certificação jurídica'}); await c.close();});
+          for (const device of ['desktop','mobile']) await safe(`19 ${device}`,async()=>{const {c,p}=await coord(device); await tab(p,'Marca'); await snap({page:p,folder:'02-coordenacao',base:'19-marca',screen:19,role:'coordenacao',device,anchor:'Marca da escola',note:'Sem salvar alteração'}); await c.close();});
+
+          async function ficha(device){
+            const {c,p}=await coord(device); await tab(p,'Alunos');
+            const search=p.locator('input').filter({visible:true}).filter({has:p.locator('nothing')});
+            // Use a text match to locate Helena's row, then its local action; fallback to first Ver desempenho after sorting/listing.
+            const helena=p.getByText(hero,{exact:true}).filter({visible:true}).first();
+            if(await helena.count()){
+              const row=helena.locator('xpath=ancestor::*[self::tr or @role="row" or contains(@style,"border")][1]');
+              const local=row.getByRole('button',{name:'Ver desempenho'}).filter({visible:true}).first();
+              if(await local.count()) await local.click(); else await p.getByRole('button',{name:'Ver desempenho'}).filter({visible:true}).first().click();
+            } else await p.getByRole('button',{name:'Ver desempenho'}).filter({visible:true}).first().click();
+            await settle(p,pg=>pg.getByRole('button',{name:/voltar ao painel/i})); return {c,p};
+          }
+          for (const device of ['desktop','mobile']) await safe(`20 ${device}`,async()=>{const {c,p}=await ficha(device); await snap({page:p,folder:'02-coordenacao',base:'20-ficha',screen:20,role:'coordenacao',device,anchor:pg=>pg.getByText(/Atividades da semana|Helena Vasconcelos/i).filter({visible:true}).first(),student:hero}); await c.close();});
+
+          // Screens 21/22: access management states without triggering generation or showing any code/password.
+          for (const device of ['desktop','mobile']) await safe(`21 ${device}`,async()=>{
+            const {c,p}=await coord(device); await tab(p,'Alunos');
+            const enzo=p.getByText('Enzo Bandeira',{exact:true}).filter({visible:true}).first();
+            if(await enzo.count()) await enzo.scrollIntoViewIfNeeded();
+            await snap({page:p,folder:'02-coordenacao',base:'21-credenciais',screen:21,role:'coordenacao',device,anchor:pg=>pg.getByRole('button',{name:/Gerar credencial/i}).filter({visible:true}).first(),student:'Enzo Bandeira',note:'Estado antes de gerar; nenhum código/senha foi criado nem exibido'}); await c.close();
+          });
+          for (const device of ['desktop','mobile']) await safe(`22 ${device}`,async()=>{
+            const {c,p}=await coord(device); await tab(p,'Alunos');
+            // Open the actions menu for Helena and the responsible-links manager; this is a read/navigation action only.
+            const helena=p.getByText(hero,{exact:true}).filter({visible:true}).first(); if(await helena.count()) await helena.scrollIntoViewIfNeeded();
+            const more=p.getByRole('button',{name:/Mais ações/i}).filter({visible:true}).first(); if(await more.count()) await more.click();
+            const manage=p.getByText(/Gerenciar responsáveis/i).filter({visible:true}).first(); if(await manage.count()) { await manage.click(); await settle(p); }
+            await snap({page:p,folder:'02-coordenacao',base:'22-vinculos-responsaveis',screen:22,role:'coordenacao',device,anchor:pg=>pg.getByText(/responsável|vínculo/i).filter({visible:true}).first(),student:hero,note:'Somente dados fictícios; sem revogar/gerar credencial'}); await c.close();
+          });
+
+          // 360-width validation for priority mobile screens (not part of naming/count; evidence only).
+          for (const [n,profile,sess,tabName,marker] of [
+            [5,'aluno',studentSession,'Hoje','Meta da semana'],[7,'aluno',studentSession,'Registrar','Registrar'],[13,'responsavel',respSession,null,'Helena']
+          ]) await safe(`360 check ${n}`,async()=>{const {c,p}=await openAuthed('mobile360',sess,profile==='aluno'?pg=>visibleButton(pg,'Hoje'):pg=>pg.getByRole('button',{name:'Sair'})); if(tabName) await tab(p,tabName); const overflow=await p.evaluate(()=>document.documentElement.scrollWidth>document.documentElement.clientWidth+1); if(overflow) throw new Error('horizontal overflow at 360px'); await c.close();});
+
+          await browser.close();
+          await fs.writeFile(path.join(ROOT,'_capture-manifest.json'),JSON.stringify({captured:[...captured].sort((a,b)=>a-b),manifest,missing},null,2));
+          if(missing.length) console.log(`CAPTURE_MISSING=${missing.length}`);
+          console.log(`CAPTURE_SCREENS=${[...captured].sort((a,b)=>a-b).join(',')}`);
+          EOF
+      - name: Start exact local production build
+        working-directory: app
+        run: |
+          nohup python3 -m http.server 4173 --directory dist > /tmp/triliva-http.log 2>&1 &
+          for i in {1..30}; do curl -fsS http://127.0.0.1:4173/ >/dev/null && break; sleep 1; done
+          curl -fsS http://127.0.0.1:4173/ >/dev/null
+      - name: Capture from demo
+        working-directory: app
+        env:
+          CHROME_PATH: ${{ steps.browser.outputs.chrome }}
+        run: node .capture/capture.mjs
+      - name: Upload raw capture pack
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: triliva-capture-raw
+          path: app/.capture/out/
+          if-no-files-found: error
+          retention-days: 1
