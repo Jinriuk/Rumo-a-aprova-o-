@@ -4,44 +4,39 @@ on:
   push:
     branches:
       - tmp/triliva-pack-build-20260919
-    paths-ignore:
-      - '_capture_dist.part*'
-      - '_capture_dist.meta'
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   build-export:
-    if: github.actor != 'github-actions[bot]'
     runs-on: ubuntu-latest
     env:
       PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: '1'
     steps:
       - uses: actions/checkout@v4
         with:
-          fetch-depth: 0
+          ref: 1ac7c6429968ef6ebafea34d7c539ef772e67a8a
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
           cache: npm
           cache-dependency-path: app/package-lock.json
+      - name: Create production-local demo env
+        working-directory: app
+        run: cp .env.production .env.production.local
       - name: Build production app
         working-directory: app
         run: |
           npm ci
           npm run build
-      - name: Export dist as base64 chunks
+      - name: Package dist
         run: |
           tar -C app -czf /tmp/triliva-dist.tar.gz dist
-          sha256sum /tmp/triliva-dist.tar.gz | awk '{print $1}' > _capture_dist.meta
-          printf 'source_sha=%s\n' "$GITHUB_SHA" >> _capture_dist.meta
-          printf 'built_at=%s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> _capture_dist.meta
-          base64 -w0 /tmp/triliva-dist.tar.gz | split -b 450000 - _capture_dist.part
-      - name: Commit exported build to temporary branch
-        run: |
-          git config user.name 'github-actions[bot]'
-          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add _capture_dist.meta _capture_dist.part*
-          git commit -m 'tmp: export production dist [skip ci]'
-          git push origin HEAD:tmp/triliva-pack-build-20260919
+          sha256sum /tmp/triliva-dist.tar.gz
+      - uses: actions/upload-artifact@v4
+        with:
+          name: triliva-dist-1ac7c64
+          path: /tmp/triliva-dist.tar.gz
+          if-no-files-found: error
+          retention-days: 1
