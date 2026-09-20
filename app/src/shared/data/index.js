@@ -260,24 +260,26 @@ export async function carregarRecorrenciaMedida(examTag) {
 export async function carregarRecorrenciaDoConcurso(examTag) {
   if (!examTag) return { assuntos: [], materias: [], recorrencia: [], medida: [] };
   try {
-    const [assuntos, materias, recorrencia, medida] = await Promise.all([
+    const [assuntos, materias, recorrencia, medida, catalogo] = await Promise.all([
       supabase.from("assuntos").select("*").eq("exam_tag", examTag).order("ordem"),
-      // T38: `nome` entra aqui para a tela mostrar o nome real da matéria
-      // (prova_materias.nome) em vez do código cru (qui, mat…).
-      supabase.from("prova_materias").select("materia_codigo, nome, peso, num_questoes").eq("exam_tag", examTag),
+      // `prova_materias` NÃO tem `nome` — só a estrutura da prova por
+      // código. O nome vem do catálogo `materias`, lido em paralelo abaixo.
+      supabase.from("prova_materias").select("materia_codigo, peso, num_questoes").eq("exam_tag", examTag),
       supabase.from("recorrencia_assunto").select("*").eq("exam_tag", examTag),
       supabase.from("vw_recorrencia_medida").select("*").eq("exam_tag", examTag),
+      supabase.from("materias").select("codigo, nome"),
     ]);
-    for (const r of [assuntos, materias, recorrencia, medida]) {
+    for (const r of [assuntos, materias, recorrencia, medida, catalogo]) {
       if (r.error) {
         if (tabelaInexistente(r.error)) {
           console.warn("recorrência por assunto: estrutura ausente, trilha segue sem o painel de incidência");
-          return { assuntos: [], materias: [], recorrencia: [], medida: [] };
+          return { assuntos: [], materias: [], recorrencia: [], medida: [], nomesMateria: {} };
         }
         throw falha("recorrência do concurso", r.error);
       }
     }
-    return { assuntos: assuntos.data ?? [], materias: materias.data ?? [], recorrencia: recorrencia.data ?? [], medida: medida.data ?? [] };
+    return { assuntos: assuntos.data ?? [], materias: materias.data ?? [], recorrencia: recorrencia.data ?? [], medida: medida.data ?? [],
+             nomesMateria: Object.fromEntries((catalogo.data ?? []).map((m) => [m.codigo, m.nome])) };
   } catch (e) {
     if (tabelaInexistente(e?.causa ?? e)) return { assuntos: [], materias: [], recorrencia: [], medida: [] };
     throw e;
@@ -401,12 +403,25 @@ export async function carregarMissoes(examTag, { nivel } = {}) {
   return data;
 }
 
-// T38: nome real da matéria (prova_materias) por código, para anexar às
-// missões — evita mostrar o código cru (qui, mat…) na trilha do concurso.
-async function carregarNomesMateria(examTag) {
-  const { data, error } = await supabase.from("prova_materias").select("materia_codigo, nome").eq("exam_tag", examTag);
-  if (error) throw falha("matérias da prova", error);
-  return Object.fromEntries((data ?? []).map((m) => [m.materia_codigo, m.nome]));
+/* T38: nome real da matéria por código, para anexar às missões — evita
+   mostrar o código cru (qui, mat…) na trilha do concurso.
+
+   A primeira versão disto lia `prova_materias.nome`, e essa coluna NUNCA
+   existiu: `prova_materias` guarda a ESTRUTURA da prova (quantas questões,
+   qual dia, qual peso) por exam_tag, e identifica a matéria só pelo código.
+   O nome vive no catálogo `materias` (codigo, nome, abrev, ordem). O erro
+   derrubava `carregarPlanoConcurso` inteiro e a tela da trilha morria em
+   "Trilha temporariamente indisponível" — para TODO aluno, em todo
+   concurso, desde a Onda 5. Nenhum teste pegou porque os testes de tela
+   são inspeção de fonte e não chegam a falar com o banco.
+
+   O catálogo é global e minúsculo (9 linhas), então não leva filtro por
+   exam_tag: é um mapa código → nome. Uma missão cuja matéria não esteja
+   em `prova_materias` daquele exame continua ganhando nome. */
+async function carregarNomesMateria() {
+  const { data, error } = await supabase.from("materias").select("codigo, nome");
+  if (error) throw falha("catálogo de matérias", error);
+  return Object.fromEntries((data ?? []).map((m) => [m.codigo, m.nome]));
 }
 
 // Plano pedagógico COMPLETO de um concurso (Fase 15.4), por exam_tag:
@@ -421,7 +436,7 @@ export async function carregarPlanoConcurso(examTag) {
     carregarTrilhaPlanos(examTag),
     carregarMissoes(examTag),
     carregarMissoesEscola(examTag),
-    carregarNomesMateria(examTag),
+    carregarNomesMateria(),
   ]);
   // T38: cada missão ganha o nome real da matéria (materia_nome) ao lado
   // do código já existente (materia_codigo) — a UI passa a mostrar o nome.

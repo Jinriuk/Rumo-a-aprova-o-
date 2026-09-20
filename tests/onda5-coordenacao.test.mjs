@@ -407,20 +407,33 @@ test("T37: AreaAdmin.jsx sanitiza e.logo_url antes de usá-lo como href no backo
 });
 
 // ── Bloco 12 (T38): TrilhaConcurso.jsx sem código cru de matéria ────────────
-test("T38: carregarRecorrenciaDoConcurso traz o nome real da matéria (prova_materias.nome)", () => {
+test("T38: carregarRecorrenciaDoConcurso traz o nome real da matéria (catálogo `materias`)", () => {
+  // CORRIGIDO EM 20/09/2026. Este teste exigia
+  // `prova_materias.select("materia_codigo, nome, …")` — e `nome` NUNCA
+  // existiu nessa tabela. Ou seja: o teste não deixou de pegar o defeito,
+  // ele OBRIGAVA o defeito. A tela da Trilha ficou morta de 14/09 a 20/09
+  // com a suíte verde. A intenção do T38 (mostrar nome, não código cru)
+  // continua travada; o mecanismo passou a ser o catálogo `materias`.
+  // A trava contra coluna inexistente é tests/seam-colunas-existem-db.
   const codigo = src("app/src/shared/data/index.js");
   assert.match(
     codigo,
-    /supabase\.from\("prova_materias"\)\.select\("materia_codigo, nome, peso, num_questoes"\)/,
-    "a query de recorrência precisa trazer .nome junto de materia_codigo",
+    /supabase\.from\("prova_materias"\)\.select\("materia_codigo, peso, num_questoes"\)/,
+    "a query de recorrência precisa pedir só o que prova_materias tem",
+  );
+  assert.match(
+    codigo,
+    /supabase\.from\("materias"\)\.select\("codigo, nome"\)/,
+    "o nome da matéria precisa vir do catálogo `materias`",
   );
 });
 
 test("T38: carregarPlanoConcurso anexa materia_nome a cada missão", () => {
   const codigo = src("app/src/shared/data/index.js");
-  assert.match(codigo, /async function carregarNomesMateria\(examTag\)/, "precisa de um helper pra montar código → nome");
+  // o helper não leva mais examTag: o catálogo é global (código → nome).
+  assert.match(codigo, /async function carregarNomesMateria\(\)/, "precisa de um helper pra montar código → nome");
   const trecho = codigo.slice(codigo.indexOf("export async function carregarPlanoConcurso"));
-  assert.match(trecho, /carregarNomesMateria\(examTag\)/, "carregarPlanoConcurso precisa buscar os nomes junto");
+  assert.match(trecho, /carregarNomesMateria\(\)/, "carregarPlanoConcurso precisa buscar os nomes junto");
   assert.match(
     trecho,
     /materia_nome:\s*m\.materia_codigo\s*\?\s*\(nomePorMateria\[m\.materia_codigo\]\s*\?\?\s*null\)\s*:\s*null/,
