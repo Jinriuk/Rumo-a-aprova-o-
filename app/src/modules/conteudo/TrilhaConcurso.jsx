@@ -171,14 +171,16 @@ export function TrilhaConcurso({ examTag, concursoNome, nivel = null, compacto =
 function montarRecorrenciaPorAssunto(rec) {
   const vazio = { linhas: [], pontosCegos: 0 };
   if (!rec) return vazio;
-  const { assuntos = [], materias = [], recorrencia = [], medida = [] } = rec;
+  const { assuntos = [], materias = [], recorrencia = [], medida = [], nomesMateria = {} } = rec;
   if (!recorrencia.length && !medida.length) return vazio;
 
   const pesoPorMateria = Object.fromEntries(materias.map((m) => [m.materia_codigo, m.peso != null ? Number(m.peso) : null]));
-  // T38: nome real da matéria (prova_materias.nome) — a UI não mostra
-  // mais o código cru (qui, mat…); cai de volta pro código só se faltar
-  // o nome (dado incompleto), nunca inventa um "Assunto" genérico aqui.
-  const nomeMateriaPorCodigo = Object.fromEntries(materias.map((m) => [m.materia_codigo, m.nome]));
+  // T38: nome real da matéria — a UI não mostra mais o código cru (qui,
+  // mat…); cai de volta pro código só se faltar o nome (dado incompleto),
+  // nunca inventa um "Assunto" genérico aqui.
+  // O nome vem do catálogo `materias`; `prova_materias` nunca teve coluna
+  // `nome` e pedi-la derrubava a tela inteira (ver carregarNomesMateria).
+  const nomeMateriaPorCodigo = nomesMateria;
   const nomePorAssunto = Object.fromEntries(assuntos.map((a) => [a.id, a]));
   const medidaPorAssunto = Object.fromEntries(medida.map((m) => [m.assunto_id, m]));
 
@@ -253,7 +255,7 @@ function MissaoConcurso({ mi, ultima, compacto, T }) {
       <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
         <span className="disp" style={{ fontSize: 14, fontWeight: 700 }}>{mi.nome}</span>
         {/* T38: nome real da matéria (carregarPlanoConcurso anexa
-            materia_nome a partir de prova_materias) — cai pro código só
+            materia_nome a partir do catálogo `materias`) — cai pro código só
             se faltar o nome, nunca esconde a matéria por completo. */}
         {mi.materia_codigo && (
           <span className="num" style={{ fontSize: 10.5, color: T.sub, textTransform: "uppercase", letterSpacing: 0.4 }}>{mi.materia_nome ?? mi.materia_codigo}</span>
