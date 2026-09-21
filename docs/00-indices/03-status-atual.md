@@ -48,7 +48,7 @@ ganhou motor **e** porta na coordenação.
 | Arquivos de teste | **92** (94 `.mjs` em `tests/`) | medido — `grep -l 'node:test' tests/*.mjs \| wc -l` |
 | Lint | **0 errors / 256 warnings** | medido — `cd app && npm run lint` |
 | Build de produção | **verde** | medido — `cd app && npm run build` |
-| Migrations no repo | **52** (última: `0051_proxima_edicao_trilha`) | medido — `ls supabase/migrations/*.sql \| wc -l` |
+| Migrations no repo | **53** (última: `0052_ciclo_escola_ativa_e_edicao_orfa`) | medido — `ls supabase/migrations/*.sql \| wc -l` |
 | Seeds no repo | **21** (o 04 e o 21 só rodam em Supabase real — escrevem em `auth`) | medido — `ls supabase/seed/*.sql \| wc -l` |
 | Edge Functions no repo | **7** | medido — `ls -d supabase/functions/*/ \| grep -v _shared` |
 | TypeScript em `app/src` | 0 arquivos (dívida conhecida; `supabase/functions` é TS) | medido — `find app/src -name '*.ts*' \| wc -l` |
