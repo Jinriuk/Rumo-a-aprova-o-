@@ -52,6 +52,39 @@
 --    contra 62 em produção, nenhuma delas do produto. As categorias
 --    `funcoes` e `acl_funcoes` agora excluem o que pertence a extensão
 --    (pg_depend deptype='e'), medindo só código nosso.
+--
+-- ------------------------------------------------------------
+-- 3. A TERCEIRA ARMADILHA ERA DESTE SCRIPT, e é a pior das três,
+--    porque as outras duas davam FALSO POSITIVO (alarme sem
+--    divergência) e esta dava FALSO NEGATIVO: silêncio com
+--    divergência. Achada em 21/09/2026.
+--
+--    Até esta data a categoria `funcoes` hasheava só
+--    `schema.nome(args) vol= secdef=`. NÃO hasheava o corpo. Duas
+--    funções com a mesma assinatura e lógicas completamente
+--    diferentes produziam hash idêntico. A categoria dizia "as 63
+--    funções são as mesmas" quando só sabia que os 63 CABEÇALHOS
+--    eram os mesmos.
+--
+--    Isso não é hipótese. Em 21/09/2026 este script foi rodado em
+--    demo e produção para o baseline da Etapa 0
+--    (docs/e0-baseline.md), os 12 hashes bateram, e o documento
+--    afirmou paridade de schema entre os dois ambientes com esse
+--    resultado. A afirmação se sustentou quando finalmente testada
+--    contra o corpo — md5(prosrc) normalizado das 63 funções bate
+--    nos dois; as únicas duas que divergiam no cru,
+--    public.backoffice_criar_escola e public.backoffice_detalhe_escola,
+--    diferiam só por quebra de linha dentro de um `coalesce` e de um
+--    `jsonb_build_object`, zero divergência semântica.
+--
+--    Mas sustentou-se por sorte, não por método: o script não tinha
+--    como saber disso, e teria dito exatamente a mesma coisa se os
+--    corpos fossem outros. Uma ferramenta de paridade que não pode
+--    ficar vermelha não é uma ferramenta de paridade.
+--
+--    A categoria `funcoes` agora inclui `corpo=` com o md5 do corpo
+--    NORMALIZADO. O porquê de cada passo da normalização está no
+--    comentário da própria categoria, mais abaixo.
 -- ============================================================
 
 set search_path = pg_catalog;
@@ -93,9 +126,34 @@ with itens as (
     from pg_policies where schemaname in ('public','app')
 
   union all
+  -- ATENÇÃO: `corpo=` é o que faz esta categoria medir LÓGICA e não só
+  -- assinatura. Sem ele, duas funções com a mesma assinatura e corpos
+  -- diferentes hasheiam igual — ver a armadilha 3 no cabeçalho.
+  --
+  -- O corpo é NORMALIZADO antes de hashear, na ordem abaixo, porque o
+  -- cru diverge entre ambientes por motivo que não é lógica:
+  --   1. `\r` — produção grava CRLF, o demo LF.
+  --   2. comentários de linha (`--` até o fim da linha) — reaplicação
+  --      via MCP apply_migration perde comentário que o ambiente que
+  --      recebeu o SQL original preserva.
+  --   3. whitespace colapsado — quebra de linha dentro de um
+  --      `coalesce(...)` ou `jsonb_build_object(...)` é formatação.
+  -- A ordem importa: tirar `\r` PRIMEIRO, senão `--foo\r\n` deixa o
+  -- `\r` para trás quando o comentário sai.
+  --
+  -- LIMITE CONHECIDO, registrado para não virar a próxima omissão: o
+  -- passo 2 não distingue `--` dentro de literal de texto ou de corpo
+  -- dollar-quoted. Duas funções que difiram SÓ dentro de uma string
+  -- contendo `--` hasheiam igual. É estreito, mas é falso-negativo, e
+  -- está aqui escrito em vez de descoberto depois.
   select 'funcoes',
-         format('%s.%s(%s) vol=%s secdef=%s', n.nspname, p.proname,
-                pg_get_function_identity_arguments(p.oid), p.provolatile, p.prosecdef::text)
+         format('%s.%s(%s) vol=%s secdef=%s corpo=%s', n.nspname, p.proname,
+                pg_get_function_identity_arguments(p.oid), p.provolatile, p.prosecdef::text,
+                md5(btrim(regexp_replace(
+                      regexp_replace(
+                        replace(coalesce(p.prosrc, ''), E'\r', ''),
+                      '--[^\n]*', '', 'g'),
+                    '\s+', ' ', 'g'))))
     from pg_proc p join pg_namespace n on n.oid = p.pronamespace
     left join pg_depend d on d.objid = p.oid and d.deptype = 'e'
    where n.nspname in ('public','app') and d.objid is null
