@@ -18,6 +18,40 @@ updates:
         patterns: ["*"]
     commit-message:
       prefix: "deps(app)"
+    # ⚠️ IGNORE TEMPORÁRIO — eslint major. Removido assim que a condição
+    # abaixo for satisfeita; não é política, é um bloqueio de upstream.
+    #
+    # POR QUÊ (21/09/2026, PR #118):
+    # O Dependabot subiu eslint 9 -> 10 e @eslint/js 9 -> 10 junto com seis
+    # minors. `eslint-plugin-jsx-a11y@6.10.2` declara
+    #   peerDependencies.eslint = "^3 || ^4 || ^5 || ^6 || ^7 || ^8 || ^9"
+    # e 6.10.2 é a ÚLTIMA versão publicada do plugin — não existe release
+    # dele que aceite eslint 10. Resultado: `npm install` e `npm ci` morrem
+    # os dois em ERESOLVE, o `&&` do buildCommand curto-circuita e o `vite
+    # build` nunca roda. CI vermelho e os dois previews da Vercel vermelhos,
+    # toda segunda-feira, sem que nada no repositório possa consertar.
+    #
+    # Sem este ignore, o bot reabre o mesmo PR quebrado semanalmente e ainda
+    # arrasta junto os seis minors que passariam sozinhos — foi exatamente
+    # o que o #122 teve que desfazer à mão.
+    #
+    # QUANDO REMOVER:
+    # Quando `eslint-plugin-jsx-a11y` publicar versão cujo peer de eslint
+    # inclua `^10`. Confira com:  npm view eslint-plugin-jsx-a11y peerDependencies
+    # Aí apague este bloco inteiro e deixe o bump de eslint vir SOZINHO, num
+    # PR só dele: a partir do 10 o `eslint.config.js` pode precisar de ajuste
+    # de API, e essa mudança tem que ficar isolada e revisável, não misturada
+    # com bumps de runtime.
+    #
+    # O QUE ESTE IGNORE NÃO FAZ: não segura minor nem patch de eslint/
+    # @eslint/js — 9.x continua sendo atualizado normalmente. Não toca em
+    # nenhum outro pacote. Não desliga alerta de segurança (Dependabot
+    # *alerts* é configuração de repositório e ignora esta lista).
+    ignore:
+      - dependency-name: "eslint"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "@eslint/js"
+        update-types: ["version-update:semver-major"]
 
   # Suíte de testes (node --test + utilitários)
   - package-ecosystem: "npm"
