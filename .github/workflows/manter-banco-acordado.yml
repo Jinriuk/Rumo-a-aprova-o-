@@ -109,7 +109,15 @@ jobs:
           echo "::error::A batida NÃO chegou ao projeto após 3 tentativas (última: HTTP ${codigo}). O projeto pode pausar se isso persistir por 7 dias."
           exit 1
 
+      # `if: always()` NÃO é decoração. Sem ele, este step é PULADO sempre que
+      # o step de produção sair com `exit 1` (a batida não chegou depois de 3
+      # tentativas) — e o dia em que a produção não responde é justamente o dia
+      # em que a vitrine mais precisa da batida dela. Os dois projetos são
+      # independentes: um não pode ficar sem seguro porque o outro falhou.
+      # Isto não mascara a falha de produção; o `exit 1` dela continua
+      # reprovando o job.
       - name: Bater no REST do demo (vitrine)
+        if: always()
         env:
           # A chave anon é PUBLICÁVEL por design (ela já viaja no bundle para
           # todo visitante; a segurança é a RLS). Está como secret aqui só
