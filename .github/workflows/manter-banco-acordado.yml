@@ -29,9 +29,16 @@
 # O QUE A BATIDA FAZ
 # Um GET no endpoint REST com a chave anon. A tabela `concursos` tem GRANT de
 # SELECT para `anon`, mas RLS ligada e NENHUMA policy para esse papel — então
-# a resposta é 200 com lista vazia. A consulta chega ao Postgres (o plano roda
-# e a policy é avaliada), e nenhum dado sai. É a batida mais barata possível
-# que ainda conta como atividade real.
+# a resposta é 200 com lista vazia. É a batida mais barata possível que ainda
+# conta como atividade real.
+#
+# ⚠️ A GARANTIA DE QUE A CONSULTA CHEGA AO POSTGRES VALE PARA 200, NÃO PARA
+# QUALQUER 4xx. Com 200, a requisição atravessou o gateway, o PostgREST montou
+# o plano, a policy de `anon` foi avaliada e nenhum dado saiu — é isso que
+# conta como atividade de API. Com 401 ou 403 a requisição morre NO GATEWAY:
+# a chave nem é aceita, nada chega ao banco, e não há garantia nenhuma de que
+# a batida conte para o contador de inatividade do plano free. Por isso esses
+# dois códigos são tratados como FALHA abaixo, e não como sucesso.
 name: Manter banco acordado
 
 on:
@@ -93,10 +100,29 @@ jobs:
 
             echo "tentativa ${tentativa}: HTTP ${codigo}"
 
-            # 2xx e 4xx servem: os dois provam que a requisição chegou ao
-            # projeto e contam como atividade. Só 000 (sem resposta) e 5xx
-            # significam que a batida não chegou.
+            # A ORDEM DAS CLÁUSULAS AQUI É O CONSERTO. `case` casa o PRIMEIRO
+            # padrão: sem a cláusula 401|403 vindo antes, um `401` cairia em
+            # `4*` e o step imprimiria "Banco acordado — resposta 401" e
+            # sairia com 0. Chave anon errada ou revogada passaria por boa,
+            # todo dia, em verde.
+            #
+            # E o dano não é só relatório mentiroso: com 401/403 a requisição
+            # é recusada NO GATEWAY e não chega ao Postgres, então não há
+            # garantia de que conte como atividade de API. O seguro estaria
+            # desligado exatamente enquanto se apresentava como ligado.
+            #
+            # Falha na PRIMEIRA ocorrência, sem gastar as três tentativas:
+            # repetir não conserta chave, só atrasa o aviso em 30 segundos.
+            #
+            # Os demais 4xx continuam sendo sucesso, e isso está certo: um
+            # 404 ou 400 prova que a chave foi aceita e o projeto processou
+            # a requisição. Só 000 (sem resposta) e 5xx significam que a
+            # batida não chegou.
             case "$codigo" in
+              401|403)
+                echo "::error::Chave anon INVÁLIDA ou revogada (HTTP ${codigo}). A batida foi recusada no gateway e NÃO chegou ao Postgres — não conta como atividade, e o projeto pode pausar após 7 dias mesmo com este workflow verde. Corrija o secret da chave anon deste ambiente (ver o nome dele no bloco env deste step)."
+                exit 1
+                ;;
               2*|4*)
                 echo "Banco acordado — resposta ${codigo}."
                 exit 0
@@ -153,10 +179,29 @@ jobs:
 
             echo "tentativa ${tentativa}: HTTP ${codigo}"
 
-            # 2xx e 4xx servem: os dois provam que a requisição chegou ao
-            # projeto e contam como atividade. Só 000 (sem resposta) e 5xx
-            # significam que a batida não chegou.
+            # A ORDEM DAS CLÁUSULAS AQUI É O CONSERTO. `case` casa o PRIMEIRO
+            # padrão: sem a cláusula 401|403 vindo antes, um `401` cairia em
+            # `4*` e o step imprimiria "Banco acordado — resposta 401" e
+            # sairia com 0. Chave anon errada ou revogada passaria por boa,
+            # todo dia, em verde.
+            #
+            # E o dano não é só relatório mentiroso: com 401/403 a requisição
+            # é recusada NO GATEWAY e não chega ao Postgres, então não há
+            # garantia de que conte como atividade de API. O seguro estaria
+            # desligado exatamente enquanto se apresentava como ligado.
+            #
+            # Falha na PRIMEIRA ocorrência, sem gastar as três tentativas:
+            # repetir não conserta chave, só atrasa o aviso em 30 segundos.
+            #
+            # Os demais 4xx continuam sendo sucesso, e isso está certo: um
+            # 404 ou 400 prova que a chave foi aceita e o projeto processou
+            # a requisição. Só 000 (sem resposta) e 5xx significam que a
+            # batida não chegou.
             case "$codigo" in
+              401|403)
+                echo "::error::Chave anon INVÁLIDA ou revogada (HTTP ${codigo}). A batida foi recusada no gateway e NÃO chegou ao Postgres — não conta como atividade, e o projeto pode pausar após 7 dias mesmo com este workflow verde. Corrija o secret da chave anon deste ambiente (ver o nome dele no bloco env deste step)."
+                exit 1
+                ;;
               2*|4*)
                 echo "Banco acordado — resposta ${codigo}."
                 exit 0
