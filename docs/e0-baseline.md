@@ -255,6 +255,18 @@ no script (só `SELECT`), sobre os schemas `public` e `app`:
 idêntico em `public` + `app`. A divergência de ledger documentada acima é
 contábil, não estrutural.
 
+**O que esta tabela sozinha não provava.** Na versão do script usada nesta
+coleta, a categoria `funcoes` hasheava apenas `schema.nome(args)`,
+volatilidade e `secdef` — **não hasheava o corpo da função**. Duas funções com
+a mesma assinatura e lógicas diferentes produziriam o mesmo hash. Portanto os
+12 hashes batendo provavam paridade de *superfície*, não de lógica, e a
+conclusão acima não se apoiava só neles. A paridade de corpos foi verificada
+em separado na mesma data, por `md5(prosrc)` normalizado das 63 funções nos
+dois ambientes, e se confirmou. O script foi corrigido no PR #121, que
+acrescentou `corpo=` à categoria — **os hashes desta tabela são da versão
+antiga e não são reproduzíveis com o script atual**. Quem for refazer esta
+comparação precisa gerar uma linha de base nova.
+
 ## `abrir_proximo_ciclo`
 
 ```sql
