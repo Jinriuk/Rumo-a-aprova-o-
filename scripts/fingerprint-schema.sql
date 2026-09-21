@@ -70,14 +70,27 @@
 --    demo e produção para o baseline da Etapa 0
 --    (docs/e0-baseline.md), os 12 hashes bateram, e o documento
 --    afirmou paridade de schema entre os dois ambientes com esse
---    resultado. A afirmação se sustentou quando finalmente testada
---    contra o corpo — md5(prosrc) normalizado das 63 funções bate
---    nos dois; as únicas duas que divergiam no cru,
---    public.backoffice_criar_escola e public.backoffice_detalhe_escola,
---    diferiam só por quebra de linha dentro de um `coalesce` e de um
---    `jsonb_build_object`, zero divergência semântica.
+--    resultado.
 --
---    Mas sustentou-se por sorte, não por método: o script não tinha
+--    A afirmação se sustentou quando testada contra o corpo — mas
+--    quem a testou foi o Gabriel, à mão, fora deste script e fora da
+--    sessão que escreveu esta correção (que não rodou contra
+--    produção). Medição dele, reproduzida aqui como ele relatou:
+--    md5(prosrc) das 63 funções DIVERGE no cru entre os dois bancos;
+--    normalizando, sobram duas,
+--    public.backoffice_criar_escola e public.backoffice_detalhe_escola,
+--    e as duas diferiam só por quebra de linha dentro de um `coalesce`
+--    e de um `jsonb_build_object` — zero divergência semântica.
+--    Produção usa CRLF e preserva comentário; o demo usa LF e perdeu
+--    comentário em reaplicações via MCP.
+--
+--    Registrado assim de propósito. Este arquivo existe porque uma
+--    afirmação foi feita com mais confiança do que a evidência dava;
+--    repetir o vício ao documentá-lo — carimbar como "verificado" o
+--    que outra pessoa verificou por outro caminho — seria a mesma
+--    falha num parágrafo diferente.
+--
+--    E sustentou-se por sorte, não por método: o script não tinha
 --    como saber disso, e teria dito exatamente a mesma coisa se os
 --    corpos fossem outros. Uma ferramenta de paridade que não pode
 --    ficar vermelha não é uma ferramenta de paridade.
