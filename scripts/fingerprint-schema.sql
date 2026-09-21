@@ -72,23 +72,30 @@
 --    afirmou paridade de schema entre os dois ambientes com esse
 --    resultado.
 --
---    A afirmação se sustentou quando testada contra o corpo — mas
---    quem a testou foi o Gabriel, à mão, fora deste script e fora da
---    sessão que escreveu esta correção (que não rodou contra
---    produção). Medição dele, reproduzida aqui como ele relatou:
---    md5(prosrc) das 63 funções DIVERGE no cru entre os dois bancos;
---    normalizando, sobram duas,
---    public.backoffice_criar_escola e public.backoffice_detalhe_escola,
---    e as duas diferiam só por quebra de linha dentro de um `coalesce`
---    e de um `jsonb_build_object` — zero divergência semântica.
---    Produção usa CRLF e preserva comentário; o demo usa LF e perdeu
---    comentário em reaplicações via MCP.
+--    A afirmação se sustentou quando testada contra o corpo, mas essa
+--    verificação não veio deste script nem da sessão que escreveu esta
+--    correção — que, por instrução, não rodou contra produção.
 --
---    Registrado assim de propósito. Este arquivo existe porque uma
+--    QUEM MEDIU, COMO E O QUE DEU:
+--      • Autor: a sessão de GESTÃO, em 21/09/2026.
+--      • Meio: MCP do Supabase, SOMENTE LEITURA.
+--      • Alvos: demo `bdjkgrzfzoamchdpobbl` × produção
+--        `zckyhihxjjbnqjqilymn`.
+--      • Método: md5(prosrc) das 63 funções de `public` + `app` nos
+--        dois bancos, primeiro no cru e depois normalizado.
+--      • Resultado no CRU: DIVERGE. Produção grava CRLF e preserva
+--        comentário; o demo grava LF e perdeu comentário em
+--        reaplicações via MCP.
+--      • Resultado NORMALIZADO: sobram duas funções divergentes,
+--        public.backoffice_criar_escola e
+--        public.backoffice_detalhe_escola. As duas foram inspecionadas:
+--        a diferença é quebra de linha dentro de um `coalesce` e de um
+--        `jsonb_build_object`. ZERO divergência semântica.
+--
+--    Atribuído assim de propósito. Este arquivo existe porque uma
 --    afirmação foi feita com mais confiança do que a evidência dava;
---    repetir o vício ao documentá-lo — carimbar como "verificado" o
---    que outra pessoa verificou por outro caminho — seria a mesma
---    falha num parágrafo diferente.
+--    carimbar como próprio o que outra sessão verificou por outro
+--    caminho seria a mesma falha num parágrafo diferente.
 --
 --    E sustentou-se por sorte, não por método: o script não tinha
 --    como saber disso, e teria dito exatamente a mesma coisa se os
