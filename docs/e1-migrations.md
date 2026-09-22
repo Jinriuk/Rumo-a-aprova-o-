@@ -575,6 +575,14 @@ Gravidade: lixo acumulável no catálogo, sem caminho de limpeza pelo produto.
 Não corrompe dado, não vaza tenant, não move aluno. Envenena a lista de
 edições que a coordenação enxerga.
 
+**Quanto já acumulou até hoje: nada.** Medido no demo
+(`bdjkgrzfzoamchdpobbl`, leitura) — existem 2 edições, as duas com alunos
+vinculados (`colegio-naval` v1 com 63, v2 com 8). **Não há backlog de
+limpeza**, porque a `0051` ainda não foi aplicada em lugar nenhum e ninguém
+clicou no botão. Isso muda o peso das duas saídas abaixo: hoje o problema é
+inteiramente **prospectivo**, e prevenir basta. Quanto mais tempo com o botão
+vivo e sem aviso, menos verdade isso vira.
+
 ## Por que a trava de banco foi descartada
 
 A trava chegou a existir: recusava criar edição nova quando já havia uma
