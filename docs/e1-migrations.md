@@ -230,6 +230,11 @@ atividades — com zero alunos, e incrementa `versao`. A idempotência só prote
 quando a âncora é **exatamente** a mesma: errar a data em um dia cria uma
 edição órfã. A coordenação não tem como apagar isso pela tela.
 
+> **Este achado continua ABERTO.** Uma trava de banco para ele foi escrita,
+> ensaiada e **descartada na revisão** — ela era cross-tenant. O motivo está em
+> [PROBLEMA CONHECIDO — a edição órfã segue sem trava no banco](#problema-conhecido--a-edição-órfã-segue-sem-trava-no-banco),
+> mais abaixo. A `0052` fecha só o ACHADO 1.
+
 ## ✅ Histórico preservado
 
 Mesmo aluno, antes e depois da migração para a edição nova:
@@ -533,7 +538,8 @@ provada, então "testar no demo para ver se aplica" não acrescenta quase nada
 — o percurso (b) deste ensaio já respondeu isso. O que só o demo responde é o
 **uso**: é lá que a coordenação da vitrine vai clicar no botão pela primeira
 vez, com 60 alunos e trilha de verdade, e é lá que os dois achados aparecem
-sem custo — a edição órfã e a escola suspensa.
+sem custo — a edição órfã e a escola suspensa. (Com a `0052` junto, só a
+edição órfã sobra para aparecer; ela segue sem trava no banco.)
 
 Produção tem 1 escola, 1 aluno, 0 registros (medido na Etapa 0). Aplicar lá é
 barato e reversível; o risco não está na aplicação.
@@ -544,6 +550,100 @@ ir no mesmo dia.
 
 ---
 
+# PROBLEMA CONHECIDO — a edição órfã segue sem trava no banco
+
+**Status: ABERTO. Não resolvido no banco, e a `0052` não o resolve.**
+Esta seção existe para que a próxima pessoa não reescreva a trava que já foi
+escrita, ensaiada e descartada.
+
+## O comportamento
+
+`public.abrir_proximo_ciclo` cria a edição **antes** de saber se algum aluno
+será movido (`0051:155` cria; `0051:157-167` move). A idempotência só protege
+quando a âncora é byte a byte a mesma. Então:
+
+- A coordenação erra a data em **um dia** → nasce uma edição completa (9
+  semanas, 9 disciplinas, ~50 atividades) com **zero alunos**, e `versao`
+  incrementa.
+- Abrir o ciclo sem passar `p_alunos` é **uso previsto** — o parâmetro tem
+  `default null`, e "abrir agora, vincular depois" é um fluxo legítimo. Esse
+  caminho também deixa a edição vazia, por desenho.
+- A tela da coordenação **não tem como apagar** a edição órfã. Só quem tem
+  acesso direto ao banco limpa.
+
+Gravidade: lixo acumulável no catálogo, sem caminho de limpeza pelo produto.
+Não corrompe dado, não vaza tenant, não move aluno. Envenena a lista de
+edições que a coordenação enxerga.
+
+## Por que a trava de banco foi descartada
+
+A trava chegou a existir: recusava criar edição nova quando já havia uma
+edição **futura** do mesmo nicho sem nenhum aluno vinculado, nomeando qual
+era. Ela passou nos cinco casos que foram ensaiados para ela. Foi descartada
+na revisão do PR #128 por um motivo que só aparece olhando o schema:
+
+> **`trilhas` não tem `escola_id`.** As colunas são `id, nicho, nome, versao,
+> publicada, criada_em`, com `unique (nicho, versao)` — ver
+> `0001_fundacao.sql:106-114`. Nenhuma migration posterior adiciona a coluna.
+
+`trilhas` é **catálogo global por nicho**, compartilhado entre escolas. Medido
+no demo (`bdjkgrzfzoamchdpobbl`, leitura), o nicho `colegio-naval` é usado por
+**três escolas ao mesmo tempo**: Curso Beta Preparatório, Instituto Meridiano
+e Matriz Educação RM.
+
+Qualquer trava que filtre por `nicho` e conte alunos **sem recorte de escola**
+é, portanto, cross-tenant. O cenário concreto:
+
+1. A escola A abre ciclo sem passar `p_alunos` — uso previsto.
+2. A edição fica sem alunos.
+3. A escola B tenta abrir o ciclo **dela**, com outra âncora, e é **recusada**.
+4. O erro cita uma edição que não é dela, que ela não pode vincular nem apagar.
+5. Só o super admin destrava — e a escola B não tem como nem saber disso.
+
+E a mensagem de erro, para ser útil, nomeava a edição: vazava **nome, versão e
+data de fim** de uma edição de outro tenant.
+
+Há um segundo motivo, independente do vazamento: **os dois blocos da função
+assumiriam modelos opostos.** O bloco de idempotência (`0051:91-101`) reusa
+DELIBERADAMENTE a edição de qualquer origem que termine na âncora — ele trata
+o catálogo como compartilhado, que é o que ele é. A trava tratava a edição
+como propriedade de quem a criou. Uma contradiria a outra, a três linhas de
+distância.
+
+**Conclusão: o problema não tem trava correta enquanto o catálogo não tiver
+dono por escola.** Não é uma questão de refinar o predicado.
+
+## As duas saídas possíveis
+
+### 1. Aviso na interface — cabe agora, sem mudar modelo
+
+A tela da coordenação avisa, antes de confirmar, que a âncora escolhida vai
+criar uma **edição nova** (e não reusar uma existente), mostrando a data de
+fim resultante. O erro que a trava de banco tentava evitar é, na prática, um
+erro de digitação de data: um passo de confirmação que mostre o efeito pega a
+maior parte dele.
+
+Isso é trabalho de **front**, entra com a tela na mão, e **não faz parte deste
+documento nem do PR #128**. Não corrige o caso de quem confirma mesmo assim,
+nem dá caminho de limpeza — reduz a incidência, não fecha o furo.
+
+### 2. `criada_por_escola` em `trilhas` — mudança de modelo, NÃO autorizada
+
+Adicionar `criada_por_escola uuid references escolas(id)` (nulo para o
+catálogo de origem) daria dono às edições e tornaria uma trava por escola
+possível **e** correta. Também abriria caminho para a coordenação apagar a
+própria edição órfã pela tela.
+
+**Isso é decisão de produto, não de banco, e não está autorizada.** Muda o
+significado de `trilhas` de "catálogo global" para "catálogo global + edições
+por escola", e puxa junto, no mínimo: as policies de `trilhas`, o bloco de
+idempotência da `0051`, a listagem de edições na Área da Escola, e a pergunta
+de o que acontece com as edições já criadas sem dono nos dois ambientes.
+
+Registrado aqui como opção, não como plano.
+
+---
+
 # O que este ensaio achou, e o que fazer com isso
 
 A `0051` **aplica limpa nos três percursos** e cumpre todos os critérios de
@@ -551,13 +651,28 @@ contrato, caminho feliz, histórico e concorrência. Os dois achados não são
 defeitos de migration — são defeitos de **produto** na função que ela cria, e
 nenhum dos dois é resolvido por não aplicar:
 
-| Achado | Gravidade | Onde consertar |
+| Achado | Gravidade | Situação |
 | --- | --- | --- |
-| Escola suspensa não é verificada | Fura a 0027 em demo **e** produção (dono tem `BYPASSRLS`) | `if not app.tenant_operacional() then raise` no corpo de `public.abrir_proximo_ciclo` — migration nova, não edição da 0051 |
-| Edição órfã quando ninguém é elegível | Lixo acumulável, sem caminho de limpeza na tela | Criar a edição só quando houver aluno a mover, ou exigir `p_alunos` não vazio |
+| Escola suspensa não é verificada | Fura a 0027 em demo **e** produção (dono tem `BYPASSRLS`) | **Fechado pela `0052`** — lê `escolas.status` no corpo da função e nega em `suspensa`, `cancelada` e escola não encontrada |
+| Edição órfã quando ninguém é elegível | Lixo acumulável, sem caminho de limpeza na tela | **ABERTO** — ver [PROBLEMA CONHECIDO](#problema-conhecido--a-edição-órfã-segue-sem-trava-no-banco) acima |
 
-Os dois pedem uma `0052`. A decisão de aplicar a `0051` antes ou depois dela é
-do gate, não deste documento.
+> **Correção ao que este documento dizia antes.** A primeira versão desta
+> tabela propunha `if not app.tenant_operacional() then raise` para o ACHADO 1.
+> **Isso estava errado**, e a `0052` deliberadamente não faz isso:
+> `app.tenant_operacional()` tem `coalesce(..., true)` e responde OPERACIONAL
+> quando a escola não é encontrada (o C-S04 da auditoria). Usá-la teria
+> herdado metade do furo. A `0052` lê `escolas.status` direto e nega por
+> ausência. Corrigir a própria `tenant_operacional` é Etapa 2 — ela serve
+> policies de várias tabelas, e inverter o default pode derrubar fluxo
+> legítimo que este ensaio não cobriu.
+>
+> A mesma tabela propunha, para o ACHADO 2, "criar a edição só quando houver
+> aluno a mover, ou exigir `p_alunos` não vazio". **Isso também estava errado**:
+> `p_alunos` tem `default null` e "abrir agora, vincular depois" é uso
+> previsto — exigir a lista quebraria o fluxo normal para evitar o acidental.
+
+Só o ACHADO 1 virou `0052`. A decisão de aplicar a `0051` antes ou depois dela
+é do gate, não deste documento.
 
 ## NÃO VERIFICADO
 
