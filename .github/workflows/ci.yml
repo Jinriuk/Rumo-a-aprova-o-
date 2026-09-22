@@ -87,6 +87,28 @@ jobs:
         working-directory: tests
         run: bash reset-db.sh
 
+      # Contrato front × banco. Roda LOGO DEPOIS do reset-db.sh, contra o
+      # banco que as migrations do repo acabaram de produzir.
+      #
+      # POR QUE ESTE STEP EXISTE
+      # Em 21/09/2026 a `abrir_proximo_ciclo` estava MORTA nos dois
+      # ambientes: o front chamava por RPC (shared/data/index.js:368), a
+      # tela existia, e a função não existia em schema nenhum. Nada no CI
+      # pegava — o gate roda migrations num banco limpo, onde tudo existe.
+      # O furo é entre o que o front CHAMA e o que o banco TEM.
+      #
+      # Aqui ele prova que o repositório é coerente consigo mesmo: se uma
+      # migration for esquecida no PR que adiciona a chamada no front, ou
+      # se um parâmetro for renomeado só de um lado, este step reprova.
+      # Contra demo/produção é outra corrida, manual, antes de publicar —
+      # ver docs/e1-migrations.md, Bloco 5.
+      #
+      # Não precisa de secret: fala com o Postgres de serviço deste job.
+      - name: Contrato de RPCs (front × banco)
+        env:
+          SUPABASE_DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/rumo_teste
+        run: node scripts/manifesto-rpcs.mjs
+
       - name: Testes unitários (regras + motor + isolamento RLS + suspensão)
         working-directory: tests
         run: npm test
