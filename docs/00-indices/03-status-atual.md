@@ -44,11 +44,11 @@ ganhou motor **e** porta na coordenação.
 
 | Métrica | Valor | Como foi obtido |
 |---|---|---|
-| Testes | **958 / 958 verdes** | medido — `bash reset-db.sh && npm test` em Postgres 16 local dedicado (migrations + seed 2×) |
-| Arquivos de teste | **92** (94 `.mjs` em `tests/`) | medido — `grep -l 'node:test' tests/*.mjs \| wc -l` |
+| Testes | **972 / 972 verdes** | medido em 23/09 (Bloco 2) — `bash reset-db.sh && npm test` em Postgres 16 local dedicado (migrations + seed 2×) |
+| Arquivos de teste | **93** (95 `.mjs` em `tests/`) | medido em 23/09 (Bloco 2) — `grep -l 'node:test' tests/*.mjs \| wc -l` |
 | Lint | **0 errors / 256 warnings** | medido — `cd app && npm run lint` |
 | Build de produção | **verde** | medido — `cd app && npm run build` |
-| Migrations no repo | **53** (última: `0052_ciclo_bloqueia_escola_nao_ativa`) | medido — `ls supabase/migrations/*.sql \| wc -l` |
+| Migrations no repo | **54** (última: `0053_consentimento_registrado_em`, ainda NÃO aplicada — aguarda aprovação do N02) | medido — `ls supabase/migrations/*.sql \| wc -l` |
 | Seeds no repo | **21** (o 04 e o 21 só rodam em Supabase real — escrevem em `auth`) | medido — `ls supabase/seed/*.sql \| wc -l` |
 | Edge Functions no repo | **7** | medido — `ls -d supabase/functions/*/ \| grep -v _shared` |
 | TypeScript em `app/src` | 0 arquivos (dívida conhecida; `supabase/functions` é TS) | medido — `find app/src -name '*.ts*' \| wc -l` |
