@@ -34,7 +34,7 @@ async function fimDoCiclo(c, trilha) {
   return r.rows[0].fim;
 }
 
-test("cria uma edição nova com as semanas deslocadas até a âncora", async () => {
+test("cria uma edição nova cujas semanas terminam na semana da âncora", async () => {
   await emTransacao(async (c) => {
     const fimAtual = await fimDoCiclo(c, TRILHA_CN);
     const ancora = new Date(`${fimAtual}T00:00:00`);
@@ -44,19 +44,47 @@ test("cria uma edição nova com as semanas deslocadas até a âncora", async ()
     const nova = (await c.query("select app.abrir_proximo_ciclo($1, $2::date) as id", [TRILHA_CN, alvo])).rows[0].id;
     assert.ok(nova && nova !== TRILHA_CN, "precisa devolver uma trilha NOVA");
 
-    // a última semana da edição nova termina exatamente na âncora
-    assert.equal(await fimDoCiclo(c, nova), alvo, "a última semana deve terminar na data da próxima prova");
+    // o fim atual é um domingo (semanas seg–dom) e 364 dias são 52
+    // semanas: a âncora também é domingo, e a última semana termina nela
+    assert.equal(await fimDoCiclo(c, nova), alvo, "a última semana deve terminar no domingo da semana da prova");
 
-    // a forma do plano é preservada: mesmo número de semanas e mesma duração
+    // mesmo número de semanas, todas de segunda a domingo e contíguas (D09, 0054)
     const forma = await c.query(
       `select (select count(*) from trilha_semanas where trilha_id = $1)::int as n_origem,
               (select count(*) from trilha_semanas where trilha_id = $2)::int as n_nova,
-              (select max(fim) - min(inicio) from trilha_semanas where trilha_id = $1)::int as dur_origem,
+              (select count(*) from trilha_semanas where trilha_id = $2
+                  and (extract(isodow from inicio) <> 1 or fim - inicio <> 6))::int as tortas,
               (select max(fim) - min(inicio) from trilha_semanas where trilha_id = $2)::int as dur_nova`,
       [TRILHA_CN, nova]);
     const f = forma.rows[0];
     assert.equal(f.n_nova, f.n_origem, "mesmo número de semanas");
-    assert.equal(f.dur_nova, f.dur_origem, "mesma duração total — as semanas andam juntas");
+    assert.equal(f.tortas, 0, "nenhuma semana fora de segunda a domingo");
+    assert.equal(f.dur_nova, 7 * f.n_nova - 1, "semanas contíguas, sem buraco nem sobreposição");
+  });
+});
+
+test("D09: prova no sábado — a última semana termina no domingo seguinte, e a edição começa numa segunda", async () => {
+  await emTransacao(async (c) => {
+    const fimAtual = await fimDoCiclo(c, TRILHA_CN);
+    // um sábado ~1 ano adiante (fimAtual é domingo: +363 = sábado)
+    const sab = new Date(`${fimAtual}T00:00:00Z`);
+    sab.setUTCDate(sab.getUTCDate() + 363);
+    const ancora = sab.toISOString().slice(0, 10);
+    const dom = new Date(sab); dom.setUTCDate(dom.getUTCDate() + 1);
+
+    const nova = (await c.query("select app.abrir_proximo_ciclo($1, $2::date) as id", [TRILHA_CN, ancora])).rows[0].id;
+    assert.equal(await fimDoCiclo(c, nova), dom.toISOString().slice(0, 10));
+    const r = await c.query(
+      `select extract(isodow from min(inicio))::int as dow_inicio,
+              (select count(*) from trilha_semanas where trilha_id = $1
+                  and (extract(isodow from inicio) <> 1 or fim - inicio <> 6))::int as tortas
+         from trilha_semanas where trilha_id = $1`, [nova]);
+    assert.equal(r.rows[0].dow_inicio, 1, "a edição começa numa segunda");
+    assert.equal(r.rows[0].tortas, 0);
+    // a mesma semana com outra âncora (o domingo) devolve a mesma edição
+    const outra = (await c.query("select app.abrir_proximo_ciclo($1, $2::date) as id",
+      [TRILHA_CN, dom.toISOString().slice(0, 10)])).rows[0].id;
+    assert.equal(outra, nova, "idempotente pela semana da prova");
   });
 });
 

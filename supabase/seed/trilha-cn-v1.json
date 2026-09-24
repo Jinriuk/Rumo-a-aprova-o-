@@ -17,7 +17,7 @@
     { "codigo": "prov", "nome": "Provas antigas","abrev": "Prov", "cor": "#C77DFF" }
   ],
   "semanas": [
-    { "n": 1, "inicio": "2026-05-30", "fim": "2026-06-07", "foco": "Diagnóstico + base crítica (fração e potenciação)", "simulado": null,
+    { "n": 1, "inicio": "2026-06-01", "fim": "2026-06-07", "foco": "Diagnóstico + base crítica (fração e potenciação)", "simulado": null,
       "tarefas": [
         { "s": "mat", "p": "F", "t": "Aplicar 1 prova antiga COMPLETA cronometrada (diagnóstico)" },
         { "s": "mat", "p": "F", "t": "Frações: operações, simplificação, equações" },
@@ -87,7 +87,7 @@
         { "s": "por", "p": "F", "t": "2 redações na semana + revisão de morfologia/sintaxe nos erros" },
         { "s": "ing", "p": "F", "t": "Fechar pontos fáceis: gramática recorrente e química perto de 100%" }
       ] },
-    { "n": 9, "inicio": "2026-07-27", "fim": "2026-08-01", "foco": "Ajuste fino e descanso estratégico", "simulado": "Simulado 8 (leve)",
+    { "n": 9, "inicio": "2026-07-27", "fim": "2026-08-02", "foco": "Ajuste fino e descanso estratégico", "simulado": "Simulado 8 (leve)",
       "tarefas": [
         { "s": "mat", "p": "P", "t": "1 simulado leve no início; depois só revisão" },
         { "s": "por", "p": "P", "t": "Revisar morfologia, sintaxe, crase e acentuação (resumos)" },

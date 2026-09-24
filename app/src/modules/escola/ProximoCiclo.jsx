@@ -39,7 +39,7 @@ import { SectionCard, EmptyState, Erro, StatusBadge, useDialogo } from "../../sh
 import { useTema } from "../../shared/branding/BrandingContext.jsx";
 import { useEnvioUnico } from "../../shared/hooks/useEnvioUnico.js";
 import { fmtBR } from "../../shared/regras/regras.js";
-import { gruposParaRenovar, validarAncora } from "./proximoCiclo.js";
+import { gruposParaRenovar, validarAncora, domingoDaSemana } from "./proximoCiclo.js";
 import * as db from "../../shared/data/index.js";
 
 function GrupoTrilha({ grupo, aoMudar }) {
@@ -73,7 +73,7 @@ function GrupoTrilha({ grupo, aoMudar }) {
       titulo: "Abrir o próximo ciclo",
       mensagem:
         `${marcados.size} aluno(s) vão para uma edição nova de "${grupo.trilha?.nome ?? "trilha"}", ` +
-        `com o plano terminando em ${fmtBR(String(ancora))}. ` +
+        `com o plano refeito em semanas de segunda a domingo, a última terminando em ${fmtBR(domingoDaSemana(String(ancora)))}. ` +
         "As metas do ciclo anterior ficam guardadas na edição antiga; registros, simulados, XP e patente " +
         "seguem com o aluno. Quem não for marcado continua onde está.",
       rotuloConfirmar: "Abrir ciclo",
@@ -128,7 +128,7 @@ function GrupoTrilha({ grupo, aoMudar }) {
           <div id={`${idBase}-ancora-dica`} style={{ fontSize: 11.5, color: problemaAncora && ancora ? T.red : T.sub, marginTop: 5, lineHeight: 1.5 }}>
             {problemaAncora && ancora
               ? problemaAncora
-              : "As semanas do plano andam todas juntas, preservando a forma do ciclo: a última termina nesta data."}
+              : "O plano é refeito em semanas de segunda a domingo, com as mesmas atividades de cada semana; a última é a semana desta data."}
           </div>
         </div>
 

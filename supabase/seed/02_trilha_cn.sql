@@ -8,8 +8,9 @@
 -- CALENDÁRIO ROLANTE: as datas NÃO são fixas. A semana 3
 -- da trilha é sempre a semana corrente em America/Sao_Paulo (a mesma
 -- regra de app.hoje_local()), e as outras oito guardam o encaixe
--- original — semana 1 começa no sábado, 2 a 8 são de segunda a
--- domingo, 9 termina no sábado da prova. Sem isso o seed de
+-- original: todas as semanas de segunda a domingo (D09, Bloco 4,
+-- 24/09/2026 — antes a 1 tinha 9 dias e a 9 tinha 6; a prova de sábado
+-- agora cai DENTRO da semana 9). Sem o calendário rolante o seed de
 -- demonstração vence sozinho: passada a última semana não há meta
 -- ativa, e o painel da vitrine amanhece vazio.
 -- ============================================================
@@ -37,7 +38,7 @@ with ancora as (
 insert into trilha_semanas (id, trilha_id, numero, inicio, fim, foco, simulado, meta_questoes)
 select v.id::uuid, 'b1388388-c660-4b4b-811c-b58358689e92', v.numero, a.segunda + v.ini, a.segunda + v.fim, v.foco, v.simulado, 250
   from ancora a, (values
-    ('a5e789d2-a0cd-4cef-8b4d-747fa7225b80', 1, -16, -8, 'Diagnóstico + base crítica (fração e potenciação)', null::text),
+    ('a5e789d2-a0cd-4cef-8b4d-747fa7225b80', 1, -14, -8, 'Diagnóstico + base crítica (fração e potenciação)', null::text),
     ('86d15c73-5757-4b14-8487-4e71cb8cda4e', 2, -7, -1, 'Divisibilidade + fim da base', null::text),
     ('2f576da4-a778-45f4-8456-874c6cf9d01d', 3, 0, 6, 'Início da geometria + funções', 'Simulado 1'::text),
     ('f55d9b90-5c7a-493f-8f7d-4f03adaa63c5', 4, 7, 13, 'Geometria pesada + sistemas', 'Simulado 2'::text),
@@ -45,7 +46,7 @@ select v.id::uuid, 'b1388388-c660-4b4b-811c-b58358689e92', v.numero, a.segunda +
     ('e89b4fc1-8c45-4767-89bc-969ff54e2da4', 6, 21, 27, 'Consolidação + redação entra', 'Simulado 4'::text),
     ('84340063-72e6-428f-8142-4c4eb28a30b7', 7, 28, 34, 'Simulados + redação semanal', 'Simulado 5'::text),
     ('24a9ded3-b8c5-44c1-82c8-93973aa5c647', 8, 35, 41, 'Reta final — refazer as 10 provas até dominar', 'Simulados 6 e 7'::text),
-    ('c6c2e114-98ab-4e7e-8767-707e2cf48929', 9, 42, 47, 'Ajuste fino e descanso estratégico', 'Simulado 8 (leve)'::text)
+    ('c6c2e114-98ab-4e7e-8767-707e2cf48929', 9, 42, 48, 'Ajuste fino e descanso estratégico', 'Simulado 8 (leve)'::text)
   ) as v(id, numero, ini, fim, foco, simulado)
   on conflict (trilha_id, numero) do update
      set inicio = excluded.inicio, fim = excluded.fim;
