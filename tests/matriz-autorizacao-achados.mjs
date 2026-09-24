@@ -37,6 +37,12 @@ const CS06_APP = {
   descricao: "Função interna do schema app, SECURITY DEFINER, com EXECUTE para authenticated (e PUBLIC) e parâmetro de escola/aluno. Só é alcançável pela API se `app` estiver entre os schemas expostos (não verificado por HTTP nesta sessão).",
   corrigidoPor: "0057_revoga_execute_funcoes_internas",
 };
+const ESCOLAS_COLUNAS = {
+  achado: "E2-F7-ESCOLAS",
+  descricao: "escolas com privilégio de tabela: a coordenação altera as colunas do backoffice da própria escola (status, plano, limite, slug, observação do operador) e todo usuário da escola lê as colunas internas.",
+  corrigidoPor: "0058_escolas_colunas_por_papel",
+  pr: "#144",
+};
 const E1_ACHADO_2 = {
   achado: "E1-ACHADO-2",
   descricao: "abrir_proximo_ciclo cria edição no catálogo global mesmo sem aluno a mover; aqui, para uma trilha que só outra escola usa. Já registrado em docs/e1-migrations.md como aberto; trava correta depende de decisão de produto (dono por escola no catálogo).",
@@ -44,6 +50,15 @@ const E1_ACHADO_2 = {
 };
 
 export const ACHADOS_ABERTOS = {
+  // colunas do backoffice em escolas (Fatia 7)
+  "T.escolas.coluna_backoffice.status": ESCOLAS_COLUNAS,
+  "T.escolas.coluna_backoffice.plano": ESCOLAS_COLUNAS,
+  "T.escolas.coluna_backoffice.limite_alunos": ESCOLAS_COLUNAS,
+  "T.escolas.coluna_backoffice.slug": ESCOLAS_COLUNAS,
+  "T.escolas.coluna_backoffice.observacao": ESCOLAS_COLUNAS,
+  "A.escolas.colunas_internas.alunoA1": ESCOLAS_COLUNAS,
+  "A.escolas.colunas_internas.respA1": ESCOLAS_COLUNAS,
+  "A.escolas.colunas_internas.coordA": ESCOLAS_COLUNAS,
   // FK cruzada (linha) e os cenários que ela abre
   "T.alunos.fk_usuario_B": XT,
   "T.alunos_turmas.fk_aluno_B": XT,

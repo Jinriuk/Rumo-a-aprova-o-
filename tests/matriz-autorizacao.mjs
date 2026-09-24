@@ -36,7 +36,7 @@
 // ============================================================
 import { fileURLToPath } from "node:url";
 import { resolve, dirname } from "node:path";
-import { writeFileSync, mkdirSync } from "node:fs";
+import { writeFileSync, mkdirSync, readFileSync, existsSync } from "node:fs";
 import { execFileSync } from "node:child_process";
 import pg from "pg";
 
@@ -158,6 +158,8 @@ insert into escolas (id, nome, slug, status) values
   ('${ESC.C}', 'E2 Escola C', 'e2-escola-c', 'ativa'),
   ('${ESC.S}', 'E2 Escola Suspensa', 'e2-escola-s', 'suspensa'),
   ('${ESC.X}', 'E2 Escola Cancelada', 'e2-escola-x', 'cancelada');
+-- colunas do backoffice preenchidas na A: sem valor, a leitura delas não provaria nada
+update escolas set observacao = 'E2 nota interna do operador', contato_nome = 'E2 Contato' where id = '${ESC.A}';
 
 insert into trilhas (id, nicho, nome, versao, publicada) values
   ('${TRILHA.T1}', '${NICHO_T1}', 'E2 Trilha compartilhada (A e B)', 1, true),
@@ -281,8 +283,19 @@ insert into admin_logs (super_admin_id, acao, escola_id) values ('${U.superAdmin
 insert into virada_execucoes (escola_id, data_referencia) values ('${ESC.B}', '2026-01-12');
 `;
 
+// Migrations que tiram privilégio POR CIMA do grant padrão do Supabase.
+// O grant em bloco da fixture reproduz o padrão dos hospedados; estas,
+// quando estão no repo, valem lá também depois de aplicadas, então são
+// reaplicadas aqui por cima (são idempotentes).
+const RESTRICOES_POS_GRANT = ["0058_escolas_colunas_por_papel"];
+const RAIZ = resolve(dirname(fileURLToPath(import.meta.url)), "..");
+
 export async function montarFixture(c) {
   await c.query(FIXTURE_SQL);
+  for (const m of RESTRICOES_POS_GRANT) {
+    const arq = resolve(RAIZ, "supabase/migrations", `${m}.sql`);
+    if (existsSync(arq)) await c.query(readFileSync(arq, "utf8"));
+  }
 }
 
 // ── hash das tabelas (como postgres, sem RLS) ─────────────────
@@ -444,6 +457,15 @@ export function montarCasos() {
   // escolas / usuarios / tabelas do backoffice
   add(esc("escolas", "coordA", { id: "T.escolas.alterar_B", operacao: "UPDATE escola B", esperado: "negado", sql: `update escolas set nome = 'invadida' where id = $1`, params: [ESC.B] }));
   add(esc("escolas", "coordA", { id: "T.escolas.upsert_id_B", operacao: "UPSERT com o id da escola B", esperado: "negado", sql: `insert into escolas (id, nome, slug) values ($1, 'x', 'e2-x') on conflict (id) do update set nome = 'invadida'`, params: [ESC.B] }));
+  // Fatia 7: colunas do backoffice na PRÓPRIA escola (0058, #144)
+  for (const [col, valor] of [["status", "'cancelada'"], ["plano", "'premium'"], ["limite_alunos", "999999"], ["slug", "'e2-outra'"], ["observacao", "'reescrita'"]]) {
+    add(esc("escolas", "coordA", { id: `T.escolas.coluna_backoffice.${col}`, operacao: `UPDATE ${col} da própria escola (coluna do backoffice)`, esperado: "negado", sql: `update escolas set ${col} = ${valor} where id = $1`, params: [ESC.A] }));
+  }
+  add(esc("escolas", "coordA", { id: "T.escolas.marca_propria", operacao: "UPDATE nome e cor da própria escola (controle: a tela de marca)", esperado: "permitido", sql: `update escolas set nome = 'E2 Escola A marca', cor_acento = '#0b3d2e' where id = $1`, params: [ESC.A] }));
+  for (const persona of ["alunoA1", "respA1", "coordA"]) {
+    ler({ id: `A.escolas.colunas_internas.${persona}`, superficie: "colunas do backoffice", alvo: "escolas", persona, operacao: "SELECT da observação do operador e do contato da própria escola", esperado: "negado", sql: `select observacao, contato_nome from escolas where id = $1`, params: [ESC.A], tabelas: ["escolas"] });
+  }
+  ler({ id: "A.escolas.marca.alunoA1", superficie: "colunas do backoffice", alvo: "escolas", persona: "alunoA1", operacao: "SELECT das colunas do embed de meuPerfil (controle)", esperado: "permitido", sql: `select id, nome, slug, logo_url, cor_acento, status, plano from escolas where id = $1`, params: [ESC.A], tabelas: ["escolas"] });
   add(esc("usuarios", "coordA", { id: "T.usuarios.alterar_B", operacao: "UPDATE usuário da B", esperado: "negado", sql: `update usuarios set nome = 'x' where id = $1`, params: [U.coordB] }));
   add(esc("usuarios", "coordA", { id: "T.usuarios.promover_proprio", operacao: "UPDATE do próprio usuário (papel/escola)", esperado: "negado", sql: `update usuarios set escola_id = $1 where id = $2`, params: [ESC.B, U.coordA] }));
   for (const t of ["internal_admins", "admin_logs", "virada_execucoes"]) {
@@ -841,6 +863,7 @@ export const CASOS_HTTP = [
   { id: "H.auth.login_por_persona", alvo: "Auth", persona: "todas", operacao: "login real de cada persona da matriz; claims app_metadata.escola_id/papel no token", esperado: "token com as claims da fixture", motivo: "a camada banco simula as claims; aqui elas precisam vir do Auth" },
   { id: "H.postgrest.matriz_tabelas", alvo: "PostgREST", persona: "coordA, alunoA1, respA1", operacao: "repetir por HTTP os casos T.*, A.*, R.* (GET/POST/PATCH/DELETE com Prefer: return=representation)", esperado: "mesmo esperado da camada banco; hash das tabelas conferido depois", motivo: "a RLS é a mesma, mas o corpo da requisição e o filtro vêm do cliente" },
   { id: "H.postgrest.upsert_on_conflict", alvo: "PostgREST", persona: "coordA", operacao: "POST com Prefer: resolution=merge-duplicates usando id da B", esperado: "401/403 ou 0 linhas, sem mudar a linha da B", motivo: "UPSERT pela API usa o mesmo caminho do caso T.*.upsert_id_B" },
+  { id: "H.edge.escola_parada", alvo: "gerar-meta, lgpd-titular, provisionar-aluno, revogar-responsavel", persona: "coordS, coordX", operacao: "POST com sessão válida da coordenação de escola suspensa e cancelada", esperado: "403 escola_nao_operacional, sem efeito (depois do redeploy do #145)", motivo: "a chave de serviço ignora a RLS: sem o porteiro, a suspensão não valia nas Edge Functions (Fatia 7)" },
   { id: "H.edge.sem_bearer", alvo: "Edge Functions (7)", persona: "anon", operacao: "POST sem Authorization em cada função de produto", esperado: "401, sem efeito", motivo: "verify_jwt=false nas 7: a checagem é do código" },
   { id: "H.edge.bearer_malformado", alvo: "Edge Functions (7)", persona: "anon", operacao: "POST com Authorization: Bearer abc", esperado: "401, sem efeito e sem detalhe interno", motivo: "idem" },
   { id: "H.edge.token_expirado", alvo: "Edge Functions (7)", persona: "coordA", operacao: "POST com access token expirado", esperado: "401", motivo: "idem" },

@@ -1,20 +1,20 @@
 {
-  "gerado_em": "2026-09-24T18:20:44.560Z",
-  "sha": "4e3fe57b7f26c0546a76f06101c458e88639577f",
+  "gerado_em": "2026-09-24T19:10:07.807Z",
+  "sha": "b9de7de017fc7699482f4cf0c521b609996f4e89",
   "postgres_local": "16.13 (Ubuntu 16.13-0ubuntu0.24.04.1)",
   "postgres_hospedado": "17.6 (demo e produção)",
   "nota_versao": "a camada banco roda no Postgres local; os projetos hospedados estão no 17.6. RLS, SECURITY DEFINER e grants usados aqui não mudaram entre 16 e 17.",
   "placar": {
     "camada_banco": {
-      "casos": 318,
-      "conforme": 273,
-      "divergentes": 45,
-      "divergentes_registrados": 45
+      "casos": 328,
+      "conforme": 275,
+      "divergentes": 53,
+      "divergentes_registrados": 53
     },
     "camada_http": {
-      "casos": 14,
+      "casos": 15,
       "provados": 0,
-      "pendente_e3": 14
+      "pendente_e3": 15
     }
   },
   "personas": {
@@ -39,6 +39,54 @@
     "superAdminInativo": "super admin com internal_admins.ativo = false"
   },
   "achados": {
+    "T.escolas.coluna_backoffice.status": {
+      "achado": "E2-F7-ESCOLAS",
+      "descricao": "escolas com privilégio de tabela: a coordenação altera as colunas do backoffice da própria escola (status, plano, limite, slug, observação do operador) e todo usuário da escola lê as colunas internas.",
+      "corrigidoPor": "0058_escolas_colunas_por_papel",
+      "pr": "#144"
+    },
+    "T.escolas.coluna_backoffice.plano": {
+      "achado": "E2-F7-ESCOLAS",
+      "descricao": "escolas com privilégio de tabela: a coordenação altera as colunas do backoffice da própria escola (status, plano, limite, slug, observação do operador) e todo usuário da escola lê as colunas internas.",
+      "corrigidoPor": "0058_escolas_colunas_por_papel",
+      "pr": "#144"
+    },
+    "T.escolas.coluna_backoffice.limite_alunos": {
+      "achado": "E2-F7-ESCOLAS",
+      "descricao": "escolas com privilégio de tabela: a coordenação altera as colunas do backoffice da própria escola (status, plano, limite, slug, observação do operador) e todo usuário da escola lê as colunas internas.",
+      "corrigidoPor": "0058_escolas_colunas_por_papel",
+      "pr": "#144"
+    },
+    "T.escolas.coluna_backoffice.slug": {
+      "achado": "E2-F7-ESCOLAS",
+      "descricao": "escolas com privilégio de tabela: a coordenação altera as colunas do backoffice da própria escola (status, plano, limite, slug, observação do operador) e todo usuário da escola lê as colunas internas.",
+      "corrigidoPor": "0058_escolas_colunas_por_papel",
+      "pr": "#144"
+    },
+    "T.escolas.coluna_backoffice.observacao": {
+      "achado": "E2-F7-ESCOLAS",
+      "descricao": "escolas com privilégio de tabela: a coordenação altera as colunas do backoffice da própria escola (status, plano, limite, slug, observação do operador) e todo usuário da escola lê as colunas internas.",
+      "corrigidoPor": "0058_escolas_colunas_por_papel",
+      "pr": "#144"
+    },
+    "A.escolas.colunas_internas.alunoA1": {
+      "achado": "E2-F7-ESCOLAS",
+      "descricao": "escolas com privilégio de tabela: a coordenação altera as colunas do backoffice da própria escola (status, plano, limite, slug, observação do operador) e todo usuário da escola lê as colunas internas.",
+      "corrigidoPor": "0058_escolas_colunas_por_papel",
+      "pr": "#144"
+    },
+    "A.escolas.colunas_internas.respA1": {
+      "achado": "E2-F7-ESCOLAS",
+      "descricao": "escolas com privilégio de tabela: a coordenação altera as colunas do backoffice da própria escola (status, plano, limite, slug, observação do operador) e todo usuário da escola lê as colunas internas.",
+      "corrigidoPor": "0058_escolas_colunas_por_papel",
+      "pr": "#144"
+    },
+    "A.escolas.colunas_internas.coordA": {
+      "achado": "E2-F7-ESCOLAS",
+      "descricao": "escolas com privilégio de tabela: a coordenação altera as colunas do backoffice da própria escola (status, plano, limite, slug, observação do operador) e todo usuário da escola lê as colunas internas.",
+      "corrigidoPor": "0058_escolas_colunas_por_papel",
+      "pr": "#144"
+    },
     "T.alunos.fk_usuario_B": {
       "achado": "E2-XT-FK",
       "descricao": "FK cruzada: a linha é da escola do chamador, o pai (aluno, turma, meta, conta) é de outra escola. Leva à exclusão de conta e à leitura entre escolas (cenários X.*).",
@@ -301,10 +349,10 @@
         "tabelas_inalteradas": true,
         "integridade": "ok",
         "hash_antes": {
-          "escolas": "7c725cecda726c808d20f91d9e2f4b77:7"
+          "escolas": "ee92ac8d7b17b789ca8c351803600c61:7"
         },
         "hash_depois": {
-          "escolas": "7c725cecda726c808d20f91d9e2f4b77:7"
+          "escolas": "ee92ac8d7b17b789ca8c351803600c61:7"
         }
       }
     },
@@ -325,10 +373,10 @@
         "tabelas_inalteradas": true,
         "integridade": "ok",
         "hash_antes": {
-          "usuarios": "9a8bd9790a9f28c4fa9f3b1906d0e843:82"
+          "usuarios": "a4c53c6160ec7c6a75a2a5aa7d2a6f64:82"
         },
         "hash_depois": {
-          "usuarios": "9a8bd9790a9f28c4fa9f3b1906d0e843:82"
+          "usuarios": "a4c53c6160ec7c6a75a2a5aa7d2a6f64:82"
         }
       }
     },
@@ -349,10 +397,10 @@
         "tabelas_inalteradas": true,
         "integridade": "ok",
         "hash_antes": {
-          "turmas": "c67a9547ca82bb54fe6724692bb007cd:9"
+          "turmas": "142af94faba50a9392a96c674ae2a6e2:9"
         },
         "hash_depois": {
-          "turmas": "c67a9547ca82bb54fe6724692bb007cd:9"
+          "turmas": "142af94faba50a9392a96c674ae2a6e2:9"
         }
       }
     },
@@ -373,10 +421,10 @@
         "tabelas_inalteradas": true,
         "integridade": "ok",
         "hash_antes": {
-          "alunos": "85e37ce5b6330c71e1242548e661f090:68"
+          "alunos": "5d78b41d4862831fcd055cbabf6ee735:68"
         },
         "hash_depois": {
-          "alunos": "85e37ce5b6330c71e1242548e661f090:68"
+          "alunos": "5d78b41d4862831fcd055cbabf6ee735:68"
         }
       }
     },
@@ -421,10 +469,10 @@
         "tabelas_inalteradas": true,
         "integridade": "ok",
         "hash_antes": {
-          "vinculos_responsaveis": "611b81cd366c8c9253de0e1499c0970d:4"
+          "vinculos_responsaveis": "60c8ae6b1fdb532078ad32dab20aeb54:4"
         },
         "hash_depois": {
-          "vinculos_responsaveis": "611b81cd366c8c9253de0e1499c0970d:4"
+          "vinculos_responsaveis": "60c8ae6b1fdb532078ad32dab20aeb54:4"
         }
       }
     },
@@ -445,10 +493,10 @@
         "tabelas_inalteradas": true,
         "integridade": "ok",
         "hash_antes": {
-          "metas": "635411f665b590d6a0eca97e69438d4f:77"
+          "metas": "42705b7cd19363596092adf46d1dc106:77"
         },
         "hash_depois": {
-          "metas": "635411f665b590d6a0eca97e69438d4f:77"
+          "metas": "42705b7cd19363596092adf46d1dc106:77"
         }
       }
     },
@@ -469,10 +517,10 @@
         "tabelas_inalteradas": true,
         "integridade": "ok",
         "hash_antes": {
-          "meta_atividades": "af89ebb168e249523854ee9e3a21c6c2:353"
+          "meta_atividades": "86c2b393e78a4d5d7b4de30b8c11961a:353"
         },
         "hash_depois": {
-          "meta_atividades": "af89ebb168e249523854ee9e3a21c6c2:353"
+          "meta_atividades": "86c2b393e78a4d5d7b4de30b8c11961a:353"
         }
       }
     },
@@ -493,10 +541,10 @@
         "tabelas_inalteradas": true,
         "integridade": "ok",
         "hash_antes": {
-          "registros_estudo": "305fd225e8ab680b573a2aed162bf8ea:282"
+          "registros_estudo": "51ea000a69d793c47b2ab88e8b750730:282"
         },
         "hash_depois": {
-          "registros_estudo": "305fd225e8ab680b573a2aed162bf8ea:282"
+          "registros_estudo": "51ea000a69d793c47b2ab88e8b750730:282"
         }
       }
     },
@@ -517,10 +565,10 @@
         "tabelas_inalteradas": true,
         "integridade": "ok",
         "hash_antes": {
-          "simulados": "a6516f69a774c03d3698b03c00068583:38"
+          "simulados": "0f1fcd954ffa7be58924196d3ddb966b:38"
         },
         "hash_depois": {
-          "simulados": "a6516f69a774c03d3698b03c00068583:38"
+          "simulados": "0f1fcd954ffa7be58924196d3ddb966b:38"
         }
       }
     },
@@ -541,10 +589,10 @@
         "tabelas_inalteradas": true,
         "integridade": "ok",
         "hash_antes": {
-          "consentimentos": "8852389b85dad31bc8db8b9bac948907:4"
+          "consentimentos": "2f462b71091097b30bb12d46fdd1955e:4"
         },
         "hash_depois": {
-          "consentimentos": "8852389b85dad31bc8db8b9bac948907:4"
+          "consentimentos": "2f462b71091097b30bb12d46fdd1955e:4"
         }
       }
     },
@@ -565,10 +613,10 @@
         "tabelas_inalteradas": true,
         "integridade": "ok",
         "hash_antes": {
-          "logs_acesso": "e8a8b9fdbe0d80b48ca471ef07e49ef7:2"
+          "logs_acesso": "83613035e8a2471f0649a53622498c00:2"
         },
         "hash_depois": {
-          "logs_acesso": "e8a8b9fdbe0d80b48ca471ef07e49ef7:2"
+          "logs_acesso": "83613035e8a2471f0649a53622498c00:2"
         }
       }
     },
@@ -589,10 +637,10 @@
         "tabelas_inalteradas": true,
         "integridade": "ok",
         "hash_antes": {
-          "logs_coordenacao": "2dde1fe8f61b523398a45d5e94405249:2"
+          "logs_coordenacao": "f5da6c22255639df20dcbbc80e762a4e:2"
         },
         "hash_depois": {
-          "logs_coordenacao": "2dde1fe8f61b523398a45d5e94405249:2"
+          "logs_coordenacao": "f5da6c22255639df20dcbbc80e762a4e:2"
         }
       }
     },
@@ -613,10 +661,10 @@
         "tabelas_inalteradas": true,
         "integridade": "ok",
         "hash_antes": {
-          "config_escola": "b3e818dcedc8a9ad2f86cd36eecbd456:3"
+          "config_escola": "9bca714193eb4929ad155ee62f379963:3"
         },
         "hash_depois": {
-          "config_escola": "b3e818dcedc8a9ad2f86cd36eecbd456:3"
+          "config_escola": "9bca714193eb4929ad155ee62f379963:3"
         }
       }
     },
@@ -637,10 +685,10 @@
         "tabelas_inalteradas": true,
         "integridade": "ok",
         "hash_antes": {
-          "missoes_escola": "88c50fc6ff863acffac712ad481cb2d5:3"
+          "missoes_escola": "fc2ae3f2acbbd8dcf889b6b623a523ae:3"
         },
         "hash_depois": {
-          "missoes_escola": "88c50fc6ff863acffac712ad481cb2d5:3"
+          "missoes_escola": "fc2ae3f2acbbd8dcf889b6b623a523ae:3"
         }
       }
     },
@@ -661,10 +709,10 @@
         "tabelas_inalteradas": true,
         "integridade": "ok",
         "hash_antes": {
-          "aluno_xp_eventos": "9d6622394098fa20e99d858a04b1caa0:7"
+          "aluno_xp_eventos": "3556c867d5cff522de395d06567346cd:7"
         },
         "hash_depois": {
-          "aluno_xp_eventos": "9d6622394098fa20e99d858a04b1caa0:7"
+          "aluno_xp_eventos": "3556c867d5cff522de395d06567346cd:7"
         }
       }
     },
@@ -685,10 +733,10 @@
         "tabelas_inalteradas": true,
         "integridade": "ok",
         "hash_antes": {
-          "aluno_conquistas": "27cf369734b56a7727e1591d886ce659:3"
+          "aluno_conquistas": "954f6f1933ab6a2ce0acb4eb71f394ff:3"
         },
         "hash_depois": {
-          "aluno_conquistas": "27cf369734b56a7727e1591d886ce659:3"
+          "aluno_conquistas": "954f6f1933ab6a2ce0acb4eb71f394ff:3"
         }
       }
     },
@@ -709,10 +757,10 @@
         "tabelas_inalteradas": true,
         "integridade": "ok",
         "hash_antes": {
-          "aluno_missoes": "d3bb9f9866f9454ed1cf273d1bcd2020:89"
+          "aluno_missoes": "82af9d61e431ba4c932e2113eefa685b:89"
         },
         "hash_depois": {
-          "aluno_missoes": "d3bb9f9866f9454ed1cf273d1bcd2020:89"
+          "aluno_missoes": "82af9d61e431ba4c932e2113eefa685b:89"
         }
       }
     },
@@ -733,10 +781,10 @@
         "tabelas_inalteradas": true,
         "integridade": "ok",
         "hash_antes": {
-          "aluno_niveis": "7a56a5372bb9b3303149334d40103d8b:100"
+          "aluno_niveis": "bc5d210cfec59341ec6b448459943da0:100"
         },
         "hash_depois": {
-          "aluno_niveis": "7a56a5372bb9b3303149334d40103d8b:100"
+          "aluno_niveis": "bc5d210cfec59341ec6b448459943da0:100"
         }
       }
     },
@@ -757,10 +805,10 @@
         "tabelas_inalteradas": true,
         "integridade": "ok",
         "hash_antes": {
-          "aluno_onboarding": "4f3730da7226e466ccea2f43e6629321:3"
+          "aluno_onboarding": "147d94d704d96341b12e396ff1e20ff8:3"
         },
         "hash_depois": {
-          "aluno_onboarding": "4f3730da7226e466ccea2f43e6629321:3"
+          "aluno_onboarding": "147d94d704d96341b12e396ff1e20ff8:3"
         }
       }
     },
@@ -781,10 +829,10 @@
         "tabelas_inalteradas": true,
         "integridade": "ok",
         "hash_antes": {
-          "aluno_eventos_progresso": "7343917369fdb85440a9463916e56ed9:569"
+          "aluno_eventos_progresso": "7b2fb897346506930369feab8e0c1be5:569"
         },
         "hash_depois": {
-          "aluno_eventos_progresso": "7343917369fdb85440a9463916e56ed9:569"
+          "aluno_eventos_progresso": "7b2fb897346506930369feab8e0c1be5:569"
         }
       }
     },
@@ -805,10 +853,10 @@
         "tabelas_inalteradas": true,
         "integridade": "ok",
         "hash_antes": {
-          "aluno_nivel_historico": "187c53e023c54c76e11b22643eb855fd:101"
+          "aluno_nivel_historico": "7befa928c3d513360a8b2b64e3d2a9be:101"
         },
         "hash_depois": {
-          "aluno_nivel_historico": "187c53e023c54c76e11b22643eb855fd:101"
+          "aluno_nivel_historico": "7befa928c3d513360a8b2b64e3d2a9be:101"
         }
       }
     },
@@ -829,10 +877,10 @@
         "tabelas_inalteradas": true,
         "integridade": "ok",
         "hash_antes": {
-          "aluno_eventos_progresso": "7343917369fdb85440a9463916e56ed9:569"
+          "aluno_eventos_progresso": "7b2fb897346506930369feab8e0c1be5:569"
         },
         "hash_depois": {
-          "aluno_eventos_progresso": "7343917369fdb85440a9463916e56ed9:569"
+          "aluno_eventos_progresso": "7b2fb897346506930369feab8e0c1be5:569"
         }
       }
     },
@@ -853,10 +901,10 @@
         "tabelas_inalteradas": true,
         "integridade": "ok",
         "hash_antes": {
-          "alunos": "85e37ce5b6330c71e1242548e661f090:68"
+          "alunos": "5d78b41d4862831fcd055cbabf6ee735:68"
         },
         "hash_depois": {
-          "alunos": "85e37ce5b6330c71e1242548e661f090:68"
+          "alunos": "5d78b41d4862831fcd055cbabf6ee735:68"
         }
       }
     },
@@ -877,10 +925,10 @@
         "tabelas_inalteradas": true,
         "integridade": "ok",
         "hash_antes": {
-          "registros_estudo": "305fd225e8ab680b573a2aed162bf8ea:282"
+          "registros_estudo": "51ea000a69d793c47b2ab88e8b750730:282"
         },
         "hash_depois": {
-          "registros_estudo": "305fd225e8ab680b573a2aed162bf8ea:282"
+          "registros_estudo": "51ea000a69d793c47b2ab88e8b750730:282"
         }
       }
     },
@@ -901,10 +949,10 @@
         "tabelas_inalteradas": true,
         "integridade": "ok",
         "hash_antes": {
-          "metas": "635411f665b590d6a0eca97e69438d4f:77"
+          "metas": "42705b7cd19363596092adf46d1dc106:77"
         },
         "hash_depois": {
-          "metas": "635411f665b590d6a0eca97e69438d4f:77"
+          "metas": "42705b7cd19363596092adf46d1dc106:77"
         }
       }
     },
@@ -925,10 +973,10 @@
         "tabelas_inalteradas": true,
         "integridade": "ok",
         "hash_antes": {
-          "consentimentos": "8852389b85dad31bc8db8b9bac948907:4"
+          "consentimentos": "2f462b71091097b30bb12d46fdd1955e:4"
         },
         "hash_depois": {
-          "consentimentos": "8852389b85dad31bc8db8b9bac948907:4"
+          "consentimentos": "2f462b71091097b30bb12d46fdd1955e:4"
         }
       }
     },
@@ -949,10 +997,10 @@
         "tabelas_inalteradas": true,
         "integridade": "ok",
         "hash_antes": {
-          "aluno_onboarding": "4f3730da7226e466ccea2f43e6629321:3"
+          "aluno_onboarding": "147d94d704d96341b12e396ff1e20ff8:3"
         },
         "hash_depois": {
-          "aluno_onboarding": "4f3730da7226e466ccea2f43e6629321:3"
+          "aluno_onboarding": "147d94d704d96341b12e396ff1e20ff8:3"
         }
       }
     },
@@ -973,10 +1021,10 @@
         "tabelas_inalteradas": true,
         "integridade": "ok",
         "hash_antes": {
-          "aluno_eventos_progresso": "7343917369fdb85440a9463916e56ed9:569"
+          "aluno_eventos_progresso": "7b2fb897346506930369feab8e0c1be5:569"
         },
         "hash_depois": {
-          "aluno_eventos_progresso": "7343917369fdb85440a9463916e56ed9:569"
+          "aluno_eventos_progresso": "7b2fb897346506930369feab8e0c1be5:569"
         }
       }
     },
@@ -997,10 +1045,10 @@
         "tabelas_inalteradas": true,
         "integridade": "ok",
         "hash_antes": {
-          "registros_estudo": "305fd225e8ab680b573a2aed162bf8ea:282"
+          "registros_estudo": "51ea000a69d793c47b2ab88e8b750730:282"
         },
         "hash_depois": {
-          "registros_estudo": "305fd225e8ab680b573a2aed162bf8ea:282"
+          "registros_estudo": "51ea000a69d793c47b2ab88e8b750730:282"
         }
       }
     },
@@ -1021,10 +1069,10 @@
         "tabelas_inalteradas": true,
         "integridade": "ok",
         "hash_antes": {
-          "registros_estudo": "305fd225e8ab680b573a2aed162bf8ea:282"
+          "registros_estudo": "51ea000a69d793c47b2ab88e8b750730:282"
         },
         "hash_depois": {
-          "registros_estudo": "305fd225e8ab680b573a2aed162bf8ea:282"
+          "registros_estudo": "51ea000a69d793c47b2ab88e8b750730:282"
         }
       }
     },
@@ -1045,10 +1093,10 @@
         "tabelas_inalteradas": true,
         "integridade": "ok",
         "hash_antes": {
-          "turmas": "c67a9547ca82bb54fe6724692bb007cd:9"
+          "turmas": "142af94faba50a9392a96c674ae2a6e2:9"
         },
         "hash_depois": {
-          "turmas": "c67a9547ca82bb54fe6724692bb007cd:9"
+          "turmas": "142af94faba50a9392a96c674ae2a6e2:9"
         }
       }
     },
@@ -1069,10 +1117,10 @@
         "tabelas_inalteradas": true,
         "integridade": "ok",
         "hash_antes": {
-          "turmas": "c67a9547ca82bb54fe6724692bb007cd:9"
+          "turmas": "142af94faba50a9392a96c674ae2a6e2:9"
         },
         "hash_depois": {
-          "turmas": "c67a9547ca82bb54fe6724692bb007cd:9"
+          "turmas": "142af94faba50a9392a96c674ae2a6e2:9"
         }
       }
     },
@@ -1093,10 +1141,10 @@
         "tabelas_inalteradas": true,
         "integridade": "ok",
         "hash_antes": {
-          "turmas": "c67a9547ca82bb54fe6724692bb007cd:9"
+          "turmas": "142af94faba50a9392a96c674ae2a6e2:9"
         },
         "hash_depois": {
-          "turmas": "c67a9547ca82bb54fe6724692bb007cd:9"
+          "turmas": "142af94faba50a9392a96c674ae2a6e2:9"
         }
       }
     },
@@ -1117,10 +1165,10 @@
         "tabelas_inalteradas": true,
         "integridade": "ok",
         "hash_antes": {
-          "turmas": "c67a9547ca82bb54fe6724692bb007cd:9"
+          "turmas": "142af94faba50a9392a96c674ae2a6e2:9"
         },
         "hash_depois": {
-          "turmas": "c67a9547ca82bb54fe6724692bb007cd:9"
+          "turmas": "142af94faba50a9392a96c674ae2a6e2:9"
         }
       }
     },
@@ -1141,10 +1189,10 @@
         "tabelas_inalteradas": true,
         "integridade": "ok",
         "hash_antes": {
-          "turmas": "c67a9547ca82bb54fe6724692bb007cd:9"
+          "turmas": "142af94faba50a9392a96c674ae2a6e2:9"
         },
         "hash_depois": {
-          "turmas": "c67a9547ca82bb54fe6724692bb007cd:9"
+          "turmas": "142af94faba50a9392a96c674ae2a6e2:9"
         }
       }
     },
@@ -1165,10 +1213,10 @@
         "tabelas_inalteradas": true,
         "integridade": "ok",
         "hash_antes": {
-          "turmas": "c67a9547ca82bb54fe6724692bb007cd:9"
+          "turmas": "142af94faba50a9392a96c674ae2a6e2:9"
         },
         "hash_depois": {
-          "turmas": "c67a9547ca82bb54fe6724692bb007cd:9"
+          "turmas": "142af94faba50a9392a96c674ae2a6e2:9"
         }
       }
     },
@@ -1189,10 +1237,10 @@
         "tabelas_inalteradas": false,
         "integridade": "ok",
         "hash_antes": {
-          "turmas": "c67a9547ca82bb54fe6724692bb007cd:9"
+          "turmas": "142af94faba50a9392a96c674ae2a6e2:9"
         },
         "hash_depois": {
-          "turmas": "7167f358037389fb5f1322b40d490d0f:9"
+          "turmas": "c5cc5b227e1fa775750bcd61a098ecd9:9"
         }
       }
     },
@@ -1213,10 +1261,10 @@
         "tabelas_inalteradas": true,
         "integridade": "ok",
         "hash_antes": {
-          "alunos": "85e37ce5b6330c71e1242548e661f090:68"
+          "alunos": "5d78b41d4862831fcd055cbabf6ee735:68"
         },
         "hash_depois": {
-          "alunos": "85e37ce5b6330c71e1242548e661f090:68"
+          "alunos": "5d78b41d4862831fcd055cbabf6ee735:68"
         }
       }
     },
@@ -1237,10 +1285,10 @@
         "tabelas_inalteradas": true,
         "integridade": "ok",
         "hash_antes": {
-          "alunos": "85e37ce5b6330c71e1242548e661f090:68"
+          "alunos": "5d78b41d4862831fcd055cbabf6ee735:68"
         },
         "hash_depois": {
-          "alunos": "85e37ce5b6330c71e1242548e661f090:68"
+          "alunos": "5d78b41d4862831fcd055cbabf6ee735:68"
         }
       }
     },
@@ -1261,10 +1309,10 @@
         "tabelas_inalteradas": true,
         "integridade": "ok",
         "hash_antes": {
-          "alunos": "85e37ce5b6330c71e1242548e661f090:68"
+          "alunos": "5d78b41d4862831fcd055cbabf6ee735:68"
         },
         "hash_depois": {
-          "alunos": "85e37ce5b6330c71e1242548e661f090:68"
+          "alunos": "5d78b41d4862831fcd055cbabf6ee735:68"
         }
       }
     },
@@ -1285,10 +1333,10 @@
         "tabelas_inalteradas": true,
         "integridade": "ok",
         "hash_antes": {
-          "alunos": "85e37ce5b6330c71e1242548e661f090:68"
+          "alunos": "5d78b41d4862831fcd055cbabf6ee735:68"
         },
         "hash_depois": {
-          "alunos": "85e37ce5b6330c71e1242548e661f090:68"
+          "alunos": "5d78b41d4862831fcd055cbabf6ee735:68"
         }
       }
     },
@@ -1309,10 +1357,10 @@
         "tabelas_inalteradas": true,
         "integridade": "ok",
         "hash_antes": {
-          "alunos": "85e37ce5b6330c71e1242548e661f090:68"
+          "alunos": "5d78b41d4862831fcd055cbabf6ee735:68"
         },
         "hash_depois": {
-          "alunos": "85e37ce5b6330c71e1242548e661f090:68"
+          "alunos": "5d78b41d4862831fcd055cbabf6ee735:68"
         }
       }
     },
@@ -1333,10 +1381,10 @@
         "tabelas_inalteradas": false,
         "integridade": "ok",
         "hash_antes": {
-          "alunos": "85e37ce5b6330c71e1242548e661f090:68"
+          "alunos": "5d78b41d4862831fcd055cbabf6ee735:68"
         },
         "hash_depois": {
-          "alunos": "6aa5d2a23ab0651fe386352c3bdde668:69"
+          "alunos": "06a33d4d333b229cfec62bd2303b13b1:69"
         }
       },
       "nota": "depois da 0055 quem barra é a FK composta (aluno/turma/conta da mesma escola), para qualquer escritor",
@@ -1359,10 +1407,10 @@
         "tabelas_inalteradas": false,
         "integridade": "ok",
         "hash_antes": {
-          "alunos": "85e37ce5b6330c71e1242548e661f090:68"
+          "alunos": "5d78b41d4862831fcd055cbabf6ee735:68"
         },
         "hash_depois": {
-          "alunos": "b0b1cbea7df2907c6648f7399ba5b557:68"
+          "alunos": "eb0aea83ea6b09b9bc0298cac68980be:68"
         }
       }
     },
@@ -1507,10 +1555,10 @@
         "tabelas_inalteradas": true,
         "integridade": "ok",
         "hash_antes": {
-          "vinculos_responsaveis": "611b81cd366c8c9253de0e1499c0970d:4"
+          "vinculos_responsaveis": "60c8ae6b1fdb532078ad32dab20aeb54:4"
         },
         "hash_depois": {
-          "vinculos_responsaveis": "611b81cd366c8c9253de0e1499c0970d:4"
+          "vinculos_responsaveis": "60c8ae6b1fdb532078ad32dab20aeb54:4"
         }
       }
     },
@@ -1531,10 +1579,10 @@
         "tabelas_inalteradas": true,
         "integridade": "ok",
         "hash_antes": {
-          "vinculos_responsaveis": "611b81cd366c8c9253de0e1499c0970d:4"
+          "vinculos_responsaveis": "60c8ae6b1fdb532078ad32dab20aeb54:4"
         },
         "hash_depois": {
-          "vinculos_responsaveis": "611b81cd366c8c9253de0e1499c0970d:4"
+          "vinculos_responsaveis": "60c8ae6b1fdb532078ad32dab20aeb54:4"
         }
       }
     },
@@ -1555,10 +1603,10 @@
         "tabelas_inalteradas": true,
         "integridade": "ok",
         "hash_antes": {
-          "vinculos_responsaveis": "611b81cd366c8c9253de0e1499c0970d:4"
+          "vinculos_responsaveis": "60c8ae6b1fdb532078ad32dab20aeb54:4"
         },
         "hash_depois": {
-          "vinculos_responsaveis": "611b81cd366c8c9253de0e1499c0970d:4"
+          "vinculos_responsaveis": "60c8ae6b1fdb532078ad32dab20aeb54:4"
         }
       }
     },
@@ -1579,10 +1627,10 @@
         "tabelas_inalteradas": false,
         "integridade": "ok",
         "hash_antes": {
-          "vinculos_responsaveis": "611b81cd366c8c9253de0e1499c0970d:4"
+          "vinculos_responsaveis": "60c8ae6b1fdb532078ad32dab20aeb54:4"
         },
         "hash_depois": {
-          "vinculos_responsaveis": "41b1c67ac91f8a33a7e761678962de1a:5"
+          "vinculos_responsaveis": "b48dca436a40d67fb05bd239c59fd3cf:5"
         }
       },
       "nota": "depois da 0055 quem barra é a FK composta (aluno/turma/conta da mesma escola), para qualquer escritor",
@@ -1605,10 +1653,10 @@
         "tabelas_inalteradas": false,
         "integridade": "ok",
         "hash_antes": {
-          "vinculos_responsaveis": "611b81cd366c8c9253de0e1499c0970d:4"
+          "vinculos_responsaveis": "60c8ae6b1fdb532078ad32dab20aeb54:4"
         },
         "hash_depois": {
-          "vinculos_responsaveis": "2ca065122b0bb02db321bdb2d665ce4a:5"
+          "vinculos_responsaveis": "024f3ac30f7c6b4139d835e0c8bb7b09:5"
         }
       },
       "nota": "depois da 0055 quem barra é a FK composta (aluno/turma/conta da mesma escola), para qualquer escritor",
@@ -1631,10 +1679,10 @@
         "tabelas_inalteradas": true,
         "integridade": "ok",
         "hash_antes": {
-          "metas": "635411f665b590d6a0eca97e69438d4f:77"
+          "metas": "42705b7cd19363596092adf46d1dc106:77"
         },
         "hash_depois": {
-          "metas": "635411f665b590d6a0eca97e69438d4f:77"
+          "metas": "42705b7cd19363596092adf46d1dc106:77"
         }
       }
     },
@@ -1655,10 +1703,10 @@
         "tabelas_inalteradas": true,
         "integridade": "ok",
         "hash_antes": {
-          "metas": "635411f665b590d6a0eca97e69438d4f:77"
+          "metas": "42705b7cd19363596092adf46d1dc106:77"
         },
         "hash_depois": {
-          "metas": "635411f665b590d6a0eca97e69438d4f:77"
+          "metas": "42705b7cd19363596092adf46d1dc106:77"
         }
       }
     },
@@ -1679,10 +1727,10 @@
         "tabelas_inalteradas": true,
         "integridade": "ok",
         "hash_antes": {
-          "meta_atividades": "af89ebb168e249523854ee9e3a21c6c2:353"
+          "meta_atividades": "86c2b393e78a4d5d7b4de30b8c11961a:353"
         },
         "hash_depois": {
-          "meta_atividades": "af89ebb168e249523854ee9e3a21c6c2:353"
+          "meta_atividades": "86c2b393e78a4d5d7b4de30b8c11961a:353"
         }
       }
     },
@@ -1703,10 +1751,10 @@
         "tabelas_inalteradas": true,
         "integridade": "ok",
         "hash_antes": {
-          "meta_atividades": "af89ebb168e249523854ee9e3a21c6c2:353"
+          "meta_atividades": "86c2b393e78a4d5d7b4de30b8c11961a:353"
         },
         "hash_depois": {
-          "meta_atividades": "af89ebb168e249523854ee9e3a21c6c2:353"
+          "meta_atividades": "86c2b393e78a4d5d7b4de30b8c11961a:353"
         }
       }
     },
@@ -1727,10 +1775,10 @@
         "tabelas_inalteradas": true,
         "integridade": "ok",
         "hash_antes": {
-          "meta_atividades": "af89ebb168e249523854ee9e3a21c6c2:353"
+          "meta_atividades": "86c2b393e78a4d5d7b4de30b8c11961a:353"
         },
         "hash_depois": {
-          "meta_atividades": "af89ebb168e249523854ee9e3a21c6c2:353"
+          "meta_atividades": "86c2b393e78a4d5d7b4de30b8c11961a:353"
         }
       },
       "nota": "depois da 0055 quem barra é a FK composta (aluno/turma/conta da mesma escola), para qualquer escritor"
@@ -1752,10 +1800,10 @@
         "tabelas_inalteradas": false,
         "integridade": "ok",
         "hash_antes": {
-          "meta_atividades": "af89ebb168e249523854ee9e3a21c6c2:353"
+          "meta_atividades": "86c2b393e78a4d5d7b4de30b8c11961a:353"
         },
         "hash_depois": {
-          "meta_atividades": "0b3aa845f122df35cf7f0814398ed849:353"
+          "meta_atividades": "d863961bb91f3d376d27c05c403cf444:353"
         }
       }
     },
@@ -1776,10 +1824,10 @@
         "tabelas_inalteradas": true,
         "integridade": "ok",
         "hash_antes": {
-          "registros_estudo": "305fd225e8ab680b573a2aed162bf8ea:282"
+          "registros_estudo": "51ea000a69d793c47b2ab88e8b750730:282"
         },
         "hash_depois": {
-          "registros_estudo": "305fd225e8ab680b573a2aed162bf8ea:282"
+          "registros_estudo": "51ea000a69d793c47b2ab88e8b750730:282"
         }
       }
     },
@@ -1800,10 +1848,10 @@
         "tabelas_inalteradas": true,
         "integridade": "ok",
         "hash_antes": {
-          "registros_estudo": "305fd225e8ab680b573a2aed162bf8ea:282"
+          "registros_estudo": "51ea000a69d793c47b2ab88e8b750730:282"
         },
         "hash_depois": {
-          "registros_estudo": "305fd225e8ab680b573a2aed162bf8ea:282"
+          "registros_estudo": "51ea000a69d793c47b2ab88e8b750730:282"
         }
       }
     },
@@ -1824,10 +1872,10 @@
         "tabelas_inalteradas": true,
         "integridade": "ok",
         "hash_antes": {
-          "registros_estudo": "305fd225e8ab680b573a2aed162bf8ea:282"
+          "registros_estudo": "51ea000a69d793c47b2ab88e8b750730:282"
         },
         "hash_depois": {
-          "registros_estudo": "305fd225e8ab680b573a2aed162bf8ea:282"
+          "registros_estudo": "51ea000a69d793c47b2ab88e8b750730:282"
         }
       }
     },
@@ -1848,10 +1896,10 @@
         "tabelas_inalteradas": true,
         "integridade": "ok",
         "hash_antes": {
-          "registros_estudo": "305fd225e8ab680b573a2aed162bf8ea:282"
+          "registros_estudo": "51ea000a69d793c47b2ab88e8b750730:282"
         },
         "hash_depois": {
-          "registros_estudo": "305fd225e8ab680b573a2aed162bf8ea:282"
+          "registros_estudo": "51ea000a69d793c47b2ab88e8b750730:282"
         }
       }
     },
@@ -1872,10 +1920,10 @@
         "tabelas_inalteradas": true,
         "integridade": "ok",
         "hash_antes": {
-          "registros_estudo": "305fd225e8ab680b573a2aed162bf8ea:282"
+          "registros_estudo": "51ea000a69d793c47b2ab88e8b750730:282"
         },
         "hash_depois": {
-          "registros_estudo": "305fd225e8ab680b573a2aed162bf8ea:282"
+          "registros_estudo": "51ea000a69d793c47b2ab88e8b750730:282"
         }
       }
     },
@@ -1896,10 +1944,10 @@
         "tabelas_inalteradas": true,
         "integridade": "ok",
         "hash_antes": {
-          "registros_estudo": "305fd225e8ab680b573a2aed162bf8ea:282"
+          "registros_estudo": "51ea000a69d793c47b2ab88e8b750730:282"
         },
         "hash_depois": {
-          "registros_estudo": "305fd225e8ab680b573a2aed162bf8ea:282"
+          "registros_estudo": "51ea000a69d793c47b2ab88e8b750730:282"
         }
       },
       "nota": "depois da 0055 quem barra é a FK composta (aluno/turma/conta da mesma escola), para qualquer escritor"
@@ -1921,12 +1969,12 @@
         "tabelas_inalteradas": false,
         "integridade": "ok",
         "hash_antes": {
-          "registros_estudo": "305fd225e8ab680b573a2aed162bf8ea:282",
-          "aluno_eventos_progresso": "7343917369fdb85440a9463916e56ed9:569"
+          "registros_estudo": "51ea000a69d793c47b2ab88e8b750730:282",
+          "aluno_eventos_progresso": "7b2fb897346506930369feab8e0c1be5:569"
         },
         "hash_depois": {
-          "registros_estudo": "dfb68331b053d903e4915bcdac84271c:283",
-          "aluno_eventos_progresso": "4eb089fb3437b4fb702bf09f31ab44ac:570"
+          "registros_estudo": "ca4947c349b0a28f8ed472984dc2f1fe:283",
+          "aluno_eventos_progresso": "5d7fc41b41fb2a67af5dfd7bb85b6bbf:570"
         }
       }
     },
@@ -1947,10 +1995,10 @@
         "tabelas_inalteradas": true,
         "integridade": "ok",
         "hash_antes": {
-          "simulados": "a6516f69a774c03d3698b03c00068583:38"
+          "simulados": "0f1fcd954ffa7be58924196d3ddb966b:38"
         },
         "hash_depois": {
-          "simulados": "a6516f69a774c03d3698b03c00068583:38"
+          "simulados": "0f1fcd954ffa7be58924196d3ddb966b:38"
         }
       }
     },
@@ -1971,10 +2019,10 @@
         "tabelas_inalteradas": true,
         "integridade": "ok",
         "hash_antes": {
-          "simulados": "a6516f69a774c03d3698b03c00068583:38"
+          "simulados": "0f1fcd954ffa7be58924196d3ddb966b:38"
         },
         "hash_depois": {
-          "simulados": "a6516f69a774c03d3698b03c00068583:38"
+          "simulados": "0f1fcd954ffa7be58924196d3ddb966b:38"
         }
       }
     },
@@ -1995,10 +2043,10 @@
         "tabelas_inalteradas": true,
         "integridade": "ok",
         "hash_antes": {
-          "simulados": "a6516f69a774c03d3698b03c00068583:38"
+          "simulados": "0f1fcd954ffa7be58924196d3ddb966b:38"
         },
         "hash_depois": {
-          "simulados": "a6516f69a774c03d3698b03c00068583:38"
+          "simulados": "0f1fcd954ffa7be58924196d3ddb966b:38"
         }
       },
       "nota": "depois da 0055 quem barra é a FK composta (aluno/turma/conta da mesma escola), para qualquer escritor"
@@ -2020,10 +2068,10 @@
         "tabelas_inalteradas": true,
         "integridade": "ok",
         "hash_antes": {
-          "consentimentos": "8852389b85dad31bc8db8b9bac948907:4"
+          "consentimentos": "2f462b71091097b30bb12d46fdd1955e:4"
         },
         "hash_depois": {
-          "consentimentos": "8852389b85dad31bc8db8b9bac948907:4"
+          "consentimentos": "2f462b71091097b30bb12d46fdd1955e:4"
         }
       }
     },
@@ -2044,10 +2092,10 @@
         "tabelas_inalteradas": true,
         "integridade": "ok",
         "hash_antes": {
-          "consentimentos": "8852389b85dad31bc8db8b9bac948907:4"
+          "consentimentos": "2f462b71091097b30bb12d46fdd1955e:4"
         },
         "hash_depois": {
-          "consentimentos": "8852389b85dad31bc8db8b9bac948907:4"
+          "consentimentos": "2f462b71091097b30bb12d46fdd1955e:4"
         }
       }
     },
@@ -2068,10 +2116,10 @@
         "tabelas_inalteradas": true,
         "integridade": "ok",
         "hash_antes": {
-          "consentimentos": "8852389b85dad31bc8db8b9bac948907:4"
+          "consentimentos": "2f462b71091097b30bb12d46fdd1955e:4"
         },
         "hash_depois": {
-          "consentimentos": "8852389b85dad31bc8db8b9bac948907:4"
+          "consentimentos": "2f462b71091097b30bb12d46fdd1955e:4"
         }
       }
     },
@@ -2092,10 +2140,10 @@
         "tabelas_inalteradas": true,
         "integridade": "ok",
         "hash_antes": {
-          "consentimentos": "8852389b85dad31bc8db8b9bac948907:4"
+          "consentimentos": "2f462b71091097b30bb12d46fdd1955e:4"
         },
         "hash_depois": {
-          "consentimentos": "8852389b85dad31bc8db8b9bac948907:4"
+          "consentimentos": "2f462b71091097b30bb12d46fdd1955e:4"
         }
       }
     },
@@ -2116,10 +2164,10 @@
         "tabelas_inalteradas": false,
         "integridade": "ok",
         "hash_antes": {
-          "consentimentos": "8852389b85dad31bc8db8b9bac948907:4"
+          "consentimentos": "2f462b71091097b30bb12d46fdd1955e:4"
         },
         "hash_depois": {
-          "consentimentos": "750dd0a0a413345e24222e5a0774c241:5"
+          "consentimentos": "cf56dbbdac6ae9d2b0332f70d82416b6:5"
         }
       },
       "nota": "depois da 0055 quem barra é a FK composta (aluno/turma/conta da mesma escola), para qualquer escritor",
@@ -2142,10 +2190,10 @@
         "tabelas_inalteradas": true,
         "integridade": "ok",
         "hash_antes": {
-          "logs_acesso": "e8a8b9fdbe0d80b48ca471ef07e49ef7:2"
+          "logs_acesso": "83613035e8a2471f0649a53622498c00:2"
         },
         "hash_depois": {
-          "logs_acesso": "e8a8b9fdbe0d80b48ca471ef07e49ef7:2"
+          "logs_acesso": "83613035e8a2471f0649a53622498c00:2"
         }
       }
     },
@@ -2166,10 +2214,10 @@
         "tabelas_inalteradas": false,
         "integridade": "ok",
         "hash_antes": {
-          "logs_acesso": "e8a8b9fdbe0d80b48ca471ef07e49ef7:2"
+          "logs_acesso": "83613035e8a2471f0649a53622498c00:2"
         },
         "hash_depois": {
-          "logs_acesso": "8e63b242e7939676940bfe4d16af895d:3"
+          "logs_acesso": "addae5fffbfefca92bc919a9b18c6d4a:3"
         }
       },
       "nota": "depois da 0055 quem barra é a FK composta (aluno/turma/conta da mesma escola), para qualquer escritor",
@@ -2192,10 +2240,10 @@
         "tabelas_inalteradas": true,
         "integridade": "ok",
         "hash_antes": {
-          "logs_acesso": "e8a8b9fdbe0d80b48ca471ef07e49ef7:2"
+          "logs_acesso": "83613035e8a2471f0649a53622498c00:2"
         },
         "hash_depois": {
-          "logs_acesso": "e8a8b9fdbe0d80b48ca471ef07e49ef7:2"
+          "logs_acesso": "83613035e8a2471f0649a53622498c00:2"
         }
       }
     },
@@ -2216,10 +2264,10 @@
         "tabelas_inalteradas": true,
         "integridade": "ok",
         "hash_antes": {
-          "logs_coordenacao": "2dde1fe8f61b523398a45d5e94405249:2"
+          "logs_coordenacao": "f5da6c22255639df20dcbbc80e762a4e:2"
         },
         "hash_depois": {
-          "logs_coordenacao": "2dde1fe8f61b523398a45d5e94405249:2"
+          "logs_coordenacao": "f5da6c22255639df20dcbbc80e762a4e:2"
         }
       }
     },
@@ -2240,10 +2288,10 @@
         "tabelas_inalteradas": true,
         "integridade": "ok",
         "hash_antes": {
-          "logs_coordenacao": "2dde1fe8f61b523398a45d5e94405249:2"
+          "logs_coordenacao": "f5da6c22255639df20dcbbc80e762a4e:2"
         },
         "hash_depois": {
-          "logs_coordenacao": "2dde1fe8f61b523398a45d5e94405249:2"
+          "logs_coordenacao": "f5da6c22255639df20dcbbc80e762a4e:2"
         }
       }
     },
@@ -2264,10 +2312,10 @@
         "tabelas_inalteradas": true,
         "integridade": "ok",
         "hash_antes": {
-          "config_escola": "b3e818dcedc8a9ad2f86cd36eecbd456:3"
+          "config_escola": "9bca714193eb4929ad155ee62f379963:3"
         },
         "hash_depois": {
-          "config_escola": "b3e818dcedc8a9ad2f86cd36eecbd456:3"
+          "config_escola": "9bca714193eb4929ad155ee62f379963:3"
         }
       }
     },
@@ -2288,10 +2336,10 @@
         "tabelas_inalteradas": true,
         "integridade": "ok",
         "hash_antes": {
-          "config_escola": "b3e818dcedc8a9ad2f86cd36eecbd456:3"
+          "config_escola": "9bca714193eb4929ad155ee62f379963:3"
         },
         "hash_depois": {
-          "config_escola": "b3e818dcedc8a9ad2f86cd36eecbd456:3"
+          "config_escola": "9bca714193eb4929ad155ee62f379963:3"
         }
       }
     },
@@ -2312,10 +2360,10 @@
         "tabelas_inalteradas": true,
         "integridade": "ok",
         "hash_antes": {
-          "config_escola": "b3e818dcedc8a9ad2f86cd36eecbd456:3"
+          "config_escola": "9bca714193eb4929ad155ee62f379963:3"
         },
         "hash_depois": {
-          "config_escola": "b3e818dcedc8a9ad2f86cd36eecbd456:3"
+          "config_escola": "9bca714193eb4929ad155ee62f379963:3"
         }
       }
     },
@@ -2336,10 +2384,10 @@
         "tabelas_inalteradas": true,
         "integridade": "ok",
         "hash_antes": {
-          "missoes_escola": "88c50fc6ff863acffac712ad481cb2d5:3"
+          "missoes_escola": "fc2ae3f2acbbd8dcf889b6b623a523ae:3"
         },
         "hash_depois": {
-          "missoes_escola": "88c50fc6ff863acffac712ad481cb2d5:3"
+          "missoes_escola": "fc2ae3f2acbbd8dcf889b6b623a523ae:3"
         }
       }
     },
@@ -2360,10 +2408,10 @@
         "tabelas_inalteradas": true,
         "integridade": "ok",
         "hash_antes": {
-          "missoes_escola": "88c50fc6ff863acffac712ad481cb2d5:3"
+          "missoes_escola": "fc2ae3f2acbbd8dcf889b6b623a523ae:3"
         },
         "hash_depois": {
-          "missoes_escola": "88c50fc6ff863acffac712ad481cb2d5:3"
+          "missoes_escola": "fc2ae3f2acbbd8dcf889b6b623a523ae:3"
         }
       }
     },
@@ -2384,10 +2432,10 @@
         "tabelas_inalteradas": true,
         "integridade": "ok",
         "hash_antes": {
-          "aluno_xp_eventos": "9d6622394098fa20e99d858a04b1caa0:7"
+          "aluno_xp_eventos": "3556c867d5cff522de395d06567346cd:7"
         },
         "hash_depois": {
-          "aluno_xp_eventos": "9d6622394098fa20e99d858a04b1caa0:7"
+          "aluno_xp_eventos": "3556c867d5cff522de395d06567346cd:7"
         }
       }
     },
@@ -2408,10 +2456,10 @@
         "tabelas_inalteradas": true,
         "integridade": "ok",
         "hash_antes": {
-          "aluno_xp_eventos": "9d6622394098fa20e99d858a04b1caa0:7"
+          "aluno_xp_eventos": "3556c867d5cff522de395d06567346cd:7"
         },
         "hash_depois": {
-          "aluno_xp_eventos": "9d6622394098fa20e99d858a04b1caa0:7"
+          "aluno_xp_eventos": "3556c867d5cff522de395d06567346cd:7"
         }
       }
     },
@@ -2432,10 +2480,10 @@
         "tabelas_inalteradas": true,
         "integridade": "ok",
         "hash_antes": {
-          "aluno_xp_eventos": "9d6622394098fa20e99d858a04b1caa0:7"
+          "aluno_xp_eventos": "3556c867d5cff522de395d06567346cd:7"
         },
         "hash_depois": {
-          "aluno_xp_eventos": "9d6622394098fa20e99d858a04b1caa0:7"
+          "aluno_xp_eventos": "3556c867d5cff522de395d06567346cd:7"
         }
       }
     },
@@ -2456,10 +2504,10 @@
         "tabelas_inalteradas": false,
         "integridade": "ok",
         "hash_antes": {
-          "aluno_xp_eventos": "9d6622394098fa20e99d858a04b1caa0:7"
+          "aluno_xp_eventos": "3556c867d5cff522de395d06567346cd:7"
         },
         "hash_depois": {
-          "aluno_xp_eventos": "1defd3c3393aac38c57959cabea3aadb:8"
+          "aluno_xp_eventos": "4091646494141cc3462cf2e0fd49813e:8"
         }
       },
       "nota": "depois da 0055 quem barra é a FK composta (aluno/turma/conta da mesma escola), para qualquer escritor",
@@ -2482,10 +2530,10 @@
         "tabelas_inalteradas": true,
         "integridade": "ok",
         "hash_antes": {
-          "aluno_conquistas": "27cf369734b56a7727e1591d886ce659:3"
+          "aluno_conquistas": "954f6f1933ab6a2ce0acb4eb71f394ff:3"
         },
         "hash_depois": {
-          "aluno_conquistas": "27cf369734b56a7727e1591d886ce659:3"
+          "aluno_conquistas": "954f6f1933ab6a2ce0acb4eb71f394ff:3"
         }
       }
     },
@@ -2506,10 +2554,10 @@
         "tabelas_inalteradas": true,
         "integridade": "ok",
         "hash_antes": {
-          "aluno_conquistas": "27cf369734b56a7727e1591d886ce659:3"
+          "aluno_conquistas": "954f6f1933ab6a2ce0acb4eb71f394ff:3"
         },
         "hash_depois": {
-          "aluno_conquistas": "27cf369734b56a7727e1591d886ce659:3"
+          "aluno_conquistas": "954f6f1933ab6a2ce0acb4eb71f394ff:3"
         }
       }
     },
@@ -2530,10 +2578,10 @@
         "tabelas_inalteradas": true,
         "integridade": "ok",
         "hash_antes": {
-          "aluno_conquistas": "27cf369734b56a7727e1591d886ce659:3"
+          "aluno_conquistas": "954f6f1933ab6a2ce0acb4eb71f394ff:3"
         },
         "hash_depois": {
-          "aluno_conquistas": "27cf369734b56a7727e1591d886ce659:3"
+          "aluno_conquistas": "954f6f1933ab6a2ce0acb4eb71f394ff:3"
         }
       }
     },
@@ -2554,10 +2602,10 @@
         "tabelas_inalteradas": false,
         "integridade": "ok",
         "hash_antes": {
-          "aluno_conquistas": "27cf369734b56a7727e1591d886ce659:3"
+          "aluno_conquistas": "954f6f1933ab6a2ce0acb4eb71f394ff:3"
         },
         "hash_depois": {
-          "aluno_conquistas": "cfdb4fe29aea60c61a80f5f9ee0fb5bb:4"
+          "aluno_conquistas": "41355b580ac16b1878af0c9c53920862:4"
         }
       },
       "nota": "depois da 0055 quem barra é a FK composta (aluno/turma/conta da mesma escola), para qualquer escritor",
@@ -2580,10 +2628,10 @@
         "tabelas_inalteradas": true,
         "integridade": "ok",
         "hash_antes": {
-          "aluno_missoes": "d3bb9f9866f9454ed1cf273d1bcd2020:89"
+          "aluno_missoes": "82af9d61e431ba4c932e2113eefa685b:89"
         },
         "hash_depois": {
-          "aluno_missoes": "d3bb9f9866f9454ed1cf273d1bcd2020:89"
+          "aluno_missoes": "82af9d61e431ba4c932e2113eefa685b:89"
         }
       }
     },
@@ -2604,10 +2652,10 @@
         "tabelas_inalteradas": true,
         "integridade": "ok",
         "hash_antes": {
-          "aluno_missoes": "d3bb9f9866f9454ed1cf273d1bcd2020:89"
+          "aluno_missoes": "82af9d61e431ba4c932e2113eefa685b:89"
         },
         "hash_depois": {
-          "aluno_missoes": "d3bb9f9866f9454ed1cf273d1bcd2020:89"
+          "aluno_missoes": "82af9d61e431ba4c932e2113eefa685b:89"
         }
       }
     },
@@ -2628,10 +2676,10 @@
         "tabelas_inalteradas": true,
         "integridade": "ok",
         "hash_antes": {
-          "aluno_missoes": "d3bb9f9866f9454ed1cf273d1bcd2020:89"
+          "aluno_missoes": "82af9d61e431ba4c932e2113eefa685b:89"
         },
         "hash_depois": {
-          "aluno_missoes": "d3bb9f9866f9454ed1cf273d1bcd2020:89"
+          "aluno_missoes": "82af9d61e431ba4c932e2113eefa685b:89"
         }
       }
     },
@@ -2652,10 +2700,10 @@
         "tabelas_inalteradas": false,
         "integridade": "ok",
         "hash_antes": {
-          "aluno_missoes": "d3bb9f9866f9454ed1cf273d1bcd2020:89"
+          "aluno_missoes": "82af9d61e431ba4c932e2113eefa685b:89"
         },
         "hash_depois": {
-          "aluno_missoes": "da78ae3d10ccd2d036b732304155488e:90"
+          "aluno_missoes": "cbfb0f985aa0975dd66f805cfe54ed2f:90"
         }
       },
       "nota": "depois da 0055 quem barra é a FK composta (aluno/turma/conta da mesma escola), para qualquer escritor",
@@ -2678,12 +2726,12 @@
         "tabelas_inalteradas": true,
         "integridade": "ok",
         "hash_antes": {
-          "aluno_niveis": "7a56a5372bb9b3303149334d40103d8b:100",
-          "aluno_nivel_historico": "187c53e023c54c76e11b22643eb855fd:101"
+          "aluno_niveis": "bc5d210cfec59341ec6b448459943da0:100",
+          "aluno_nivel_historico": "7befa928c3d513360a8b2b64e3d2a9be:101"
         },
         "hash_depois": {
-          "aluno_niveis": "7a56a5372bb9b3303149334d40103d8b:100",
-          "aluno_nivel_historico": "187c53e023c54c76e11b22643eb855fd:101"
+          "aluno_niveis": "bc5d210cfec59341ec6b448459943da0:100",
+          "aluno_nivel_historico": "7befa928c3d513360a8b2b64e3d2a9be:101"
         }
       }
     },
@@ -2704,12 +2752,12 @@
         "tabelas_inalteradas": true,
         "integridade": "ok",
         "hash_antes": {
-          "aluno_niveis": "7a56a5372bb9b3303149334d40103d8b:100",
-          "aluno_nivel_historico": "187c53e023c54c76e11b22643eb855fd:101"
+          "aluno_niveis": "bc5d210cfec59341ec6b448459943da0:100",
+          "aluno_nivel_historico": "7befa928c3d513360a8b2b64e3d2a9be:101"
         },
         "hash_depois": {
-          "aluno_niveis": "7a56a5372bb9b3303149334d40103d8b:100",
-          "aluno_nivel_historico": "187c53e023c54c76e11b22643eb855fd:101"
+          "aluno_niveis": "bc5d210cfec59341ec6b448459943da0:100",
+          "aluno_nivel_historico": "7befa928c3d513360a8b2b64e3d2a9be:101"
         }
       }
     },
@@ -2730,12 +2778,12 @@
         "tabelas_inalteradas": true,
         "integridade": "ok",
         "hash_antes": {
-          "aluno_niveis": "7a56a5372bb9b3303149334d40103d8b:100",
-          "aluno_nivel_historico": "187c53e023c54c76e11b22643eb855fd:101"
+          "aluno_niveis": "bc5d210cfec59341ec6b448459943da0:100",
+          "aluno_nivel_historico": "7befa928c3d513360a8b2b64e3d2a9be:101"
         },
         "hash_depois": {
-          "aluno_niveis": "7a56a5372bb9b3303149334d40103d8b:100",
-          "aluno_nivel_historico": "187c53e023c54c76e11b22643eb855fd:101"
+          "aluno_niveis": "bc5d210cfec59341ec6b448459943da0:100",
+          "aluno_nivel_historico": "7befa928c3d513360a8b2b64e3d2a9be:101"
         }
       }
     },
@@ -2756,12 +2804,12 @@
         "tabelas_inalteradas": false,
         "integridade": "ok",
         "hash_antes": {
-          "aluno_niveis": "7a56a5372bb9b3303149334d40103d8b:100",
-          "aluno_nivel_historico": "187c53e023c54c76e11b22643eb855fd:101"
+          "aluno_niveis": "bc5d210cfec59341ec6b448459943da0:100",
+          "aluno_nivel_historico": "7befa928c3d513360a8b2b64e3d2a9be:101"
         },
         "hash_depois": {
-          "aluno_niveis": "27956034034699613c56bd4410e84736:101",
-          "aluno_nivel_historico": "0ef52d478773fc2a7f68fb9c81b84096:102"
+          "aluno_niveis": "aee0b45930511090bb8ceb2193b17655:101",
+          "aluno_nivel_historico": "8a25882a13f40f37f3f42669cc163d7c:102"
         }
       },
       "nota": "depois da 0055 quem barra é a FK composta (aluno/turma/conta da mesma escola), para qualquer escritor",
@@ -2784,10 +2832,10 @@
         "tabelas_inalteradas": true,
         "integridade": "ok",
         "hash_antes": {
-          "aluno_onboarding": "4f3730da7226e466ccea2f43e6629321:3"
+          "aluno_onboarding": "147d94d704d96341b12e396ff1e20ff8:3"
         },
         "hash_depois": {
-          "aluno_onboarding": "4f3730da7226e466ccea2f43e6629321:3"
+          "aluno_onboarding": "147d94d704d96341b12e396ff1e20ff8:3"
         }
       }
     },
@@ -2808,10 +2856,10 @@
         "tabelas_inalteradas": false,
         "integridade": "ok",
         "hash_antes": {
-          "aluno_onboarding": "4f3730da7226e466ccea2f43e6629321:3"
+          "aluno_onboarding": "147d94d704d96341b12e396ff1e20ff8:3"
         },
         "hash_depois": {
-          "aluno_onboarding": "f2058c3cea1144a075a33483ea0e3748:4"
+          "aluno_onboarding": "4ef18108eeb63d8f26dbb013fb9a1b0f:4"
         }
       },
       "nota": "depois da 0055 quem barra é a FK composta (aluno/turma/conta da mesma escola), para qualquer escritor",
@@ -2834,10 +2882,10 @@
         "tabelas_inalteradas": true,
         "integridade": "ok",
         "hash_antes": {
-          "aluno_eventos_progresso": "7343917369fdb85440a9463916e56ed9:569"
+          "aluno_eventos_progresso": "7b2fb897346506930369feab8e0c1be5:569"
         },
         "hash_depois": {
-          "aluno_eventos_progresso": "7343917369fdb85440a9463916e56ed9:569"
+          "aluno_eventos_progresso": "7b2fb897346506930369feab8e0c1be5:569"
         }
       }
     },
@@ -2858,10 +2906,10 @@
         "tabelas_inalteradas": false,
         "integridade": "ok",
         "hash_antes": {
-          "aluno_eventos_progresso": "7343917369fdb85440a9463916e56ed9:569"
+          "aluno_eventos_progresso": "7b2fb897346506930369feab8e0c1be5:569"
         },
         "hash_depois": {
-          "aluno_eventos_progresso": "c9603a6f6260323d2f8bb6c71585eec8:570"
+          "aluno_eventos_progresso": "2cd356a3b50da22af7fe82f6948ec6c2:570"
         }
       },
       "nota": "depois da 0055 quem barra é a FK composta (aluno/turma/conta da mesma escola), para qualquer escritor",
@@ -2884,10 +2932,10 @@
         "tabelas_inalteradas": true,
         "integridade": "ok",
         "hash_antes": {
-          "aluno_eventos_progresso": "7343917369fdb85440a9463916e56ed9:569"
+          "aluno_eventos_progresso": "7b2fb897346506930369feab8e0c1be5:569"
         },
         "hash_depois": {
-          "aluno_eventos_progresso": "7343917369fdb85440a9463916e56ed9:569"
+          "aluno_eventos_progresso": "7b2fb897346506930369feab8e0c1be5:569"
         }
       }
     },
@@ -2908,10 +2956,10 @@
         "tabelas_inalteradas": true,
         "integridade": "ok",
         "hash_antes": {
-          "escolas": "7c725cecda726c808d20f91d9e2f4b77:7"
+          "escolas": "ee92ac8d7b17b789ca8c351803600c61:7"
         },
         "hash_depois": {
-          "escolas": "7c725cecda726c808d20f91d9e2f4b77:7"
+          "escolas": "ee92ac8d7b17b789ca8c351803600c61:7"
         }
       }
     },
@@ -2932,10 +2980,258 @@
         "tabelas_inalteradas": true,
         "integridade": "ok",
         "hash_antes": {
-          "escolas": "7c725cecda726c808d20f91d9e2f4b77:7"
+          "escolas": "ee92ac8d7b17b789ca8c351803600c61:7"
         },
         "hash_depois": {
-          "escolas": "7c725cecda726c808d20f91d9e2f4b77:7"
+          "escolas": "ee92ac8d7b17b789ca8c351803600c61:7"
+        }
+      }
+    },
+    {
+      "id": "T.escolas.coluna_backoffice.status",
+      "camada": "banco",
+      "superficie": "tabela com tenant",
+      "alvo": "escolas",
+      "persona": "coordA",
+      "operacao": "UPDATE status da própria escola (coluna do backoffice)",
+      "esperado": "negado",
+      "observado": "permitido",
+      "prova": {
+        "linhas": 1,
+        "sem_rls": {
+          "linhas": 1
+        },
+        "tabelas_inalteradas": false,
+        "integridade": "ok",
+        "hash_antes": {
+          "escolas": "ee92ac8d7b17b789ca8c351803600c61:7"
+        },
+        "hash_depois": {
+          "escolas": "a0ef709ba6b4cef6c3aaed8ed883e74d:7"
+        }
+      },
+      "achado": "E2-F7-ESCOLAS"
+    },
+    {
+      "id": "T.escolas.coluna_backoffice.plano",
+      "camada": "banco",
+      "superficie": "tabela com tenant",
+      "alvo": "escolas",
+      "persona": "coordA",
+      "operacao": "UPDATE plano da própria escola (coluna do backoffice)",
+      "esperado": "negado",
+      "observado": "permitido",
+      "prova": {
+        "linhas": 1,
+        "sem_rls": {
+          "linhas": 1
+        },
+        "tabelas_inalteradas": false,
+        "integridade": "ok",
+        "hash_antes": {
+          "escolas": "ee92ac8d7b17b789ca8c351803600c61:7"
+        },
+        "hash_depois": {
+          "escolas": "68e831cb7d8ef6aa19bb74053776731b:7"
+        }
+      },
+      "achado": "E2-F7-ESCOLAS"
+    },
+    {
+      "id": "T.escolas.coluna_backoffice.limite_alunos",
+      "camada": "banco",
+      "superficie": "tabela com tenant",
+      "alvo": "escolas",
+      "persona": "coordA",
+      "operacao": "UPDATE limite_alunos da própria escola (coluna do backoffice)",
+      "esperado": "negado",
+      "observado": "permitido",
+      "prova": {
+        "linhas": 1,
+        "sem_rls": {
+          "linhas": 1
+        },
+        "tabelas_inalteradas": false,
+        "integridade": "ok",
+        "hash_antes": {
+          "escolas": "ee92ac8d7b17b789ca8c351803600c61:7"
+        },
+        "hash_depois": {
+          "escolas": "41ae0171bc422c15deebcf2d96d2748a:7"
+        }
+      },
+      "achado": "E2-F7-ESCOLAS"
+    },
+    {
+      "id": "T.escolas.coluna_backoffice.slug",
+      "camada": "banco",
+      "superficie": "tabela com tenant",
+      "alvo": "escolas",
+      "persona": "coordA",
+      "operacao": "UPDATE slug da própria escola (coluna do backoffice)",
+      "esperado": "negado",
+      "observado": "permitido",
+      "prova": {
+        "linhas": 1,
+        "sem_rls": {
+          "linhas": 1
+        },
+        "tabelas_inalteradas": false,
+        "integridade": "ok",
+        "hash_antes": {
+          "escolas": "ee92ac8d7b17b789ca8c351803600c61:7"
+        },
+        "hash_depois": {
+          "escolas": "187b9c286ac8d426aa28e9df31eaeddd:7"
+        }
+      },
+      "achado": "E2-F7-ESCOLAS"
+    },
+    {
+      "id": "T.escolas.coluna_backoffice.observacao",
+      "camada": "banco",
+      "superficie": "tabela com tenant",
+      "alvo": "escolas",
+      "persona": "coordA",
+      "operacao": "UPDATE observacao da própria escola (coluna do backoffice)",
+      "esperado": "negado",
+      "observado": "permitido",
+      "prova": {
+        "linhas": 1,
+        "sem_rls": {
+          "linhas": 1
+        },
+        "tabelas_inalteradas": false,
+        "integridade": "ok",
+        "hash_antes": {
+          "escolas": "ee92ac8d7b17b789ca8c351803600c61:7"
+        },
+        "hash_depois": {
+          "escolas": "af6c7d8978ba00c470010e31b20a1c61:7"
+        }
+      },
+      "achado": "E2-F7-ESCOLAS"
+    },
+    {
+      "id": "T.escolas.marca_propria",
+      "camada": "banco",
+      "superficie": "tabela com tenant",
+      "alvo": "escolas",
+      "persona": "coordA",
+      "operacao": "UPDATE nome e cor da própria escola (controle: a tela de marca)",
+      "esperado": "permitido",
+      "observado": "permitido",
+      "prova": {
+        "linhas": 1,
+        "sem_rls": {
+          "linhas": 1
+        },
+        "tabelas_inalteradas": false,
+        "integridade": "ok",
+        "hash_antes": {
+          "escolas": "ee92ac8d7b17b789ca8c351803600c61:7"
+        },
+        "hash_depois": {
+          "escolas": "5837c1fc0b993e26260ddaad662488ff:7"
+        }
+      }
+    },
+    {
+      "id": "A.escolas.colunas_internas.alunoA1",
+      "camada": "banco",
+      "superficie": "colunas do backoffice",
+      "alvo": "escolas",
+      "persona": "alunoA1",
+      "operacao": "SELECT da observação do operador e do contato da própria escola",
+      "esperado": "negado",
+      "observado": "permitido",
+      "prova": {
+        "linhas": 1,
+        "sem_rls": {
+          "linhas": 1
+        },
+        "tabelas_inalteradas": true,
+        "integridade": "ok",
+        "hash_antes": {
+          "escolas": "ee92ac8d7b17b789ca8c351803600c61:7"
+        },
+        "hash_depois": {
+          "escolas": "ee92ac8d7b17b789ca8c351803600c61:7"
+        }
+      },
+      "achado": "E2-F7-ESCOLAS"
+    },
+    {
+      "id": "A.escolas.colunas_internas.respA1",
+      "camada": "banco",
+      "superficie": "colunas do backoffice",
+      "alvo": "escolas",
+      "persona": "respA1",
+      "operacao": "SELECT da observação do operador e do contato da própria escola",
+      "esperado": "negado",
+      "observado": "permitido",
+      "prova": {
+        "linhas": 1,
+        "sem_rls": {
+          "linhas": 1
+        },
+        "tabelas_inalteradas": true,
+        "integridade": "ok",
+        "hash_antes": {
+          "escolas": "ee92ac8d7b17b789ca8c351803600c61:7"
+        },
+        "hash_depois": {
+          "escolas": "ee92ac8d7b17b789ca8c351803600c61:7"
+        }
+      },
+      "achado": "E2-F7-ESCOLAS"
+    },
+    {
+      "id": "A.escolas.colunas_internas.coordA",
+      "camada": "banco",
+      "superficie": "colunas do backoffice",
+      "alvo": "escolas",
+      "persona": "coordA",
+      "operacao": "SELECT da observação do operador e do contato da própria escola",
+      "esperado": "negado",
+      "observado": "permitido",
+      "prova": {
+        "linhas": 1,
+        "sem_rls": {
+          "linhas": 1
+        },
+        "tabelas_inalteradas": true,
+        "integridade": "ok",
+        "hash_antes": {
+          "escolas": "ee92ac8d7b17b789ca8c351803600c61:7"
+        },
+        "hash_depois": {
+          "escolas": "ee92ac8d7b17b789ca8c351803600c61:7"
+        }
+      },
+      "achado": "E2-F7-ESCOLAS"
+    },
+    {
+      "id": "A.escolas.marca.alunoA1",
+      "camada": "banco",
+      "superficie": "colunas do backoffice",
+      "alvo": "escolas",
+      "persona": "alunoA1",
+      "operacao": "SELECT das colunas do embed de meuPerfil (controle)",
+      "esperado": "permitido",
+      "observado": "permitido",
+      "prova": {
+        "linhas": 1,
+        "sem_rls": {
+          "linhas": 1
+        },
+        "tabelas_inalteradas": true,
+        "integridade": "ok",
+        "hash_antes": {
+          "escolas": "ee92ac8d7b17b789ca8c351803600c61:7"
+        },
+        "hash_depois": {
+          "escolas": "ee92ac8d7b17b789ca8c351803600c61:7"
         }
       }
     },
@@ -2956,10 +3252,10 @@
         "tabelas_inalteradas": true,
         "integridade": "ok",
         "hash_antes": {
-          "usuarios": "9a8bd9790a9f28c4fa9f3b1906d0e843:82"
+          "usuarios": "a4c53c6160ec7c6a75a2a5aa7d2a6f64:82"
         },
         "hash_depois": {
-          "usuarios": "9a8bd9790a9f28c4fa9f3b1906d0e843:82"
+          "usuarios": "a4c53c6160ec7c6a75a2a5aa7d2a6f64:82"
         }
       }
     },
@@ -2980,10 +3276,10 @@
         "tabelas_inalteradas": true,
         "integridade": "ok",
         "hash_antes": {
-          "usuarios": "9a8bd9790a9f28c4fa9f3b1906d0e843:82"
+          "usuarios": "a4c53c6160ec7c6a75a2a5aa7d2a6f64:82"
         },
         "hash_depois": {
-          "usuarios": "9a8bd9790a9f28c4fa9f3b1906d0e843:82"
+          "usuarios": "a4c53c6160ec7c6a75a2a5aa7d2a6f64:82"
         }
       }
     },
@@ -3004,10 +3300,10 @@
         "tabelas_inalteradas": true,
         "integridade": "ok",
         "hash_antes": {
-          "internal_admins": "edbbc999be1d1ed545b8d486f71400ce:2"
+          "internal_admins": "b0d4f746a0acbb0c65e23221bcf3bb01:2"
         },
         "hash_depois": {
-          "internal_admins": "edbbc999be1d1ed545b8d486f71400ce:2"
+          "internal_admins": "b0d4f746a0acbb0c65e23221bcf3bb01:2"
         }
       }
     },
@@ -3028,10 +3324,10 @@
         "tabelas_inalteradas": true,
         "integridade": "ok",
         "hash_antes": {
-          "admin_logs": "86c13c96ce84b71403c2d8d35c796cb5:1"
+          "admin_logs": "7872703cefd799b1d39ffaac1f6e8658:1"
         },
         "hash_depois": {
-          "admin_logs": "86c13c96ce84b71403c2d8d35c796cb5:1"
+          "admin_logs": "7872703cefd799b1d39ffaac1f6e8658:1"
         }
       }
     },
@@ -3052,10 +3348,10 @@
         "tabelas_inalteradas": true,
         "integridade": "ok",
         "hash_antes": {
-          "virada_execucoes": "afc44db6d10a5f3afa483f18e62358da:1"
+          "virada_execucoes": "ed657e386e8fa83e7229142744aeba9c:1"
         },
         "hash_depois": {
-          "virada_execucoes": "afc44db6d10a5f3afa483f18e62358da:1"
+          "virada_execucoes": "ed657e386e8fa83e7229142744aeba9c:1"
         }
       }
     },
@@ -3076,10 +3372,10 @@
         "tabelas_inalteradas": true,
         "integridade": "ok",
         "hash_antes": {
-          "internal_admins": "edbbc999be1d1ed545b8d486f71400ce:2"
+          "internal_admins": "b0d4f746a0acbb0c65e23221bcf3bb01:2"
         },
         "hash_depois": {
-          "internal_admins": "edbbc999be1d1ed545b8d486f71400ce:2"
+          "internal_admins": "b0d4f746a0acbb0c65e23221bcf3bb01:2"
         }
       }
     },
@@ -3100,10 +3396,10 @@
         "tabelas_inalteradas": true,
         "integridade": "ok",
         "hash_antes": {
-          "internal_admins": "edbbc999be1d1ed545b8d486f71400ce:2"
+          "internal_admins": "b0d4f746a0acbb0c65e23221bcf3bb01:2"
         },
         "hash_depois": {
-          "internal_admins": "edbbc999be1d1ed545b8d486f71400ce:2"
+          "internal_admins": "b0d4f746a0acbb0c65e23221bcf3bb01:2"
         }
       }
     },
@@ -3124,10 +3420,10 @@
         "tabelas_inalteradas": true,
         "integridade": "ok",
         "hash_antes": {
-          "admin_logs": "86c13c96ce84b71403c2d8d35c796cb5:1"
+          "admin_logs": "7872703cefd799b1d39ffaac1f6e8658:1"
         },
         "hash_depois": {
-          "admin_logs": "86c13c96ce84b71403c2d8d35c796cb5:1"
+          "admin_logs": "7872703cefd799b1d39ffaac1f6e8658:1"
         }
       }
     },
@@ -3148,10 +3444,10 @@
         "tabelas_inalteradas": true,
         "integridade": "ok",
         "hash_antes": {
-          "trilhas": "a83e503baf28b6e184f2b4bbb1e08ca2:4"
+          "trilhas": "b62d388e4828d82db2a3053876d7ca95:4"
         },
         "hash_depois": {
-          "trilhas": "a83e503baf28b6e184f2b4bbb1e08ca2:4"
+          "trilhas": "b62d388e4828d82db2a3053876d7ca95:4"
         }
       }
     },
@@ -3172,10 +3468,10 @@
         "tabelas_inalteradas": true,
         "integridade": "ok",
         "hash_antes": {
-          "trilhas": "a83e503baf28b6e184f2b4bbb1e08ca2:4"
+          "trilhas": "b62d388e4828d82db2a3053876d7ca95:4"
         },
         "hash_depois": {
-          "trilhas": "a83e503baf28b6e184f2b4bbb1e08ca2:4"
+          "trilhas": "b62d388e4828d82db2a3053876d7ca95:4"
         }
       }
     },
@@ -3196,10 +3492,10 @@
         "tabelas_inalteradas": true,
         "integridade": "ok",
         "hash_antes": {
-          "trilhas": "a83e503baf28b6e184f2b4bbb1e08ca2:4"
+          "trilhas": "b62d388e4828d82db2a3053876d7ca95:4"
         },
         "hash_depois": {
-          "trilhas": "a83e503baf28b6e184f2b4bbb1e08ca2:4"
+          "trilhas": "b62d388e4828d82db2a3053876d7ca95:4"
         }
       }
     },
@@ -3436,10 +3732,10 @@
         "tabelas_inalteradas": true,
         "integridade": "ok",
         "hash_antes": {
-          "concursos": "cf8eb94b9208eebf8408596e4c046d17:8"
+          "concursos": "712ca3baf58e54fc9f80954d5f9c8db1:8"
         },
         "hash_depois": {
-          "concursos": "cf8eb94b9208eebf8408596e4c046d17:8"
+          "concursos": "712ca3baf58e54fc9f80954d5f9c8db1:8"
         }
       }
     },
@@ -3460,10 +3756,10 @@
         "tabelas_inalteradas": true,
         "integridade": "ok",
         "hash_antes": {
-          "concursos": "cf8eb94b9208eebf8408596e4c046d17:8"
+          "concursos": "712ca3baf58e54fc9f80954d5f9c8db1:8"
         },
         "hash_depois": {
-          "concursos": "cf8eb94b9208eebf8408596e4c046d17:8"
+          "concursos": "712ca3baf58e54fc9f80954d5f9c8db1:8"
         }
       }
     },
@@ -3484,10 +3780,10 @@
         "tabelas_inalteradas": true,
         "integridade": "ok",
         "hash_antes": {
-          "concursos": "cf8eb94b9208eebf8408596e4c046d17:8"
+          "concursos": "712ca3baf58e54fc9f80954d5f9c8db1:8"
         },
         "hash_depois": {
-          "concursos": "cf8eb94b9208eebf8408596e4c046d17:8"
+          "concursos": "712ca3baf58e54fc9f80954d5f9c8db1:8"
         }
       }
     },
@@ -3580,10 +3876,10 @@
         "tabelas_inalteradas": true,
         "integridade": "ok",
         "hash_antes": {
-          "provas": "6a1600d3272a07d0c41558fd10aab92b:6"
+          "provas": "0b5b3b14fe8f064bbe99a514a0680a04:6"
         },
         "hash_depois": {
-          "provas": "6a1600d3272a07d0c41558fd10aab92b:6"
+          "provas": "0b5b3b14fe8f064bbe99a514a0680a04:6"
         }
       }
     },
@@ -3604,10 +3900,10 @@
         "tabelas_inalteradas": true,
         "integridade": "ok",
         "hash_antes": {
-          "provas": "6a1600d3272a07d0c41558fd10aab92b:6"
+          "provas": "0b5b3b14fe8f064bbe99a514a0680a04:6"
         },
         "hash_depois": {
-          "provas": "6a1600d3272a07d0c41558fd10aab92b:6"
+          "provas": "0b5b3b14fe8f064bbe99a514a0680a04:6"
         }
       }
     },
@@ -3628,10 +3924,10 @@
         "tabelas_inalteradas": true,
         "integridade": "ok",
         "hash_antes": {
-          "provas": "6a1600d3272a07d0c41558fd10aab92b:6"
+          "provas": "0b5b3b14fe8f064bbe99a514a0680a04:6"
         },
         "hash_depois": {
-          "provas": "6a1600d3272a07d0c41558fd10aab92b:6"
+          "provas": "0b5b3b14fe8f064bbe99a514a0680a04:6"
         }
       }
     },
@@ -3652,10 +3948,10 @@
         "tabelas_inalteradas": true,
         "integridade": "ok",
         "hash_antes": {
-          "prova_materias": "3b948b9fa513f5a4b91350efa991ac7c:32"
+          "prova_materias": "cd194f50b19cae96a3179993357a18a6:32"
         },
         "hash_depois": {
-          "prova_materias": "3b948b9fa513f5a4b91350efa991ac7c:32"
+          "prova_materias": "cd194f50b19cae96a3179993357a18a6:32"
         }
       }
     },
@@ -3676,10 +3972,10 @@
         "tabelas_inalteradas": true,
         "integridade": "ok",
         "hash_antes": {
-          "prova_materias": "3b948b9fa513f5a4b91350efa991ac7c:32"
+          "prova_materias": "cd194f50b19cae96a3179993357a18a6:32"
         },
         "hash_depois": {
-          "prova_materias": "3b948b9fa513f5a4b91350efa991ac7c:32"
+          "prova_materias": "cd194f50b19cae96a3179993357a18a6:32"
         }
       }
     },
@@ -3700,10 +3996,10 @@
         "tabelas_inalteradas": true,
         "integridade": "ok",
         "hash_antes": {
-          "prova_materias": "3b948b9fa513f5a4b91350efa991ac7c:32"
+          "prova_materias": "cd194f50b19cae96a3179993357a18a6:32"
         },
         "hash_depois": {
-          "prova_materias": "3b948b9fa513f5a4b91350efa991ac7c:32"
+          "prova_materias": "cd194f50b19cae96a3179993357a18a6:32"
         }
       }
     },
@@ -3724,10 +4020,10 @@
         "tabelas_inalteradas": true,
         "integridade": "ok",
         "hash_antes": {
-          "assuntos": "88817d1bb886f721b56ef6a8270dac1d:87"
+          "assuntos": "c7fa837df221b3490772e68742ddba50:87"
         },
         "hash_depois": {
-          "assuntos": "88817d1bb886f721b56ef6a8270dac1d:87"
+          "assuntos": "c7fa837df221b3490772e68742ddba50:87"
         }
       }
     },
@@ -3748,10 +4044,10 @@
         "tabelas_inalteradas": true,
         "integridade": "ok",
         "hash_antes": {
-          "assuntos": "88817d1bb886f721b56ef6a8270dac1d:87"
+          "assuntos": "c7fa837df221b3490772e68742ddba50:87"
         },
         "hash_depois": {
-          "assuntos": "88817d1bb886f721b56ef6a8270dac1d:87"
+          "assuntos": "c7fa837df221b3490772e68742ddba50:87"
         }
       }
     },
@@ -3772,10 +4068,10 @@
         "tabelas_inalteradas": true,
         "integridade": "ok",
         "hash_antes": {
-          "assuntos": "88817d1bb886f721b56ef6a8270dac1d:87"
+          "assuntos": "c7fa837df221b3490772e68742ddba50:87"
         },
         "hash_depois": {
-          "assuntos": "88817d1bb886f721b56ef6a8270dac1d:87"
+          "assuntos": "c7fa837df221b3490772e68742ddba50:87"
         }
       }
     },
@@ -3796,10 +4092,10 @@
         "tabelas_inalteradas": true,
         "integridade": "ok",
         "hash_antes": {
-          "trilhas": "a83e503baf28b6e184f2b4bbb1e08ca2:4"
+          "trilhas": "b62d388e4828d82db2a3053876d7ca95:4"
         },
         "hash_depois": {
-          "trilhas": "a83e503baf28b6e184f2b4bbb1e08ca2:4"
+          "trilhas": "b62d388e4828d82db2a3053876d7ca95:4"
         }
       }
     },
@@ -3820,10 +4116,10 @@
         "tabelas_inalteradas": true,
         "integridade": "ok",
         "hash_antes": {
-          "alunos": "85e37ce5b6330c71e1242548e661f090:68"
+          "alunos": "5d78b41d4862831fcd055cbabf6ee735:68"
         },
         "hash_depois": {
-          "alunos": "85e37ce5b6330c71e1242548e661f090:68"
+          "alunos": "5d78b41d4862831fcd055cbabf6ee735:68"
         }
       }
     },
@@ -3844,10 +4140,10 @@
         "tabelas_inalteradas": true,
         "integridade": "ok",
         "hash_antes": {
-          "registros_estudo": "305fd225e8ab680b573a2aed162bf8ea:282"
+          "registros_estudo": "51ea000a69d793c47b2ab88e8b750730:282"
         },
         "hash_depois": {
-          "registros_estudo": "305fd225e8ab680b573a2aed162bf8ea:282"
+          "registros_estudo": "51ea000a69d793c47b2ab88e8b750730:282"
         }
       }
     },
@@ -3868,10 +4164,10 @@
         "tabelas_inalteradas": true,
         "integridade": "ok",
         "hash_antes": {
-          "metas": "635411f665b590d6a0eca97e69438d4f:77"
+          "metas": "42705b7cd19363596092adf46d1dc106:77"
         },
         "hash_depois": {
-          "metas": "635411f665b590d6a0eca97e69438d4f:77"
+          "metas": "42705b7cd19363596092adf46d1dc106:77"
         }
       }
     },
@@ -3892,10 +4188,10 @@
         "tabelas_inalteradas": true,
         "integridade": "ok",
         "hash_antes": {
-          "meta_atividades": "af89ebb168e249523854ee9e3a21c6c2:353"
+          "meta_atividades": "86c2b393e78a4d5d7b4de30b8c11961a:353"
         },
         "hash_depois": {
-          "meta_atividades": "af89ebb168e249523854ee9e3a21c6c2:353"
+          "meta_atividades": "86c2b393e78a4d5d7b4de30b8c11961a:353"
         }
       }
     },
@@ -3916,10 +4212,10 @@
         "tabelas_inalteradas": true,
         "integridade": "ok",
         "hash_antes": {
-          "simulados": "a6516f69a774c03d3698b03c00068583:38"
+          "simulados": "0f1fcd954ffa7be58924196d3ddb966b:38"
         },
         "hash_depois": {
-          "simulados": "a6516f69a774c03d3698b03c00068583:38"
+          "simulados": "0f1fcd954ffa7be58924196d3ddb966b:38"
         }
       }
     },
@@ -3940,10 +4236,10 @@
         "tabelas_inalteradas": true,
         "integridade": "ok",
         "hash_antes": {
-          "aluno_onboarding": "4f3730da7226e466ccea2f43e6629321:3"
+          "aluno_onboarding": "147d94d704d96341b12e396ff1e20ff8:3"
         },
         "hash_depois": {
-          "aluno_onboarding": "4f3730da7226e466ccea2f43e6629321:3"
+          "aluno_onboarding": "147d94d704d96341b12e396ff1e20ff8:3"
         }
       }
     },
@@ -3964,10 +4260,10 @@
         "tabelas_inalteradas": true,
         "integridade": "ok",
         "hash_antes": {
-          "usuarios": "9a8bd9790a9f28c4fa9f3b1906d0e843:82"
+          "usuarios": "a4c53c6160ec7c6a75a2a5aa7d2a6f64:82"
         },
         "hash_depois": {
-          "usuarios": "9a8bd9790a9f28c4fa9f3b1906d0e843:82"
+          "usuarios": "a4c53c6160ec7c6a75a2a5aa7d2a6f64:82"
         }
       }
     },
@@ -3988,10 +4284,10 @@
         "tabelas_inalteradas": true,
         "integridade": "ok",
         "hash_antes": {
-          "vinculos_responsaveis": "611b81cd366c8c9253de0e1499c0970d:4"
+          "vinculos_responsaveis": "60c8ae6b1fdb532078ad32dab20aeb54:4"
         },
         "hash_depois": {
-          "vinculos_responsaveis": "611b81cd366c8c9253de0e1499c0970d:4"
+          "vinculos_responsaveis": "60c8ae6b1fdb532078ad32dab20aeb54:4"
         }
       }
     },
@@ -4012,10 +4308,10 @@
         "tabelas_inalteradas": true,
         "integridade": "ok",
         "hash_antes": {
-          "consentimentos": "8852389b85dad31bc8db8b9bac948907:4"
+          "consentimentos": "2f462b71091097b30bb12d46fdd1955e:4"
         },
         "hash_depois": {
-          "consentimentos": "8852389b85dad31bc8db8b9bac948907:4"
+          "consentimentos": "2f462b71091097b30bb12d46fdd1955e:4"
         }
       }
     },
@@ -4036,10 +4332,10 @@
         "tabelas_inalteradas": true,
         "integridade": "ok",
         "hash_antes": {
-          "logs_acesso": "e8a8b9fdbe0d80b48ca471ef07e49ef7:2"
+          "logs_acesso": "83613035e8a2471f0649a53622498c00:2"
         },
         "hash_depois": {
-          "logs_acesso": "e8a8b9fdbe0d80b48ca471ef07e49ef7:2"
+          "logs_acesso": "83613035e8a2471f0649a53622498c00:2"
         }
       }
     },
@@ -4060,10 +4356,10 @@
         "tabelas_inalteradas": true,
         "integridade": "ok",
         "hash_antes": {
-          "registros_estudo": "305fd225e8ab680b573a2aed162bf8ea:282"
+          "registros_estudo": "51ea000a69d793c47b2ab88e8b750730:282"
         },
         "hash_depois": {
-          "registros_estudo": "305fd225e8ab680b573a2aed162bf8ea:282"
+          "registros_estudo": "51ea000a69d793c47b2ab88e8b750730:282"
         }
       }
     },
@@ -4084,12 +4380,12 @@
         "tabelas_inalteradas": true,
         "integridade": "ok",
         "hash_antes": {
-          "meta_atividades": "af89ebb168e249523854ee9e3a21c6c2:353",
-          "aluno_eventos_progresso": "7343917369fdb85440a9463916e56ed9:569"
+          "meta_atividades": "86c2b393e78a4d5d7b4de30b8c11961a:353",
+          "aluno_eventos_progresso": "7b2fb897346506930369feab8e0c1be5:569"
         },
         "hash_depois": {
-          "meta_atividades": "af89ebb168e249523854ee9e3a21c6c2:353",
-          "aluno_eventos_progresso": "7343917369fdb85440a9463916e56ed9:569"
+          "meta_atividades": "86c2b393e78a4d5d7b4de30b8c11961a:353",
+          "aluno_eventos_progresso": "7b2fb897346506930369feab8e0c1be5:569"
         }
       }
     },
@@ -4110,10 +4406,10 @@
         "tabelas_inalteradas": true,
         "integridade": "ok",
         "hash_antes": {
-          "registros_estudo": "305fd225e8ab680b573a2aed162bf8ea:282"
+          "registros_estudo": "51ea000a69d793c47b2ab88e8b750730:282"
         },
         "hash_depois": {
-          "registros_estudo": "305fd225e8ab680b573a2aed162bf8ea:282"
+          "registros_estudo": "51ea000a69d793c47b2ab88e8b750730:282"
         }
       }
     },
@@ -4134,10 +4430,10 @@
         "tabelas_inalteradas": true,
         "integridade": "ok",
         "hash_antes": {
-          "registros_estudo": "305fd225e8ab680b573a2aed162bf8ea:282"
+          "registros_estudo": "51ea000a69d793c47b2ab88e8b750730:282"
         },
         "hash_depois": {
-          "registros_estudo": "305fd225e8ab680b573a2aed162bf8ea:282"
+          "registros_estudo": "51ea000a69d793c47b2ab88e8b750730:282"
         }
       }
     },
@@ -4158,12 +4454,12 @@
         "tabelas_inalteradas": true,
         "integridade": "ok",
         "hash_antes": {
-          "registros_estudo": "305fd225e8ab680b573a2aed162bf8ea:282",
-          "aluno_eventos_progresso": "7343917369fdb85440a9463916e56ed9:569"
+          "registros_estudo": "51ea000a69d793c47b2ab88e8b750730:282",
+          "aluno_eventos_progresso": "7b2fb897346506930369feab8e0c1be5:569"
         },
         "hash_depois": {
-          "registros_estudo": "305fd225e8ab680b573a2aed162bf8ea:282",
-          "aluno_eventos_progresso": "7343917369fdb85440a9463916e56ed9:569"
+          "registros_estudo": "51ea000a69d793c47b2ab88e8b750730:282",
+          "aluno_eventos_progresso": "7b2fb897346506930369feab8e0c1be5:569"
         }
       }
     },
@@ -4184,10 +4480,10 @@
         "tabelas_inalteradas": true,
         "integridade": "ok",
         "hash_antes": {
-          "registros_estudo": "305fd225e8ab680b573a2aed162bf8ea:282"
+          "registros_estudo": "51ea000a69d793c47b2ab88e8b750730:282"
         },
         "hash_depois": {
-          "registros_estudo": "305fd225e8ab680b573a2aed162bf8ea:282"
+          "registros_estudo": "51ea000a69d793c47b2ab88e8b750730:282"
         }
       }
     },
@@ -4208,10 +4504,10 @@
         "tabelas_inalteradas": true,
         "integridade": "ok",
         "hash_antes": {
-          "registros_estudo": "305fd225e8ab680b573a2aed162bf8ea:282"
+          "registros_estudo": "51ea000a69d793c47b2ab88e8b750730:282"
         },
         "hash_depois": {
-          "registros_estudo": "305fd225e8ab680b573a2aed162bf8ea:282"
+          "registros_estudo": "51ea000a69d793c47b2ab88e8b750730:282"
         }
       }
     },
@@ -4232,12 +4528,12 @@
         "tabelas_inalteradas": true,
         "integridade": "ok",
         "hash_antes": {
-          "meta_atividades": "af89ebb168e249523854ee9e3a21c6c2:353",
-          "aluno_eventos_progresso": "7343917369fdb85440a9463916e56ed9:569"
+          "meta_atividades": "86c2b393e78a4d5d7b4de30b8c11961a:353",
+          "aluno_eventos_progresso": "7b2fb897346506930369feab8e0c1be5:569"
         },
         "hash_depois": {
-          "meta_atividades": "af89ebb168e249523854ee9e3a21c6c2:353",
-          "aluno_eventos_progresso": "7343917369fdb85440a9463916e56ed9:569"
+          "meta_atividades": "86c2b393e78a4d5d7b4de30b8c11961a:353",
+          "aluno_eventos_progresso": "7b2fb897346506930369feab8e0c1be5:569"
         }
       }
     },
@@ -4258,10 +4554,10 @@
         "tabelas_inalteradas": true,
         "integridade": "ok",
         "hash_antes": {
-          "metas": "635411f665b590d6a0eca97e69438d4f:77"
+          "metas": "42705b7cd19363596092adf46d1dc106:77"
         },
         "hash_depois": {
-          "metas": "635411f665b590d6a0eca97e69438d4f:77"
+          "metas": "42705b7cd19363596092adf46d1dc106:77"
         }
       }
     },
@@ -4282,12 +4578,12 @@
         "tabelas_inalteradas": true,
         "integridade": "ok",
         "hash_antes": {
-          "simulados": "a6516f69a774c03d3698b03c00068583:38",
-          "aluno_eventos_progresso": "7343917369fdb85440a9463916e56ed9:569"
+          "simulados": "0f1fcd954ffa7be58924196d3ddb966b:38",
+          "aluno_eventos_progresso": "7b2fb897346506930369feab8e0c1be5:569"
         },
         "hash_depois": {
-          "simulados": "a6516f69a774c03d3698b03c00068583:38",
-          "aluno_eventos_progresso": "7343917369fdb85440a9463916e56ed9:569"
+          "simulados": "0f1fcd954ffa7be58924196d3ddb966b:38",
+          "aluno_eventos_progresso": "7b2fb897346506930369feab8e0c1be5:569"
         }
       }
     },
@@ -4308,10 +4604,10 @@
         "tabelas_inalteradas": true,
         "integridade": "ok",
         "hash_antes": {
-          "simulados": "a6516f69a774c03d3698b03c00068583:38"
+          "simulados": "0f1fcd954ffa7be58924196d3ddb966b:38"
         },
         "hash_depois": {
-          "simulados": "a6516f69a774c03d3698b03c00068583:38"
+          "simulados": "0f1fcd954ffa7be58924196d3ddb966b:38"
         }
       }
     },
@@ -4332,10 +4628,10 @@
         "tabelas_inalteradas": true,
         "integridade": "ok",
         "hash_antes": {
-          "alunos": "85e37ce5b6330c71e1242548e661f090:68"
+          "alunos": "5d78b41d4862831fcd055cbabf6ee735:68"
         },
         "hash_depois": {
-          "alunos": "85e37ce5b6330c71e1242548e661f090:68"
+          "alunos": "5d78b41d4862831fcd055cbabf6ee735:68"
         }
       }
     },
@@ -4356,10 +4652,10 @@
         "tabelas_inalteradas": true,
         "integridade": "ok",
         "hash_antes": {
-          "aluno_xp_eventos": "9d6622394098fa20e99d858a04b1caa0:7"
+          "aluno_xp_eventos": "3556c867d5cff522de395d06567346cd:7"
         },
         "hash_depois": {
-          "aluno_xp_eventos": "9d6622394098fa20e99d858a04b1caa0:7"
+          "aluno_xp_eventos": "3556c867d5cff522de395d06567346cd:7"
         }
       }
     },
@@ -4380,10 +4676,10 @@
         "tabelas_inalteradas": true,
         "integridade": "ok",
         "hash_antes": {
-          "aluno_eventos_progresso": "7343917369fdb85440a9463916e56ed9:569"
+          "aluno_eventos_progresso": "7b2fb897346506930369feab8e0c1be5:569"
         },
         "hash_depois": {
-          "aluno_eventos_progresso": "7343917369fdb85440a9463916e56ed9:569"
+          "aluno_eventos_progresso": "7b2fb897346506930369feab8e0c1be5:569"
         }
       }
     },
@@ -4401,10 +4697,10 @@
         "tabelas_inalteradas": true,
         "integridade": "ok",
         "hash_antes": {
-          "registros_estudo": "305fd225e8ab680b573a2aed162bf8ea:282"
+          "registros_estudo": "51ea000a69d793c47b2ab88e8b750730:282"
         },
         "hash_depois": {
-          "registros_estudo": "305fd225e8ab680b573a2aed162bf8ea:282"
+          "registros_estudo": "51ea000a69d793c47b2ab88e8b750730:282"
         }
       },
       "nota": "negado = nenhuma linha de outro aluno"
@@ -4426,10 +4722,10 @@
         "tabelas_inalteradas": true,
         "integridade": "ok",
         "hash_antes": {
-          "alunos": "85e37ce5b6330c71e1242548e661f090:68"
+          "alunos": "5d78b41d4862831fcd055cbabf6ee735:68"
         },
         "hash_depois": {
-          "alunos": "85e37ce5b6330c71e1242548e661f090:68"
+          "alunos": "5d78b41d4862831fcd055cbabf6ee735:68"
         }
       }
     },
@@ -4450,10 +4746,10 @@
         "tabelas_inalteradas": true,
         "integridade": "ok",
         "hash_antes": {
-          "alunos": "85e37ce5b6330c71e1242548e661f090:68"
+          "alunos": "5d78b41d4862831fcd055cbabf6ee735:68"
         },
         "hash_depois": {
-          "alunos": "85e37ce5b6330c71e1242548e661f090:68"
+          "alunos": "5d78b41d4862831fcd055cbabf6ee735:68"
         }
       }
     },
@@ -4474,10 +4770,10 @@
         "tabelas_inalteradas": true,
         "integridade": "ok",
         "hash_antes": {
-          "alunos": "85e37ce5b6330c71e1242548e661f090:68"
+          "alunos": "5d78b41d4862831fcd055cbabf6ee735:68"
         },
         "hash_depois": {
-          "alunos": "85e37ce5b6330c71e1242548e661f090:68"
+          "alunos": "5d78b41d4862831fcd055cbabf6ee735:68"
         }
       }
     },
@@ -4498,10 +4794,10 @@
         "tabelas_inalteradas": true,
         "integridade": "ok",
         "hash_antes": {
-          "alunos": "85e37ce5b6330c71e1242548e661f090:68"
+          "alunos": "5d78b41d4862831fcd055cbabf6ee735:68"
         },
         "hash_depois": {
-          "alunos": "85e37ce5b6330c71e1242548e661f090:68"
+          "alunos": "5d78b41d4862831fcd055cbabf6ee735:68"
         }
       }
     },
@@ -4522,10 +4818,10 @@
         "tabelas_inalteradas": true,
         "integridade": "ok",
         "hash_antes": {
-          "registros_estudo": "305fd225e8ab680b573a2aed162bf8ea:282"
+          "registros_estudo": "51ea000a69d793c47b2ab88e8b750730:282"
         },
         "hash_depois": {
-          "registros_estudo": "305fd225e8ab680b573a2aed162bf8ea:282"
+          "registros_estudo": "51ea000a69d793c47b2ab88e8b750730:282"
         }
       }
     },
@@ -4546,10 +4842,10 @@
         "tabelas_inalteradas": true,
         "integridade": "ok",
         "hash_antes": {
-          "registros_estudo": "305fd225e8ab680b573a2aed162bf8ea:282"
+          "registros_estudo": "51ea000a69d793c47b2ab88e8b750730:282"
         },
         "hash_depois": {
-          "registros_estudo": "305fd225e8ab680b573a2aed162bf8ea:282"
+          "registros_estudo": "51ea000a69d793c47b2ab88e8b750730:282"
         }
       }
     },
@@ -4570,10 +4866,10 @@
         "tabelas_inalteradas": true,
         "integridade": "ok",
         "hash_antes": {
-          "registros_estudo": "305fd225e8ab680b573a2aed162bf8ea:282"
+          "registros_estudo": "51ea000a69d793c47b2ab88e8b750730:282"
         },
         "hash_depois": {
-          "registros_estudo": "305fd225e8ab680b573a2aed162bf8ea:282"
+          "registros_estudo": "51ea000a69d793c47b2ab88e8b750730:282"
         }
       }
     },
@@ -4594,10 +4890,10 @@
         "tabelas_inalteradas": true,
         "integridade": "ok",
         "hash_antes": {
-          "registros_estudo": "305fd225e8ab680b573a2aed162bf8ea:282"
+          "registros_estudo": "51ea000a69d793c47b2ab88e8b750730:282"
         },
         "hash_depois": {
-          "registros_estudo": "305fd225e8ab680b573a2aed162bf8ea:282"
+          "registros_estudo": "51ea000a69d793c47b2ab88e8b750730:282"
         }
       }
     },
@@ -4618,10 +4914,10 @@
         "tabelas_inalteradas": true,
         "integridade": "ok",
         "hash_antes": {
-          "metas": "635411f665b590d6a0eca97e69438d4f:77"
+          "metas": "42705b7cd19363596092adf46d1dc106:77"
         },
         "hash_depois": {
-          "metas": "635411f665b590d6a0eca97e69438d4f:77"
+          "metas": "42705b7cd19363596092adf46d1dc106:77"
         }
       }
     },
@@ -4642,10 +4938,10 @@
         "tabelas_inalteradas": true,
         "integridade": "ok",
         "hash_antes": {
-          "metas": "635411f665b590d6a0eca97e69438d4f:77"
+          "metas": "42705b7cd19363596092adf46d1dc106:77"
         },
         "hash_depois": {
-          "metas": "635411f665b590d6a0eca97e69438d4f:77"
+          "metas": "42705b7cd19363596092adf46d1dc106:77"
         }
       }
     },
@@ -4666,10 +4962,10 @@
         "tabelas_inalteradas": true,
         "integridade": "ok",
         "hash_antes": {
-          "metas": "635411f665b590d6a0eca97e69438d4f:77"
+          "metas": "42705b7cd19363596092adf46d1dc106:77"
         },
         "hash_depois": {
-          "metas": "635411f665b590d6a0eca97e69438d4f:77"
+          "metas": "42705b7cd19363596092adf46d1dc106:77"
         }
       }
     },
@@ -4690,10 +4986,10 @@
         "tabelas_inalteradas": true,
         "integridade": "ok",
         "hash_antes": {
-          "metas": "635411f665b590d6a0eca97e69438d4f:77"
+          "metas": "42705b7cd19363596092adf46d1dc106:77"
         },
         "hash_depois": {
-          "metas": "635411f665b590d6a0eca97e69438d4f:77"
+          "metas": "42705b7cd19363596092adf46d1dc106:77"
         }
       }
     },
@@ -4714,10 +5010,10 @@
         "tabelas_inalteradas": true,
         "integridade": "ok",
         "hash_antes": {
-          "simulados": "a6516f69a774c03d3698b03c00068583:38"
+          "simulados": "0f1fcd954ffa7be58924196d3ddb966b:38"
         },
         "hash_depois": {
-          "simulados": "a6516f69a774c03d3698b03c00068583:38"
+          "simulados": "0f1fcd954ffa7be58924196d3ddb966b:38"
         }
       }
     },
@@ -4738,10 +5034,10 @@
         "tabelas_inalteradas": true,
         "integridade": "ok",
         "hash_antes": {
-          "simulados": "a6516f69a774c03d3698b03c00068583:38"
+          "simulados": "0f1fcd954ffa7be58924196d3ddb966b:38"
         },
         "hash_depois": {
-          "simulados": "a6516f69a774c03d3698b03c00068583:38"
+          "simulados": "0f1fcd954ffa7be58924196d3ddb966b:38"
         }
       }
     },
@@ -4762,10 +5058,10 @@
         "tabelas_inalteradas": true,
         "integridade": "ok",
         "hash_antes": {
-          "simulados": "a6516f69a774c03d3698b03c00068583:38"
+          "simulados": "0f1fcd954ffa7be58924196d3ddb966b:38"
         },
         "hash_depois": {
-          "simulados": "a6516f69a774c03d3698b03c00068583:38"
+          "simulados": "0f1fcd954ffa7be58924196d3ddb966b:38"
         }
       }
     },
@@ -4786,10 +5082,10 @@
         "tabelas_inalteradas": true,
         "integridade": "ok",
         "hash_antes": {
-          "simulados": "a6516f69a774c03d3698b03c00068583:38"
+          "simulados": "0f1fcd954ffa7be58924196d3ddb966b:38"
         },
         "hash_depois": {
-          "simulados": "a6516f69a774c03d3698b03c00068583:38"
+          "simulados": "0f1fcd954ffa7be58924196d3ddb966b:38"
         }
       }
     },
@@ -4810,10 +5106,10 @@
         "tabelas_inalteradas": true,
         "integridade": "ok",
         "hash_antes": {
-          "registros_estudo": "305fd225e8ab680b573a2aed162bf8ea:282"
+          "registros_estudo": "51ea000a69d793c47b2ab88e8b750730:282"
         },
         "hash_depois": {
-          "registros_estudo": "305fd225e8ab680b573a2aed162bf8ea:282"
+          "registros_estudo": "51ea000a69d793c47b2ab88e8b750730:282"
         }
       }
     },
@@ -4834,10 +5130,10 @@
         "tabelas_inalteradas": true,
         "integridade": "ok",
         "hash_antes": {
-          "registros_estudo": "305fd225e8ab680b573a2aed162bf8ea:282"
+          "registros_estudo": "51ea000a69d793c47b2ab88e8b750730:282"
         },
         "hash_depois": {
-          "registros_estudo": "305fd225e8ab680b573a2aed162bf8ea:282"
+          "registros_estudo": "51ea000a69d793c47b2ab88e8b750730:282"
         }
       }
     },
@@ -4858,10 +5154,10 @@
         "tabelas_inalteradas": true,
         "integridade": "ok",
         "hash_antes": {
-          "meta_atividades": "af89ebb168e249523854ee9e3a21c6c2:353"
+          "meta_atividades": "86c2b393e78a4d5d7b4de30b8c11961a:353"
         },
         "hash_depois": {
-          "meta_atividades": "af89ebb168e249523854ee9e3a21c6c2:353"
+          "meta_atividades": "86c2b393e78a4d5d7b4de30b8c11961a:353"
         }
       }
     },
@@ -4882,10 +5178,10 @@
         "tabelas_inalteradas": true,
         "integridade": "ok",
         "hash_antes": {
-          "vinculos_responsaveis": "611b81cd366c8c9253de0e1499c0970d:4"
+          "vinculos_responsaveis": "60c8ae6b1fdb532078ad32dab20aeb54:4"
         },
         "hash_depois": {
-          "vinculos_responsaveis": "611b81cd366c8c9253de0e1499c0970d:4"
+          "vinculos_responsaveis": "60c8ae6b1fdb532078ad32dab20aeb54:4"
         }
       }
     },
@@ -4906,10 +5202,10 @@
         "tabelas_inalteradas": true,
         "integridade": "ok",
         "hash_antes": {
-          "alunos": "85e37ce5b6330c71e1242548e661f090:68"
+          "alunos": "5d78b41d4862831fcd055cbabf6ee735:68"
         },
         "hash_depois": {
-          "alunos": "85e37ce5b6330c71e1242548e661f090:68"
+          "alunos": "5d78b41d4862831fcd055cbabf6ee735:68"
         }
       }
     },
@@ -4930,10 +5226,10 @@
         "tabelas_inalteradas": true,
         "integridade": "ok",
         "hash_antes": {
-          "config_escola": "b3e818dcedc8a9ad2f86cd36eecbd456:3"
+          "config_escola": "9bca714193eb4929ad155ee62f379963:3"
         },
         "hash_depois": {
-          "config_escola": "b3e818dcedc8a9ad2f86cd36eecbd456:3"
+          "config_escola": "9bca714193eb4929ad155ee62f379963:3"
         }
       },
       "nota": "comportamento registrado: config_escola_select só exige escola_id = tenant, para qualquer papel; revogar o vínculo não desliga a conta"
@@ -4952,10 +5248,10 @@
         "tabelas_inalteradas": true,
         "integridade": "ok",
         "hash_antes": {
-          "escolas": "7c725cecda726c808d20f91d9e2f4b77:7"
+          "escolas": "ee92ac8d7b17b789ca8c351803600c61:7"
         },
         "hash_depois": {
-          "escolas": "7c725cecda726c808d20f91d9e2f4b77:7"
+          "escolas": "ee92ac8d7b17b789ca8c351803600c61:7"
         }
       }
     },
@@ -4973,10 +5269,10 @@
         "tabelas_inalteradas": true,
         "integridade": "ok",
         "hash_antes": {
-          "escolas": "7c725cecda726c808d20f91d9e2f4b77:7"
+          "escolas": "ee92ac8d7b17b789ca8c351803600c61:7"
         },
         "hash_depois": {
-          "escolas": "7c725cecda726c808d20f91d9e2f4b77:7"
+          "escolas": "ee92ac8d7b17b789ca8c351803600c61:7"
         }
       }
     },
@@ -4994,10 +5290,10 @@
         "tabelas_inalteradas": true,
         "integridade": "ok",
         "hash_antes": {
-          "escolas": "7c725cecda726c808d20f91d9e2f4b77:7"
+          "escolas": "ee92ac8d7b17b789ca8c351803600c61:7"
         },
         "hash_depois": {
-          "escolas": "7c725cecda726c808d20f91d9e2f4b77:7"
+          "escolas": "ee92ac8d7b17b789ca8c351803600c61:7"
         }
       }
     },
@@ -5015,12 +5311,12 @@
         "tabelas_inalteradas": true,
         "integridade": "ok",
         "hash_antes": {
-          "escolas": "7c725cecda726c808d20f91d9e2f4b77:7",
-          "admin_logs": "86c13c96ce84b71403c2d8d35c796cb5:1"
+          "escolas": "ee92ac8d7b17b789ca8c351803600c61:7",
+          "admin_logs": "7872703cefd799b1d39ffaac1f6e8658:1"
         },
         "hash_depois": {
-          "escolas": "7c725cecda726c808d20f91d9e2f4b77:7",
-          "admin_logs": "86c13c96ce84b71403c2d8d35c796cb5:1"
+          "escolas": "ee92ac8d7b17b789ca8c351803600c61:7",
+          "admin_logs": "7872703cefd799b1d39ffaac1f6e8658:1"
         }
       }
     },
@@ -5038,12 +5334,12 @@
         "tabelas_inalteradas": true,
         "integridade": "ok",
         "hash_antes": {
-          "escolas": "7c725cecda726c808d20f91d9e2f4b77:7",
-          "admin_logs": "86c13c96ce84b71403c2d8d35c796cb5:1"
+          "escolas": "ee92ac8d7b17b789ca8c351803600c61:7",
+          "admin_logs": "7872703cefd799b1d39ffaac1f6e8658:1"
         },
         "hash_depois": {
-          "escolas": "7c725cecda726c808d20f91d9e2f4b77:7",
-          "admin_logs": "86c13c96ce84b71403c2d8d35c796cb5:1"
+          "escolas": "ee92ac8d7b17b789ca8c351803600c61:7",
+          "admin_logs": "7872703cefd799b1d39ffaac1f6e8658:1"
         }
       }
     },
@@ -5061,12 +5357,12 @@
         "tabelas_inalteradas": true,
         "integridade": "ok",
         "hash_antes": {
-          "escolas": "7c725cecda726c808d20f91d9e2f4b77:7",
-          "admin_logs": "86c13c96ce84b71403c2d8d35c796cb5:1"
+          "escolas": "ee92ac8d7b17b789ca8c351803600c61:7",
+          "admin_logs": "7872703cefd799b1d39ffaac1f6e8658:1"
         },
         "hash_depois": {
-          "escolas": "7c725cecda726c808d20f91d9e2f4b77:7",
-          "admin_logs": "86c13c96ce84b71403c2d8d35c796cb5:1"
+          "escolas": "ee92ac8d7b17b789ca8c351803600c61:7",
+          "admin_logs": "7872703cefd799b1d39ffaac1f6e8658:1"
         }
       }
     },
@@ -5084,10 +5380,10 @@
         "tabelas_inalteradas": true,
         "integridade": "ok",
         "hash_antes": {
-          "admin_logs": "86c13c96ce84b71403c2d8d35c796cb5:1"
+          "admin_logs": "7872703cefd799b1d39ffaac1f6e8658:1"
         },
         "hash_depois": {
-          "admin_logs": "86c13c96ce84b71403c2d8d35c796cb5:1"
+          "admin_logs": "7872703cefd799b1d39ffaac1f6e8658:1"
         }
       }
     },
@@ -5105,10 +5401,10 @@
         "tabelas_inalteradas": true,
         "integridade": "ok",
         "hash_antes": {
-          "escolas": "7c725cecda726c808d20f91d9e2f4b77:7"
+          "escolas": "ee92ac8d7b17b789ca8c351803600c61:7"
         },
         "hash_depois": {
-          "escolas": "7c725cecda726c808d20f91d9e2f4b77:7"
+          "escolas": "ee92ac8d7b17b789ca8c351803600c61:7"
         }
       }
     },
@@ -5126,10 +5422,10 @@
         "tabelas_inalteradas": true,
         "integridade": "ok",
         "hash_antes": {
-          "escolas": "7c725cecda726c808d20f91d9e2f4b77:7"
+          "escolas": "ee92ac8d7b17b789ca8c351803600c61:7"
         },
         "hash_depois": {
-          "escolas": "7c725cecda726c808d20f91d9e2f4b77:7"
+          "escolas": "ee92ac8d7b17b789ca8c351803600c61:7"
         }
       }
     },
@@ -5147,10 +5443,10 @@
         "tabelas_inalteradas": true,
         "integridade": "ok",
         "hash_antes": {
-          "escolas": "7c725cecda726c808d20f91d9e2f4b77:7"
+          "escolas": "ee92ac8d7b17b789ca8c351803600c61:7"
         },
         "hash_depois": {
-          "escolas": "7c725cecda726c808d20f91d9e2f4b77:7"
+          "escolas": "ee92ac8d7b17b789ca8c351803600c61:7"
         }
       }
     },
@@ -5168,10 +5464,10 @@
         "tabelas_inalteradas": true,
         "integridade": "ok",
         "hash_antes": {
-          "escolas": "7c725cecda726c808d20f91d9e2f4b77:7"
+          "escolas": "ee92ac8d7b17b789ca8c351803600c61:7"
         },
         "hash_depois": {
-          "escolas": "7c725cecda726c808d20f91d9e2f4b77:7"
+          "escolas": "ee92ac8d7b17b789ca8c351803600c61:7"
         }
       }
     },
@@ -5189,12 +5485,12 @@
         "tabelas_inalteradas": true,
         "integridade": "ok",
         "hash_antes": {
-          "escolas": "7c725cecda726c808d20f91d9e2f4b77:7",
-          "admin_logs": "86c13c96ce84b71403c2d8d35c796cb5:1"
+          "escolas": "ee92ac8d7b17b789ca8c351803600c61:7",
+          "admin_logs": "7872703cefd799b1d39ffaac1f6e8658:1"
         },
         "hash_depois": {
-          "escolas": "7c725cecda726c808d20f91d9e2f4b77:7",
-          "admin_logs": "86c13c96ce84b71403c2d8d35c796cb5:1"
+          "escolas": "ee92ac8d7b17b789ca8c351803600c61:7",
+          "admin_logs": "7872703cefd799b1d39ffaac1f6e8658:1"
         }
       }
     },
@@ -5212,12 +5508,12 @@
         "tabelas_inalteradas": true,
         "integridade": "ok",
         "hash_antes": {
-          "escolas": "7c725cecda726c808d20f91d9e2f4b77:7",
-          "admin_logs": "86c13c96ce84b71403c2d8d35c796cb5:1"
+          "escolas": "ee92ac8d7b17b789ca8c351803600c61:7",
+          "admin_logs": "7872703cefd799b1d39ffaac1f6e8658:1"
         },
         "hash_depois": {
-          "escolas": "7c725cecda726c808d20f91d9e2f4b77:7",
-          "admin_logs": "86c13c96ce84b71403c2d8d35c796cb5:1"
+          "escolas": "ee92ac8d7b17b789ca8c351803600c61:7",
+          "admin_logs": "7872703cefd799b1d39ffaac1f6e8658:1"
         }
       }
     },
@@ -5235,12 +5531,12 @@
         "tabelas_inalteradas": true,
         "integridade": "ok",
         "hash_antes": {
-          "escolas": "7c725cecda726c808d20f91d9e2f4b77:7",
-          "admin_logs": "86c13c96ce84b71403c2d8d35c796cb5:1"
+          "escolas": "ee92ac8d7b17b789ca8c351803600c61:7",
+          "admin_logs": "7872703cefd799b1d39ffaac1f6e8658:1"
         },
         "hash_depois": {
-          "escolas": "7c725cecda726c808d20f91d9e2f4b77:7",
-          "admin_logs": "86c13c96ce84b71403c2d8d35c796cb5:1"
+          "escolas": "ee92ac8d7b17b789ca8c351803600c61:7",
+          "admin_logs": "7872703cefd799b1d39ffaac1f6e8658:1"
         }
       }
     },
@@ -5258,10 +5554,10 @@
         "tabelas_inalteradas": true,
         "integridade": "ok",
         "hash_antes": {
-          "admin_logs": "86c13c96ce84b71403c2d8d35c796cb5:1"
+          "admin_logs": "7872703cefd799b1d39ffaac1f6e8658:1"
         },
         "hash_depois": {
-          "admin_logs": "86c13c96ce84b71403c2d8d35c796cb5:1"
+          "admin_logs": "7872703cefd799b1d39ffaac1f6e8658:1"
         }
       }
     },
@@ -5279,10 +5575,10 @@
         "tabelas_inalteradas": true,
         "integridade": "ok",
         "hash_antes": {
-          "escolas": "7c725cecda726c808d20f91d9e2f4b77:7"
+          "escolas": "ee92ac8d7b17b789ca8c351803600c61:7"
         },
         "hash_depois": {
-          "escolas": "7c725cecda726c808d20f91d9e2f4b77:7"
+          "escolas": "ee92ac8d7b17b789ca8c351803600c61:7"
         }
       }
     },
@@ -5300,10 +5596,10 @@
         "tabelas_inalteradas": true,
         "integridade": "ok",
         "hash_antes": {
-          "escolas": "7c725cecda726c808d20f91d9e2f4b77:7"
+          "escolas": "ee92ac8d7b17b789ca8c351803600c61:7"
         },
         "hash_depois": {
-          "escolas": "7c725cecda726c808d20f91d9e2f4b77:7"
+          "escolas": "ee92ac8d7b17b789ca8c351803600c61:7"
         }
       }
     },
@@ -5321,10 +5617,10 @@
         "tabelas_inalteradas": true,
         "integridade": "ok",
         "hash_antes": {
-          "escolas": "7c725cecda726c808d20f91d9e2f4b77:7"
+          "escolas": "ee92ac8d7b17b789ca8c351803600c61:7"
         },
         "hash_depois": {
-          "escolas": "7c725cecda726c808d20f91d9e2f4b77:7"
+          "escolas": "ee92ac8d7b17b789ca8c351803600c61:7"
         }
       }
     },
@@ -5342,10 +5638,10 @@
         "tabelas_inalteradas": true,
         "integridade": "ok",
         "hash_antes": {
-          "escolas": "7c725cecda726c808d20f91d9e2f4b77:7"
+          "escolas": "ee92ac8d7b17b789ca8c351803600c61:7"
         },
         "hash_depois": {
-          "escolas": "7c725cecda726c808d20f91d9e2f4b77:7"
+          "escolas": "ee92ac8d7b17b789ca8c351803600c61:7"
         }
       }
     },
@@ -5363,12 +5659,12 @@
         "tabelas_inalteradas": true,
         "integridade": "ok",
         "hash_antes": {
-          "escolas": "7c725cecda726c808d20f91d9e2f4b77:7",
-          "admin_logs": "86c13c96ce84b71403c2d8d35c796cb5:1"
+          "escolas": "ee92ac8d7b17b789ca8c351803600c61:7",
+          "admin_logs": "7872703cefd799b1d39ffaac1f6e8658:1"
         },
         "hash_depois": {
-          "escolas": "7c725cecda726c808d20f91d9e2f4b77:7",
-          "admin_logs": "86c13c96ce84b71403c2d8d35c796cb5:1"
+          "escolas": "ee92ac8d7b17b789ca8c351803600c61:7",
+          "admin_logs": "7872703cefd799b1d39ffaac1f6e8658:1"
         }
       }
     },
@@ -5386,12 +5682,12 @@
         "tabelas_inalteradas": true,
         "integridade": "ok",
         "hash_antes": {
-          "escolas": "7c725cecda726c808d20f91d9e2f4b77:7",
-          "admin_logs": "86c13c96ce84b71403c2d8d35c796cb5:1"
+          "escolas": "ee92ac8d7b17b789ca8c351803600c61:7",
+          "admin_logs": "7872703cefd799b1d39ffaac1f6e8658:1"
         },
         "hash_depois": {
-          "escolas": "7c725cecda726c808d20f91d9e2f4b77:7",
-          "admin_logs": "86c13c96ce84b71403c2d8d35c796cb5:1"
+          "escolas": "ee92ac8d7b17b789ca8c351803600c61:7",
+          "admin_logs": "7872703cefd799b1d39ffaac1f6e8658:1"
         }
       }
     },
@@ -5409,12 +5705,12 @@
         "tabelas_inalteradas": true,
         "integridade": "ok",
         "hash_antes": {
-          "escolas": "7c725cecda726c808d20f91d9e2f4b77:7",
-          "admin_logs": "86c13c96ce84b71403c2d8d35c796cb5:1"
+          "escolas": "ee92ac8d7b17b789ca8c351803600c61:7",
+          "admin_logs": "7872703cefd799b1d39ffaac1f6e8658:1"
         },
         "hash_depois": {
-          "escolas": "7c725cecda726c808d20f91d9e2f4b77:7",
-          "admin_logs": "86c13c96ce84b71403c2d8d35c796cb5:1"
+          "escolas": "ee92ac8d7b17b789ca8c351803600c61:7",
+          "admin_logs": "7872703cefd799b1d39ffaac1f6e8658:1"
         }
       }
     },
@@ -5432,10 +5728,10 @@
         "tabelas_inalteradas": true,
         "integridade": "ok",
         "hash_antes": {
-          "admin_logs": "86c13c96ce84b71403c2d8d35c796cb5:1"
+          "admin_logs": "7872703cefd799b1d39ffaac1f6e8658:1"
         },
         "hash_depois": {
-          "admin_logs": "86c13c96ce84b71403c2d8d35c796cb5:1"
+          "admin_logs": "7872703cefd799b1d39ffaac1f6e8658:1"
         }
       }
     },
@@ -5453,10 +5749,10 @@
         "tabelas_inalteradas": true,
         "integridade": "ok",
         "hash_antes": {
-          "escolas": "7c725cecda726c808d20f91d9e2f4b77:7"
+          "escolas": "ee92ac8d7b17b789ca8c351803600c61:7"
         },
         "hash_depois": {
-          "escolas": "7c725cecda726c808d20f91d9e2f4b77:7"
+          "escolas": "ee92ac8d7b17b789ca8c351803600c61:7"
         }
       }
     },
@@ -5474,10 +5770,10 @@
         "tabelas_inalteradas": true,
         "integridade": "ok",
         "hash_antes": {
-          "escolas": "7c725cecda726c808d20f91d9e2f4b77:7"
+          "escolas": "ee92ac8d7b17b789ca8c351803600c61:7"
         },
         "hash_depois": {
-          "escolas": "7c725cecda726c808d20f91d9e2f4b77:7"
+          "escolas": "ee92ac8d7b17b789ca8c351803600c61:7"
         }
       }
     },
@@ -5495,10 +5791,10 @@
         "tabelas_inalteradas": true,
         "integridade": "ok",
         "hash_antes": {
-          "escolas": "7c725cecda726c808d20f91d9e2f4b77:7"
+          "escolas": "ee92ac8d7b17b789ca8c351803600c61:7"
         },
         "hash_depois": {
-          "escolas": "7c725cecda726c808d20f91d9e2f4b77:7"
+          "escolas": "ee92ac8d7b17b789ca8c351803600c61:7"
         }
       }
     },
@@ -5516,10 +5812,10 @@
         "tabelas_inalteradas": true,
         "integridade": "ok",
         "hash_antes": {
-          "escolas": "7c725cecda726c808d20f91d9e2f4b77:7"
+          "escolas": "ee92ac8d7b17b789ca8c351803600c61:7"
         },
         "hash_depois": {
-          "escolas": "7c725cecda726c808d20f91d9e2f4b77:7"
+          "escolas": "ee92ac8d7b17b789ca8c351803600c61:7"
         }
       }
     },
@@ -5537,12 +5833,12 @@
         "tabelas_inalteradas": true,
         "integridade": "ok",
         "hash_antes": {
-          "escolas": "7c725cecda726c808d20f91d9e2f4b77:7",
-          "admin_logs": "86c13c96ce84b71403c2d8d35c796cb5:1"
+          "escolas": "ee92ac8d7b17b789ca8c351803600c61:7",
+          "admin_logs": "7872703cefd799b1d39ffaac1f6e8658:1"
         },
         "hash_depois": {
-          "escolas": "7c725cecda726c808d20f91d9e2f4b77:7",
-          "admin_logs": "86c13c96ce84b71403c2d8d35c796cb5:1"
+          "escolas": "ee92ac8d7b17b789ca8c351803600c61:7",
+          "admin_logs": "7872703cefd799b1d39ffaac1f6e8658:1"
         }
       }
     },
@@ -5560,12 +5856,12 @@
         "tabelas_inalteradas": true,
         "integridade": "ok",
         "hash_antes": {
-          "escolas": "7c725cecda726c808d20f91d9e2f4b77:7",
-          "admin_logs": "86c13c96ce84b71403c2d8d35c796cb5:1"
+          "escolas": "ee92ac8d7b17b789ca8c351803600c61:7",
+          "admin_logs": "7872703cefd799b1d39ffaac1f6e8658:1"
         },
         "hash_depois": {
-          "escolas": "7c725cecda726c808d20f91d9e2f4b77:7",
-          "admin_logs": "86c13c96ce84b71403c2d8d35c796cb5:1"
+          "escolas": "ee92ac8d7b17b789ca8c351803600c61:7",
+          "admin_logs": "7872703cefd799b1d39ffaac1f6e8658:1"
         }
       }
     },
@@ -5583,12 +5879,12 @@
         "tabelas_inalteradas": true,
         "integridade": "ok",
         "hash_antes": {
-          "escolas": "7c725cecda726c808d20f91d9e2f4b77:7",
-          "admin_logs": "86c13c96ce84b71403c2d8d35c796cb5:1"
+          "escolas": "ee92ac8d7b17b789ca8c351803600c61:7",
+          "admin_logs": "7872703cefd799b1d39ffaac1f6e8658:1"
         },
         "hash_depois": {
-          "escolas": "7c725cecda726c808d20f91d9e2f4b77:7",
-          "admin_logs": "86c13c96ce84b71403c2d8d35c796cb5:1"
+          "escolas": "ee92ac8d7b17b789ca8c351803600c61:7",
+          "admin_logs": "7872703cefd799b1d39ffaac1f6e8658:1"
         }
       }
     },
@@ -5606,10 +5902,10 @@
         "tabelas_inalteradas": true,
         "integridade": "ok",
         "hash_antes": {
-          "admin_logs": "86c13c96ce84b71403c2d8d35c796cb5:1"
+          "admin_logs": "7872703cefd799b1d39ffaac1f6e8658:1"
         },
         "hash_depois": {
-          "admin_logs": "86c13c96ce84b71403c2d8d35c796cb5:1"
+          "admin_logs": "7872703cefd799b1d39ffaac1f6e8658:1"
         }
       }
     },
@@ -5627,10 +5923,10 @@
         "tabelas_inalteradas": true,
         "integridade": "ok",
         "hash_antes": {
-          "escolas": "7c725cecda726c808d20f91d9e2f4b77:7"
+          "escolas": "ee92ac8d7b17b789ca8c351803600c61:7"
         },
         "hash_depois": {
-          "escolas": "7c725cecda726c808d20f91d9e2f4b77:7"
+          "escolas": "ee92ac8d7b17b789ca8c351803600c61:7"
         }
       }
     },
@@ -5648,10 +5944,10 @@
         "tabelas_inalteradas": true,
         "integridade": "ok",
         "hash_antes": {
-          "escolas": "7c725cecda726c808d20f91d9e2f4b77:7"
+          "escolas": "ee92ac8d7b17b789ca8c351803600c61:7"
         },
         "hash_depois": {
-          "escolas": "7c725cecda726c808d20f91d9e2f4b77:7"
+          "escolas": "ee92ac8d7b17b789ca8c351803600c61:7"
         }
       }
     },
@@ -5669,10 +5965,10 @@
         "tabelas_inalteradas": true,
         "integridade": "ok",
         "hash_antes": {
-          "escolas": "7c725cecda726c808d20f91d9e2f4b77:7"
+          "escolas": "ee92ac8d7b17b789ca8c351803600c61:7"
         },
         "hash_depois": {
-          "escolas": "7c725cecda726c808d20f91d9e2f4b77:7"
+          "escolas": "ee92ac8d7b17b789ca8c351803600c61:7"
         }
       }
     },
@@ -5690,10 +5986,10 @@
         "tabelas_inalteradas": true,
         "integridade": "ok",
         "hash_antes": {
-          "escolas": "7c725cecda726c808d20f91d9e2f4b77:7"
+          "escolas": "ee92ac8d7b17b789ca8c351803600c61:7"
         },
         "hash_depois": {
-          "escolas": "7c725cecda726c808d20f91d9e2f4b77:7"
+          "escolas": "ee92ac8d7b17b789ca8c351803600c61:7"
         }
       }
     },
@@ -5711,12 +6007,12 @@
         "tabelas_inalteradas": false,
         "integridade": "ok",
         "hash_antes": {
-          "escolas": "7c725cecda726c808d20f91d9e2f4b77:7",
-          "admin_logs": "86c13c96ce84b71403c2d8d35c796cb5:1"
+          "escolas": "ee92ac8d7b17b789ca8c351803600c61:7",
+          "admin_logs": "7872703cefd799b1d39ffaac1f6e8658:1"
         },
         "hash_depois": {
-          "escolas": "59277a6c3996bf1645b92951f31b8e0c:7",
-          "admin_logs": "df227ddb295ad7a66b12bff631993de9:2"
+          "escolas": "881c842b4d5ed8e003abcb8ce116a8f4:7",
+          "admin_logs": "7e659369d68e5f6c4c6609ba6b8c7590:2"
         }
       }
     },
@@ -5734,12 +6030,12 @@
         "tabelas_inalteradas": false,
         "integridade": "ok",
         "hash_antes": {
-          "escolas": "7c725cecda726c808d20f91d9e2f4b77:7",
-          "admin_logs": "86c13c96ce84b71403c2d8d35c796cb5:1"
+          "escolas": "ee92ac8d7b17b789ca8c351803600c61:7",
+          "admin_logs": "7872703cefd799b1d39ffaac1f6e8658:1"
         },
         "hash_depois": {
-          "escolas": "3114c1b594d7b52fb0f6b9436d9c97ae:7",
-          "admin_logs": "e9c856fdf8c83efb6e17a0c31f01bfe5:2"
+          "escolas": "bf06ba4e7c6746e35059255464fe99ff:7",
+          "admin_logs": "2a4fab352989a556edbb3007b4c276bc:2"
         }
       }
     },
@@ -5757,12 +6053,12 @@
         "tabelas_inalteradas": false,
         "integridade": "ok",
         "hash_antes": {
-          "escolas": "7c725cecda726c808d20f91d9e2f4b77:7",
-          "admin_logs": "86c13c96ce84b71403c2d8d35c796cb5:1"
+          "escolas": "ee92ac8d7b17b789ca8c351803600c61:7",
+          "admin_logs": "7872703cefd799b1d39ffaac1f6e8658:1"
         },
         "hash_depois": {
-          "escolas": "a0a8c630c9306912b2f8f1e191104838:8",
-          "admin_logs": "9ad8fe57715092fc21bd0d50beda3acc:2"
+          "escolas": "b2ed3aa4c6f87d86aa223731c29cda83:8",
+          "admin_logs": "d27fe030abd295078645dc4d9ffd411b:2"
         }
       }
     },
@@ -5780,10 +6076,10 @@
         "tabelas_inalteradas": false,
         "integridade": "ok",
         "hash_antes": {
-          "admin_logs": "86c13c96ce84b71403c2d8d35c796cb5:1"
+          "admin_logs": "7872703cefd799b1d39ffaac1f6e8658:1"
         },
         "hash_depois": {
-          "admin_logs": "5d7ac74c99c643f14875d89706243428:2"
+          "admin_logs": "542d17e1e01f7b7eb39820cf7a54c949:2"
         }
       }
     },
@@ -5801,10 +6097,10 @@
         "tabelas_inalteradas": true,
         "integridade": "ok",
         "hash_antes": {
-          "escolas": "7c725cecda726c808d20f91d9e2f4b77:7"
+          "escolas": "ee92ac8d7b17b789ca8c351803600c61:7"
         },
         "hash_depois": {
-          "escolas": "7c725cecda726c808d20f91d9e2f4b77:7"
+          "escolas": "ee92ac8d7b17b789ca8c351803600c61:7"
         }
       }
     },
@@ -5825,10 +6121,10 @@
         "tabelas_inalteradas": true,
         "integridade": "ok",
         "hash_antes": {
-          "internal_admins": "edbbc999be1d1ed545b8d486f71400ce:2"
+          "internal_admins": "b0d4f746a0acbb0c65e23221bcf3bb01:2"
         },
         "hash_depois": {
-          "internal_admins": "edbbc999be1d1ed545b8d486f71400ce:2"
+          "internal_admins": "b0d4f746a0acbb0c65e23221bcf3bb01:2"
         }
       }
     },
@@ -5849,10 +6145,10 @@
         "tabelas_inalteradas": true,
         "integridade": "ok",
         "hash_antes": {
-          "internal_admins": "edbbc999be1d1ed545b8d486f71400ce:2"
+          "internal_admins": "b0d4f746a0acbb0c65e23221bcf3bb01:2"
         },
         "hash_depois": {
-          "internal_admins": "edbbc999be1d1ed545b8d486f71400ce:2"
+          "internal_admins": "b0d4f746a0acbb0c65e23221bcf3bb01:2"
         }
       }
     },
@@ -5873,10 +6169,10 @@
         "tabelas_inalteradas": true,
         "integridade": "ok",
         "hash_antes": {
-          "internal_admins": "edbbc999be1d1ed545b8d486f71400ce:2"
+          "internal_admins": "b0d4f746a0acbb0c65e23221bcf3bb01:2"
         },
         "hash_depois": {
-          "internal_admins": "edbbc999be1d1ed545b8d486f71400ce:2"
+          "internal_admins": "b0d4f746a0acbb0c65e23221bcf3bb01:2"
         }
       }
     },
@@ -5894,10 +6190,10 @@
         "tabelas_inalteradas": true,
         "integridade": "ok",
         "hash_antes": {
-          "internal_admins": "edbbc999be1d1ed545b8d486f71400ce:2"
+          "internal_admins": "b0d4f746a0acbb0c65e23221bcf3bb01:2"
         },
         "hash_depois": {
-          "internal_admins": "edbbc999be1d1ed545b8d486f71400ce:2"
+          "internal_admins": "b0d4f746a0acbb0c65e23221bcf3bb01:2"
         }
       }
     },
@@ -5917,10 +6213,10 @@
         "tabelas_inalteradas": true,
         "integridade": "ok",
         "hash_antes": {
-          "alunos": "85e37ce5b6330c71e1242548e661f090:68"
+          "alunos": "5d78b41d4862831fcd055cbabf6ee735:68"
         },
         "hash_depois": {
-          "alunos": "85e37ce5b6330c71e1242548e661f090:68"
+          "alunos": "5d78b41d4862831fcd055cbabf6ee735:68"
         }
       },
       "nota": "negado = B1 não é movido; a edição nova do catálogo nasce de qualquer jeito (ver P.abrir_proximo_ciclo.trilha_de_C)"
@@ -5941,12 +6237,12 @@
         "tabelas_inalteradas": false,
         "integridade": "ok",
         "hash_antes": {
-          "alunos": "85e37ce5b6330c71e1242548e661f090:68",
-          "trilhas": "a83e503baf28b6e184f2b4bbb1e08ca2:4"
+          "alunos": "5d78b41d4862831fcd055cbabf6ee735:68",
+          "trilhas": "b62d388e4828d82db2a3053876d7ca95:4"
         },
         "hash_depois": {
-          "alunos": "d2a040e817aac9addd44fd5d481184a6:68",
-          "trilhas": "7a5e0682d8f4b1919afde5d11deced39:5"
+          "alunos": "f2d1cc6018a73da034d65636be6e38c3:68",
+          "trilhas": "9bb1029b94a9f368abfc4dd80b34bd2a:5"
         }
       }
     },
@@ -5964,14 +6260,14 @@
         "tabelas_inalteradas": false,
         "integridade": "ok",
         "hash_antes": {
-          "trilhas": "a83e503baf28b6e184f2b4bbb1e08ca2:4",
+          "trilhas": "b62d388e4828d82db2a3053876d7ca95:4",
           "trilha_semanas": "ea6897c1c62d79e913bc011395703278:21",
           "atividades_modelo": "4a74a4adb463c3d67fce346eb84f0804:162"
         },
         "hash_depois": {
-          "trilhas": "e552321651d6a9fce320a6b043de14c0:5",
-          "trilha_semanas": "96d86c99db8d3ad9b14c0ddaeb5392b9:22",
-          "atividades_modelo": "3f317faa7bfb5460dd93fe5c873a8f60:163"
+          "trilhas": "d9f9059301b70ad87795601fb9bcb656:5",
+          "trilha_semanas": "81cd9a6154ab50bfde079af6835b283e:22",
+          "atividades_modelo": "4ced73e2a13ad3918f439fd8cd6f4987:163"
         }
       },
       "achado": "E1-ACHADO-2"
@@ -5990,10 +6286,10 @@
         "tabelas_inalteradas": true,
         "integridade": "ok",
         "hash_antes": {
-          "aluno_onboarding": "4f3730da7226e466ccea2f43e6629321:3"
+          "aluno_onboarding": "147d94d704d96341b12e396ff1e20ff8:3"
         },
         "hash_depois": {
-          "aluno_onboarding": "4f3730da7226e466ccea2f43e6629321:3"
+          "aluno_onboarding": "147d94d704d96341b12e396ff1e20ff8:3"
         }
       }
     },
@@ -6011,10 +6307,10 @@
         "tabelas_inalteradas": true,
         "integridade": "ok",
         "hash_antes": {
-          "registros_estudo": "305fd225e8ab680b573a2aed162bf8ea:282"
+          "registros_estudo": "51ea000a69d793c47b2ab88e8b750730:282"
         },
         "hash_depois": {
-          "registros_estudo": "305fd225e8ab680b573a2aed162bf8ea:282"
+          "registros_estudo": "51ea000a69d793c47b2ab88e8b750730:282"
         }
       }
     },
@@ -6032,10 +6328,10 @@
         "tabelas_inalteradas": true,
         "integridade": "ok",
         "hash_antes": {
-          "aluno_eventos_progresso": "7343917369fdb85440a9463916e56ed9:569"
+          "aluno_eventos_progresso": "7b2fb897346506930369feab8e0c1be5:569"
         },
         "hash_depois": {
-          "aluno_eventos_progresso": "7343917369fdb85440a9463916e56ed9:569"
+          "aluno_eventos_progresso": "7b2fb897346506930369feab8e0c1be5:569"
         }
       },
       "achado": "C-S06"
@@ -6054,12 +6350,12 @@
         "tabelas_inalteradas": true,
         "integridade": "ok",
         "hash_antes": {
-          "aluno_eventos_progresso": "7343917369fdb85440a9463916e56ed9:569",
-          "aluno_conquistas": "27cf369734b56a7727e1591d886ce659:3"
+          "aluno_eventos_progresso": "7b2fb897346506930369feab8e0c1be5:569",
+          "aluno_conquistas": "954f6f1933ab6a2ce0acb4eb71f394ff:3"
         },
         "hash_depois": {
-          "aluno_eventos_progresso": "7343917369fdb85440a9463916e56ed9:569",
-          "aluno_conquistas": "27cf369734b56a7727e1591d886ce659:3"
+          "aluno_eventos_progresso": "7b2fb897346506930369feab8e0c1be5:569",
+          "aluno_conquistas": "954f6f1933ab6a2ce0acb4eb71f394ff:3"
         }
       },
       "achado": "C-S06"
@@ -6078,12 +6374,12 @@
         "tabelas_inalteradas": true,
         "integridade": "ok",
         "hash_antes": {
-          "aluno_eventos_progresso": "7343917369fdb85440a9463916e56ed9:569",
-          "aluno_conquistas": "27cf369734b56a7727e1591d886ce659:3"
+          "aluno_eventos_progresso": "7b2fb897346506930369feab8e0c1be5:569",
+          "aluno_conquistas": "954f6f1933ab6a2ce0acb4eb71f394ff:3"
         },
         "hash_depois": {
-          "aluno_eventos_progresso": "7343917369fdb85440a9463916e56ed9:569",
-          "aluno_conquistas": "27cf369734b56a7727e1591d886ce659:3"
+          "aluno_eventos_progresso": "7b2fb897346506930369feab8e0c1be5:569",
+          "aluno_conquistas": "954f6f1933ab6a2ce0acb4eb71f394ff:3"
         }
       },
       "achado": "C-S06"
@@ -6102,10 +6398,10 @@
         "tabelas_inalteradas": true,
         "integridade": "ok",
         "hash_antes": {
-          "aluno_conquistas": "27cf369734b56a7727e1591d886ce659:3"
+          "aluno_conquistas": "954f6f1933ab6a2ce0acb4eb71f394ff:3"
         },
         "hash_depois": {
-          "aluno_conquistas": "27cf369734b56a7727e1591d886ce659:3"
+          "aluno_conquistas": "954f6f1933ab6a2ce0acb4eb71f394ff:3"
         }
       },
       "achado": "C-S06"
@@ -6124,10 +6420,10 @@
         "tabelas_inalteradas": true,
         "integridade": "ok",
         "hash_antes": {
-          "alunos": "85e37ce5b6330c71e1242548e661f090:68"
+          "alunos": "5d78b41d4862831fcd055cbabf6ee735:68"
         },
         "hash_depois": {
-          "alunos": "85e37ce5b6330c71e1242548e661f090:68"
+          "alunos": "5d78b41d4862831fcd055cbabf6ee735:68"
         }
       },
       "achado": "C-S06"
@@ -6146,10 +6442,10 @@
         "tabelas_inalteradas": true,
         "integridade": "ok",
         "hash_antes": {
-          "registros_estudo": "305fd225e8ab680b573a2aed162bf8ea:282"
+          "registros_estudo": "51ea000a69d793c47b2ab88e8b750730:282"
         },
         "hash_depois": {
-          "registros_estudo": "305fd225e8ab680b573a2aed162bf8ea:282"
+          "registros_estudo": "51ea000a69d793c47b2ab88e8b750730:282"
         }
       },
       "achado": "C-S06"
@@ -6179,12 +6475,12 @@
         "tabelas_inalteradas": false,
         "integridade": "ok",
         "hash_antes": {
-          "usuarios": "9a8bd9790a9f28c4fa9f3b1906d0e843:82",
-          "alunos": "85e37ce5b6330c71e1242548e661f090:68"
+          "usuarios": "a4c53c6160ec7c6a75a2a5aa7d2a6f64:82",
+          "alunos": "5d78b41d4862831fcd055cbabf6ee735:68"
         },
         "hash_depois": {
-          "usuarios": "0a43eac373fff751e64472848c4da5d3:81",
-          "alunos": "201b71bbb336a2343384822f8f28154c:67"
+          "usuarios": "9b438c8f45fc2658566e71c422c46ecf:81",
+          "alunos": "301f469383080768a1ddc69d5c8f7506:67"
         }
       },
       "achado": "E2-XT-FK"
@@ -6214,12 +6510,12 @@
         "tabelas_inalteradas": false,
         "integridade": "ok",
         "hash_antes": {
-          "usuarios": "9a8bd9790a9f28c4fa9f3b1906d0e843:82",
-          "vinculos_responsaveis": "611b81cd366c8c9253de0e1499c0970d:4"
+          "usuarios": "a4c53c6160ec7c6a75a2a5aa7d2a6f64:82",
+          "vinculos_responsaveis": "60c8ae6b1fdb532078ad32dab20aeb54:4"
         },
         "hash_depois": {
-          "usuarios": "3be1adce4cc1a52ce8bf8992c3b7223c:80",
-          "vinculos_responsaveis": "611b81cd366c8c9253de0e1499c0970d:4"
+          "usuarios": "c3f3b52fd5c09b7e588195d3de7cef92:80",
+          "vinculos_responsaveis": "60c8ae6b1fdb532078ad32dab20aeb54:4"
         }
       },
       "achado": "E2-XT-FK"
@@ -6249,10 +6545,10 @@
         "tabelas_inalteradas": false,
         "integridade": "ok",
         "hash_antes": {
-          "aluno_onboarding": "4f3730da7226e466ccea2f43e6629321:3"
+          "aluno_onboarding": "147d94d704d96341b12e396ff1e20ff8:3"
         },
         "hash_depois": {
-          "aluno_onboarding": "ead4808de078b807668af81fc1fc3bb2:4"
+          "aluno_onboarding": "95585d269fe7e96118b6a11f05818832:4"
         }
       },
       "achado": "E2-XT-FK"
@@ -6311,12 +6607,12 @@
         "tabelas_inalteradas": false,
         "integridade": "ok",
         "hash_antes": {
-          "consentimentos": "8852389b85dad31bc8db8b9bac948907:4",
-          "logs_acesso": "e8a8b9fdbe0d80b48ca471ef07e49ef7:2"
+          "consentimentos": "2f462b71091097b30bb12d46fdd1955e:4",
+          "logs_acesso": "83613035e8a2471f0649a53622498c00:2"
         },
         "hash_depois": {
-          "consentimentos": "1fe498e375c3302bdb6f5fb39e9cde76:5",
-          "logs_acesso": "d8a0cafaf4dff324bb4075c1a036aab3:3"
+          "consentimentos": "28fc57af24146b8e6e37b81099ba9a57:5",
+          "logs_acesso": "a83222646a20629b83c31d6f6216b56e:3"
         }
       },
       "achado": "E2-XT-FK"
@@ -6342,12 +6638,12 @@
         "tabelas_inalteradas": false,
         "integridade": "ok",
         "hash_antes": {
-          "usuarios": "9a8bd9790a9f28c4fa9f3b1906d0e843:82",
-          "alunos": "85e37ce5b6330c71e1242548e661f090:68"
+          "usuarios": "a4c53c6160ec7c6a75a2a5aa7d2a6f64:82",
+          "alunos": "5d78b41d4862831fcd055cbabf6ee735:68"
         },
         "hash_depois": {
-          "usuarios": "f36cc1ba261d3f439672894d1c88cdb7:80",
-          "alunos": "80c55a37bcc3f4d5d75dc717440b144a:67"
+          "usuarios": "b56130e3454690e2642a84820ea2b373:80",
+          "alunos": "752cbc1268a044eb2326eaf4b8c21fb0:67"
         }
       }
     },
@@ -6368,10 +6664,10 @@
         "tabelas_inalteradas": true,
         "integridade": "ok",
         "hash_antes": {
-          "alunos": "85e37ce5b6330c71e1242548e661f090:68"
+          "alunos": "5d78b41d4862831fcd055cbabf6ee735:68"
         },
         "hash_depois": {
-          "alunos": "85e37ce5b6330c71e1242548e661f090:68"
+          "alunos": "5d78b41d4862831fcd055cbabf6ee735:68"
         }
       },
       "nota": "janela do token: as policies leem o papel do JWT, não de usuarios. Vale até o access token expirar (3600 s no banco) e, se o app_metadata não for trocado no Auth, também depois do refresh"
@@ -6393,10 +6689,10 @@
         "tabelas_inalteradas": false,
         "integridade": "ok",
         "hash_antes": {
-          "turmas": "c67a9547ca82bb54fe6724692bb007cd:9"
+          "turmas": "142af94faba50a9392a96c674ae2a6e2:9"
         },
         "hash_depois": {
-          "turmas": "c5c66e780736bd0a5543d8a9a6fb9a54:10"
+          "turmas": "427c02b5d11521d194003ccfff4e9c10:10"
         }
       },
       "nota": "mesma janela do caso acima"
@@ -6418,10 +6714,10 @@
         "tabelas_inalteradas": true,
         "integridade": "ok",
         "hash_antes": {
-          "alunos": "85e37ce5b6330c71e1242548e661f090:68"
+          "alunos": "5d78b41d4862831fcd055cbabf6ee735:68"
         },
         "hash_depois": {
-          "alunos": "85e37ce5b6330c71e1242548e661f090:68"
+          "alunos": "5d78b41d4862831fcd055cbabf6ee735:68"
         }
       }
     },
@@ -6442,10 +6738,10 @@
         "tabelas_inalteradas": true,
         "integridade": "ok",
         "hash_antes": {
-          "turmas": "c67a9547ca82bb54fe6724692bb007cd:9"
+          "turmas": "142af94faba50a9392a96c674ae2a6e2:9"
         },
         "hash_depois": {
-          "turmas": "c67a9547ca82bb54fe6724692bb007cd:9"
+          "turmas": "142af94faba50a9392a96c674ae2a6e2:9"
         }
       }
     },
@@ -6466,10 +6762,10 @@
         "tabelas_inalteradas": true,
         "integridade": "ok",
         "hash_antes": {
-          "escolas": "7c725cecda726c808d20f91d9e2f4b77:7"
+          "escolas": "ee92ac8d7b17b789ca8c351803600c61:7"
         },
         "hash_depois": {
-          "escolas": "7c725cecda726c808d20f91d9e2f4b77:7"
+          "escolas": "ee92ac8d7b17b789ca8c351803600c61:7"
         }
       }
     },
@@ -6490,10 +6786,10 @@
         "tabelas_inalteradas": false,
         "integridade": "ok",
         "hash_antes": {
-          "config_escola": "b3e818dcedc8a9ad2f86cd36eecbd456:3"
+          "config_escola": "9bca714193eb4929ad155ee62f379963:3"
         },
         "hash_depois": {
-          "config_escola": "4d21e450b43a9bf801a17af8b23ad43b:4"
+          "config_escola": "cb5a2497367d817e28dfa2f5f20e4f5d:4"
         }
       },
       "achado": "C-S04b"
@@ -6515,10 +6811,10 @@
         "tabelas_inalteradas": false,
         "integridade": "ok",
         "hash_antes": {
-          "missoes_escola": "88c50fc6ff863acffac712ad481cb2d5:3"
+          "missoes_escola": "fc2ae3f2acbbd8dcf889b6b623a523ae:3"
         },
         "hash_depois": {
-          "missoes_escola": "8e7801bb4e1dda20ca913e416208a438:4"
+          "missoes_escola": "44cda2613ad7ad935b81a6d46ed43e27:4"
         }
       },
       "achado": "C-S04b"
@@ -6540,10 +6836,10 @@
         "tabelas_inalteradas": false,
         "integridade": "ok",
         "hash_antes": {
-          "logs_coordenacao": "2dde1fe8f61b523398a45d5e94405249:2"
+          "logs_coordenacao": "f5da6c22255639df20dcbbc80e762a4e:2"
         },
         "hash_depois": {
-          "logs_coordenacao": "a1b94641539b6f79527933da87050ffc:3"
+          "logs_coordenacao": "b6f3e5c1b06df593954118e84f737782:3"
         }
       },
       "achado": "C-S04b"
@@ -6562,10 +6858,10 @@
         "tabelas_inalteradas": true,
         "integridade": "ok",
         "hash_antes": {
-          "trilhas": "a83e503baf28b6e184f2b4bbb1e08ca2:4"
+          "trilhas": "b62d388e4828d82db2a3053876d7ca95:4"
         },
         "hash_depois": {
-          "trilhas": "a83e503baf28b6e184f2b4bbb1e08ca2:4"
+          "trilhas": "b62d388e4828d82db2a3053876d7ca95:4"
         }
       }
     },
@@ -6583,10 +6879,10 @@
         "tabelas_inalteradas": true,
         "integridade": "ok",
         "hash_antes": {
-          "registros_estudo": "305fd225e8ab680b573a2aed162bf8ea:282"
+          "registros_estudo": "51ea000a69d793c47b2ab88e8b750730:282"
         },
         "hash_depois": {
-          "registros_estudo": "305fd225e8ab680b573a2aed162bf8ea:282"
+          "registros_estudo": "51ea000a69d793c47b2ab88e8b750730:282"
         }
       }
     },
@@ -6607,10 +6903,10 @@
         "tabelas_inalteradas": false,
         "integridade": "ok",
         "hash_antes": {
-          "aluno_xp_eventos": "9d6622394098fa20e99d858a04b1caa0:7"
+          "aluno_xp_eventos": "3556c867d5cff522de395d06567346cd:7"
         },
         "hash_depois": {
-          "aluno_xp_eventos": "c664ec17c91623fdf00f3749c49fd1a8:8"
+          "aluno_xp_eventos": "8e377b9c5d83b6017340eacf09975105:8"
         }
       },
       "achado": "C-S04b"
@@ -6632,10 +6928,10 @@
         "tabelas_inalteradas": false,
         "integridade": "ok",
         "hash_antes": {
-          "aluno_conquistas": "27cf369734b56a7727e1591d886ce659:3"
+          "aluno_conquistas": "954f6f1933ab6a2ce0acb4eb71f394ff:3"
         },
         "hash_depois": {
-          "aluno_conquistas": "fdb38b0f8340de0694fdbc7a526a93bd:4"
+          "aluno_conquistas": "438bafe51a6a8e96efa9d747b4472545:4"
         }
       },
       "achado": "C-S04b"
@@ -6657,10 +6953,10 @@
         "tabelas_inalteradas": false,
         "integridade": "ok",
         "hash_antes": {
-          "aluno_missoes": "d3bb9f9866f9454ed1cf273d1bcd2020:89"
+          "aluno_missoes": "82af9d61e431ba4c932e2113eefa685b:89"
         },
         "hash_depois": {
-          "aluno_missoes": "6fc7de990f4ad6c1bce2079ab32d2ec7:90"
+          "aluno_missoes": "23b7d3741c9fd56b852c2d1174e1ff6c:90"
         }
       },
       "achado": "C-S04b"
@@ -6682,12 +6978,12 @@
         "tabelas_inalteradas": false,
         "integridade": "ok",
         "hash_antes": {
-          "aluno_niveis": "7a56a5372bb9b3303149334d40103d8b:100",
-          "aluno_nivel_historico": "187c53e023c54c76e11b22643eb855fd:101"
+          "aluno_niveis": "bc5d210cfec59341ec6b448459943da0:100",
+          "aluno_nivel_historico": "7befa928c3d513360a8b2b64e3d2a9be:101"
         },
         "hash_depois": {
-          "aluno_niveis": "063cd69d76eefd7464fff0f4dbb764d3:101",
-          "aluno_nivel_historico": "de3125b01300eb2e3debeda7f5dcb45e:102"
+          "aluno_niveis": "5c940d15a4137f9233a453365cbdc3c0:101",
+          "aluno_nivel_historico": "7e57f1232af54b31f6ae77881e798290:102"
         }
       },
       "achado": "C-S04b"
@@ -6709,10 +7005,10 @@
         "tabelas_inalteradas": false,
         "integridade": "ok",
         "hash_antes": {
-          "aluno_onboarding": "4f3730da7226e466ccea2f43e6629321:3"
+          "aluno_onboarding": "147d94d704d96341b12e396ff1e20ff8:3"
         },
         "hash_depois": {
-          "aluno_onboarding": "ad7099b9d160305c154467a0634f3d4d:4"
+          "aluno_onboarding": "b3d926659a7e5f69529b11cd74980c91:4"
         }
       },
       "achado": "C-S04b"
@@ -6734,10 +7030,10 @@
         "tabelas_inalteradas": false,
         "integridade": "ok",
         "hash_antes": {
-          "aluno_eventos_progresso": "7343917369fdb85440a9463916e56ed9:569"
+          "aluno_eventos_progresso": "7b2fb897346506930369feab8e0c1be5:569"
         },
         "hash_depois": {
-          "aluno_eventos_progresso": "7c8bfd23f547176c204f4c30b210112e:570"
+          "aluno_eventos_progresso": "b90240cb743eb6ab87e8c0e15fe06d26:570"
         }
       },
       "achado": "C-S04b"
@@ -6759,10 +7055,10 @@
         "tabelas_inalteradas": true,
         "integridade": "ok",
         "hash_antes": {
-          "consentimentos": "8852389b85dad31bc8db8b9bac948907:4"
+          "consentimentos": "2f462b71091097b30bb12d46fdd1955e:4"
         },
         "hash_depois": {
-          "consentimentos": "8852389b85dad31bc8db8b9bac948907:4"
+          "consentimentos": "2f462b71091097b30bb12d46fdd1955e:4"
         }
       }
     },
@@ -6783,10 +7079,10 @@
         "tabelas_inalteradas": true,
         "integridade": "ok",
         "hash_antes": {
-          "vinculos_responsaveis": "611b81cd366c8c9253de0e1499c0970d:4"
+          "vinculos_responsaveis": "60c8ae6b1fdb532078ad32dab20aeb54:4"
         },
         "hash_depois": {
-          "vinculos_responsaveis": "611b81cd366c8c9253de0e1499c0970d:4"
+          "vinculos_responsaveis": "60c8ae6b1fdb532078ad32dab20aeb54:4"
         }
       }
     },
@@ -6807,10 +7103,10 @@
         "tabelas_inalteradas": true,
         "integridade": "ok",
         "hash_antes": {
-          "registros_estudo": "305fd225e8ab680b573a2aed162bf8ea:282"
+          "registros_estudo": "51ea000a69d793c47b2ab88e8b750730:282"
         },
         "hash_depois": {
-          "registros_estudo": "305fd225e8ab680b573a2aed162bf8ea:282"
+          "registros_estudo": "51ea000a69d793c47b2ab88e8b750730:282"
         }
       }
     },
@@ -6831,10 +7127,10 @@
         "tabelas_inalteradas": true,
         "integridade": "ok",
         "hash_antes": {
-          "metas": "635411f665b590d6a0eca97e69438d4f:77"
+          "metas": "42705b7cd19363596092adf46d1dc106:77"
         },
         "hash_depois": {
-          "metas": "635411f665b590d6a0eca97e69438d4f:77"
+          "metas": "42705b7cd19363596092adf46d1dc106:77"
         }
       }
     },
@@ -6852,10 +7148,10 @@
         "tabelas_inalteradas": true,
         "integridade": "ok",
         "hash_antes": {
-          "aluno_onboarding": "4f3730da7226e466ccea2f43e6629321:3"
+          "aluno_onboarding": "147d94d704d96341b12e396ff1e20ff8:3"
         },
         "hash_depois": {
-          "aluno_onboarding": "4f3730da7226e466ccea2f43e6629321:3"
+          "aluno_onboarding": "147d94d704d96341b12e396ff1e20ff8:3"
         }
       }
     },
@@ -6876,10 +7172,10 @@
         "tabelas_inalteradas": true,
         "integridade": "ok",
         "hash_antes": {
-          "alunos": "85e37ce5b6330c71e1242548e661f090:68"
+          "alunos": "5d78b41d4862831fcd055cbabf6ee735:68"
         },
         "hash_depois": {
-          "alunos": "85e37ce5b6330c71e1242548e661f090:68"
+          "alunos": "5d78b41d4862831fcd055cbabf6ee735:68"
         }
       }
     },
@@ -6900,10 +7196,10 @@
         "tabelas_inalteradas": true,
         "integridade": "ok",
         "hash_antes": {
-          "turmas": "c67a9547ca82bb54fe6724692bb007cd:9"
+          "turmas": "142af94faba50a9392a96c674ae2a6e2:9"
         },
         "hash_depois": {
-          "turmas": "c67a9547ca82bb54fe6724692bb007cd:9"
+          "turmas": "142af94faba50a9392a96c674ae2a6e2:9"
         }
       }
     },
@@ -6924,10 +7220,10 @@
         "tabelas_inalteradas": true,
         "integridade": "ok",
         "hash_antes": {
-          "escolas": "7c725cecda726c808d20f91d9e2f4b77:7"
+          "escolas": "ee92ac8d7b17b789ca8c351803600c61:7"
         },
         "hash_depois": {
-          "escolas": "7c725cecda726c808d20f91d9e2f4b77:7"
+          "escolas": "ee92ac8d7b17b789ca8c351803600c61:7"
         }
       }
     },
@@ -6948,10 +7244,10 @@
         "tabelas_inalteradas": false,
         "integridade": "ok",
         "hash_antes": {
-          "config_escola": "b3e818dcedc8a9ad2f86cd36eecbd456:3"
+          "config_escola": "9bca714193eb4929ad155ee62f379963:3"
         },
         "hash_depois": {
-          "config_escola": "0bd5dd1bfb223fb57a30ddc5bb912f3e:4"
+          "config_escola": "a5ced2dda08664c3c0cacc4a4c0309bd:4"
         }
       },
       "achado": "C-S04b"
@@ -6973,10 +7269,10 @@
         "tabelas_inalteradas": false,
         "integridade": "ok",
         "hash_antes": {
-          "missoes_escola": "88c50fc6ff863acffac712ad481cb2d5:3"
+          "missoes_escola": "fc2ae3f2acbbd8dcf889b6b623a523ae:3"
         },
         "hash_depois": {
-          "missoes_escola": "c2eb3ed158ce9ab6de4194e1c114286c:4"
+          "missoes_escola": "4c63b41a850eb652e9ba31b74dc10ae8:4"
         }
       },
       "achado": "C-S04b"
@@ -6998,10 +7294,10 @@
         "tabelas_inalteradas": false,
         "integridade": "ok",
         "hash_antes": {
-          "logs_coordenacao": "2dde1fe8f61b523398a45d5e94405249:2"
+          "logs_coordenacao": "f5da6c22255639df20dcbbc80e762a4e:2"
         },
         "hash_depois": {
-          "logs_coordenacao": "2660842ba3ce5a6a31d8a72f838f6811:3"
+          "logs_coordenacao": "7557b1e6da8c1594e56e3eb3572f13a2:3"
         }
       },
       "achado": "C-S04b"
@@ -7020,10 +7316,10 @@
         "tabelas_inalteradas": true,
         "integridade": "ok",
         "hash_antes": {
-          "trilhas": "a83e503baf28b6e184f2b4bbb1e08ca2:4"
+          "trilhas": "b62d388e4828d82db2a3053876d7ca95:4"
         },
         "hash_depois": {
-          "trilhas": "a83e503baf28b6e184f2b4bbb1e08ca2:4"
+          "trilhas": "b62d388e4828d82db2a3053876d7ca95:4"
         }
       }
     },
@@ -7041,10 +7337,10 @@
         "tabelas_inalteradas": true,
         "integridade": "ok",
         "hash_antes": {
-          "registros_estudo": "305fd225e8ab680b573a2aed162bf8ea:282"
+          "registros_estudo": "51ea000a69d793c47b2ab88e8b750730:282"
         },
         "hash_depois": {
-          "registros_estudo": "305fd225e8ab680b573a2aed162bf8ea:282"
+          "registros_estudo": "51ea000a69d793c47b2ab88e8b750730:282"
         }
       }
     },
@@ -7065,10 +7361,10 @@
         "tabelas_inalteradas": false,
         "integridade": "ok",
         "hash_antes": {
-          "aluno_xp_eventos": "9d6622394098fa20e99d858a04b1caa0:7"
+          "aluno_xp_eventos": "3556c867d5cff522de395d06567346cd:7"
         },
         "hash_depois": {
-          "aluno_xp_eventos": "ec25905fedac7a97dbf72be92ef252af:8"
+          "aluno_xp_eventos": "04e197d38fbe59f5e7160d968792304a:8"
         }
       },
       "achado": "C-S04b"
@@ -7090,10 +7386,10 @@
         "tabelas_inalteradas": false,
         "integridade": "ok",
         "hash_antes": {
-          "aluno_conquistas": "27cf369734b56a7727e1591d886ce659:3"
+          "aluno_conquistas": "954f6f1933ab6a2ce0acb4eb71f394ff:3"
         },
         "hash_depois": {
-          "aluno_conquistas": "9cf436a5aead0715ecf75278a90904a3:4"
+          "aluno_conquistas": "1b4bf1ac209ce34a0aed998a424a9766:4"
         }
       },
       "achado": "C-S04b"
@@ -7115,10 +7411,10 @@
         "tabelas_inalteradas": false,
         "integridade": "ok",
         "hash_antes": {
-          "aluno_missoes": "d3bb9f9866f9454ed1cf273d1bcd2020:89"
+          "aluno_missoes": "82af9d61e431ba4c932e2113eefa685b:89"
         },
         "hash_depois": {
-          "aluno_missoes": "7bef33c38d90c19c74c149dcab261afa:90"
+          "aluno_missoes": "a41451eceae9fbde006eaabe1787e330:90"
         }
       },
       "achado": "C-S04b"
@@ -7140,12 +7436,12 @@
         "tabelas_inalteradas": false,
         "integridade": "ok",
         "hash_antes": {
-          "aluno_niveis": "7a56a5372bb9b3303149334d40103d8b:100",
-          "aluno_nivel_historico": "187c53e023c54c76e11b22643eb855fd:101"
+          "aluno_niveis": "bc5d210cfec59341ec6b448459943da0:100",
+          "aluno_nivel_historico": "7befa928c3d513360a8b2b64e3d2a9be:101"
         },
         "hash_depois": {
-          "aluno_niveis": "b38ca971f8e633236034923b40bc1eb8:101",
-          "aluno_nivel_historico": "ef4a348618518dd3d37e2a6524195a55:102"
+          "aluno_niveis": "2136d601a2015a4406ba1f0884217cce:101",
+          "aluno_nivel_historico": "7bbecf9be0b0cd029e7eef30b7230719:102"
         }
       },
       "achado": "C-S04b"
@@ -7167,10 +7463,10 @@
         "tabelas_inalteradas": false,
         "integridade": "ok",
         "hash_antes": {
-          "aluno_onboarding": "4f3730da7226e466ccea2f43e6629321:3"
+          "aluno_onboarding": "147d94d704d96341b12e396ff1e20ff8:3"
         },
         "hash_depois": {
-          "aluno_onboarding": "dbae51ed9e49b56e588ec784ef3dec2e:4"
+          "aluno_onboarding": "af8352b9a472e445e5b0d19c0dd27bff:4"
         }
       },
       "achado": "C-S04b"
@@ -7192,10 +7488,10 @@
         "tabelas_inalteradas": false,
         "integridade": "ok",
         "hash_antes": {
-          "aluno_eventos_progresso": "7343917369fdb85440a9463916e56ed9:569"
+          "aluno_eventos_progresso": "7b2fb897346506930369feab8e0c1be5:569"
         },
         "hash_depois": {
-          "aluno_eventos_progresso": "42e6e0db6646cfc670b3feafb7988090:570"
+          "aluno_eventos_progresso": "af303e2d7bfdf84b29a72d2e22ec7a8e:570"
         }
       },
       "achado": "C-S04b"
@@ -7217,10 +7513,10 @@
         "tabelas_inalteradas": true,
         "integridade": "ok",
         "hash_antes": {
-          "consentimentos": "8852389b85dad31bc8db8b9bac948907:4"
+          "consentimentos": "2f462b71091097b30bb12d46fdd1955e:4"
         },
         "hash_depois": {
-          "consentimentos": "8852389b85dad31bc8db8b9bac948907:4"
+          "consentimentos": "2f462b71091097b30bb12d46fdd1955e:4"
         }
       }
     },
@@ -7241,10 +7537,10 @@
         "tabelas_inalteradas": true,
         "integridade": "ok",
         "hash_antes": {
-          "vinculos_responsaveis": "611b81cd366c8c9253de0e1499c0970d:4"
+          "vinculos_responsaveis": "60c8ae6b1fdb532078ad32dab20aeb54:4"
         },
         "hash_depois": {
-          "vinculos_responsaveis": "611b81cd366c8c9253de0e1499c0970d:4"
+          "vinculos_responsaveis": "60c8ae6b1fdb532078ad32dab20aeb54:4"
         }
       }
     },
@@ -7265,10 +7561,10 @@
         "tabelas_inalteradas": true,
         "integridade": "ok",
         "hash_antes": {
-          "registros_estudo": "305fd225e8ab680b573a2aed162bf8ea:282"
+          "registros_estudo": "51ea000a69d793c47b2ab88e8b750730:282"
         },
         "hash_depois": {
-          "registros_estudo": "305fd225e8ab680b573a2aed162bf8ea:282"
+          "registros_estudo": "51ea000a69d793c47b2ab88e8b750730:282"
         }
       }
     },
@@ -7286,10 +7582,10 @@
         "tabelas_inalteradas": true,
         "integridade": "ok",
         "hash_antes": {
-          "aluno_onboarding": "4f3730da7226e466ccea2f43e6629321:3"
+          "aluno_onboarding": "147d94d704d96341b12e396ff1e20ff8:3"
         },
         "hash_depois": {
-          "aluno_onboarding": "4f3730da7226e466ccea2f43e6629321:3"
+          "aluno_onboarding": "147d94d704d96341b12e396ff1e20ff8:3"
         }
       }
     },
@@ -7307,10 +7603,10 @@
         "tabelas_inalteradas": true,
         "integridade": "ok",
         "hash_antes": {
-          "escolas": "7c725cecda726c808d20f91d9e2f4b77:7"
+          "escolas": "ee92ac8d7b17b789ca8c351803600c61:7"
         },
         "hash_depois": {
-          "escolas": "7c725cecda726c808d20f91d9e2f4b77:7"
+          "escolas": "ee92ac8d7b17b789ca8c351803600c61:7"
         }
       },
       "nota": "negado = a função responde false",
@@ -7330,10 +7626,10 @@
         "tabelas_inalteradas": true,
         "integridade": "ok",
         "hash_antes": {
-          "escolas": "7c725cecda726c808d20f91d9e2f4b77:7"
+          "escolas": "ee92ac8d7b17b789ca8c351803600c61:7"
         },
         "hash_depois": {
-          "escolas": "7c725cecda726c808d20f91d9e2f4b77:7"
+          "escolas": "ee92ac8d7b17b789ca8c351803600c61:7"
         }
       },
       "nota": "negado = a função responde false",
@@ -7353,10 +7649,10 @@
         "tabelas_inalteradas": true,
         "integridade": "ok",
         "hash_antes": {
-          "escolas": "7c725cecda726c808d20f91d9e2f4b77:7"
+          "escolas": "ee92ac8d7b17b789ca8c351803600c61:7"
         },
         "hash_depois": {
-          "escolas": "7c725cecda726c808d20f91d9e2f4b77:7"
+          "escolas": "ee92ac8d7b17b789ca8c351803600c61:7"
         }
       }
     },
@@ -7377,10 +7673,10 @@
         "tabelas_inalteradas": true,
         "integridade": "ok",
         "hash_antes": {
-          "trilhas": "a83e503baf28b6e184f2b4bbb1e08ca2:4"
+          "trilhas": "b62d388e4828d82db2a3053876d7ca95:4"
         },
         "hash_depois": {
-          "trilhas": "a83e503baf28b6e184f2b4bbb1e08ca2:4"
+          "trilhas": "b62d388e4828d82db2a3053876d7ca95:4"
         }
       },
       "nota": "decisão registrada: o catálogo é global e publicado, não é dado de escola; as policies de leitura do catálogo são using (true) para authenticated. Negar aqui exigiria mudar ~20 policies sem ganho de isolamento"
@@ -7399,10 +7695,10 @@
         "tabelas_inalteradas": true,
         "integridade": "ok",
         "hash_antes": {
-          "trilhas": "a83e503baf28b6e184f2b4bbb1e08ca2:4"
+          "trilhas": "b62d388e4828d82db2a3053876d7ca95:4"
         },
         "hash_depois": {
-          "trilhas": "a83e503baf28b6e184f2b4bbb1e08ca2:4"
+          "trilhas": "b62d388e4828d82db2a3053876d7ca95:4"
         }
       }
     },
@@ -7423,10 +7719,10 @@
         "tabelas_inalteradas": true,
         "integridade": "ok",
         "hash_antes": {
-          "turmas": "c67a9547ca82bb54fe6724692bb007cd:9"
+          "turmas": "142af94faba50a9392a96c674ae2a6e2:9"
         },
         "hash_depois": {
-          "turmas": "c67a9547ca82bb54fe6724692bb007cd:9"
+          "turmas": "142af94faba50a9392a96c674ae2a6e2:9"
         }
       },
       "nota": "quem barra é a FK para escolas, não a policy: com tenant_operacional() = true para escola inexistente, a RLS deixaria passar (C-S04)"
@@ -7448,10 +7744,10 @@
         "tabelas_inalteradas": true,
         "integridade": "ok",
         "hash_antes": {
-          "escolas": "7c725cecda726c808d20f91d9e2f4b77:7"
+          "escolas": "ee92ac8d7b17b789ca8c351803600c61:7"
         },
         "hash_depois": {
-          "escolas": "7c725cecda726c808d20f91d9e2f4b77:7"
+          "escolas": "ee92ac8d7b17b789ca8c351803600c61:7"
         }
       }
     },
@@ -7472,10 +7768,10 @@
         "tabelas_inalteradas": true,
         "integridade": "ok",
         "hash_antes": {
-          "usuarios": "9a8bd9790a9f28c4fa9f3b1906d0e843:82"
+          "usuarios": "a4c53c6160ec7c6a75a2a5aa7d2a6f64:82"
         },
         "hash_depois": {
-          "usuarios": "9a8bd9790a9f28c4fa9f3b1906d0e843:82"
+          "usuarios": "a4c53c6160ec7c6a75a2a5aa7d2a6f64:82"
         }
       }
     },
@@ -7496,10 +7792,10 @@
         "tabelas_inalteradas": true,
         "integridade": "ok",
         "hash_antes": {
-          "alunos": "85e37ce5b6330c71e1242548e661f090:68"
+          "alunos": "5d78b41d4862831fcd055cbabf6ee735:68"
         },
         "hash_depois": {
-          "alunos": "85e37ce5b6330c71e1242548e661f090:68"
+          "alunos": "5d78b41d4862831fcd055cbabf6ee735:68"
         }
       }
     },
@@ -7520,10 +7816,10 @@
         "tabelas_inalteradas": true,
         "integridade": "ok",
         "hash_antes": {
-          "registros_estudo": "305fd225e8ab680b573a2aed162bf8ea:282"
+          "registros_estudo": "51ea000a69d793c47b2ab88e8b750730:282"
         },
         "hash_depois": {
-          "registros_estudo": "305fd225e8ab680b573a2aed162bf8ea:282"
+          "registros_estudo": "51ea000a69d793c47b2ab88e8b750730:282"
         }
       }
     },
@@ -7544,10 +7840,10 @@
         "tabelas_inalteradas": true,
         "integridade": "ok",
         "hash_antes": {
-          "metas": "635411f665b590d6a0eca97e69438d4f:77"
+          "metas": "42705b7cd19363596092adf46d1dc106:77"
         },
         "hash_depois": {
-          "metas": "635411f665b590d6a0eca97e69438d4f:77"
+          "metas": "42705b7cd19363596092adf46d1dc106:77"
         }
       }
     },
@@ -7568,10 +7864,10 @@
         "tabelas_inalteradas": true,
         "integridade": "ok",
         "hash_antes": {
-          "consentimentos": "8852389b85dad31bc8db8b9bac948907:4"
+          "consentimentos": "2f462b71091097b30bb12d46fdd1955e:4"
         },
         "hash_depois": {
-          "consentimentos": "8852389b85dad31bc8db8b9bac948907:4"
+          "consentimentos": "2f462b71091097b30bb12d46fdd1955e:4"
         }
       }
     },
@@ -7592,10 +7888,10 @@
         "tabelas_inalteradas": true,
         "integridade": "ok",
         "hash_antes": {
-          "vinculos_responsaveis": "611b81cd366c8c9253de0e1499c0970d:4"
+          "vinculos_responsaveis": "60c8ae6b1fdb532078ad32dab20aeb54:4"
         },
         "hash_depois": {
-          "vinculos_responsaveis": "611b81cd366c8c9253de0e1499c0970d:4"
+          "vinculos_responsaveis": "60c8ae6b1fdb532078ad32dab20aeb54:4"
         }
       }
     },
@@ -7616,10 +7912,10 @@
         "tabelas_inalteradas": true,
         "integridade": "ok",
         "hash_antes": {
-          "internal_admins": "edbbc999be1d1ed545b8d486f71400ce:2"
+          "internal_admins": "b0d4f746a0acbb0c65e23221bcf3bb01:2"
         },
         "hash_depois": {
-          "internal_admins": "edbbc999be1d1ed545b8d486f71400ce:2"
+          "internal_admins": "b0d4f746a0acbb0c65e23221bcf3bb01:2"
         }
       }
     },
@@ -7640,10 +7936,10 @@
         "tabelas_inalteradas": true,
         "integridade": "ok",
         "hash_antes": {
-          "concursos": "cf8eb94b9208eebf8408596e4c046d17:8"
+          "concursos": "712ca3baf58e54fc9f80954d5f9c8db1:8"
         },
         "hash_depois": {
-          "concursos": "cf8eb94b9208eebf8408596e4c046d17:8"
+          "concursos": "712ca3baf58e54fc9f80954d5f9c8db1:8"
         }
       }
     },
@@ -7664,10 +7960,10 @@
         "tabelas_inalteradas": true,
         "integridade": "ok",
         "hash_antes": {
-          "trilhas": "a83e503baf28b6e184f2b4bbb1e08ca2:4"
+          "trilhas": "b62d388e4828d82db2a3053876d7ca95:4"
         },
         "hash_depois": {
-          "trilhas": "a83e503baf28b6e184f2b4bbb1e08ca2:4"
+          "trilhas": "b62d388e4828d82db2a3053876d7ca95:4"
         }
       }
     },
@@ -7688,10 +7984,10 @@
         "tabelas_inalteradas": true,
         "integridade": "ok",
         "hash_antes": {
-          "aluno_eventos_progresso": "7343917369fdb85440a9463916e56ed9:569"
+          "aluno_eventos_progresso": "7b2fb897346506930369feab8e0c1be5:569"
         },
         "hash_depois": {
-          "aluno_eventos_progresso": "7343917369fdb85440a9463916e56ed9:569"
+          "aluno_eventos_progresso": "7b2fb897346506930369feab8e0c1be5:569"
         }
       }
     },
@@ -7712,10 +8008,10 @@
         "tabelas_inalteradas": true,
         "integridade": "ok",
         "hash_antes": {
-          "registros_estudo": "305fd225e8ab680b573a2aed162bf8ea:282"
+          "registros_estudo": "51ea000a69d793c47b2ab88e8b750730:282"
         },
         "hash_depois": {
-          "registros_estudo": "305fd225e8ab680b573a2aed162bf8ea:282"
+          "registros_estudo": "51ea000a69d793c47b2ab88e8b750730:282"
         }
       }
     },
@@ -7736,10 +8032,10 @@
         "tabelas_inalteradas": true,
         "integridade": "ok",
         "hash_antes": {
-          "escolas": "7c725cecda726c808d20f91d9e2f4b77:7"
+          "escolas": "ee92ac8d7b17b789ca8c351803600c61:7"
         },
         "hash_depois": {
-          "escolas": "7c725cecda726c808d20f91d9e2f4b77:7"
+          "escolas": "ee92ac8d7b17b789ca8c351803600c61:7"
         }
       }
     },
@@ -7760,10 +8056,10 @@
         "tabelas_inalteradas": true,
         "integridade": "ok",
         "hash_antes": {
-          "trilhas": "a83e503baf28b6e184f2b4bbb1e08ca2:4"
+          "trilhas": "b62d388e4828d82db2a3053876d7ca95:4"
         },
         "hash_depois": {
-          "trilhas": "a83e503baf28b6e184f2b4bbb1e08ca2:4"
+          "trilhas": "b62d388e4828d82db2a3053876d7ca95:4"
         }
       }
     },
@@ -7781,12 +8077,12 @@
         "tabelas_inalteradas": true,
         "integridade": "ok",
         "hash_antes": {
-          "trilhas": "a83e503baf28b6e184f2b4bbb1e08ca2:4",
-          "aluno_eventos_progresso": "7343917369fdb85440a9463916e56ed9:569"
+          "trilhas": "b62d388e4828d82db2a3053876d7ca95:4",
+          "aluno_eventos_progresso": "7b2fb897346506930369feab8e0c1be5:569"
         },
         "hash_depois": {
-          "trilhas": "a83e503baf28b6e184f2b4bbb1e08ca2:4",
-          "aluno_eventos_progresso": "7343917369fdb85440a9463916e56ed9:569"
+          "trilhas": "b62d388e4828d82db2a3053876d7ca95:4",
+          "aluno_eventos_progresso": "7b2fb897346506930369feab8e0c1be5:569"
         }
       }
     },
@@ -7804,12 +8100,12 @@
         "tabelas_inalteradas": true,
         "integridade": "ok",
         "hash_antes": {
-          "trilhas": "a83e503baf28b6e184f2b4bbb1e08ca2:4",
-          "aluno_eventos_progresso": "7343917369fdb85440a9463916e56ed9:569"
+          "trilhas": "b62d388e4828d82db2a3053876d7ca95:4",
+          "aluno_eventos_progresso": "7b2fb897346506930369feab8e0c1be5:569"
         },
         "hash_depois": {
-          "trilhas": "a83e503baf28b6e184f2b4bbb1e08ca2:4",
-          "aluno_eventos_progresso": "7343917369fdb85440a9463916e56ed9:569"
+          "trilhas": "b62d388e4828d82db2a3053876d7ca95:4",
+          "aluno_eventos_progresso": "7b2fb897346506930369feab8e0c1be5:569"
         }
       }
     },
@@ -7827,12 +8123,12 @@
         "tabelas_inalteradas": true,
         "integridade": "ok",
         "hash_antes": {
-          "trilhas": "a83e503baf28b6e184f2b4bbb1e08ca2:4",
-          "aluno_eventos_progresso": "7343917369fdb85440a9463916e56ed9:569"
+          "trilhas": "b62d388e4828d82db2a3053876d7ca95:4",
+          "aluno_eventos_progresso": "7b2fb897346506930369feab8e0c1be5:569"
         },
         "hash_depois": {
-          "trilhas": "a83e503baf28b6e184f2b4bbb1e08ca2:4",
-          "aluno_eventos_progresso": "7343917369fdb85440a9463916e56ed9:569"
+          "trilhas": "b62d388e4828d82db2a3053876d7ca95:4",
+          "aluno_eventos_progresso": "7b2fb897346506930369feab8e0c1be5:569"
         }
       }
     },
@@ -7850,12 +8146,12 @@
         "tabelas_inalteradas": true,
         "integridade": "ok",
         "hash_antes": {
-          "trilhas": "a83e503baf28b6e184f2b4bbb1e08ca2:4",
-          "aluno_eventos_progresso": "7343917369fdb85440a9463916e56ed9:569"
+          "trilhas": "b62d388e4828d82db2a3053876d7ca95:4",
+          "aluno_eventos_progresso": "7b2fb897346506930369feab8e0c1be5:569"
         },
         "hash_depois": {
-          "trilhas": "a83e503baf28b6e184f2b4bbb1e08ca2:4",
-          "aluno_eventos_progresso": "7343917369fdb85440a9463916e56ed9:569"
+          "trilhas": "b62d388e4828d82db2a3053876d7ca95:4",
+          "aluno_eventos_progresso": "7b2fb897346506930369feab8e0c1be5:569"
         }
       }
     },
@@ -7873,12 +8169,12 @@
         "tabelas_inalteradas": true,
         "integridade": "ok",
         "hash_antes": {
-          "trilhas": "a83e503baf28b6e184f2b4bbb1e08ca2:4",
-          "aluno_eventos_progresso": "7343917369fdb85440a9463916e56ed9:569"
+          "trilhas": "b62d388e4828d82db2a3053876d7ca95:4",
+          "aluno_eventos_progresso": "7b2fb897346506930369feab8e0c1be5:569"
         },
         "hash_depois": {
-          "trilhas": "a83e503baf28b6e184f2b4bbb1e08ca2:4",
-          "aluno_eventos_progresso": "7343917369fdb85440a9463916e56ed9:569"
+          "trilhas": "b62d388e4828d82db2a3053876d7ca95:4",
+          "aluno_eventos_progresso": "7b2fb897346506930369feab8e0c1be5:569"
         }
       }
     },
@@ -7896,12 +8192,12 @@
         "tabelas_inalteradas": true,
         "integridade": "ok",
         "hash_antes": {
-          "trilhas": "a83e503baf28b6e184f2b4bbb1e08ca2:4",
-          "aluno_eventos_progresso": "7343917369fdb85440a9463916e56ed9:569"
+          "trilhas": "b62d388e4828d82db2a3053876d7ca95:4",
+          "aluno_eventos_progresso": "7b2fb897346506930369feab8e0c1be5:569"
         },
         "hash_depois": {
-          "trilhas": "a83e503baf28b6e184f2b4bbb1e08ca2:4",
-          "aluno_eventos_progresso": "7343917369fdb85440a9463916e56ed9:569"
+          "trilhas": "b62d388e4828d82db2a3053876d7ca95:4",
+          "aluno_eventos_progresso": "7b2fb897346506930369feab8e0c1be5:569"
         }
       }
     }
@@ -7954,6 +8250,16 @@
       "operacao": "POST com Prefer: resolution=merge-duplicates usando id da B",
       "esperado": "401/403 ou 0 linhas, sem mudar a linha da B",
       "motivo": "UPSERT pela API usa o mesmo caminho do caso T.*.upsert_id_B",
+      "camada": "http",
+      "observado": "PENDENTE-E3"
+    },
+    {
+      "id": "H.edge.escola_parada",
+      "alvo": "gerar-meta, lgpd-titular, provisionar-aluno, revogar-responsavel",
+      "persona": "coordS, coordX",
+      "operacao": "POST com sessão válida da coordenação de escola suspensa e cancelada",
+      "esperado": "403 escola_nao_operacional, sem efeito (depois do redeploy do #145)",
+      "motivo": "a chave de serviço ignora a RLS: sem o porteiro, a suspensão não valia nas Edge Functions (Fatia 7)",
       "camada": "http",
       "observado": "PENDENTE-E3"
     },
