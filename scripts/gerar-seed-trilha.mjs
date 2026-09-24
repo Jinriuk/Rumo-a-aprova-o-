@@ -30,8 +30,9 @@ linhas.push(`-- ============================================================
 -- CALENDÁRIO ROLANTE: as datas NÃO são fixas. A semana ${trilha.semanaAncora}
 -- da trilha é sempre a semana corrente em America/Sao_Paulo (a mesma
 -- regra de app.hoje_local()), e as outras oito guardam o encaixe
--- original — semana 1 começa no sábado, 2 a 8 são de segunda a
--- domingo, 9 termina no sábado da prova. Sem isso o seed de
+-- original: todas as semanas de segunda a domingo (D09, Bloco 4,
+-- 24/09/2026 — antes a 1 tinha 9 dias e a 9 tinha 6; a prova de sábado
+-- agora cai DENTRO da semana 9). Sem o calendário rolante o seed de
 -- demonstração vence sozinho: passada a última semana não há meta
 -- ativa, e o painel da vitrine amanhece vazio.
 -- ============================================================
@@ -61,6 +62,16 @@ const desloc = (iso) => Math.round((dia(iso) - dia(ancora.inicio)) / DIA_MS);
 if (new Date(dia(ancora.inicio)).getUTCDay() !== 1) {
   throw new Error(`a semana âncora precisa começar numa segunda-feira (${ancora.inicio})`);
 }
+// D09 (Bloco 4): toda semana é de segunda a domingo e encosta na
+// anterior — a mesma regra que o gerador da EsPCEx já exigia. Semana
+// de 9 ou de 6 dias passava daqui para o banco e dali para cada edição
+// clonada por abrir_proximo_ciclo.
+trilha.semanas.forEach((s, i) => {
+  if (new Date(dia(s.inicio)).getUTCDay() !== 1) throw new Error(`semana ${s.n} não começa na segunda (${s.inicio})`);
+  if (desloc(s.fim) - desloc(s.inicio) !== 6) throw new Error(`semana ${s.n} não tem 7 dias (${s.inicio} a ${s.fim})`);
+  const anterior = trilha.semanas[i - 1];
+  if (anterior && desloc(s.inicio) !== desloc(anterior.fim) + 1) throw new Error(`semana ${s.n} não encosta na ${anterior.n}`);
+});
 
 linhas.push(`with ancora as (
   -- date_trunc('week') devolve a SEGUNDA-feira; app.hoje_local() é a

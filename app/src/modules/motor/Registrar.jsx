@@ -171,7 +171,7 @@ export function Registrar({
                 vez). Este campo não está dentro de <form>, então o
                 atributo nativo não muda o comportamento de envio: só
                 alinha a semântica ARIA com o HTML de verdade. */}
-            <input id={id("top")} value={f.topico} onChange={(e) => set("topico", e.target.value)} required aria-required="true" placeholder="ex: divisibilidade — MDC e MMC (obrigatório)" style={inputS} />
+            <input id={id("top")} value={f.topico} onChange={(e) => set("topico", e.target.value)} required aria-required="true" placeholder="ex: MDC e MMC" style={inputS} />
           </div>
           <div>
             <label htmlFor={id("q")} style={lbl}>Questões</label>

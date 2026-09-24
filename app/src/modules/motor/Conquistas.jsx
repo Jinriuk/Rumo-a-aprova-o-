@@ -30,7 +30,7 @@ export function catalogoConquistas({ m, metas, simulados }) {
     { grupo: "Volume",     gIcone: "raio", icone: "raio",    raridade: "destacada", nome: "Linha de Frente",     req: "Resolva 500 questões",                            atual: m.totDone, alvo: 500 },
     { grupo: "Volume",     gIcone: "raio", icone: "estrela", raridade: "rara",      nome: "Mil Questões",        req: "Resolva 1.000 questões",                          atual: m.totDone, alvo: 1000 },
     { grupo: "Volume",     gIcone: "raio", icone: "trofeu",  raridade: "lendaria",  nome: "Lendário",            req: "Resolva 5.000 questões",                          atual: m.totDone, alvo: 5000 },
-    { grupo: "Precisão",   gIcone: "alvo", icone: "alvo",    raridade: "destacada", nome: "Mira Certa",          req: "70% de acerto geral (mín. 50 questões)",          atual: m.totDone >= 50 ? m.acerto : 0, alvo: 70, sufixo: "%" },
+    { grupo: "Precisão",   gIcone: "alvo", icone: "alvo",    raridade: "destacada", nome: "Mira Certa",          req: "70% de acerto no ciclo (mín. 50 questões)",          atual: m.totDone >= 50 ? m.acerto : 0, alvo: 70, sufixo: "%" },
     { grupo: "Precisão",   gIcone: "alvo", icone: "medalha", raridade: "rara",      nome: "Precisão Cirúrgica",  req: "80% de acerto em uma matéria (mín. 10 questões)", atual: melhorMateria, alvo: 80, sufixo: "%" },
     { grupo: "Missões",    gIcone: "ancora", icone: "ancora", raridade: "comum",    nome: "Primeiro Alvo",       req: "Conclua seu primeiro objetivo de missão",         atual: cumpridas, alvo: 1 },
     { grupo: "Missões",    gIcone: "ancora", icone: "check",  raridade: "destacada", nome: "Missão Cumprida",    req: "Feche uma semana com 100% dos objetivos",         atual: semanas100, alvo: 1 },

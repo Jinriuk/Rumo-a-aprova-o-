@@ -29,6 +29,28 @@ export function corDeAcerto(T, acc) {
   return T.red;
 }
 
+/* Sequência ("ofensiva") de dias seguidos com estudo — Bloco 4,
+   24/09/2026 (aprovado). Antes contava de HOJE para trás e zerava se
+   ainda não houvesse registro hoje: quem estudou ontem via "retomando
+   o ritmo" de manhã, antes de ter tido a chance de estudar. Agora a
+   sequência segue viva até o fim do dia seguinte ao último estudo:
+   conta a partir de hoje se houver registro hoje; senão, a partir de
+   ontem; e zera só quando ontem também ficou vazio. `hoje` é
+   YYYY-MM-DD (data local do produto). */
+const isoLocal = (d) =>
+  `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+
+export function contarSequencia(datas, hoje) {
+  const d = new Date(`${hoje}T00:00:00`);
+  if (!datas.has(isoLocal(d))) d.setDate(d.getDate() - 1);
+  let n = 0;
+  while (datas.has(isoLocal(d))) {
+    n++;
+    d.setDate(d.getDate() - 1);
+  }
+  return n;
+}
+
 export function calcularMetricas({ registros, simulados, semanas, semanaAtiva, disciplinas, metaQuestoes }) {
   const t = todayISO();
   const logs = registros.map((r) => ({ ...r, data: String(r.data) }));
@@ -41,14 +63,7 @@ export function calcularMetricas({ registros, simulados, semanas, semanaAtiva, d
   const totCorr = logs.reduce((a, l) => a + (+l.acertos || 0), 0);
   const acerto = totDone ? Math.round((totCorr / totDone) * 100) : 0;
 
-  // streak (sequência de dias com estudo, contando de hoje pra trás)
-  const dset = new Set(logs.map((l) => l.data));
-  let streak = 0;
-  const d = new Date(`${t}T00:00:00`);
-  while (dset.has(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`)) {
-    streak++;
-    d.setDate(d.getDate() - 1);
-  }
+  const streak = contarSequencia(new Set(logs.map((l) => l.data)), t);
 
   const diasSemana = new Set(wlogs.map((l) => l.data)).size;
   const minutosSemana = wlogs.reduce((a, l) => a + (+l.minutos || 0), 0);

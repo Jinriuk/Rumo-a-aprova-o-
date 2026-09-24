@@ -65,6 +65,9 @@ export function adaptarResumoEscola(linhas, alunosPorId, semanasPorTrilha = {}) 
         // últimos 7 dias
         qSem: Number(l.questoes_7d) || 0,
         accSem: caSem ? Math.round(((Number(l.acertos_7d) || 0) / caSem) * 100) : null,
+        // brutos da janela, para somar entre alunos sem média de médias (D04)
+        acertosSem: Number(l.acertos_7d) || 0,
+        caQSem: caSem,
         minSem: Number(l.minutos_7d) || 0,
         diasSem,
         ultimaAtividade: l.ultima_atividade ?? null,
@@ -83,4 +86,20 @@ export function adaptarResumoEscola(linhas, alunosPorId, semanasPorTrilha = {}) 
       };
     })
     .filter(Boolean);
+}
+
+// D04 (Bloco 3, 23/09/2026): o card "Acerto médio" do painel era a
+// média SIMPLES do acerto acumulado de cada aluno — sem período, ao lado
+// de dois cards de 7 dias, e dando o mesmo peso a quem fez 18 e a quem
+// fez 378 questões. Agora é "Acerto (7 dias)", ponderado: soma de
+// acertos ÷ soma de questões com acerto lançado nos últimos 7 dias, a
+// mesma janela e o mesmo denominador (cd/cc) do resto da coordenação.
+// null quando ninguém lançou acerto na janela.
+export function acertoPonderadoSemana(resumo) {
+  let acertos = 0, questoes = 0;
+  for (const x of resumo ?? []) {
+    acertos += Number(x.acertosSem) || 0;
+    questoes += Number(x.caQSem) || 0;
+  }
+  return questoes ? Math.round((acertos / questoes) * 100) : null;
 }

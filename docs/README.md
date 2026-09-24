@@ -14,6 +14,7 @@ Documentação organizada por **área** e por **assunto**. Comece pelos índices
 | [`fases/`](#-fases) | Histórico de **build** do produto, fase a fase (14.5 → 17) |
 | [`auditoria/`](./auditoria/README.md) | Auditorias e fases de evolução, **por assunto** (segurança, banco, operacional, produto) + `antigos/` |
 | [`operacao/`](#-operacao) | Documentação **viva** de operação: infra, ambientes, backup, rollback, go-live, LGPD, runbooks |
+| [`demo/`](./demo/HISTORIA.md) | A demonstração do Instituto Meridiano: a história de cada aluno e a "semana 4 em repetição" (`supabase/demo/`) |
 
 > **Regra de leitura:** `fundacao/` e `operacao/` são **referência viva**. `auditoria/`
 > registra **o que foi feito em cada fase**. `auditoria/antigos/` é **histórico** e não

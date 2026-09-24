@@ -258,7 +258,7 @@ export function MissaoAtual({ meta, trilha, m, metas, ciclo, aoAvancar }) {
         <div>
           <div style={{ fontSize: 11, color: T.sub, fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.6, margin: "2px 2px 8px" }}>◎ {L.radar}</div>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(150px,1fr))", gap: 10 }}>
-            <StatCard rotulo={L.precisao} valor={`${m.acerto}%`} sub="acerto geral" icone="◎" tom={m.acerto >= 70 ? "ok" : m.acerto > 0 ? "alerta" : "neutro"} />
+            <StatCard rotulo={L.precisao} valor={`${m.acerto}%`} sub="acerto no ciclo" icone="◎" tom={m.acerto >= 70 ? "ok" : m.acerto > 0 ? "alerta" : "neutro"} />
             <StatCard rotulo={L.horas} valor={fmtHoras(m.minutosTotais ?? 0)} sub="tempo registrado" icone="◷" />
             <StatCard rotulo={L.questoesTotal} valor={m.totDone} sub={`${m.qSem} nesta semana`} icone="✦" />
             <StatCard rotulo={L.ritmo} valor={fmtHorasCurto(m.mediaMinutosDia ?? 0)} sub={m.streak > 0 ? `ofensiva: ${m.streak} 🔥` : "retomando o ritmo"} icone="⧗" />

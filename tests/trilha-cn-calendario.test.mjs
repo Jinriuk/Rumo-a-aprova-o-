@@ -61,15 +61,14 @@ test("o conteúdo continua o mesmo: 9 semanas contíguas, 50 atividades, ids est
     for (const linha of s.rows.slice(1)) {
       assert.equal(linha.depois_da_anterior, 1, `semana ${linha.numero} não encosta na anterior`);
     }
-    // a forma autoral, preservada: a 1 abre no sábado (diagnóstico) e é
-    // mais longa; a 9 fecha no sábado da prova; as do meio são segunda a
-    // domingo (isodow: 1 = segunda, 6 = sábado, 7 = domingo)
-    assert.equal(s.rows[0].dow_inicio, 6, "a semana 1 abre no sábado");
-    assert.equal(s.rows[0].dias, 8, "a semana 1 é a longa do diagnóstico");
-    assert.equal(s.rows[8].dow_fim, 6, "a semana 9 fecha no sábado da prova");
-    for (const linha of s.rows.slice(1, 8)) {
+    // D09 (Bloco 4, 24/09/2026): TODAS as semanas são de segunda a
+    // domingo (isodow: 1 = segunda, 7 = domingo). Antes a 1 abria no
+    // sábado com 9 dias e a 9 fechava no sábado da prova com 6 — forma
+    // que o Meridiano herdou; a prova de sábado agora cai dentro da 9.
+    for (const linha of s.rows) {
       assert.equal(linha.dow_inicio, 1, `semana ${linha.numero} começa na segunda`);
-      assert.equal(linha.dias, 6, `semana ${linha.numero} vai de segunda a domingo`);
+      assert.equal(linha.dow_fim, 7, `semana ${linha.numero} termina no domingo`);
+      assert.equal(linha.dias, 6, `semana ${linha.numero} tem 7 dias`);
     }
 
     const a = await c.query(

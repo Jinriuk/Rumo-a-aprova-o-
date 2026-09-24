@@ -108,6 +108,12 @@ export const FONTES_CSS = `
      contêiner de rolagem — "hidden" no html quebra a inércia do
      scroll por toque no Safari/iPad. */
   html, body { margin:0; max-width:100%; overflow-x:clip; background:#0A1622; }
+  /* D08 (Bloco 4, 23/09/2026): a família e a cor do texto moravam só na
+     div raiz do App. Os modais saem por createPortal(document.body) —
+     fora dessa div — e herdavam do <body>, que não tinha nenhuma das
+     duas: o "Responsáveis de Helena" saía na serifa padrão do
+     navegador. Declaradas aqui, valem para tudo o que nasce no body. */
+  body { font-family: Archivo, system-ui, sans-serif; color: ${BASE.ink}; }
   /* sem efeito elástico no topo (mobile): o cabeçalho não "descola"
      do resto da tela ao puxar pra baixo */
   html, body { overscroll-behavior-y: none; }
