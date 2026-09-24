@@ -59,18 +59,18 @@ policy de SELECT, e a meta de B é invisível para o aluno de A.
 
 ## Estado corrente
 
-**Atualizado em:** 24/09/2026, fim da Fatia 5.
+**Atualizado em:** 24/09/2026, fim da Fatia 6.
 **SHA de referência:** `fc564124bf7f735ddbb32d89b65169e11be18a33` (`main`).
 
 | Item | Estado | O que falta | Prova |
 | --- | --- | --- | --- |
 | **C-S01** capture-oidc | **PENDENTE DO DONO** | Apagar a função no painel do Supabase (demo); apagar a branch `tmp/triliva-pack-build-20260919`; ler o JWT expiry no painel | [Fatia 1](#fatia-1--c-s01-com-o-estado-de-2409) |
 | C-S02 CORS | **PENDENTE DO DONO** (correção pronta) | Ler se `ALLOWED_ORIGINS` existe em cada projeto; aprovar o redeploy das 7 funções (#142); decidir se produção aceita preview | [Fatia 5](#fatia-5--c-s02-cors) |
-| C-S03 credenciais no Vercel | em andamento (Fatia 6) | — | — |
+| C-S03 credenciais no Vercel | **PENDENTE DO DONO** (remoção feita e provada; rotação planejada) | Executar o plano de rotação (`docs/operacao/plano-rotacao-chaves-supabase.md`, #143): passo 0 no painel e aprovações. Prazo: antes do primeiro aluno real e até 01/12/2026, porque as chaves legadas param no fim de 2026. Conferir as variáveis compartilhadas do time Vercel | [Fatia 6](#fatia-6--c-s03-c-s05-e-c-s07) |
 | C-S04 `tenant_operacional` | **PENDENTE DO DONO** (correção pronta) | Aprovar a aplicação da 0056 (#140, empilhado no #138) em demo e produção | [Fatia 3](#fatia-3--c-s04-tenant_operacional-nega-por-padrão) |
-| C-S05 senha vazada | em andamento (Fatia 6) | — | — |
-| C-S06 SECURITY DEFINER | **PENDENTE DO DONO** (correção pronta) | Aprovar a 0057 (#141); conferir no painel se `app` está em "Exposed schemas" | [Fatia 4](#fatia-4--c-s06-security-definer) |
-| C-S07 chave anon | em andamento (Fatia 6) | — | — |
+| C-S05 senha vazada | **PENDENTE DE ETAPA (E8)** | Ligar e testar na ativação do Pro, pela lista em `auth-credenciais-checklist.md` (#143). Testar se a checagem vale no caminho da `trocar-senha` (API de admin) | [Fatia 6](#fatia-6--c-s03-c-s05-e-c-s07) |
+| C-S06 SECURITY DEFINER | **PENDENTE DO DONO** (correção pronta) | Aprovar a 0057 (#141); conferir no painel se `app` está em "Exposed schemas" (o advisor da Supabase indica que não está, ver Fatia 6) | [Fatia 4](#fatia-4--c-s06-security-definer) |
+| C-S07 chave anon | **PENDENTE DE ETAPA (E3)**, só a leitura do deploy de produção | Banco provado: `anon` não lê, não altera, não executa nada. Falta ver, por HTTP, que o bundle publicado em produção usa uma chave de papel `anon` do projeto de produção (o valor no Vercel não é legível e a rede desta sessão não alcança o domínio) | [Fatia 6](#fatia-6--c-s03-c-s05-e-c-s07) |
 | Matriz de autorização | **camada banco: FEITA** · camada HTTP: **PENDENTE DE ETAPA (E3)** | 45 divergências registradas, cada uma com a correção; 14 casos HTTP especificados para a E3 | #139, [Fatia 2](#fatia-2--matriz-de-autorização) |
 | Complementos G | em andamento (Fatia 7) | — | — |
 
@@ -84,6 +84,7 @@ policy de SELECT, e a meta de B é invisível para o aluno de A.
 | 3 · C-S04 (0056) | #140, **base = #138** | Merge depois do #138 (numeração contígua de migrations). Aplicação só com aprovação. |
 | 4 · C-S06 (0057) | #141, **base = #140** | Merge depois do #140. Aplicação só com aprovação. |
 | 5 · C-S02 CORS | #142 (da `main`) | CI verde. Aplicação = redeploy das 7 funções, só com aprovação. |
+| 6 · C-S03, C-S05, C-S07 | #143 (da `main`) | CI verde. Só testes e documentação; nada aplicado. O plano de rotação não foi executado. |
 
 ---
 
@@ -499,6 +500,177 @@ a lista inteira.
 | Observado | 17/17 no arquivo; contrafactual: 2 falham com o `cors.ts` antigo; suíte 1060/1060 |
 | Pendente | (1) o dono lê se `ALLOWED_ORIGINS` existe em cada projeto e se tem `localhost`; (2) aprova o redeploy; (3) decide sobre o preview. OPTIONS por HTTP nas funções publicadas: PENDENTE-E3 |
 | Estado | **PENDENTE DO DONO** |
+
+---
+
+## Fatia 6 — C-S03, C-S05 e C-S07
+
+**PR:** #143, a partir da `main`, independente. Só testes e documentação.
+**Nada aplicado**, e o plano de rotação **não foi executado**.
+
+### C-S03: credenciais de servidor no Vercel
+
+**Remoção: feita e medida (24/09, só leitura).** Os dois projetos Vercel
+(`triliva-producao` e `rumo-a-aprova-o`) têm só `VITE_SUPABASE_URL` e
+`VITE_SUPABASE_ANON_KEY`, com `hiddenProductionEnvCount: 0`. Em 21/09 o de
+produção tinha 8 (`docs/e0-baseline.md`), entre elas
+`SUPABASE_SERVICE_ROLE_KEY` em Production e Preview. A remoção aconteceu
+entre 21/09 e 24/09; quem removeu e quando não é visível por ferramenta.
+
+**Bundle:**
+- `vite.config.js` não liga sourcemap, e o build local não gera `.map`.
+- O único JWT no bundle tem papel `anon`. O único `sb_secret_` é o prefixo
+  que a biblioteca testa, não uma chave.
+- Teste novo no CI, sobre o build do próprio job, trava as três coisas.
+- **Bundle publicado em produção: NÃO VERIFICADO diretamente.** A
+  ferramenta do Vercel não lê os arquivos do deploy (`File tree not
+  found`), e a rede desta sessão não alcança o domínio.
+
+**Logs e uso: nada a ler.** Produção não tem nenhuma requisição HTTP nos
+logs de 22/09 e de 23-24/09 (só `postgres_logs` e `postgrest_logs` de
+arranque). O Vercel não guarda o que um build leu do ambiente.
+
+**Exposição: potencial, não consumada.** A chave ficou no ambiente de build
+de todo preview, inclusive de branch de bot, onde qualquer script de
+instalação de dependência a lia. Não há indício de uso indevido, e não há
+como descartá-lo. Por isso a rotação se justifica, e há um motivo mais
+forte: **as chaves legadas `anon` e `service_role` param no fim de 2026**,
+segundo a Supabase, e o **JWT secret legado não pode mais ser
+rotacionado**. A rotação é a troca pela chave secreta nova e a
+desativação das legadas.
+
+**Plano:** `docs/operacao/plano-rotacao-chaves-supabase.md` (#143). Resumo:
+0. o dono confere no painel se a chave secreta `default` existe (a
+   publicável `default` existe nos dois projetos, medido);
+1. PR das funções para ler `SUPABASE_SECRET_KEYS`, com a legada como
+   alternativa só na transição, e a `virar-semana` aceitando a secreta no
+   `apikey`;
+2. publicar no demo;
+3. front com a publicável (Vercel e `app/.env.production`);
+4. keepalive sem `Authorization: Bearer`;
+5. scripts de operador;
+6. desativar as legadas, demo antes, produção depois (reversível).
+
+**Achado para a E0:** o keepalive manda a chave também em
+`Authorization: Bearer`, e a Supabase recusa chave publicável nesse
+cabeçalho. **Os secrets do keepalive devem receber a `anon` legada** até
+o passo 4.
+
+| Campo | Valor |
+| --- | --- |
+| ID | C-S03 |
+| Decisão | Variáveis de servidor fora do Vercel (feito); bundle travado por teste; rotação pela migração para a chave secreta nova |
+| SHA | `2f1e929` (branch do #143) |
+| Teste | `E2/C-S03` em `tests/sec3-endurecimento-edge.test.mjs` |
+| Observado | Passa no build atual; falha com `.map` no `dist` e com JWT `service_role` plantado (contraprova) |
+| Estado | **PENDENTE DO DONO:** passo 0 do plano, aprovações dos passos 1 a 6, e conferir as variáveis compartilhadas do time Vercel (a ferramenta não lista) |
+
+### C-S05: senha vazada e o fluxo de troca que existe hoje
+
+**Plano Pro, conferido na documentação em 24/09:** a proteção de senha
+vazada, a sessão com prazo, o tempo de inatividade e a sessão única são
+exclusivas do Pro. Comprimento mínimo, caracteres obrigatórios e o JWT
+expiry valem em todos os planos. O advisor
+`auth_leaked_password_protection` está WARN nos dois projetos.
+
+**Lista de ativação da E8:** em `docs/operacao/auth-credenciais-checklist.md`
+(#143), com valor proposto e teste de cada controle. Dois cuidados que a
+lista registra:
+- **A `trocar-senha` troca pela API de admin.** A documentação não diz se
+  a checagem de senha vazada vale nesse caminho. Se não valer, a proteção
+  não cobre alunos e responsáveis, que trocam a senha por ali.
+- **Não exigir classes de caractere antes de mudar o gerador:** a senha
+  temporária tem 16 caracteres de `[A-Za-z2-9]`, sem símbolo e às vezes sem
+  dígito.
+
+**Testado no banco local (8 testes, bloco `E2/C-S05`):**
+- `authenticated` não tem UPDATE em `usuarios`, **igual aos hospedados**
+  (medido em demo e produção). O aluno tentando zerar o próprio
+  `must_change_password` leva 42501.
+- Mesmo com um grant vazado, nem o aluno nem a coordenação mudam
+  `must_change_password`, `credencial_status`, `papel` ou `escola_id`: a
+  RLS não tem policy de UPDATE. 0 linhas, linha intacta.
+- `anon` tem SELECT e UPDATE em `usuarios` nos hospedados; com os dois,
+  altera 0 linhas.
+- O caminho do servidor (`service_role`) zera a troca, revoga e reativa.
+
+**Comportamentos registrados, com teste de REGISTRO:**
+- `must_change_password` é trava de tela. Quem tem a senha temporária e
+  fala direto com a API usa a conta sem trocar a senha. Não cruza escola.
+- Credencial revogada lê até o token expirar: nenhuma policy lê
+  `credencial_status`, e o banimento só impede o refresh. Janela = JWT
+  expiry.
+
+**Recuperação de senha:** acontece no GoTrue (`PATCH /auth/v1/user` com o
+token do link, `app/src/shared/data/index.js:807-830`). Não há parte de
+banco para testar localmente. Se o reset feito pela coordenação encerra as
+sessões abertas do aluno: **PENDENTE-E3** (a `provisionar-aluno` não chama
+nenhum encerramento de sessão).
+
+| Campo | Valor |
+| --- | --- |
+| ID | C-S05 |
+| Decisão | Ligar na ativação do Pro, pela lista; no Free, só o servidor mexe na credencial (provado) |
+| Teste | 8 testes em `tests/etapa7-bloco-b-credencial.test.mjs` |
+| Observado | 8/8. Contraprova: policy de UPDATE em `usuarios` derruba 2; grant permanente de UPDATE derruba o do 42501 |
+| Estado | **PENDENTE DE ETAPA (E8)** |
+
+### C-S07: o que a chave anon alcança
+
+**Não é `service_role`:** a chave de `app/.env.production` tem papel
+`anon` e `ref` do demo (teste T76). O bundle do CI só carrega JWT `anon`
+(teste C-S03). As duas chaves publicáveis de cada projeto (`anon` legada
+e `sb_publishable_` `default`) estão ativas.
+
+**Enumeração, 24/09, idêntica em demo e produção (só leitura):**
+
+| Superfície | Alcance de `anon` |
+| --- | --- |
+| 50 objetos de `public` | grant de DML em 48 (faltam `logs_coordenacao` e `vw_concurso_qualidade`) |
+| Policies | 85 em `public`, **nenhuma** para `anon` ou PUBLIC |
+| RLS | ligada em todas as tabelas |
+| Views | as 3 são `security_invoker` |
+| Funções de `public` e `app` | **nenhuma** alcançável (`app` sem USAGE; as de `public` sem EXECUTE) |
+| Sequências | USAGE em 4 (`logs_acesso_id_seq`, `aluno_nivel_historico_id_seq`, `admin_logs_id_seq`, `logs_coordenacao_id_seq`); o PostgREST não expõe `nextval`, efeito nulo |
+| Realtime | publicação `supabase_realtime` sem tabela, então `postgres_changes` não entrega nada; o app não usa Realtime |
+| Storage | produção: nenhum bucket; demo: `Logos-escolas` público, sem policy (Fatia 7) |
+
+**Testado no banco local (5 testes, bloco `E2/C-S07`):** com DML concedido
+em **todos** os 50 objetos (mais do que o hospedado dá), `anon` lê 0,
+altera 0 e apaga 0 em cada um, e o INSERT é recusado pela RLS. As 5
+tabelas que o seed deixa vazias estão listadas no teste; nelas só o
+INSERT prova. Contraprova: policy para `anon`, RLS desligada, USAGE em
+`app` e view sem `security_invoker` derrubam o teste esperado.
+
+**O que falta:** ver, por HTTP, que o bundle **publicado** em produção
+usa uma chave de papel `anon` do projeto de produção. O valor no Vercel é
+`sensitive` (ilegível), e a rede desta sessão não alcança o domínio.
+PENDENTE-E3; o dono pode adiantar abrindo `app.trilivaedu.com.br` e
+conferindo, na aba de rede do navegador, que as chamadas vão para
+`zckyhihxjjbnqjqilymn.supabase.co`.
+
+**Sugestão, sem urgência:** como o app não usa Realtime, desligar o
+acesso público de Realtime no painel. Hoje qualquer um com a chave `anon`
+pode usar canais de broadcast como retransmissor. Não expõe dado.
+
+| Campo | Valor |
+| --- | --- |
+| ID | C-S07 |
+| Decisão | A chave `anon` é pública por desenho; a segurança está no banco, e o banco foi provado |
+| Teste | 5 testes em `tests/sec3-endurecimento-edge.test.mjs` |
+| Observado | 5/5 e contraprova; enumeração hospedada idêntica à local |
+| Estado | **PENDENTE DE ETAPA (E3):** só a leitura do deploy de produção |
+
+### C-S06: indício novo sobre "Exposed schemas"
+
+O advisor de segurança da Supabase (`get_advisors`, 24/09, demo e
+produção) lista em `authenticated_security_definer_function_executable`
+as 12 funções SECURITY DEFINER de `public`, cada uma "via
+`/rest/v1/rpc/...`", e **nenhuma das 6 internas de `app`**, que também são
+SECURITY DEFINER com EXECUTE e USAGE para `authenticated`. Esse lint olha
+os schemas expostos pela API. É **indício forte** de que `app` não está
+exposto: não é prova, porque a regra do lint não está no banco. A leitura
+do painel continua sendo o fechamento.
 
 ---
 
