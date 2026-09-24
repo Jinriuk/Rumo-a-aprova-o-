@@ -79,12 +79,12 @@ dois ambientes, e produção sem nenhuma coluna interna preenchida.
    ainda cria contas de aluno e responsável, reseta, revoga e reativa
    credenciais, gera meta, revoga vínculo e **exporta o dossiê LGPD de
    qualquer aluno da escola**, que a RLS já não a deixa ler. Lido no código
-   (as sete funções, Fatia 7). **Correção: PR próprio (URGENTE)**, porteiro
-   de escola operacional nas funções da coordenação.
+   (as sete funções, Fatia 7). **Correção: PR #145 (URGENTE)**, porteiro de
+   escola operacional nas funções da coordenação. Não publicado.
 
 ## Estado corrente
 
-**Atualizado em:** 24/09/2026, fim da Fatia 6.
+**Atualizado em:** 24/09/2026, fim da Fatia 7 (etapa inteira).
 **SHA de referência:** `fc564124bf7f735ddbb32d89b65169e11be18a33` (`main`).
 
 | Item | Estado | O que falta | Prova |
@@ -96,8 +96,8 @@ dois ambientes, e produção sem nenhuma coluna interna preenchida.
 | C-S05 senha vazada | **PENDENTE DE ETAPA (E8)** | Ligar e testar na ativação do Pro, pela lista em `auth-credenciais-checklist.md` (#143). Testar se a checagem vale no caminho da `trocar-senha` (API de admin) | [Fatia 6](#fatia-6--c-s03-c-s05-e-c-s07) |
 | C-S06 SECURITY DEFINER | **PENDENTE DO DONO** (correção pronta) | Aprovar a 0057 (#141); conferir no painel se `app` está em "Exposed schemas" (o advisor da Supabase indica que não está, ver Fatia 6) | [Fatia 4](#fatia-4--c-s06-security-definer) |
 | C-S07 chave anon | **PENDENTE DE ETAPA (E3)**, só a leitura do deploy de produção | Banco provado: `anon` não lê, não altera, não executa nada. Falta ver, por HTTP, que o bundle publicado em produção usa uma chave de papel `anon` do projeto de produção (o valor no Vercel não é legível e a rede desta sessão não alcança o domínio) | [Fatia 6](#fatia-6--c-s03-c-s05-e-c-s07) |
-| Matriz de autorização | **camada banco: FEITA** · camada HTTP: **PENDENTE DE ETAPA (E3)** | 45 divergências registradas, cada uma com a correção; 14 casos HTTP especificados para a E3 | #139, [Fatia 2](#fatia-2--matriz-de-autorização) |
-| Complementos G | em andamento (Fatia 7) | — | — |
+| Matriz de autorização | **camada banco: FEITA** · camada HTTP: **PENDENTE DE ETAPA (E3)** | 328 casos; 53 divergências registradas, cada uma com a correção (com 0055 a 0058 juntas sobra 1, a E1-ACHADO-2); 15 casos HTTP especificados para a E3 | #139, [Fatia 2](#fatia-2--matriz-de-autorização) |
+| Complementos G | **PENDENTE DO DONO** (2 correções urgentes prontas) e **PENDENTE DE ETAPA (E3)** | Aprovar a 0058 (#144) e o redeploy das 4 funções (#145); ler os limites de login do Auth, o secret `PASSWORD_RESET_REDIRECT_URL` de produção e o objeto `IMG_9712.jpeg` do demo; sondagens HTTP na E3 | [Fatia 7](#fatia-7--complementos-do-relatório-g) |
 
 ## PRs da etapa
 
@@ -110,8 +110,48 @@ dois ambientes, e produção sem nenhuma coluna interna preenchida.
 | 4 · C-S06 (0057) | #141, **base = #140** | Merge depois do #140. Aplicação só com aprovação. |
 | 5 · C-S02 CORS | #142 (da `main`) | CI verde. Aplicação = redeploy das 7 funções, só com aprovação. |
 | 6 · C-S03, C-S05, C-S07 | #143 (da `main`) | CI verde. Só testes e documentação; nada aplicado. O plano de rotação não foi executado. |
+| **URGENTE** · 7 · 0058 colunas de `escolas` | #144, **base = #141** | Merge depois do #141. Aplicação só com aprovação do dono. |
+| **URGENTE** · 7 · Edge Functions e escola parada | #145 (da `main`) | CI verde. Aplicação = redeploy de 4 funções com `_shared/escola.ts`, só com aprovação. |
 
 ---
+
+## O que falta para o G2 fechar
+
+Tudo abaixo depende do dono. O que é código está pronto e testado; nada
+foi aplicado.
+
+**Aprovações (cada uma em prompt próprio):**
+1. Aplicar **0055** (#138), depois **0056** (#140), **0057** (#141) e
+   **0058** (#144), nessa ordem, no demo e depois em produção. A 0055 e
+   a 0058 antes da segunda escola real.
+2. Redeploy das funções: as 7 do CORS (#142) e as 4 do porteiro de escola
+   parada (#145), com os arquivos de `_shared/` no pacote.
+3. Executar o plano de rotação das chaves (`docs/operacao/plano-rotacao-chaves-supabase.md`, #143)
+   antes do primeiro aluno real e até 01/12/2026.
+
+**Ações no painel:**
+4. C-S01: apagar a função `capture-oidc-20260919` (demo) e a branch
+   `tmp/triliva-pack-build-20260919`; ler o JWT expiry.
+5. C-S02: ler se `ALLOWED_ORIGINS` existe em cada projeto e decidir se o
+   preview de produção fica ligado ao banco de produção.
+6. C-S06: conferir *Exposed schemas* (o advisor indica que `app` não está
+   exposto).
+7. C-S03: confirmar a chave secreta `default` nos dois projetos e olhar
+   as variáveis compartilhadas do time Vercel.
+8. Fatia 7: ler os limites de sign-in do Auth; confirmar o secret
+   `PASSWORD_RESET_REDIRECT_URL` em produção; conferir o objeto
+   `IMG_9712.jpeg` do bucket público do demo.
+
+**Decisões de produto:**
+9. E1-ACHADO-2 (edição órfã no catálogo).
+10. Pedido do titular (LGPD) em escola suspensa ou cancelada: hoje, com o
+    #145, fica só com o operador, e não há caminho pronto para ele.
+11. `must_change_password` só na tela e credencial revogada valendo até o
+    token expirar (C-S05): aceitar, ou baixar o JWT expiry.
+
+**Para a rede desta sessão:** liberar `*.supabase.co` e
+`trilivaedu.com.br` destrava as sondagens HTTP da E3 (15 casos) e a
+leitura do bundle publicado (C-S07).
 
 ## Fatia 1 — C-S01 com o estado de 24/09
 
@@ -353,8 +393,12 @@ tabela.
 
 | Camada | Provados | Divergentes (registrados) | PENDENTE-E3 |
 | --- | --- | --- | --- |
-| Banco | 273 conformes de 318 | 45: FK cruzada e cenários (18) → 0055/#138 · C-S04 (20) → 0056 · C-S06 (6) → 0057 · E1-ACHADO-2 (1) | — |
-| HTTP | 0 | — | 14 (ver `camada_http` no JSON: Accept-Profile, login por persona, PostgREST, as 7 Edge Functions sem bearer / malformado / expirado / outro tenant / método / OPTIONS, refresh com claims antigas, limite do login por código) |
+| Banco | 275 conformes de 328 | 53: FK cruzada e cenários (18) → 0055/#138 · C-S04 (20) → 0056/#140 · C-S06 (6) → 0057/#141 · colunas do backoffice em `escolas` (8) → 0058/#144 · E1-ACHADO-2 (1) | — |
+| HTTP | 0 | — | 15 (ver `camada_http` no JSON: Accept-Profile, login por persona, PostgREST, as 7 Edge Functions sem bearer / malformado / expirado / outro tenant / método / OPTIONS, escola parada nas funções da coordenação (#145), refresh com claims antigas, limite do login por código) |
+
+Atualizado na Fatia 7 (eram 318 casos, 45 divergentes e 14 HTTP). Com
+0055, 0056, 0057 e 0058 aplicadas juntas no banco local, sobra 1
+divergente: a E1-ACHADO-2.
 
 ### O que a matriz mostrou, além da falha do topo
 
@@ -696,6 +740,125 @@ SECURITY DEFINER com EXECUTE e USAGE para `authenticated`. Esse lint olha
 os schemas expostos pela API. É **indício forte** de que `app` não está
 exposto: não é prova, porque a regra do lint não está no banco. A leitura
 do painel continua sendo o fechamento.
+
+---
+
+## Fatia 7 — Complementos do relatório G
+
+**PRs:** #144 (0058, URGENTE, empilhado no #141) e #145 (Edge Functions,
+URGENTE, da `main`). A matriz (#139) ganhou 9 casos e 1 caso HTTP.
+**Nada aplicado nem publicado.** A rede desta sessão continua sem
+alcançar `*.supabase.co` (`curl` devolve `000`), então nenhuma sondagem
+HTTP foi feita: todas ficam PENDENTE-E3.
+
+### As 7 Edge Functions, lidas uma a uma
+
+Todas têm `verify_jwt = false` (`supabase/config.toml`), aceitam só
+`POST` (mais `OPTIONS`), identificam quem chama pelo token validado no
+Auth (`admin.auth.getUser(token)`), tiram escola e papel do
+`app_metadata` (que o usuário não edita) e nunca de campo do corpo. Todas
+devolvem erro genérico no `catch`.
+
+| Função | Operação | Quem passa (linha) | Alvo conferido na escola do token | Observação |
+| --- | --- | --- | --- | --- |
+| `gerar-meta` | gera a meta da semana de um aluno | coordenação (`index.ts:33-35`) | `alunoDaEscola` (`:40`) | Devolve à coordenação a mensagem de erro do motor (`:73`). Sem porteiro de escola parada até o #145. |
+| `lgpd-titular` | exporta o dossiê ou apaga o aluno e as contas | coordenação (`:47-51`) | `alunoDaEscola` (`:58`) | A lista de contas que caem vem de `lgpd_usuarios_do_aluno`, que a 0055 corrige (falha do topo). Sem porteiro de escola parada até o #145. |
+| `provisionar-aluno` | cria conta de aluno ou responsável; reseta, revoga e reativa credencial; vincula responsável | coordenação (`:216-218`) | `alunoDaEscola` (`:239`), `usuarioDaEscola` com papel aluno/responsável (`:152`), responsável da escola (`:248-254`) | A senha temporária só volta na resposta, uma vez. O reset não encerra sessões abertas (PENDENTE-E3). Sem porteiro de escola parada até o #145. |
+| `revogar-responsavel` | apaga o vínculo | coordenação (`:88-105`) ou super_admin ativo (`:94-98`) | `escola_id` do token no filtro (`:114`); super_admin em qualquer escola | Sem porteiro de escola parada até o #145 (só no ramo da coordenação). |
+| `trocar-senha` | troca a própria senha e zera a troca obrigatória | qualquer usuário autenticado (`:115-116`) | sempre `quem.id`, nunca id do corpo (`:129`, `:136`) | Regra de força e "senha diferente do código" no servidor. Troca pela API de admin (ver C-S05). |
+| `backoffice-coordenador` | cria ou revincula coordenação; reenvia link de acesso | super_admin ativo em `internal_admins` (`:53-67`, `:213-214`) | escola existe (`:255-258`) | O link de recuperação nunca volta na resposta nem vai para log. Dois pontos de endurecimento abaixo. |
+| `virar-semana` | vira a semana, global ou de uma escola | só a chave de serviço, comparada em tempo constante (`:48-51`) | `escola_id` do corpo, aceito porque o chamador é o operador | Plano de rotação muda este porteiro (C-S03). |
+
+**Achado URGENTE (#145):** nenhuma das funções da coordenação conferia se
+a escola está suspensa ou cancelada. Detalhe no topo deste registro.
+
+**Endurecimento, sem urgência (só o super_admin alcança):**
+- `backoffice-coordenador`, modo "criar", reaproveita qualquer conta que
+  já exista com o e-mail digitado: acha pelo cache `usuarios.email` ou,
+  se não achar, paginando o Auth (`:269-294`), e troca o `app_metadata`
+  para coordenação da escola escolhida. Um e-mail de coordenação de outra
+  escola **move** a pessoa de escola sem aviso. O e-mail sintético de um
+  aluno (`<código>@codigo.acesso.local`; os alunos não têm
+  `usuarios.email`, medido no demo) cai no fallback e **converte a conta
+  do aluno em coordenação**, com a senha do aluno valendo. Proposta:
+  recusar o domínio `codigo.acesso.local` e pedir confirmação explícita
+  para reaproveitar conta de outra escola ou de outro papel.
+- O destino do link de recuperação cai no domínio do demo se o secret
+  `PASSWORD_RESET_REDIRECT_URL` não existir no projeto (`:50-51`). **O
+  dono confere** se ele existe em produção (os secrets das funções não
+  são legíveis por ferramenta).
+
+**Sondagens HTTP seguras: PENDENTE-E3.** O código mostra que as seis
+funções de usuário recusam antes de qualquer escrita quando não há
+bearer, quando o token é inválido e quando o método não é `POST`
+(`chamador` ou `superAdmin` rodam antes de ler o corpo). A
+`virar-semana` recusa antes de ler o corpo. Então as sondagens sem
+bearer, com bearer malformado, com método errado e `OPTIONS` não têm
+efeito colateral e podem rodar no demo quando a rede permitir.
+
+### Login por código
+
+- **O login de hoje não passa pelo banco.** O front chama
+  `signInWithPassword` com o e-mail sintético e a senha
+  (`app/src/shared/data/index.js:57-65`). A `app.resolver_codigo`, com
+  limite de tentativas por chave e resposta uniforme, existe (0044) e tem
+  7 testes verdes no banco local (`tests/est1-credencial-opaca-db.test.mjs`),
+  mas está **dormente**: nenhum caminho do app a chama. A tabela
+  `app.login_tentativas` não recebe nada no login real.
+- **O limite que vale é o do Auth**, configurado no painel (*Auth > Rate
+  Limits*). Não é legível por ferramenta. **O dono lê** os valores de
+  "sign-in" e anota.
+- **Anti-enumeração:** o código tem 12 caracteres de um alfabeto de 31
+  (cerca de 59 bits) e, desde a Etapa 7, não basta: é preciso a senha,
+  que começa com 16 caracteres aleatórios. O Auth responde a mesma
+  mensagem para e-mail inexistente e senha errada; se conta banida
+  responde diferente: PENDENTE-E3.
+- **O teste de limite por HTTP não pode rodar no demo:** tentativa de
+  login falha grava no log de auditoria do Auth, e isso é escrita. Vai para
+  o projeto isolado da E3.
+
+### Dados sensíveis em log
+
+- **Código:** nenhuma função, tela ou script registra senha, token, link
+  de recuperação ou chave. `provisionar-aluno` e `trocar-senha` não
+  registram a senha em lugar nenhum.
+- **Ressalvas pequenas:**
+  - `gerar-meta`, `lgpd-titular`, `provisionar-aluno`, `trocar-senha` e
+    `virar-semana` fazem `console.error` do objeto de erro inteiro. Um erro
+    de constraint do Postgres traz "Failing row contains (...)", com a
+    linha completa, nome de aluno inclusive, no log da função. Proposta:
+    registrar só `code` e `message`.
+  - `backoffice-coordenador` registra o corpo da recusa do Resend
+    (`:175`), que pode trazer o e-mail de destino.
+  - `scripts/corrigir-senha-codigo-0093.mjs` imprime o e-mail sintético,
+    que é o código de acesso. Saída de terminal do operador; na época do
+    bug 0093 o código era também a senha.
+- **Logs hospedados (últimas 24 h, só leitura, contagem por padrão):**
+  demo e produção sem JWT, sem `sb_secret_` e sem "failing row" ou
+  senha. Os únicos e-mails aparecem em comentários das migrations
+  aplicadas hoje. Nenhum log de Edge Function na janela. A ferramenta
+  lê no máximo 24 h por consulta; janelas mais antigas não foram lidas.
+
+### Storage
+
+- **Produção:** nenhum bucket.
+- **Demo:** bucket `Logos-escolas`, **público**, sem limite de tamanho,
+  sem restrição de tipo e **sem nenhuma policy** em `storage.objects`.
+  Efeito: qualquer pessoa baixa um objeto pela URL pública; ninguém além
+  do painel e da chave de serviço lista, envia ou apaga. Dois objetos:
+  `.emptyFolderPlaceholder` e `IMG_9712.jpeg` (31.756 bytes, enviado em
+  16/06, sem dono). **O dono confere** se `IMG_9712.jpeg` é um logo, e
+  não uma foto pessoal, porque o link é público. Nenhum código do app ou
+  das funções usa o storage: o logo é uma URL gravada em
+  `escolas.logo_url`.
+
+| Campo | Valor |
+| --- | --- |
+| ID | Complementos G |
+| Achados | 2 URGENTES (#144, #145), 4 endurecimentos, 3 leituras do dono |
+| Testes | 6 (#144) + 11 (#145) + 9 casos da matriz (#139) |
+| Observado | #144: 3 dos 6 falham sem a 0058. #145: 6 dos 11 falham sem a mudança nas funções. Matriz com 0055 a 0058: 1 divergente em 328 |
+| Estado | **PENDENTE DO DONO** (aplicação dos dois PRs urgentes e três leituras) e **PENDENTE DE ETAPA (E3)** (sondagens HTTP) |
 
 ---
 
