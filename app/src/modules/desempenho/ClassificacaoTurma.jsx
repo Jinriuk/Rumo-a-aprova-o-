@@ -10,19 +10,13 @@ import { useTema } from "../../shared/branding/BrandingContext.jsx";
 import { fmtBR } from "../../shared/regras/regras.js";
 import { provaDoConcurso, notaPct, totalAcertos, totalQuestoes } from "../conteudo/provas.js";
 import { LIMIAR } from "../conteudo/niveisAluno.js";
+import { CRITERIOS_ESTUDO, linhaDeEstudo, classificarEstudo, semPodioNaJanela } from "./ranking.js";
 
 const MEDALHAS = ["🥇", "🥈", "🥉"];
 const fmtH = (min) => {
   if (!min) return "0m";
   const h = Math.floor(min / 60), m = Math.round(min % 60);
   return h ? `${h}h${String(m).padStart(2, "0")}m` : `${m}m`;
-};
-
-const CRITERIOS_ESTUDO = {
-  questoes: { rotulo: "Questões", v: (r) => r.q },
-  acerto: { rotulo: "% acerto", v: (r) => r.acc ?? -1 },
-  tempo: { rotulo: "Tempo", v: (r) => r.minutos },
-  dias: { rotulo: "Dias", v: (r) => r.dias },
 };
 
 export function ClassificacaoTurma({ alunos, turmas, resumoPorAluno = {}, simulados = [], concursosPorId }) {
@@ -45,34 +39,14 @@ export function ClassificacaoTurma({ alunos, turmas, resumoPorAluno = {}, simula
   // janela ativa) entra na lista numerada; o resto vai para
   // `semDadosSuficientes`, sem posição — ordenados por nome, nunca por
   // um critério que não têm volume pra sustentar.
+  // D05: a classificação mora em ./ranking.js, a mesma que o pódio do
+  // Painel de gestão usa — as duas telas não podem mais divergir.
   const { comparaveis, semDadosSuficientes } = useMemo(() => {
-    const geral = janela === "geral";
     const visiveis = alunos.filter(
       (a) => !turmaId || (a.alunos_turmas ?? []).some((v) => v.turma_id === turmaId),
     );
-
-    const linhas = visiveis.map((a) => {
-      const r = resumoPorAluno[a.id];
-      return {
-        aluno: a,
-        q: r ? (geral ? r.q : r.qSem) : 0,
-        minutos: r ? (geral ? r.minutos : r.minSem) : 0,
-        dias: r ? (geral ? r.dias : r.diasSem) : 0,
-        acc: r ? (geral ? r.acc : r.accSem) : null,
-        metaPct: r?.metaPct ?? null,
-        feitas: r?.feitas ?? 0,
-        consideradas: r?.consideradas ?? 0,
-      };
-    });
-
-    const c = CRITERIOS_ESTUDO[criterio];
-    const comp = linhas
-      .filter((x) => x.q >= LIMIAR.VOLUME_MINIMO)
-      .sort((x, y) => (c.v(y) - c.v(x)) || (y.q - x.q) || ((y.acc ?? -1) - (x.acc ?? -1)) || (y.minutos - x.minutos));
-    const semDados = linhas
-      .filter((x) => x.q < LIMIAR.VOLUME_MINIMO)
-      .sort((x, y) => x.aluno.nome.localeCompare(y.aluno.nome, "pt-BR"));
-    return { comparaveis: comp, semDadosSuficientes: semDados };
+    const linhas = visiveis.map((a) => linhaDeEstudo(a, resumoPorAluno[a.id], janela));
+    return classificarEstudo(linhas, criterio);
   }, [alunos, resumoPorAluno, turmaId, janela, criterio]);
 
   // RANKING 2 — Simulados: a nota como a PROVA classificaria (melhor
@@ -178,6 +152,11 @@ export function ClassificacaoTurma({ alunos, turmas, resumoPorAluno = {}, simula
           {comparaveis.map((r, i) => (
             <LinhaEstudo key={r.aluno.id} r={r} posicao={i} maxQ={maxQ} concursosPorId={concursosPorId} T={T} />
           ))}
+          {comparaveis.length === 0 && (
+            <div role="status" style={{ fontSize: 13, color: T.ink, fontWeight: 600, padding: "10px 10px 4px" }}>
+              {semPodioNaJanela(janela)}
+            </div>
+          )}
           {semDadosSuficientes.length > 0 && (
             <>
               <div style={{ fontSize: 11, color: T.sub, fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.6, margin: comparaveis.length ? "14px 2px 0" : "2px 2px 0" }}>
