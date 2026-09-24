@@ -45,10 +45,10 @@ ganhou motor **e** porta na coordenação.
 | Métrica | Valor | Como foi obtido |
 |---|---|---|
 | Testes | **1055 / 1055 verdes** | medido em 24/09 (demonstração: XP acumula e nunca cai) — `bash reset-db.sh && npm test` em Postgres 16 local dedicado (migrations + seed 2×) |
-| Arquivos de teste | **98** (100 `.mjs` em `tests/`) | medido em 24/09 (Bloco 5 sobre a main com os Blocos 1 a 4) — `grep -l 'node:test' tests/*.mjs \| wc -l` |
+| Arquivos de teste | **99** (101 `.mjs` em `tests/`) | medido em 24/09 (Bloco 5 sobre a main com os Blocos 1 a 4) — `grep -l 'node:test' tests/*.mjs \| wc -l` |
 | Lint | **0 errors / 256 warnings** | medido — `cd app && npm run lint` |
 | Build de produção | **verde** | medido — `cd app && npm run build` |
-| Migrations no repo | **55** (última: `0054_proximo_ciclo_semanas_seg_dom`; a `0053_consentimento_registrado_em` foi aplicada na demonstração em 23/09 às 22:02 e em produção em 24/09 às 06:02 de Brasília; a `0054` foi aplicada na demonstração em 24/09 às 06:10 de Brasília; em produção a 0051, a 0052 e a 0054 foram aplicadas em 24/09 entre 10:25 e 10:26 de Brasília, nessa ordem, com o corpo das funções igual ao da demonstração e nenhum dado alterado. Os dois ambientes estão na 0054) | medido — `ls supabase/migrations/*.sql \| wc -l` |
+| Migrations no repo | **56** (última: `0055_coerencia_tenant`, **no repo e não aplicada em nenhum ambiente**: aguarda aprovação, ver `docs/e2-seguranca.md`; antes dela, `0054_proximo_ciclo_semanas_seg_dom`; a `0053_consentimento_registrado_em` foi aplicada na demonstração em 23/09 às 22:02 e em produção em 24/09 às 06:02 de Brasília; a `0054` foi aplicada na demonstração em 24/09 às 06:10 de Brasília; em produção a 0051, a 0052 e a 0054 foram aplicadas em 24/09 entre 10:25 e 10:26 de Brasília, nessa ordem, com o corpo das funções igual ao da demonstração e nenhum dado alterado. Os dois ambientes estão na 0054) | medido — `ls supabase/migrations/*.sql \| wc -l` |
 | Seeds no repo | **21** (o 04 e o 21 só rodam em Supabase real — escrevem em `auth`) | medido — `ls supabase/seed/*.sql \| wc -l` |
 | Edge Functions no repo | **7** | medido — `ls -d supabase/functions/*/ \| grep -v _shared` |
 | TypeScript em `app/src` | 0 arquivos (dívida conhecida; `supabase/functions` é TS) | medido — `find app/src -name '*.ts*' \| wc -l` |
