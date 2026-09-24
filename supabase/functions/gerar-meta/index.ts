@@ -17,6 +17,7 @@
 // válido (concurso sem trilha semanal, ex.: PED2) e não marca pendente.
 // ============================================================
 import { admin, chamador, alunoDaEscola, corsHeaders } from "../_shared/contexto.ts";
+import { escolaOperacional, RESPOSTA_ESCOLA_PARADA } from "../_shared/escola.ts";
 
 Deno.serve(async (req) => {
   const cors = corsHeaders(req);
@@ -33,6 +34,7 @@ Deno.serve(async (req) => {
     const quem = await chamador(req);
     if (!quem) return json({ error: "não autenticado" }, 401);
     if (quem.papel !== "coordenacao") return json({ error: "só a coordenação dispara geração de meta" }, 403);
+    if (!(await escolaOperacional(admin, quem.escola_id))) return json(RESPOSTA_ESCOLA_PARADA, 403);
 
     const { aluno_id } = await req.json().catch(() => ({}));
     if (!aluno_id) return json({ error: "informe aluno_id" }, 400);

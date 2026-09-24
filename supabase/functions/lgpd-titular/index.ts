@@ -20,6 +20,7 @@
 //   nunca o meio-termo silencioso.
 // ============================================================
 import { admin, chamador, alunoDaEscola, corsHeaders, registrarLog } from "../_shared/contexto.ts";
+import { escolaOperacional, RESPOSTA_ESCOLA_PARADA } from "../_shared/escola.ts";
 
 // Apaga uma conta do Auth de forma IDEMPOTENTE: se a conta já não
 // existe, trata como sucesso (a exclusão é o estado desejado). Só conta
@@ -49,6 +50,10 @@ Deno.serve(async (req) => {
     if (quem.papel !== "coordenacao") {
       return json({ error: "pedidos do titular passam pela coordenação (controladora)" }, 403);
     }
+    // Escola suspensa ou cancelada: a RLS já não deixa a coordenação ler os
+    // alunos, e a exportação por aqui contornava isso com a chave de
+    // serviço. Pedido do titular nesse estado passa pelo operador.
+    if (!(await escolaOperacional(admin, quem.escola_id))) return json(RESPOSTA_ESCOLA_PARADA, 403);
 
     const { acao, aluno_id } = await req.json().catch(() => ({}));
     if (!aluno_id || !["exportar", "excluir"].includes(acao)) {

@@ -45,7 +45,7 @@ ganhou motor **e** porta na coordenação.
 | Métrica | Valor | Como foi obtido |
 |---|---|---|
 | Testes | **1055 / 1055 verdes** | medido em 24/09 (demonstração: XP acumula e nunca cai) — `bash reset-db.sh && npm test` em Postgres 16 local dedicado (migrations + seed 2×) |
-| Arquivos de teste | **102** (104 `.mjs` em `tests/`) | medido em 24/09 (Bloco 5 sobre a main com os Blocos 1 a 4) — `grep -l 'node:test' tests/*.mjs \| wc -l` |
+| Arquivos de teste | **103** (105 `.mjs` em `tests/`) | medido em 24/09 (Bloco 5 sobre a main com os Blocos 1 a 4) — `grep -l 'node:test' tests/*.mjs \| wc -l` |
 | Lint | **0 errors / 256 warnings** | medido — `cd app && npm run lint` |
 | Build de produção | **verde** | medido — `cd app && npm run build` |
 | Migrations no repo | **59** (últimas: `0055_coerencia_tenant`, `0056_tenant_operacional_nega_por_padrao`, `0057_revoga_execute_funcoes_internas` e `0058_escolas_colunas_por_papel`, **no repo e não aplicadas em nenhum ambiente**: aguardam aprovação, ver `docs/e2-seguranca.md`; antes delas, `0054_proximo_ciclo_semanas_seg_dom`; a `0053_consentimento_registrado_em` foi aplicada na demonstração em 23/09 às 22:02 e em produção em 24/09 às 06:02 de Brasília; a `0054` foi aplicada na demonstração em 24/09 às 06:10 de Brasília; em produção a 0051, a 0052 e a 0054 foram aplicadas em 24/09 entre 10:25 e 10:26 de Brasília, nessa ordem, com o corpo das funções igual ao da demonstração e nenhum dado alterado. Os dois ambientes estão na 0054) | medido — `ls supabase/migrations/*.sql \| wc -l` |
