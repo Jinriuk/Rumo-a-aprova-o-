@@ -26,6 +26,37 @@ descartável. Nenhum valor de secret, senha ou token neste arquivo.
 
 ---
 
+## ⚠️ Falha entre escolas aberta (achada na Fatia 2)
+
+**Registrada em 24/09/2026, antes de continuar a matriz.** Correção no
+**PR #138** (`0055_coerencia_tenant`), marcado URGENTE, não aplicado em
+ambiente nenhum.
+
+As policies de escrita conferem `escola_id = tenant` na linha, mas as FKs
+apontam só para o `id`, e FK não passa por RLS. A coordenação da escola A
+grava na própria escola uma linha que aponta para aluno, turma ou conta
+da escola B. Provado em Postgres local, em transação desfeita:
+
+1. **Exclusão de conta entre escolas.** A aponta o `usuario_id` de um aluno
+   seu (ou um vínculo de responsável) para a conta da coordenação de B e
+   pede a exclusão LGPD desse aluno. `lgpd_usuarios_do_aluno` devolve a
+   conta de B; `lgpd-titular` apaga no Auth e no banco.
+2. **Leitura entre escolas.** A planta `aluno_onboarding` para o aluno de
+   B; quando ele responde, as respostas vão para a linha de A. A lê, B não.
+3. **Leitura entre escolas pela exportação LGPD.** Turma de B matriculada
+   num aluno de A aparece na exportação desse aluno. Linhas plantadas por
+   A também entram na exportação que B fizer do próprio aluno.
+
+**Condição:** conhecer o UUID do alvo, que a API não entrega. **Hoje não
+há vítima:** produção tem uma escola de teste só; vale a partir da segunda
+escola real. **Gate G2 não fecha com isto aberto.**
+
+**O que NÃO se confirmou:** repontar a própria `meta_atividades` para a
+meta de outra escola, para ganhar XP pelo gatilho `progresso_de_missao`,
+é barrado. Com `WHERE` na atualização (o PostgREST sempre manda filtro, e
+`safeupdate` recusa UPDATE sem filtro), a linha nova precisa passar na
+policy de SELECT, e a meta de B é invisível para o aluno de A.
+
 ## Estado corrente
 
 **Atualizado em:** 24/09/2026, fim da Fatia 1.
@@ -40,7 +71,7 @@ descartável. Nenhum valor de secret, senha ou token neste arquivo.
 | C-S05 senha vazada | em andamento (Fatia 6) | — | — |
 | C-S06 SECURITY DEFINER | em andamento (Fatia 4) | — | — |
 | C-S07 chave anon | em andamento (Fatia 6) | — | — |
-| Matriz de autorização | em andamento (Fatia 2) | — | — |
+| Matriz de autorização | em andamento (Fatia 2) | Achou a falha acima; correção no #138 | PR da Fatia 2 |
 | Complementos G | em andamento (Fatia 7) | — | — |
 
 ## PRs da etapa
@@ -48,6 +79,7 @@ descartável. Nenhum valor de secret, senha ou token neste arquivo.
 | Fatia | PR | Condição de merge |
 | --- | --- | --- |
 | 1 · C-S01 e sessões da captura | #131 (este) | CI verde. Não aplica nada em ambiente hospedado. Ver "Condição de merge" na Fatia 1. |
+| **URGENTE** · 0055 coerência de tenant | #138 | CI verde para o merge. **Aplicação em demo e produção só com aprovação do dono**, antes da segunda escola real. |
 
 ---
 
