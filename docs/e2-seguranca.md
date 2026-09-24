@@ -59,7 +59,7 @@ policy de SELECT, e a meta de B é invisível para o aluno de A.
 
 ## Estado corrente
 
-**Atualizado em:** 24/09/2026, fim da Fatia 1.
+**Atualizado em:** 24/09/2026, fim da Fatia 2.
 **SHA de referência:** `fc564124bf7f735ddbb32d89b65169e11be18a33` (`main`).
 
 | Item | Estado | O que falta | Prova |
@@ -71,7 +71,7 @@ policy de SELECT, e a meta de B é invisível para o aluno de A.
 | C-S05 senha vazada | em andamento (Fatia 6) | — | — |
 | C-S06 SECURITY DEFINER | em andamento (Fatia 4) | — | — |
 | C-S07 chave anon | em andamento (Fatia 6) | — | — |
-| Matriz de autorização | em andamento (Fatia 2) | Achou a falha acima; correção no #138 | PR da Fatia 2 |
+| Matriz de autorização | **camada banco: FEITA** · camada HTTP: **PENDENTE DE ETAPA (E3)** | 45 divergências registradas, cada uma com a correção; 14 casos HTTP especificados para a E3 | #139, [Fatia 2](#fatia-2--matriz-de-autorização) |
 | Complementos G | em andamento (Fatia 7) | — | — |
 
 ## PRs da etapa
@@ -80,6 +80,7 @@ policy de SELECT, e a meta de B é invisível para o aluno de A.
 | --- | --- | --- |
 | 1 · C-S01 e sessões da captura | #131 (este) | CI verde. Não aplica nada em ambiente hospedado. Ver "Condição de merge" na Fatia 1. |
 | **URGENTE** · 0055 coerência de tenant | #138 | CI verde para o merge. **Aplicação em demo e produção só com aprovação do dono**, antes da segunda escola real. |
+| 2 · matriz de autorização | #139 | CI verde. Só testes e evidência; nada aplicado. Ordem com o #138 indiferente. |
 
 ---
 
@@ -274,6 +275,103 @@ tabela.
 - CI verde: `build-e-unitarios` roda os 8 testes novos junto com a suíte.
 - Efeito em produção: nenhum. Efeito no demo: a próxima execução da captura
   passa a apagar as quatro sessões que ela mesma abrir.
+
+---
+
+## Fatia 2 — Matriz de autorização
+
+**Data:** 24/09/2026. **PR:** #139. **Evidência gerada:**
+`docs/evidencias/e2-matriz-autorizacao.json` (commit `4e3fe57`, Postgres
+16.13 local; os hospedados estão no 17.6).
+
+### O que é
+
+318 casos na **camada banco**, rodando no CI (`build-e-unitarios`):
+
+- **Fixture só local:** escolas A e B na mesma trilha, C com outra, uma
+  suspensa, uma cancelada, e um token de escola inexistente.
+- **20 personas:** anônimo, alunos, responsáveis vinculado, sem vínculo e
+  revogado, coordenações de cada escola, sem escola no token e com
+  claims antigas, super admin ativo, falso e inativo.
+- **Superfícies:**
+  - tabelas com tenant: ler, alterar, apagar, inserir na outra escola,
+    mover o `escola_id`, UPSERT com id alheio, FK cruzada;
+  - as nove tabelas do catálogo compartilhado;
+  - aluno contra colega;
+  - responsável;
+  - backoffice;
+  - RPCs com ID de outro tenant;
+  - funções `app.*` com EXECUTE amplo;
+  - claims antigas;
+  - escola não operacional;
+  - anônimo;
+  - cenários de várias etapas.
+
+**Como prova:**
+- Transação `REPEATABLE READ`, sempre desfeita no fim.
+- Hash de todas as linhas das tabelas envolvidas antes e depois de cada caso.
+- O mesmo comando sem RLS precisa afetar linha, senão a negação é vazia.
+- Escritas sem RETURNING, que é o caminho da API com `return=minimal`.
+- Os grants do hospedado são reproduzidos na transação: lá `anon` e
+  `authenticated` têm DML de tabela e só a RLS segura.
+- Trava de destino: só roda em `127.0.0.1` e em banco `rumo_teste*`.
+
+**Mutações conferidas:**
+- policy `update using (true)` em `trilhas`: a matriz pega (achado NOVO);
+- `select using (true)` em `registros_estudo`: 6 casos caem.
+
+### Placar
+
+| Camada | Provados | Divergentes (registrados) | PENDENTE-E3 |
+| --- | --- | --- | --- |
+| Banco | 273 conformes de 318 | 45: FK cruzada e cenários (18) → 0055/#138 · C-S04 (20) → 0056 · C-S06 (6) → 0057 · E1-ACHADO-2 (1) | — |
+| HTTP | 0 | — | 14 (ver `camada_http` no JSON: Accept-Profile, login por persona, PostgREST, as 7 Edge Functions sem bearer / malformado / expirado / outro tenant / método / OPTIONS, refresh com claims antigas, limite do login por código) |
+
+### O que a matriz mostrou, além da falha do topo
+
+- **Barrado, e provado:**
+  - leitura e escrita entre A e B nas 23 tabelas com tenant, nos dois
+    sentidos;
+  - UPSERT com id alheio;
+  - mudança de `escola_id` (WITH CHECK);
+  - escrita no catálogo pelas nove tabelas;
+  - aluno contra colega;
+  - responsável sem vínculo ou revogado;
+  - coordenação, super admin falso e inativo, e anônimo no backoffice;
+  - aluno marcando atividade de meta alheia.
+- **Achado C-S04b, mais largo que o C-S04:** a 0027 bloqueou escola
+  suspensa ou cancelada só em parte das policies. A coordenação dessas
+  escolas ainda grava configuração, missões, log de coordenação,
+  onboarding e toda a gamificação (XP, conquistas, missões, níveis,
+  eventos de progresso). Não é entre escolas, mas fura a suspensão.
+  Correção na Fatia 3 (0056).
+- **C-S06 medido:** 6 funções `app.*` SECURITY DEFINER com EXECUTE para
+  `authenticated` e parâmetro de escola ou aluno (`backfill_progresso`,
+  `motor_avaliar_aluno`, `motor_conquista_xp`,
+  `desbloquear_conquista_basica`, `exam_tag_do_aluno`,
+  `motor_streak_dias`) executam com o ID da escola B. Só são
+  alcançáveis pela API se `app` estiver entre os schemas expostos do
+  PostgREST: **NÃO VERIFICADO**, porque a rede desta sessão não alcança
+  `*.supabase.co`. `anon` não tem USAGE em `app` nos dois projetos
+  (medido), então o EXECUTE de `anon` nelas não tem efeito. Correção na
+  Fatia 4 (0057).
+- **E1-ACHADO-2, variante entre escolas:** a coordenação A cria edição
+  nova no catálogo de uma trilha que só a escola C usa. Continua aberto
+  como decisão de produto (docs/e1-migrations.md).
+
+### Comportamentos registrados, não tratados como falha
+
+- **Claims antigas:** a ex-coordenação (`usuarios.papel` já trocado)
+  continua coordenação enquanto o token valer, porque as policies leem o
+  papel do JWT. A janela é o JWT expiry (indício de 3600 s). Se o
+  `app_metadata` não for trocado no Auth, o refresh reemite as claims
+  antigas e a janela vira indefinida. Esse teste é HTTP: PENDENTE-E3
+  (`H.auth.refresh_reemite_claims`).
+- **Responsável revogado:** perde o aluno na hora, porque o vínculo é
+  lido ao vivo. A conta segue autenticada e lê a configuração da escola.
+- **Catálogo** publicado é legível por qualquer token autenticado,
+  inclusive de escola inexistente. Decisão registrada: não é dado de
+  escola.
 
 ---
 
