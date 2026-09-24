@@ -7,3 +7,6 @@ dist/
 !app/.env.production
 *.log
 .DS_Store
+
+# pack de capturas (scripts/captura/pack-v2.mjs): saída local, nunca versionada
+.captura/

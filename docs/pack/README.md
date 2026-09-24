@@ -1,0 +1,99 @@
+# Pack de capturas
+
+Como o pack comercial de telas é produzido, onde fica o que é interno e o que falta para a
+próxima captura. Código: `scripts/captura/pack-v2.mjs` (runner) e `scripts/captura/pack-v2-lib.mjs`
+(funções puras, testadas em `tests/bloco5-captura.test.mjs`). Workflow:
+`.github/workflows/captura-pack-v2.yml`.
+
+## O que vai para quem
+
+| Pasta ou artefato | Para quem | O que leva |
+|---|---|---|
+| `pack-triliva-v2-AAAA-MM-DD/` (artefato `pack-triliva-v2`) | material comercial | telas, `MANIFESTO.md`, `CAPTURA.json`, `COERENCIA-HELENA.md`, `CHANGELOG.md`, `SHA256SUMS.txt`. **Sem** o identificador do projeto Supabase (P07) e sem nenhum valor de segredo: o runner confere e apaga o pack se achar um dos dois. |
+| `interno-AAAA-MM-DD/` (artefato `interno-captura`) | só nós | id do projeto, commit, modo, falhas, avisos de recorte, requisições bloqueadas, checagem a 360 px e, se pedida, a tela 18. |
+| `docs/pack/AAAA-MM-DD/` (neste repositório) | só nós | arquivos de controle de cada pack publicado. O de 19/09 vai em `docs/pack/2026-09-19/` quando os arquivos chegarem (ver "Pendente"). |
+
+**O repositório é público.** "Interno" aqui quer dizer fora do pack comercial, não secreto: os
+artefatos do Actions ficam baixáveis por qualquer conta do GitHub enquanto existirem (retenção de 3
+dias; baixe, publique e apague o artefato), e o que for para `docs/pack/` fica visível a todos. O
+identificador do projeto já é público em `app/.env.production`; o P07 é sobre ele não aparecer no
+material que vai para a escola.
+
+A tela 18 (LGPD) **não entra no material comercial** até a validação jurídica do D02. O runner só
+a captura quando pedido (`tela_18`) e grava na pasta interna.
+
+## Quando capturar
+
+Sábado depois das 18:00 de Brasília, com a semana 4 em repetição no ar (`docs/demo/HISTORIA.md`).
+É só nessa janela que os números batem com as apresentações (seção 3.3 do documento de 23/09).
+O modo `oficial` recusa rodar fora dela; o `ensaio` roda em qualquer dia e sai com o sufixo
+`-ensaio` no nome, para não ser confundido.
+
+## Segredos (cadastrar em Settings → Secrets and variables → Actions)
+
+| Segredo | Conta (demonstração, Instituto Meridiano) |
+|---|---|
+| `TRILIVA_CAPTURA_COORD_EMAIL` | e-mail da coordenação do Meridiano |
+| `TRILIVA_CAPTURA_COORD_SENHA` | senha dessa coordenação |
+| `TRILIVA_CAPTURA_ALUNO_CODIGO` | código de acesso da Helena Vasconcelos |
+| `TRILIVA_CAPTURA_ALUNO_SENHA` | senha da Helena |
+| `TRILIVA_CAPTURA_RESP_CODIGO` | código de acesso do responsável vinculado à Helena |
+| `TRILIVA_CAPTURA_RESP_SENHA` | senha desse responsável |
+
+Nenhum valor vai para chat, PR, arquivo ou log: o runner lê só do ambiente, não grava a sessão em
+disco e passa toda mensagem de erro por um filtro que troca qualquer segredo por `•••` (o GitHub
+também mascara os valores cadastrados).
+
+Se a senha de alguma conta não for conhecida, "Resetar senha" (coordenação, aba Alunos) gera uma
+temporária, e a conta passa a pedir troca no primeiro acesso. O runner **não troca senha**: se cair
+na tela "Escolha sua senha", ele para e avisa. Faça esse primeiro acesso à mão e cadastre a senha
+definitiva.
+
+A captura de 19/09 não usou segredo nenhum: entrou por OIDC do GitHub Actions e pela função
+`capture-oidc-20260919`, que emitia link de acesso com a service role. A Etapa 2 (#131) manda
+remover essa função, e o v2 não depende dela.
+
+## O que o runner garante
+
+- **Nada é escrito no banco pelo navegador.** Passa só leitura (GET), login e renovação de token
+  (`/auth/v1/`) e as duas RPCs que leem por POST (`resumo_escola`, `sou_super_admin`). Todo o resto
+  é bloqueado e listado no arquivo interno. Isso inclui `logs_acesso`: a captura não é um acesso
+  de pessoa e não entra na trilha de auditoria.
+- **Tela 21 sem credencial nova.** O botão "Gerar credencial" chama `provisionar-aluno` na hora e
+  cria a conta do Enzo, o que desmancharia o D01. Na captura, a resposta é simulada no navegador
+  com código `ENZO••••` e senha `••••••••`, e o manifesto diz isso.
+- **Nenhum outro tenant e nenhum código na tela:** a captura falha se aparecer o nome de uma das
+  quatro escolas protegidas, um campo de senha preenchido ou um dos códigos de acesso.
+- **P03:** o recorte sai da captura integral, com 24 px de margem, e nenhum vizinho (caixa ou linha
+  de texto) sai cortado ao meio. Quando o vizinho está a menos de 24 px, a margem daquele lado
+  encolhe até ele e o recorte fica marcado como `margem_reduzida` no interno, para revisão.
+- **Conferência (P05):** `COERENCIA-HELENA.md` calcula os números esperados do banco no momento da
+  captura (`resumo_escola`, alunos e XP, com a conta da coordenação) e diz em que tela cada um
+  aparece: Helena (acerto no ciclo, D15; o resto da semana) e agregados da turma no Painel, em
+  Turmas e no Ranking.
+
+## Telas
+
+Mesma lista de 19/09 (01 a 22), com 06 refeita, 21 com o modal (P02), 22 com o modal inteiro (P06)
+e Hoje, Ficha e Responsável em página inteira no celular. Toda captura é integral; no celular sai
+também a primeira dobra.
+
+Não recapturadas no v2 (estados que exigem preparar a conta da Helena e parariam a semana
+repetida): **04** troca de senha obrigatória e **25** trilha não configurada (as de 19/09 seguem
+válidas, nenhuma correção dos Blocos 1 a 4 muda essas telas) e **24** onboarding (o D12 mudou o
+exemplo do objetivo, então a de 19/09 não serve; recapturar depende de decisão).
+
+## Rodar
+
+- Ensaio: Actions → captura-pack-v2 → Run workflow → modo `ensaio`. Antes do merge, qualquer push na
+  branch do Bloco 5 que mexa em `scripts/captura/` roda em modo `auto`.
+- Oficial: sábado depois das 18:00 de Brasília, modo `oficial`.
+- Local (só o que não depende de login, porque o proxy do ambiente de desenvolvimento pode barrar
+  o Supabase): `cd app && npm run build`, servir `dist` em 127.0.0.1:4173 e
+  `CHROME_PATH=... node scripts/captura/pack-v2.mjs`.
+
+## Pendente
+
+- Arquivos de controle de 19/09 (`CAPTURA.json`, `MANIFESTO.md`, `COERENCIA-HELENA.md`,
+  `SHA256SUMS.txt`) para `docs/pack/2026-09-19/`. O identificador do projeto pode ficar neles: a
+  pasta é interna.

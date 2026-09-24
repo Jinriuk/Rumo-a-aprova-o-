@@ -1,0 +1,111 @@
+# Pack de capturas v2 (Bloco 5). Documentação: docs/pack/README.md
+#
+# Captura o build deste commit, servido localmente e apontado para o
+# projeto de DEMONSTRAÇÃO, entrando pela tela de login com os seis
+# segredos do repositório (TRILIVA_CAPTURA_*). Não usa service role nem
+# função de Edge. O navegador bloqueia toda requisição que não é leitura.
+#
+# Disparo:
+#   - manual (workflow_dispatch), depois do merge: modo "ensaio" ou "oficial";
+#   - push na branch do Bloco 5 que mexa na captura: modo "auto" (oficial
+#     só dentro da janela de sábado depois das 18:00 de Brasília).
+# Sem os segredos cadastrados, o ensaio termina sem capturar nada.
+name: captura-pack-v2
+
+on:
+  workflow_dispatch:
+    inputs:
+      modo:
+        description: "ensaio (qualquer dia) ou oficial (só sábado depois das 18:00 de Brasília)"
+        type: choice
+        options: [ensaio, oficial]
+        default: ensaio
+      tela_18:
+        description: "Capturar a tela 18 (LGPD) só na pasta interna"
+        type: boolean
+        default: false
+  push:
+    branches: [claude/triliva-bloco5]
+    paths:
+      - ".github/workflows/captura-pack-v2.yml"
+      - "scripts/captura/**"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: captura-pack-v2
+  cancel-in-progress: false
+
+jobs:
+  capturar:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: app/package-lock.json
+
+      - name: Dependências do app (sem baixar navegador)
+        working-directory: app
+        env:
+          PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: "1"
+        run: npm ci
+
+      - name: Build deste commit contra a demonstração
+        working-directory: app
+        run: |
+          grep -q 'bdjkgrzfzoamchdpobbl' .env.production
+          npm run build
+
+      - name: Chrome do runner
+        id: navegador
+        run: |
+          CHROME="$(command -v google-chrome-stable || command -v google-chrome || command -v chromium || true)"
+          test -n "$CHROME"
+          echo "chrome=$CHROME" >> "$GITHUB_OUTPUT"
+
+      - name: Serve o build em 127.0.0.1:4173
+        working-directory: app
+        run: |
+          nohup python3 -m http.server 4173 --bind 127.0.0.1 --directory dist > /tmp/http.log 2>&1 &
+          for i in $(seq 1 30); do curl -fsS http://127.0.0.1:4173/ > /dev/null && break; sleep 1; done
+          curl -fsS http://127.0.0.1:4173/ > /dev/null
+
+      - name: Captura
+        env:
+          CHROME_PATH: ${{ steps.navegador.outputs.chrome }}
+          CAPTURA_MODO: ${{ github.event_name == 'workflow_dispatch' && inputs.modo || 'auto' }}
+          CAPTURA_TELA_18: ${{ github.event_name == 'workflow_dispatch' && inputs.tela_18 || false }}
+          CAPTURA_SAIDA: ${{ github.workspace }}/.captura
+          TRILIVA_CAPTURA_COORD_EMAIL: ${{ secrets.TRILIVA_CAPTURA_COORD_EMAIL }}
+          TRILIVA_CAPTURA_COORD_SENHA: ${{ secrets.TRILIVA_CAPTURA_COORD_SENHA }}
+          TRILIVA_CAPTURA_ALUNO_CODIGO: ${{ secrets.TRILIVA_CAPTURA_ALUNO_CODIGO }}
+          TRILIVA_CAPTURA_ALUNO_SENHA: ${{ secrets.TRILIVA_CAPTURA_ALUNO_SENHA }}
+          TRILIVA_CAPTURA_RESP_CODIGO: ${{ secrets.TRILIVA_CAPTURA_RESP_CODIGO }}
+          TRILIVA_CAPTURA_RESP_SENHA: ${{ secrets.TRILIVA_CAPTURA_RESP_SENHA }}
+        run: node scripts/captura/pack-v2.mjs
+
+      - name: Pack comercial
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pack-triliva-v2
+          path: .captura/pack-triliva-v2-*/
+          if-no-files-found: ignore
+          # repositório público: o artefato é baixável por qualquer conta do
+          # GitHub enquanto existir. Baixe, publique e apague.
+          retention-days: 3
+
+      - name: Arquivo interno (id do projeto, bloqueios, avisos, tela 18)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: interno-captura
+          path: .captura/interno-*/
+          if-no-files-found: ignore
+          retention-days: 3
