@@ -106,6 +106,17 @@ test("D05: a ordem de entrada não muda o pódio (desempate total, até o nome)"
   }
 });
 
+test("D05: homônimos com os mesmos números saem na mesma ordem em qualquer entrada (id desempata)", () => {
+  // Achado do Codex no #134: o painel recebe resumo_escola() sem ordem e
+  // o Ranking recebe listarAlunos() por nome; empate total até o nome
+  // deixava o pódio depender da ordem de entrada.
+  const linha = (id) => linhaDeEstudo({ id, nome: "Ana Souza" }, { q: 30, qSem: 30, acc: 80, accSem: 80, minutos: 60, minSem: 60, dias: 2, diasSem: 2 }, "semana");
+  const a = classificarEstudo([linha("b2"), linha("a1")], "acerto").comparaveis.map((r) => r.aluno.id);
+  const b = classificarEstudo([linha("a1"), linha("b2")], "acerto").comparaveis.map((r) => r.aluno.id);
+  assert.deepEqual(a, ["a1", "b2"]);
+  assert.deepEqual(b, ["a1", "b2"]);
+});
+
 test("D05: quem não passa do piso vai para 'sem dados suficientes', por nome", () => {
   const resumo = resumoDaSemana4();
   const r = classificarEstudo(resumo.map((x) => linhaDeEstudo(x.aluno, x, "semana")), "acerto");

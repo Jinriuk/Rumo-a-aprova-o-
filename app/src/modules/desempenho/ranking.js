@@ -38,18 +38,20 @@ export function linhaDeEstudo(aluno, r, janela = "semana") {
   };
 }
 
-// Desempate: critério → volume → acerto → tempo → nome. O nome no fim
-// torna a ordem total: duas telas com a mesma entrada em ordens
-// diferentes dão o mesmo pódio.
+// Desempate: critério → volume → acerto → tempo → nome → id. O id no
+// fim torna a ordem total (dois alunos podem ter o mesmo nome): duas
+// telas com a mesma entrada em ordens diferentes dão o mesmo pódio.
+const porId = (x, y) => (x.aluno.id < y.aluno.id ? -1 : x.aluno.id > y.aluno.id ? 1 : 0);
+
 export function classificarEstudo(linhas, criterio) {
   const c = CRITERIOS_ESTUDO[criterio] ?? CRITERIOS_ESTUDO.acerto;
   const comparaveis = linhas
     .filter((x) => x.q >= LIMIAR.VOLUME_MINIMO)
     .sort((x, y) => (c.v(y) - c.v(x)) || (y.q - x.q) || ((y.acc ?? -1) - (x.acc ?? -1))
-      || (y.minutos - x.minutos) || x.aluno.nome.localeCompare(y.aluno.nome, "pt-BR"));
+      || (y.minutos - x.minutos) || x.aluno.nome.localeCompare(y.aluno.nome, "pt-BR") || porId(x, y));
   const semDadosSuficientes = linhas
     .filter((x) => x.q < LIMIAR.VOLUME_MINIMO)
-    .sort((x, y) => x.aluno.nome.localeCompare(y.aluno.nome, "pt-BR"));
+    .sort((x, y) => x.aluno.nome.localeCompare(y.aluno.nome, "pt-BR") || porId(x, y));
   return { comparaveis, semDadosSuficientes };
 }
 
