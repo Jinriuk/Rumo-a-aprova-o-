@@ -57,6 +57,31 @@ meta de outra escola, para ganhar XP pelo gatilho `progresso_de_missao`,
 `safeupdate` recusa UPDATE sem filtro), a linha nova precisa passar na
 policy de SELECT, e a meta de B é invisível para o aluno de A.
 
+## ⚠️ Operação privilegiada ao alcance de quem não devia (achada na Fatia 7)
+
+**Registrada em 24/09/2026.** Dois furos da mesma classe. Nenhum cruza
+escola, e **hoje não há vítima**: nenhuma escola suspensa ou cancelada nos
+dois ambientes, e produção sem nenhuma coluna interna preenchida.
+
+1. **A coordenação altera colunas do backoffice da própria escola, e todo
+   usuário da escola lê as notas internas do operador.** A policy
+   `escolas_update` confere só a linha, e o grant é da tabela inteira. Pela
+   API, a coordenação troca `status`, `plano`, `limite_alunos`, `slug` e
+   reescreve a `observacao` do operador; pode se marcar `cancelada` e ficar
+   trancada fora. Aluno e responsável leem `observacao`, `contato_nome`,
+   `telefone_contato`, `email_institucional` e `contato_observacao`. Provado
+   em Postgres local. **Correção: 0058, PR #144 (URGENTE)**, privilégio por
+   coluna. Não aplicada.
+2. **As Edge Functions não respeitam a suspensão da escola.** Suspender ou
+   cancelar só muda `escolas.status`; o bloqueio fica a cargo da RLS
+   (`tenant_operacional`). As funções usam a chave de serviço, que ignora a
+   RLS. A coordenação de escola suspensa ou cancelada, com sessão válida,
+   ainda cria contas de aluno e responsável, reseta, revoga e reativa
+   credenciais, gera meta, revoga vínculo e **exporta o dossiê LGPD de
+   qualquer aluno da escola**, que a RLS já não a deixa ler. Lido no código
+   (as sete funções, Fatia 7). **Correção: PR próprio (URGENTE)**, porteiro
+   de escola operacional nas funções da coordenação.
+
 ## Estado corrente
 
 **Atualizado em:** 24/09/2026, fim da Fatia 6.
