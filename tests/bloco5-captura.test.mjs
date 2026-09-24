@@ -202,9 +202,15 @@ const runner = src("scripts/captura/pack-v2.mjs");
 // só o código: os comentários explicam, de propósito, o que o v2 NÃO usa
 const codigoRunner = runner.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
 
-test("workflow: só leitura do repositório e exatamente os seis segredos", () => {
-  assert.match(wf, /permissions:\s*\n\s*contents: read\s*\n/);
-  assert.doesNotMatch(wf, /id-token|write-all|contents: write/);
+test("workflow: só roda à mão (workflow_dispatch), sem push, PR, agenda ou chamada de outro workflow", () => {
+  const gatilhos = wf.slice(wf.indexOf("\non:"), wf.indexOf("\npermissions:"));
+  assert.match(gatilhos, /^\s*workflow_dispatch:/m);
+  assert.doesNotMatch(gatilhos, /^\s{2}(push|pull_request|pull_request_target|schedule|workflow_call|workflow_run|repository_dispatch):/m);
+});
+
+test("workflow: só leitura (repositório e artefatos) e exatamente os seis segredos", () => {
+  assert.match(wf, /permissions:\s*\n\s*contents: read\s*\n\s*actions: read/);
+  assert.doesNotMatch(wf, /id-token|write-all|: write/);
   const usados = [...new Set([...wf.matchAll(/secrets\.([A-Z0-9_]+)/g)].map((m) => m[1]))].sort();
   assert.deepEqual(usados, [...L.SEGREDOS].sort());
   assert.doesNotMatch(wf, /echo[^\n]*secrets\./, "nenhum segredo ecoado no log");
@@ -213,6 +219,28 @@ test("workflow: só leitura do repositório e exatamente os seis segredos", () =
 test("workflow: o artefato comercial não leva a pasta interna", () => {
   assert.match(wf, /name: pack-triliva-v2\s*\n\s*path: \.captura\/pack-triliva-v2-\*\//);
   assert.match(wf, /name: interno-captura\s*\n\s*path: \.captura\/interno-\*\//);
+});
+
+test("workflow: publica só PNG e os textos do pack; qualquer outro arquivo derruba a publicação", () => {
+  const confere = wf.slice(wf.indexOf("- name: Confere o que vai ser publicado"), wf.indexOf("- name: Pack comercial"));
+  assert.match(confere, /id: confere/);
+  for (const n of ["'*.png'", "'MANIFESTO.md'", "'CAPTURA.json'", "'CHANGELOG.md'", "'COERENCIA-HELENA.md'", "'SHA256SUMS.txt'", "'CAPTURA-INTERNA*.json'"]) {
+    assert.ok(confere.includes(`! -name ${n}`), `falta ${n} na lista`);
+  }
+  assert.match(confere, /exit 1/);
+  const uploads = wf.match(/uses: actions\/upload-artifact@v4/g) ?? [];
+  const condicionados = wf.match(/if: \$\{\{ !cancelled\(\) && steps\.confere\.outcome == 'success' \}\}\n\s*uses: actions\/upload-artifact@v4/g) ?? [];
+  assert.equal(condicionados.length, uploads.length, "todo upload depende da conferência");
+});
+
+test("sem trace, vídeo nem HAR do Playwright; DEBUG e PWDEBUG zerados no workflow e recusados no runner", () => {
+  assert.doesNotMatch(codigoRunner, /tracing|recordVideo|recordHar|video\s*:|\.har\b|trace\s*:/i);
+  assert.match(wf, /DEBUG: ""\n\s*PWDEBUG: ""/);
+  assert.match(runner, /if \(\/pw:\/\.test\(env\.DEBUG \?\? ""\) \|\| env\.PWDEBUG\) \{[\s\S]*?process\.exit\(6\)/);
+  // o runner abre o navegador direto (chromium.launch), não pelo test runner
+  // do Playwright, que é quem lê playwright.config e poderia ligar trace
+  assert.match(codigoRunner, /chromium\.launch\(/);
+  assert.doesNotMatch(codigoRunner, /playwright\.config|defineConfig/);
 });
 
 test("runner: não usa service role, função de Edge de captura nem OIDC", () => {
@@ -243,8 +271,63 @@ test("runner: tela 18 nunca vai para o pack comercial", () => {
 
 test("runner: modo oficial fora da janela ou sem segredo aborta; ensaio sem segredo não captura nada", () => {
   assert.match(runner, /if \(OFICIAL && !janela\.ok\) \{[\s\S]*?process\.exit\(3\)/);
-  // OFICIAL, não MODO: o auto dentro da janela também é oficial (Codex #136)
   assert.match(runner, /if \(OFICIAL\) \{ console\.error\(`ERRO: \$\{msg\}`\); process\.exit\(2\); \}/);
-  assert.match(runner, /const OFICIAL = MODO === "oficial" \|\| \(MODO === "auto" && janela\.ok\)/);
+  assert.match(runner, /const MODO = env\.CAPTURA_MODO === "oficial" \? "oficial" : "ensaio";/);
+  assert.doesNotMatch(codigoRunner, /"auto"/, "sem modo automático: o workflow só roda à mão");
   assert.match(runner, /ensaio pulado, nada capturado[\s\S]*?process\.exit\(0\)/);
+});
+
+// ── tela 24 ───────────────────────────────────────────────────
+const baseCaptura = () => ({
+  pack: "pack-triliva-v2-2026-09-26", oficial: true, dataLocal: "2026-09-26", escola: "Instituto Meridiano",
+  telas: [1, 5], arquivos: [
+    { tela: 5, nome: "Hoje", device: "mobile", viewport: "390x844", dpr: 3, integral: "página inteira", arquivo: "01-aluno/05-hoje-mobile.png", recorte: "01-aluno/05-hoje-mobile-recorte.png", nota: "" },
+    { tela: 1, nome: "Portal", device: "desktop", viewport: "1440x900", dpr: 2, integral: "página inteira", arquivo: "00-publico/01-portal-desktop.png", recorte: null, nota: "" },
+  ],
+  naoIncluidas: [
+    { tela: 25, nome: "Trilha não configurada", motivo: "estado especial" },
+    { tela: 24, nome: "Onboarding", motivo: "NÃO INCLUÍDA nesta execução: capturado por último em execução própria." },
+  ],
+});
+const img24 = { tela: 24, nome: "Onboarding", device: "mobile", viewport: "390x844", dpr: 3, integral: "página inteira", arquivo: "04-estados/24-onboarding-mobile.png", recorte: "04-estados/24-onboarding-mobile-recorte.png", nota: "preparado" };
+
+test("tela 24: quando a imagem sai, entra no pack e sai das não incluídas", () => {
+  const c = L.juntarTela24(baseCaptura(), { arquivos: [img24], run: "123", capturadoEm: "2026-09-26T22:00:00Z" });
+  assert.deepEqual(c.telas, [1, 5, 24]);
+  assert.equal(c.naoIncluidas.some((n) => n.tela === 24), false);
+  assert.deepEqual(c.complementos, [{ tela: 24, run: "123", capturadoEm: "2026-09-26T22:00:00Z", resultado: "incluída" }]);
+  const m = L.montarManifesto(c);
+  assert.match(m, /\| 24 \| Onboarding \| mobile \|/);
+  assert.ok(m.indexOf("| 01 |") < m.indexOf("| 05 |") && m.indexOf("| 05 |") < m.indexOf("| 24 |"), "ordem por tela");
+  assert.match(m, /Tela 24 capturada por último, em execução própria \(run 123\)[^\n]*: incluída\./);
+  assert.doesNotMatch(m, /\*\*24 Onboarding\*\*/);
+});
+
+test("tela 24: quando falha, fica NÃO INCLUÍDA com o motivo real, e o resto do pack não muda", () => {
+  const base = baseCaptura();
+  const c = L.juntarTela24(base, { falha: "o onboarding da Helena não está pendente (o preparo da tela 24 rodou?)" });
+  assert.deepEqual(c.arquivos.map((a) => a.arquivo).sort(), base.arquivos.map((a) => a.arquivo).sort());
+  const n24 = c.naoIncluidas.filter((n) => n.tela === 24);
+  assert.equal(n24.length, 1);
+  assert.match(n24[0].motivo, /^NÃO INCLUÍDA: o onboarding da Helena não está pendente/);
+  assert.match(L.montarManifesto(c), /- \*\*24 Onboarding\*\*: NÃO INCLUÍDA: o onboarding/);
+});
+
+test("tela 24: rodar a junção de novo não duplica a 24", () => {
+  const uma = L.juntarTela24(baseCaptura(), { arquivos: [img24] });
+  const duas = L.juntarTela24(uma, { arquivos: [img24] });
+  assert.equal(duas.arquivos.filter((a) => a.tela === 24).length, 1);
+  assert.equal(duas.complementos.length, 1);
+});
+
+test("tela 24 no runner: só a 24, só o login do aluno, sobre o pack do mesmo dia e do mesmo modo", () => {
+  assert.match(runner, /const SO_TELA_24 = env\.CAPTURA_TELA === "24";/);
+  assert.match(runner, /packBase\.oficial !== OFICIAL[\s\S]*?process\.exit\(7\)/);
+  assert.match(runner, /packBase\.dataLocal !== DATA[\s\S]*?process\.exit\(7\)/);
+  const bloco = runner.slice(runner.indexOf("if (SO_TELA_24) {\n  await capturarDef(TELA_24);"), runner.indexOf("await browser.close();"));
+  assert.match(bloco, /capturarDef\(TELA_24\)/);
+  assert.doesNotMatch(bloco.split("} else {")[0], /entrar\("(responsavel|coordenacao)"\)/);
+  assert.match(runner, /o onboarding da Helena não está pendente \(o preparo da tela 24 rodou\?\)/);
+  // no modo principal a 24 aparece como capturada à parte, não como falha
+  assert.match(runner, /\{ tela: 24, nome: "Onboarding", motivo: "NÃO INCLUÍDA nesta execução: estado especial, capturado por último/);
 });

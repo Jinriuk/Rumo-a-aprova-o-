@@ -11,7 +11,7 @@ próxima captura. Código: `scripts/captura/pack-v2.mjs` (runner) e `scripts/cap
 |---|---|---|
 | `pack-triliva-v2-AAAA-MM-DD/` (artefato `pack-triliva-v2`) | material comercial | telas, `MANIFESTO.md`, `CAPTURA.json`, `COERENCIA-HELENA.md`, `CHANGELOG.md`, `SHA256SUMS.txt`. **Sem** o identificador do projeto Supabase (P07) e sem nenhum valor de segredo: o runner confere e apaga o pack se achar um dos dois. |
 | `interno-AAAA-MM-DD/` (artefato `interno-captura`) | só nós | id do projeto, commit, modo, falhas, avisos de recorte, requisições bloqueadas, checagem a 360 px e, se pedida, a tela 18. |
-| `docs/pack/AAAA-MM-DD/` (neste repositório) | só nós | arquivos de controle de cada pack publicado. O de 19/09 vai em `docs/pack/2026-09-19/` quando os arquivos chegarem (ver "Pendente"). |
+| `docs/pack/AAAA-MM-DD/` (neste repositório) | só nós | arquivos de controle de cada pack publicado. O de 19/09 está em [`docs/pack/2026-09-19/`](./2026-09-19/README.md). |
 
 **O repositório é público.** "Interno" aqui quer dizer fora do pack comercial, não secreto: os
 artefatos do Actions ficam baixáveis por qualquer conta do GitHub enquanto existirem (retenção de 3
@@ -79,26 +79,56 @@ remover essa função, e o v2 não depende dela.
 
 ## Telas
 
-Mesma lista de 19/09 (01 a 22), com 06 refeita, 21 com o modal (P02), 22 com o modal inteiro (P06)
+Mesma lista de 19/09 (01 a 22), com 06 refeita (em 19/09 ela mostrava "Trilha temporariamente
+indisponível", defeito corrigido em `62abef2`), 21 com o modal (P02), 22 com o modal inteiro (P06)
 e Hoje, Ficha e Responsável em página inteira no celular. Toda captura é integral; no celular sai
 também a primeira dobra.
 
-Não recapturadas no v2 (estados que exigem preparar a conta da Helena e parariam a semana
-repetida): **04** troca de senha obrigatória e **25** trilha não configurada (as de 19/09 seguem
-válidas, nenhuma correção dos Blocos 1 a 4 muda essas telas) e **24** onboarding (o D12 mudou o
-exemplo do objetivo, então a de 19/09 não serve; recapturar depende de decisão).
+Não recapturadas no v2: **04** troca de senha obrigatória e **25** trilha não configurada (as de
+19/09 seguem válidas; nenhuma correção dos Blocos 1 a 4 muda essas telas).
+
+## Tela 24 (Onboarding): por último, com preparo e restauração
+
+O estado da 24 exige deixar o onboarding da Helena pendente, e isso muda a tela Hoje dela; por isso
+ela é capturada **depois** de tudo, em execução própria que completa o pack da execução principal.
+O D12 mudou o exemplo do objetivo, então a de 19/09 não serve.
+
+No sábado, nesta ordem (SQL no projeto de demonstração, só a Helena do Meridiano):
+
+1. Critério de aceite (seção 3.3) e captura principal (`modo: oficial`). Anotar o id da execução.
+2. V9b e `supabase/demo/captura/tela24_conferir.sql` (antes).
+3. `tela24_preparar.sql`: guarda do tenant, backup da linha de `aluno_onboarding` e do
+   `must_change_password` em `demo.backup_20260926_tela24`, `concluido_em = null`,
+   `must_change_password = false`. Conferir de novo (pendente = true).
+4. Workflow com `modo: oficial` e `tela_24_completa_run: <id da execução principal>`. Ele baixa o
+   pack da execução principal, captura só a 24 (celular) e devolve o pack inteiro, com manifesto,
+   `CAPTURA.json` e somas refeitos. Se a 24 falhar, ela fica NÃO INCLUÍDA com o motivo.
+5. `tela24_restaurar.sql` (sempre, dê a captura certo ou não): devolve a linha e o
+   `must_change_password` exatamente como no backup. Conferir (igual ao passo 2) e V9b.
+6. Critério de aceite de novo.
+
+Os scripts rodam duas vezes sem estragar o backup, e a restauração sem backup não faz nada
+(`tests/bloco5-tela24-db.test.mjs`).
 
 ## Rodar
 
-- Ensaio: Actions → captura-pack-v2 → Run workflow → modo `ensaio`. Antes do merge, qualquer push na
-  branch do Bloco 5 que mexa em `scripts/captura/` roda em modo `auto`.
-- Oficial: sábado depois das 18:00 de Brasília, modo `oficial`.
+Só à mão, pela aba Actions → captura-pack-v2 → Run workflow, a partir da `main` (um workflow com
+`workflow_dispatch` só aparece depois do merge). Não há disparo por push, PR ou agenda.
+
+- Ensaio (qualquer dia, sai com `-ensaio` no nome): valida logins e telas antes do sábado.
+- Oficial: sábado depois das 18:00 de Brasília.
+- Tela 24: ver a seção acima.
 - Local (só o que não depende de login, porque o proxy do ambiente de desenvolvimento pode barrar
   o Supabase): `cd app && npm run build`, servir `dist` em 127.0.0.1:4173 e
   `CHROME_PATH=... node scripts/captura/pack-v2.mjs`.
 
-## Pendente
+## O que é publicado
 
-- Arquivos de controle de 19/09 (`CAPTURA.json`, `MANIFESTO.md`, `COERENCIA-HELENA.md`,
-  `SHA256SUMS.txt`) para `docs/pack/2026-09-19/`. O identificador do projeto pode ficar neles: a
-  pasta é interna.
+Nada de trace, vídeo ou HAR do Playwright: o runner abre o navegador direto (não pelo test runner,
+que é quem lê `playwright.config`), não liga `tracing`/`recordVideo`/`recordHar` (teste estático) e
+recusa rodar com `DEBUG=pw:*` ou `PWDEBUG`, que registrariam o que é digitado no login.
+
+Antes de publicar, o passo "Confere o que vai ser publicado" derruba a publicação se houver qualquer
+arquivo além de: PNGs, `MANIFESTO.md`, `CAPTURA.json`, `CHANGELOG.md`, `COERENCIA-HELENA.md`,
+`SHA256SUMS.txt` (pack comercial) e `CAPTURA-INTERNA*.json` (artefato interno). Os textos são os
+que a seção 9 pede (P01, P05, P07) e passam pela checagem de segredo e de id do projeto.

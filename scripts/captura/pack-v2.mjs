@@ -18,6 +18,12 @@
 //   pack-triliva-v2-AAAA-MM-DD/   → pack comercial (sem id do projeto)
 //   interno-AAAA-MM-DD/           → id do projeto, commit, bloqueios,
 //                                   avisos, tela 18 (se pedida)
+// Com CAPTURA_TELA=24 captura só a tela 24 e completa o pack que está em
+// CAPTURA_BASE (o da execução principal do mesmo sábado): ver
+// docs/pack/README.md, "Tela 24".
+//
+// Não grava trace, vídeo nem HAR do Playwright (o trace registraria o
+// que é digitado no login) e recusa rodar com DEBUG/PWDEBUG do Playwright.
 // Uso: node scripts/captura/pack-v2.mjs (a partir da raiz do repo)
 // ============================================================
 import { createRequire } from "node:module";
@@ -39,26 +45,27 @@ const { PNG } = requireApp(path.join(path.dirname(requireApp.resolve("playwright
 
 const env = process.env;
 // ensaio: qualquer dia, sai com sufixo "-ensaio"; oficial: só na janela
-// de sábado (aborta fora dela); auto (push na branch): oficial se estiver
-// na janela, ensaio fora dela.
-const MODO = ["ensaio", "oficial", "auto"].includes(env.CAPTURA_MODO) ? env.CAPTURA_MODO : "ensaio";
-const COM_TELA_18 = env.CAPTURA_TELA_18 === "true";
+// de sábado depois das 18:00 de Brasília (aborta fora dela). O workflow
+// só roda por workflow_dispatch, então não há modo automático.
+const MODO = env.CAPTURA_MODO === "oficial" ? "oficial" : "ensaio";
+const OFICIAL = MODO === "oficial";
+const SO_TELA_24 = env.CAPTURA_TELA === "24";
+const COM_TELA_18 = env.CAPTURA_TELA_18 === "true" && !SO_TELA_24;
 const BASE = env.CAPTURA_BASE_URL ?? "http://127.0.0.1:4173";
 const SAIDA = path.resolve(env.CAPTURA_SAIDA ?? path.join(RAIZ, ".captura"));
 const AGORA = new Date();
 const janela = L.janelaOficial(AGORA);
-const OFICIAL = MODO === "oficial" || (MODO === "auto" && janela.ok);
 const DATA = L.dataLocal(AGORA);
-const PACK = L.nomeDoPack(DATA) + (OFICIAL ? "" : "-ensaio");
-const DIR_PACK = path.join(SAIDA, PACK);
-const DIR_INTERNO = path.join(SAIDA, `interno-${DATA}${OFICIAL ? "" : "-ensaio"}`);
 
 // ── pré-condições ─────────────────────────────────────────────
+// Com DEBUG=pw:* ou PWDEBUG o Playwright escreve no log o que é digitado.
+if (/pw:/.test(env.DEBUG ?? "") || env.PWDEBUG) {
+  console.error("ERRO: DEBUG/PWDEBUG do Playwright ligado registraria o que é digitado no login. Nada capturado.");
+  process.exit(6);
+}
 const faltando = L.SEGREDOS.filter((n) => !env[n]);
 if (faltando.length) {
   const msg = `segredos ausentes no repositório: ${faltando.join(", ")}`;
-  // OFICIAL e não MODO: no modo auto dentro da janela a execução é oficial e
-  // não pode sair verde sem ter capturado nada (achado do Codex no #136)
   if (OFICIAL) { console.error(`ERRO: ${msg}`); process.exit(2); }
   console.log(`::warning::${msg} — ensaio pulado, nada capturado.`);
   process.exit(0);
@@ -67,6 +74,30 @@ if (OFICIAL && !janela.ok) {
   console.error(`ERRO: captura oficial fora da janela (${janela.motivo}). Use a captura de ensaio.`);
   process.exit(3);
 }
+// Tela 24: completa o pack da execução principal (baixado em CAPTURA_BASE).
+let packBase = null;
+// O artefato baixado pode trazer o CAPTURA.json na raiz ou numa subpasta
+// com o nome do pack, conforme o upload gravou; aceita os dois.
+async function acharPackBase(dir) {
+  if (!dir) return null;
+  const tem = (d) => fs.access(path.join(d, "CAPTURA.json")).then(() => true, () => false);
+  if (await tem(dir)) return dir;
+  for (const e of await fs.readdir(dir, { withFileTypes: true }).catch(() => [])) {
+    if (e.isDirectory() && await tem(path.join(dir, e.name))) return path.join(dir, e.name);
+  }
+  return null;
+}
+if (SO_TELA_24) {
+  const dirBase = await acharPackBase(env.CAPTURA_BASE ? path.resolve(env.CAPTURA_BASE) : null);
+  packBase = dirBase && JSON.parse(await fs.readFile(path.join(dirBase, "CAPTURA.json"), "utf8").catch(() => "null"));
+  if (!packBase) { console.error("ERRO: a tela 24 completa um pack; não achei o CAPTURA.json da execução principal em CAPTURA_BASE."); process.exit(7); }
+  if (packBase.oficial !== OFICIAL) { console.error(`ERRO: o pack base é ${packBase.oficial ? "oficial" : "de ensaio"} e esta execução é ${MODO}.`); process.exit(7); }
+  if (packBase.dataLocal !== DATA) { console.error(`ERRO: o pack base é de ${packBase.dataLocal}; a 24 completa o pack do mesmo dia (${DATA}).`); process.exit(7); }
+  packBase.dir = dirBase;
+}
+const PACK = packBase ? packBase.pack : L.nomeDoPack(DATA) + (OFICIAL ? "" : "-ensaio");
+const DIR_PACK = path.join(SAIDA, PACK);
+const DIR_INTERNO = path.join(SAIDA, `interno-${DATA}${OFICIAL ? "" : "-ensaio"}${SO_TELA_24 ? "-tela24" : ""}`);
 const envTexto = await fs.readFile(path.join(APP, ".env.production"), "utf8");
 const SUPA_URL = envTexto.match(/^VITE_SUPABASE_URL=(.+)$/m)?.[1]?.trim();
 const ANON = envTexto.match(/^VITE_SUPABASE_ANON_KEY=(.+)$/m)?.[1]?.trim();
@@ -96,6 +127,7 @@ const bloqueadas = [];
 const textos = {};
 const checks360 = [];
 
+if (packBase && path.resolve(packBase.dir) !== DIR_PACK) await fs.rename(packBase.dir, DIR_PACK);
 await Promise.all(["00-publico", "01-aluno", "02-coordenacao", "03-responsavel", "04-estados"]
   .map((d) => fs.mkdir(path.join(DIR_PACK, d), { recursive: true })));
 await fs.mkdir(path.join(DIR_INTERNO, "02-coordenacao"), { recursive: true });
@@ -354,18 +386,25 @@ const TELAS = [
 
 const NAO_RECAPTURADAS = [
   { tela: 4, nome: "Troca de senha obrigatória", motivo: "estado especial: exige preparar a conta da Helena, e a semana repetida está no ar; a de 19/09 segue válida (nenhuma correção dos Blocos 1 a 4 muda esta tela)." },
-  { tela: 24, nome: "Onboarding", motivo: "estado especial: exige preparar a conta; o Bloco 4 mudou o exemplo do objetivo (D12), então a de 19/09 não deve ser usada. Recaptura depende de decisão (ver relatório)." },
+  { tela: 24, nome: "Onboarding", motivo: "NÃO INCLUÍDA nesta execução: estado especial, capturado por último em execução própria, depois do critério de aceite, com preparo e restauração da Helena. Se esta linha estiver no pack final, a 24 não entrou." },
   { tela: 25, nome: "Trilha não configurada", motivo: "estado especial: exige tirar a trilha da Helena, o que pararia a semana repetida; a de 19/09 segue válida." },
 ];
 
-// ── execução ──────────────────────────────────────────────────
-let estados = {};
-await seguro("login aluno", async () => { estados.aluno = await entrar("aluno"); });
-await seguro("login responsável", async () => { estados.responsavel = await entrar("responsavel"); });
-await seguro("login coordenação", async () => { estados.coordenacao = await entrar("coordenacao"); });
+// Tela 24: só na execução própria (CAPTURA_TELA=24), com a Helena preparada
+// por supabase/demo/captura/tela24_preparar.sql (onboarding pendente).
+const TELA_24 = {
+  tela: 24, base: "24-onboarding", nome: "Onboarding", pasta: "04-estados", papel: "aluno", devices: ["mobile"], aluno: L.ALUNA_REFERENCIA,
+  antes: async (p) => {
+    const cartao = p.getByText(/^Bem-vind[oa], Helena/).first();
+    await cartao.waitFor({ state: "visible", timeout: 15000 })
+      .catch(() => { throw new Error("o onboarding da Helena não está pendente (o preparo da tela 24 rodou?)"); });
+  },
+  ancora: porTexto(/^Bem-vind[oa], Helena/),
+  nota: "Estado preparado no tenant fictício só para esta captura (onboarding pendente) e restaurado em seguida; formulário sem envio.",
+};
 
-for (const def of TELAS) {
-  if (def.interna && !COM_TELA_18) { naoIncluidas.push({ tela: def.tela, nome: def.nome, motivo: "não pedida nesta execução (fora do material comercial até o D02)" }); continue; }
+// ── execução ──────────────────────────────────────────────────
+async function capturarDef(def) {
   for (const device of def.devices) {
     await seguro(`${String(def.tela).padStart(2, "0")} ${device}`, async () => {
       if (def.papel !== "publico" && !estados[def.papel]) throw new Error(`sem sessão de ${def.papel}`);
@@ -382,7 +421,7 @@ for (const def of TELAS) {
 }
 
 // 360 px: só evidência de que não há rolagem lateral (vai para o interno)
-for (const [tela, perfil, nomeAba] of [[5, "aluno", "Hoje"], [7, "aluno", "Registrar"], [13, "responsavel", null]]) {
+async function checar360(tela, perfil, nomeAba) {
   await seguro(`360 ${tela}`, async () => {
     if (!estados[perfil]) throw new Error(`sem sessão de ${perfil}`);
     const { c, p } = await abrir("mobile360", estados[perfil], MARCADOR[perfil]);
@@ -393,11 +432,28 @@ for (const [tela, perfil, nomeAba] of [[5, "aluno", "Hoje"], [7, "aluno", "Regis
     } finally { await c.close(); }
   });
 }
+
+let estados = {};
+await seguro("login aluno", async () => { estados.aluno = await entrar("aluno"); });
+if (SO_TELA_24) {
+  await capturarDef(TELA_24);
+  await checar360(24, "aluno", null);
+} else {
+  await seguro("login responsável", async () => { estados.responsavel = await entrar("responsavel"); });
+  await seguro("login coordenação", async () => { estados.coordenacao = await entrar("coordenacao"); });
+  for (const def of TELAS) {
+    if (def.interna && !COM_TELA_18) { naoIncluidas.push({ tela: def.tela, nome: def.nome, motivo: "não pedida nesta execução (fora do material comercial até o D02)" }); continue; }
+    await capturarDef(def);
+  }
+  for (const [tela, perfil, nomeAba] of [[5, "aluno", "Hoje"], [7, "aluno", "Registrar"], [13, "responsavel", null]]) {
+    await checar360(tela, perfil, nomeAba);
+  }
+}
 await browser.close();
 
 // ── conferência contra o banco (P05) ──────────────────────────
 let esperado = null;
-await seguro("dados para a conferência", async () => {
+if (!SO_TELA_24) await seguro("dados para a conferência", async () => {
   const sb = createClient(SUPA_URL, ANON, { auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false } });
   const { error: eLogin } = await sb.auth.signInWithPassword({ email: env.TRILIVA_CAPTURA_COORD_EMAIL, password: env.TRILIVA_CAPTURA_COORD_SENHA });
   if (eLogin) throw new Error(`login da conferência: ${eLogin.message}`);
@@ -435,26 +491,27 @@ function faltantes() {
   }
   return out;
 }
-const telasCapturadas = [...new Set(comerciais.map((m) => m.tela))].sort((a, b) => a - b);
-const captura = {
-  pack: PACK, oficial: OFICIAL, capturadoEm: AGORA.toISOString(), dataLocal: DATA, fusoHorario: "America/Sao_Paulo", idioma: "pt-BR",
-  escola: L.ESCOLA_DEMO, telas: telasCapturadas, arquivos: comerciais.map(({ comercial, ...m }) => m),
-  naoIncluidas: [...NAO_RECAPTURADAS, ...naoIncluidas, ...faltantes()],
-};
+const semMarcaComercial = (lista) => lista.map(({ comercial, ...m }) => m);
+let captura;
+if (SO_TELA_24) {
+  const { dir, ...base } = packBase;
+  captura = L.juntarTela24(base, {
+    arquivos: semMarcaComercial(comerciais),
+    falha: falhas.map((f) => `${f.rotulo}: ${f.erro}`).join("; ") || null,
+    run: env.GITHUB_RUN_ID ?? null, capturadoEm: AGORA.toISOString(),
+  });
+} else {
+  captura = {
+    pack: PACK, oficial: OFICIAL, capturadoEm: AGORA.toISOString(), dataLocal: DATA, fusoHorario: "America/Sao_Paulo", idioma: "pt-BR",
+    escola: L.ESCOLA_DEMO, telas: [...new Set(comerciais.map((m) => m.tela))].sort((a, b) => a - b), arquivos: semMarcaComercial(comerciais),
+    naoIncluidas: [...NAO_RECAPTURADAS, ...naoIncluidas, ...faltantes()],
+  };
+}
+const telasCapturadas = captura.telas;
+const MANIFESTO = L.montarManifesto(captura);
 
-const linhaTela = (m) => `| ${String(m.tela).padStart(2, "0")} | ${m.nome} | ${m.device} | ${m.viewport} @${m.dpr}x | \`${m.arquivo}\` (${m.integral})${m.dobra ? ` · \`${m.dobra}\`` : ""} · ${m.recorte ? `\`${m.recorte}\`` : "sem recorte válido"} | ${m.nota || "·"} |`;
-const MANIFESTO = [
-  `# ${PACK}`, "",
-  `Capturado em ${DATA} (America/Sao_Paulo), ${OFICIAL ? "captura oficial" : "**ENSAIO, não usar em material**"}. Escola: ${L.ESCOLA_DEMO} (fictícia).`,
-  "Navegador: Chromium, pt-BR, America/Sao_Paulo. Celular 390 px @3x; desktop 1440 px @2x.",
-  "Cada tela tem a captura integral: a página inteira, ou a janela quando a tela é um modal (camada fixa). No celular sai também a primeira dobra. O recorte sai da integral, com 24 px de margem e sem cortar componente; quando isso não é possível, não há recorte.", "",
-  "| Tela | Nome | Aparelho | Janela | Arquivos | Nota |", "|---|---|---|---|---|---|",
-  ...comerciais.map(linhaTela), "",
-  "## Não incluídas", "",
-  ...captura.naoIncluidas.map((n) => `- **${String(n.tela).padStart(2, "0")} ${n.nome}**: ${n.motivo}`), "",
-].join("\n");
-
-const CHANGELOG = [
+const CHANGELOG_24 = "- Tela 24 (Onboarding) refeita: capturada por último, em execução própria, depois do critério de aceite, com preparo e restauração da Helena (o D12 mudou o exemplo do objetivo).";
+const CHANGELOG = SO_TELA_24 ? null : [
   `# CHANGELOG · ${PACK}`, "", "Em relação ao pack de 19/09/2026:", "",
   "- **P01** Versão no nome (`pack-triliva-v2-AAAA-MM-DD`). O sufixo `_1_1` do pack anterior era duplicata de download, não versão.",
   "- **P02** Tela 21 refeita com o modal \"Gerar credencial\" (a de 19/09 era cópia da 15). Código e senha mascarados; a resposta foi simulada no navegador, nenhuma credencial foi criada.",
@@ -469,7 +526,8 @@ const CHANGELOG = [
   ...Object.entries(blocos).map(([b, ok]) => `- ${ok ? "sim" : "**não**"} · ${b}`), "",
 ].join("\n");
 
-let COERENCIA = `# COERENCIA-HELENA · ${PACK}\n\nA conferência não pôde ser feita: ${falhas.find((f) => f.rotulo === "dados para a conferência")?.erro ?? "sem dados"}.\n`;
+// no modo 24 a conferência é a da execução principal (a 24 não muda números)
+let COERENCIA = SO_TELA_24 ? null : `# COERENCIA-HELENA · ${PACK}\n\nA conferência não pôde ser feita: ${falhas.find((f) => f.rotulo === "dados para a conferência")?.erro ?? "sem dados"}.\n`;
 if (esperado) {
   const telasHelena = Object.fromEntries(Object.entries(textos).filter(([k]) => /^(05|08|10|13|20) /.test(k)));
   const matriz = L.conferir(L.numerosDaReferencia(esperado), telasHelena);
@@ -497,33 +555,40 @@ if (esperado) {
     ...esperado.turmas.flatMap((t) => [
       `| Turmas (17) · ${t.nome} | Alunos | · | ${t.alunos} | ${aparece(17, t.nome)} |`,
       `| Turmas (17) · ${t.nome} | Questões | ciclo | ${fmtNum(t.questoesCiclo)} | ${aparece(17, fmtNum(t.questoesCiclo))} |`,
-      `| Turmas (17) · ${t.nome} | Acerto (média simples dos alunos) | ciclo | ${t.acertoCicloMediaSimples ?? "—"}% | ${aparece(17, `${t.acertoCicloMediaSimples}%`)} |`,
+      `| Turmas (17) · ${t.nome} | Acerto médio no ciclo (média simples dos alunos) | ciclo | ${t.acertoCicloMediaSimples ?? "—"}% | ${aparece(17, `${t.acertoCicloMediaSimples}%`)} |`,
     ]),
     `| Painel (14) e Ranking (16) | Pódio "Melhor acerto (7d)" (D05) | 7 dias, piso de ${L.VOLUME_MINIMO} questões | ${esperado.podioAcerto7d.join(", ")} | Painel: ${esperado.podioAcerto7d.every((n) => turmaTexto(14).includes(n)) ? "aparece" : "**não encontrado**"} · Ranking: ${esperado.podioAcerto7d.every((n) => turmaTexto(16).includes(n)) ? "aparece" : "**não encontrado**"} |`,
     "",
-    "Atenção: a tela Turmas mostra \"Acerto\" como média simples do acerto do ciclo de cada aluno, e \"Questões\" do ciclo; o Painel mostra acerto ponderado de 7 dias. São números diferentes por definição, não erro de captura.", "",
+    "Atenção: \"Acerto médio no ciclo\" (Turmas) é a média simples do acerto do ciclo de cada aluno, e \"Questões\" em Turmas é do ciclo; o Painel mostra acerto ponderado de 7 dias. São números diferentes por definição, não erro de captura.", "",
   ].join("\n");
 }
 function fmtNum(n) { return L.fmtMilhar(n); }
 
 const INTERNO = {
   pack: PACK, projetoSupabase: L.PROJETO_DEMO, commit, run: env.GITHUB_RUN_ID ?? null,
-  modo: MODO, janela: janela.motivo, oficial: OFICIAL, telaLgpd: COM_TELA_18,
+  modo: MODO, somenteTela24: SO_TELA_24, janela: janela.motivo, oficial: OFICIAL, telaLgpd: COM_TELA_18,
   falhas, avisos, requisicoesNaoLeitura: bloqueadas, checks360,
   arquivosInternos: manifesto.filter((m) => !m.comercial),
 };
 
 await fs.writeFile(path.join(DIR_PACK, "MANIFESTO.md"), MANIFESTO);
 await fs.writeFile(path.join(DIR_PACK, "CAPTURA.json"), JSON.stringify(captura, null, 2));
-await fs.writeFile(path.join(DIR_PACK, "CHANGELOG.md"), CHANGELOG);
-await fs.writeFile(path.join(DIR_PACK, "COERENCIA-HELENA.md"), COERENCIA);
-await fs.writeFile(path.join(DIR_INTERNO, "CAPTURA-INTERNA.json"), JSON.stringify(INTERNO, null, 2));
+if (CHANGELOG) await fs.writeFile(path.join(DIR_PACK, "CHANGELOG.md"), CHANGELOG);
+else if (comerciais.length) {
+  const atual = await fs.readFile(path.join(DIR_PACK, "CHANGELOG.md"), "utf8");
+  if (!atual.includes(CHANGELOG_24)) {
+    await fs.writeFile(path.join(DIR_PACK, "CHANGELOG.md"), atual.replace("\n## Correções de produto", `${CHANGELOG_24}\n\n## Correções de produto`));
+  }
+}
+if (COERENCIA) await fs.writeFile(path.join(DIR_PACK, "COERENCIA-HELENA.md"), COERENCIA);
+const ARQ_INTERNO = SO_TELA_24 ? "CAPTURA-INTERNA-TELA24.json" : "CAPTURA-INTERNA.json";
+await fs.writeFile(path.join(DIR_INTERNO, ARQ_INTERNO), JSON.stringify(INTERNO, null, 2));
 
 // P07 e segredos: o pack comercial não pode levar id do projeto nem segredo
 const textosDoPack = {};
 for (const f of ["MANIFESTO.md", "CAPTURA.json", "CHANGELOG.md", "COERENCIA-HELENA.md"]) textosDoPack[f] = await fs.readFile(path.join(DIR_PACK, f), "utf8");
 const violacoes = L.violacoesDoPackComercial(textosDoPack, { segredos: VALORES_SECRETOS });
-const internoTexto = await fs.readFile(path.join(DIR_INTERNO, "CAPTURA-INTERNA.json"), "utf8");
+const internoTexto = await fs.readFile(path.join(DIR_INTERNO, ARQ_INTERNO), "utf8");
 const vazouNoInterno = L.violacoesDoPackComercial({ interno: internoTexto }, { projeto: null, segredos: VALORES_SECRETOS });
 
 // SHA256SUMS de tudo o que está no pack
@@ -536,7 +601,8 @@ async function listar(dir) {
   return out;
 }
 const somas = [];
-for (const f of (await listar(DIR_PACK)).sort()) {
+// sem o SHA256SUMS anterior (no modo 24 ele veio do pack base)
+for (const f of (await listar(DIR_PACK)).filter((x) => path.basename(x) !== "SHA256SUMS.txt").sort()) {
   const h = crypto.createHash("sha256").update(await fs.readFile(f)).digest("hex");
   somas.push(`${h}  ${path.relative(DIR_PACK, f)}`);
 }

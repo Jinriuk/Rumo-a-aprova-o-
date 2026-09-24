@@ -310,3 +310,55 @@ export function violacoesDoPackComercial(arquivos, { projeto = PROJETO_DEMO, seg
   }
   return out;
 }
+
+// ── manifesto e junção da tela 24 ─────────────────────────────
+// O MANIFESTO.md sai sempre do CAPTURA.json (uma fonte só), para que a
+// execução da tela 24 possa reescrevê-lo depois de juntar a imagem dela.
+const doisDigitos = (n) => String(n).padStart(2, "0");
+const ordemArquivo = (a, b) => (a.tela - b.tela) || String(a.device).localeCompare(String(b.device));
+
+export function linhaDoManifesto(m) {
+  const arquivos = [
+    `\`${m.arquivo}\` (${m.integral})`,
+    m.dobra ? `\`${m.dobra}\`` : null,
+    m.recorte ? `\`${m.recorte}\`` : "sem recorte válido",
+  ].filter(Boolean).join(" · ");
+  return `| ${doisDigitos(m.tela)} | ${m.nome} | ${m.device} | ${m.viewport} @${m.dpr}x | ${arquivos} | ${m.nota || "·"} |`;
+}
+
+export function montarManifesto(captura) {
+  const complementos = (captura.complementos ?? []).map((c) =>
+    `- Tela ${doisDigitos(c.tela)} capturada por último, em execução própria${c.run ? ` (run ${c.run})` : ""}, com preparo e restauração da aluna de referência: ${c.resultado}.`);
+  return [
+    `# ${captura.pack}`, "",
+    `Capturado em ${captura.dataLocal} (America/Sao_Paulo), ${captura.oficial ? "captura oficial" : "**ENSAIO, não usar em material**"}. Escola: ${captura.escola} (fictícia).`,
+    "Navegador: Chromium, pt-BR, America/Sao_Paulo. Celular 390 px @3x; desktop 1440 px @2x.",
+    "Cada tela tem a captura integral: a página inteira, ou a janela quando a tela é um modal (camada fixa). No celular sai também a primeira dobra. O recorte sai da integral, com 24 px de margem e sem cortar componente; quando isso não é possível, não há recorte.",
+    ...(complementos.length ? ["", ...complementos] : []), "",
+    "| Tela | Nome | Aparelho | Janela | Arquivos | Nota |", "|---|---|---|---|---|---|",
+    ...[...captura.arquivos].sort(ordemArquivo).map(linhaDoManifesto), "",
+    "## Não incluídas", "",
+    ...[...captura.naoIncluidas].sort((a, b) => a.tela - b.tela).map((n) => `- **${doisDigitos(n.tela)} ${n.nome}**: ${n.motivo}`), "",
+  ].join("\n");
+}
+
+// A tela 24 é capturada por último, em execução própria (o estado dela
+// exige mexer na Helena, o que mudaria as outras telas da aluna). Esta
+// função junta o resultado ao CAPTURA.json da execução principal: tira
+// a 24 das "não incluídas" se a imagem saiu, ou troca o motivo pelo erro.
+export function juntarTela24(base, { arquivos = [], falha = null, run = null, capturadoEm = null } = {}) {
+  const arquivosFinais = [...(base.arquivos ?? []).filter((a) => a.tela !== 24), ...arquivos].sort(ordemArquivo);
+  const naoIncluidas = (base.naoIncluidas ?? []).filter((n) => n.tela !== 24);
+  if (!arquivos.length) {
+    naoIncluidas.push({ tela: 24, nome: "Onboarding", motivo: `NÃO INCLUÍDA: ${falha || "a captura da 24 não produziu imagem"}` });
+  }
+  naoIncluidas.sort((a, b) => a.tela - b.tela);
+  return {
+    ...base,
+    telas: [...new Set(arquivosFinais.map((a) => a.tela))].sort((a, b) => a - b),
+    arquivos: arquivosFinais,
+    naoIncluidas,
+    complementos: [...(base.complementos ?? []).filter((c) => c.tela !== 24),
+      { tela: 24, run, capturadoEm, resultado: arquivos.length ? "incluída" : "NÃO INCLUÍDA" }],
+  };
+}
