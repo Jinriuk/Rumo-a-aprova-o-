@@ -31,13 +31,19 @@ const ENV_ORIGINS = (Deno.env.get("ALLOWED_ORIGINS") ?? "")
 // secret (ALLOWED_ORIGINS) estar certo num painel que o repositório
 // não enxerga. O override por env continua valendo para o dia em que
 // entrar um domínio novo sem deploy.
+//
+// C-S02 (Etapa 2): localhost SAIU do default. Com ele aqui, toda função
+// publicada — inclusive a de produção — aceitava http://localhost:5173
+// sempre que ALLOWED_ORIGINS não estivesse definida no projeto. Para o
+// desenvolvimento local, a origem entra pelo ambiente local das funções:
+//   ALLOWED_ORIGINS=http://localhost:5173
+// no arquivo de env usado por `supabase functions serve --env-file`.
+// Lembrete: ALLOWED_ORIGINS SUBSTITUI esta lista inteira.
 const DEFAULT_ORIGINS = [
   "https://app.trilivaedu.com.br", // produção (domínio próprio)
   "https://www.trilivaedu.com.br", // demo / vitrine (domínio próprio)
   "https://trilivaedu.com.br", // apex, sem www
   "https://rumo-a-aprova-o.vercel.app", // slug legado da Vercel
-  "http://localhost:5173", // dev local (Vite)
-  "http://localhost:3000", // dev local (alternativo)
 ];
 
 const ORIGINS = ENV_ORIGINS.length > 0 ? ENV_ORIGINS : DEFAULT_ORIGINS;
@@ -50,9 +56,12 @@ const ORIGINS = ENV_ORIGINS.length > 0 ? ENV_ORIGINS : DEFAULT_ORIGINS;
 // andamento), não exige editar código, como já vale para ALLOWED_ORIGINS.
 // Compat: sem PREFIXES, cai para o singular VERCEL_PREVIEW_PREFIX (nome
 // de secret já existente, lido desde a troca de marca — não é órfão).
-// Sem nenhuma das duas, usa o default. Para desligar previews por
-// completo, defina ALLOWED_ORIGINS sem eles; o regex segue só validando
-// os prefixos configurados.
+// Sem nenhuma das duas, usa o default. ATENÇÃO: ALLOWED_ORIGINS NÃO
+// desliga os previews — origemPermitida() testa este regex sempre, com ou
+// sem ALLOWED_ORIGINS. Hoje, preview de qualquer branch destes projetos
+// fala com as funções (e o triliva-producao tem as VITE_ em Preview, ou
+// seja, aponta para o banco de produção). Aceitar ou não essa origem nas
+// funções de produção é decisão do dono (docs/e2-seguranca.md, fatia 5).
 // Dois projetos Vercel publicam este repositório hoje (visível nos
 // deploys de PR): o slug legado e o de produção da marca. O default
 // cobria só o primeiro, então preview do segundo nascia bloqueado.
