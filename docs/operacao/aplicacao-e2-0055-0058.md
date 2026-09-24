@@ -200,7 +200,7 @@ arquivo no README. Os arquivos foram gravados a partir do retorno bruto de
 primeira escrita em produção.
 
 - 16 dos 17 arquivos são idênticos ao git em `48ff020`.
-- O `provisionar-aluno/source/index.ts` difere numa linha de comentário: o traço
+- O `provisionar-aluno/source/index.ts.txt` difere numa linha de comentário: o traço
   decorativo de `// ── Gerar credencial de aluno` tem 37 caracteres `─` em
   produção e 46 no git.
 
@@ -302,6 +302,18 @@ nos mesmos hashes.
 ### Não verificado
 
 - Resposta HTTP das funções e valor de `ALLOWED_ORIGINS`, pelo mesmo motivo da fase 1.
+- **Achado do CodeQL no PR deste registro: viés por módulo no código vivo.** A
+  `provisionar-aluno` sorteia o código de acesso e a senha temporária com
+  `byte % alfabeto.length`, e isso não distribui por igual: 256 não é múltiplo de
+  31 nem de 54.
+  - Medido: a senha de 16 caracteres tem 90,85 bits de min-entropia, contra 92,08
+    no ideal. O código de 12 caracteres tem 57,96, contra 59,45.
+  - O impacto prático é desprezível, mas o alerta está certo.
+  - O comentário do código fala em 56 símbolos; o alfabeto da senha tem 54.
+  - A correção é amostragem com rejeição (descartar byte ≥ `256 - 256 % n`). É
+    mudança de Edge Function publicada, fica para decisão do dono e não entra aqui.
+  - O arquivo de reversão guarda o mesmo padrão de propósito, porque precisa ser
+    byte a byte o que estava publicado.
 - **Teste de produção, a cargo do dono** (roteiro abaixo).
 
 ### Roteiro de teste de produção
