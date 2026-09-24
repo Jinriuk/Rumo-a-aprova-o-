@@ -77,7 +77,7 @@ export function ResumoResponsavel({ aluno, m, meta, trilha, simulados, semanaAti
     ? `${primeiroNome} ainda não registrou estudos nesta semana.`
     : `${primeiroNome} estudou em ${m.diasSemana} ${m.diasSemana === 1 ? "dia" : "dias"} nesta semana, ` +
       `resolveu ${m.qSem} ${m.qSem === 1 ? "questão" : "questões"}` +
-      (m.acerto > 0 ? ` e está com ${m.acerto}% de acerto geral` : "") + ". " +
+      (m.acerto > 0 ? ` e está com ${m.acerto}% de acerto no ciclo` : "") + ". " +
       fechoMeta;
 
   // alertas simples. Quando a meta foi concluída, o "poucos dias" já é
@@ -179,7 +179,7 @@ export function ResumoResponsavel({ aluno, m, meta, trilha, simulados, semanaAti
           tom={metaConcluida ? "ok" : pendentes > 0 ? "alerta" : "neutro"} />
         <StatCard rotulo="Questões" valor={m.qSem} sub="nesta semana" icone="✦" />
         <StatCard rotulo="Tempo estudado" valor={fmtHoras(m.minutosSemana ?? 0)} sub="nesta semana" icone="◷" />
-        <StatCard rotulo="Acerto geral" valor={m.acerto > 0 ? `${m.acerto}%` : "—"} sub={lerAcerto} icone="◎"
+        <StatCard rotulo="Acerto no ciclo" valor={m.acerto > 0 ? `${m.acerto}%` : "—"} sub={lerAcerto} icone="◎"
           tom={m.acerto >= 70 ? "ok" : m.acerto > 0 ? "alerta" : "neutro"} />
         <StatCard rotulo="Dias ativos" valor={`${m.diasSemana}/7`} sub={lerDias} icone="📆"
           tom={m.diasSemana >= 5 ? "ok" : m.diasSemana >= 3 ? "alerta" : "risco"} />

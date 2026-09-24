@@ -14,6 +14,7 @@ Documentação organizada por **área** e por **assunto**. Comece pelos índices
 | [`fases/`](#-fases) | Histórico de **build** do produto, fase a fase (14.5 → 17) |
 | [`auditoria/`](./auditoria/README.md) | Auditorias e fases de evolução, **por assunto** (segurança, banco, operacional, produto) + `antigos/` |
 | [`operacao/`](#-operacao) | Documentação **viva** de operação: infra, ambientes, backup, rollback, go-live, LGPD, runbooks |
+| [`demo/`](./demo/HISTORIA.md) | A demonstração do Instituto Meridiano: a história de cada aluno e a "semana 4 em repetição" (`supabase/demo/`) |
 
 > **Regra de leitura:** `fundacao/` e `operacao/` são **referência viva**. `auditoria/`
 > registra **o que foi feito em cada fase**. `auditoria/antigos/` é **histórico** e não
@@ -70,4 +71,5 @@ Runbooks e checklists vivos. Destaques:
 - **Infra / LGPD:** [ambientes-e-variaveis.md](./operacao/ambientes-e-variaveis.md) · [lgpd-e-infra.md](./operacao/lgpd-e-infra.md) · [plano-migracao-sa-east-1.md](./operacao/plano-migracao-sa-east-1.md)
 - **Backup:** [backup-retencao-lgpd.md](./operacao/backup-retencao-lgpd.md) · [backup-e-plano-supabase.md](./operacao/backup-e-plano-supabase.md) · [monitoramento-backup.md](./operacao/monitoramento-backup.md)
 - **Acesso / coordenação:** [auth-codigos-alunos.md](./operacao/auth-codigos-alunos.md) · [auth-credenciais-checklist.md](./operacao/auth-credenciais-checklist.md) · [backoffice-superoperador.md](./operacao/backoffice-superoperador.md)
+- **Pack de capturas:** [pack/README.md](./pack/README.md) (como o pack comercial é capturado, segredos, o que é interno)
 - **GitHub / Supabase:** [github-seguranca.md](./operacao/github-seguranca.md) · [github/repositorio-publico.md](./operacao/github/repositorio-publico.md) · [supabase/leaked-password-protection.md](./operacao/supabase/leaked-password-protection.md)
