@@ -332,7 +332,9 @@ function Turmas({ turmas, alunos, porAluno, aoMudar, aoVerRanking, aoVerAluno })
                   </button>
                   <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(90px,1fr))", gap: 8, marginTop: 10 }}>
                     <Mini rotulo="Alunos" valor={s.n} />
-                    <Mini rotulo="Acerto" valor={s.acerto == null ? "—" : `${s.acerto}%`} cor={s.acerto == null ? null : s.acerto >= 70 ? T.green : T.gold} />
+                    {/* média SIMPLES do acerto do ciclo de cada aluno (statsTurma): o
+                        rótulo diz a janela e o tipo de média, como o D15 (24/09) */}
+                    <Mini rotulo="Acerto médio no ciclo" valor={s.acerto == null ? "—" : `${s.acerto}%`} cor={s.acerto == null ? null : s.acerto >= 70 ? T.green : T.gold} />
                     <Mini rotulo="Questões" valor={s.questoes} />
                     <Mini rotulo="Sem atividade" valor={s.risco} cor={s.risco ? T.red : T.green} />
                   </div>
@@ -411,7 +413,9 @@ function Turmas({ turmas, alunos, porAluno, aoMudar, aoVerRanking, aoVerAluno })
 const Mini = React.memo(function Mini({ rotulo, valor, cor }) {
   const T = useTema();
   return (
-    <div style={{ background: T.bg, border: `1px solid ${T.line}`, borderRadius: 9, padding: "8px 10px" }}>
+    // coluna com o valor embaixo: um rótulo que quebra em duas linhas
+    // ("Acerto médio no ciclo" no celular) não desalinha os números da linha
+    <div style={{ background: T.bg, border: `1px solid ${T.line}`, borderRadius: 9, padding: "8px 10px", display: "flex", flexDirection: "column", justifyContent: "space-between" }}>
       <div style={{ fontSize: 10, color: T.sub, textTransform: "uppercase", letterSpacing: 0.4 }}>{rotulo}</div>
       <div className="num disp" style={{ fontSize: 18, fontWeight: 800, color: cor || T.ink, marginTop: 2 }}>{valor}</div>
     </div>

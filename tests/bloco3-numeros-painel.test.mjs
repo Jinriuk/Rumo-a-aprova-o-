@@ -156,6 +156,15 @@ test("Pódio vazio: Painel e Ranking usam a mesma frase, e o 'Sem dados para ran
   assert.doesNotMatch(painel, /Sem dados para ranking/);
 });
 
+// ── Turmas (resposta de 24/09, item 4) ──────────────────────────────
+test("Turmas: o acerto é rotulado 'Acerto médio no ciclo' e o cálculo continua o mesmo", () => {
+  const codigo = src("app/src/routes/escola/AreaEscola.jsx");
+  assert.match(codigo, /<Mini rotulo="Acerto médio no ciclo" valor=\{s\.acerto == null/);
+  assert.doesNotMatch(codigo, /<Mini rotulo="Acerto" /);
+  // cálculo intocado: média simples do acc (ciclo) dos alunos com acerto
+  assert.match(codigo, /entrada\.acerto = comAcc\.length \? Math\.round\(comAcc\.reduce\(\(s, x\) => s \+ x\.acc, 0\) \/ comAcc\.length\) : null;/);
+});
+
 // ── D15 ────────────────────────────────────────────────────────────
 test("D15: o 'acerto' da ficha e do responsável é o do ciclo inteiro, não o da semana", () => {
   const semanas = [
