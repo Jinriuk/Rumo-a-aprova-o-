@@ -14,12 +14,13 @@
 --
 --   aceito_em     = quando o responsável aceitou (declarado; pode ser
 --                   retroativo — termo em papel lançado depois)
---   registrado_em = quando a linha entrou no banco (sempre o real)
+--   registrado_em = quando a linha entrou no banco (o real, para toda
+--                   linha gravada depois desta migration)
 --
 -- Linhas existentes: o `default now()` de um ADD COLUMN é avaliado UMA
 -- vez, no momento da migration — é esse o valor que elas recebem. Não
 -- há como saber o instante real delas; o momento da migration é o
--- limite inferior honesto ("registrado até aqui").
+-- limite SUPERIOR honesto: a linha foi gravada até ali, nunca depois.
 --
 -- Por que um gatilho e não só o default: a coordenação tem INSERT e
 -- UPDATE em todas as colunas de consentimentos (grant de tabela da
@@ -33,7 +34,7 @@ alter table public.consentimentos
   add column if not exists registrado_em timestamptz not null default now();
 
 comment on column public.consentimentos.registrado_em is
-  'N02 (0053): quando a linha foi gravada no banco — sempre o real, forçado por gatilho. aceito_em é o que foi declarado e pode ser retroativo.';
+  'N02 (0053): quando a linha foi gravada no banco, forçado por gatilho. Linhas anteriores à 0053 guardam o momento da migration (limite superior, não o instante real). aceito_em é o que foi declarado e pode ser retroativo.';
 
 create or replace function app.consentimento_registrado_em()
   returns trigger
