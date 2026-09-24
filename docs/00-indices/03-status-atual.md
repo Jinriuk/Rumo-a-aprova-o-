@@ -44,11 +44,11 @@ ganhou motor **e** porta na coordenação.
 
 | Métrica | Valor | Como foi obtido |
 |---|---|---|
-| Testes | **972 / 972 verdes** | medido em 23/09 (Bloco 2) — `bash reset-db.sh && npm test` em Postgres 16 local dedicado (migrations + seed 2×) |
-| Arquivos de teste | **93** (95 `.mjs` em `tests/`) | medido em 23/09 (Bloco 2) — `grep -l 'node:test' tests/*.mjs \| wc -l` |
+| Testes | **1003 / 1003 verdes** | medido em 24/09 (Bloco 2 sobre a main com os Blocos 1 e 3) — `bash reset-db.sh && npm test` em Postgres 16 local dedicado (migrations + seed 2×) |
+| Arquivos de teste | **95** (97 `.mjs` em `tests/`) | medido em 24/09 (Bloco 2 sobre a main com os Blocos 1 e 3) — `grep -l 'node:test' tests/*.mjs \| wc -l` |
 | Lint | **0 errors / 256 warnings** | medido — `cd app && npm run lint` |
 | Build de produção | **verde** | medido — `cd app && npm run build` |
-| Migrations no repo | **54** (última: `0053_consentimento_registrado_em`, aplicada na demonstração em 23/09 às 22:02 de Brasília; produção depois do merge do #133) | medido — `ls supabase/migrations/*.sql \| wc -l` |
+| Migrations no repo | **54** (última: `0053_consentimento_registrado_em`, aplicada na demonstração em 23/09 às 22:02 e em produção em 24/09 às 06:02 de Brasília; em produção a 0051 e a 0052 continuam não aplicadas) | medido — `ls supabase/migrations/*.sql \| wc -l` |
 | Seeds no repo | **21** (o 04 e o 21 só rodam em Supabase real — escrevem em `auth`) | medido — `ls supabase/seed/*.sql \| wc -l` |
 | Edge Functions no repo | **7** | medido — `ls -d supabase/functions/*/ \| grep -v _shared` |
 | TypeScript em `app/src` | 0 arquivos (dívida conhecida; `supabase/functions` é TS) | medido — `find app/src -name '*.ts*' \| wc -l` |
