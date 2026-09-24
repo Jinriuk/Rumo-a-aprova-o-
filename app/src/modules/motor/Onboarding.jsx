@@ -88,7 +88,7 @@ export function Onboarding({ aluno, materias = [], aoConcluir }) {
         <div>
           <label htmlFor={id("obj")} style={lbl}>Seu objetivo (opcional)</label>
           <input id={id("obj")} value={f.objetivo} onChange={(e) => set("objetivo", e.target.value)}
-            placeholder="ex: passar no Colégio Naval em 2026" style={inputS} />
+            placeholder="ex: passar no Colégio Naval" style={inputS} />
         </div>
 
         <Botao onClick={salvar} disabled={!podeSalvar} style={{ width: "100%" }}>

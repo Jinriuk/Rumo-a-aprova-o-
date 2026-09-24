@@ -102,3 +102,17 @@ export function validarAncora(ancora, fimAtual) {
   }
   return null;
 }
+
+/* D09 (Bloco 4, 24/09/2026): a edição nova é refeita em semanas de
+   segunda a domingo, e a última é a semana da âncora — termina no
+   domingo dessa semana (no próprio dia, se a prova for num domingo).
+   Espelha o cálculo de app.abrir_proximo_ciclo (0053) para a tela dizer
+   a data certa antes de chamar o RPC. `iso` é YYYY-MM-DD. */
+export function domingoDaSemana(iso) {
+  if (!iso) return null;
+  const d = new Date(`${iso}T00:00:00Z`);
+  if (Number.isNaN(d.getTime())) return null;
+  const dow = d.getUTCDay();                  // 0 = domingo … 6 = sábado
+  d.setUTCDate(d.getUTCDate() + ((7 - dow) % 7));
+  return d.toISOString().slice(0, 10);
+}
