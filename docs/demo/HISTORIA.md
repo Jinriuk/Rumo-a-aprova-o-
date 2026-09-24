@@ -135,6 +135,35 @@ fique, garantir que a semana 4 da trilha comece na segunda usada como âncora, r
 `select demo.gravar(date 'AAAA-MM-DD');` com essa segunda e religar. A gravação é trocada inteira;
 a função recusa âncora que não seja segunda ou que não coincida com o início de uma semana.
 
+### Não use a Matriz Educação RM (nem o Curso Beta) em demonstração
+
+Decisão de 23/09/2026: o seed **não** é reaplicado na Matriz. Consequência, medida no banco de
+demonstração em 24/09/2026:
+
+- A Matriz (60 alunos) e o Curso Beta Preparatório (3 alunos) usam a trilha
+  `b1388388-c660-4b4b-811c-b58358689e92` ("Trilha base de preparação militar — 9 semanas"), que
+  guarda o calendário **antigo** do CN: a semana 1 vai de sábado 30/05 a domingo 07/06 (9 dias) e a
+  semana 9 vai de segunda 27/07 a sábado 01/08 (6 dias). É exatamente o D09 que foi corrigido no
+  Meridiano (`03_d07_d09.sql`) e no seed/`abrir_proximo_ciclo` (Bloco 4). Na trilha da Matriz, não.
+- O ciclo dessa trilha terminou em 01/08: não há semana ativa hoje, e os registros são de junho e
+  julho. (O que cada tela mostra para esses alunos não foi conferido em 24/09; o dado do banco é
+  este.)
+- Os dois tenants estão entre os quatro que **não podem ter nenhuma linha alterada** (regra do
+  documento de 23/09). Corrigir o calendário deles exige decisão explícita, não um ajuste de demo.
+
+Para demonstrar, use só o Instituto Meridiano. Se a Matriz aparecer por engano numa reunião
+(troca de conta, link antigo), as semanas de 9 e 6 dias e o ciclo sem semana ativa são esperados,
+não defeito novo.
+
+Conferir (só leitura):
+
+```sql
+select s.numero, s.inicio, s.fim, s.fim - s.inicio + 1 as dias, extract(isodow from s.inicio) as dia_semana
+  from trilha_semanas s
+ where s.trilha_id = 'b1388388-c660-4b4b-811c-b58358689e92'
+ order by s.numero;
+```
+
 ## 4. Arquivos
 
 | Arquivo | O quê | Rodou em |
