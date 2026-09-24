@@ -8,9 +8,19 @@
 -- corrente; o que a gravação data de hoje em diante fica numa fila e
 -- entra no produto dia a dia, às 00:10, sempre com a data de ontem.
 --
+-- XP NUNCA CAI (decisão de 24/09/2026): registros, simulados, metas e
+-- atividades voltam à gravação toda segunda, mas o XP não. A virada
+-- não apaga evento de XP: arquiva os das semanas anteriores (ver
+-- demo.virar_semana, passo 1) e a semana 4 soma de novo, com ids
+-- novos por semana. Cada aluno ganha por semana o que ganhou na semana
+-- gravada (Helena +510); quem não estuda (Larissa, Enzo) fica parado,
+-- nunca desce. Até 23/09 a virada apagava o XP e ele "voltava" na
+-- segunda (Helena 1.720 → 1.210); o produto real nunca fez isso.
+--
 --   demo.gravar(segunda)      tira a fotografia (uma vez; já feita)
---   demo.virar_semana(hoje)   apaga o dinâmico do Meridiano e reinsere
---                             a gravação ancorada na segunda de `hoje`
+--   demo.virar_semana(hoje)   refaz o dinâmico do Meridiano a partir da
+--                             gravação, ancorada na segunda de `hoje`,
+--                             sem apagar XP
 --   demo.liberar(hoje)        move da fila o que vence até `hoje`; se a
 --                             âncora não é desta semana, refaz a semana
 --   demo.pausar(bool)         desliga/religa as duas acima
@@ -57,6 +67,14 @@ $$;
 create or replace function demo.segunda_de(p date) returns date
   language sql immutable set search_path = '' as
 $$ select p - (extract(isodow from p)::int - 1) $$;
+
+-- id determinístico de um evento da gravação numa semana: a mesma
+-- linha gravada, reproduzida em semanas diferentes, é um evento novo
+-- em cada uma (o XP acumula); na mesma semana, é sempre o mesmo id
+-- (rodar duas vezes não duplica).
+create or replace function demo.id_na_semana(p_id uuid, p_seg date) returns uuid
+  language sql immutable set search_path = '' as
+$$ select md5(p_id::text || ':' || p_seg::text)::uuid $$;
 
 -- ── gravar: a fotografia das semanas 1..N, relativa à segunda da N ──
 -- Grava o estado ATUAL do Meridiano até o domingo da semana que começa
@@ -264,10 +282,15 @@ begin
   -- concluída). `on conflict do nothing` sem alvo cobre também a chave
   -- de idempotência: se a atividade foi concluída ao vivo, o gatilho
   -- já gravou o XP dela e este não duplica.
+  -- O id é da SEMANA (gravação × âncora): o XP acumula, então a mesma
+  -- linha da gravação vira um evento novo a cada semana. A chave de
+  -- idempotência continua a original: é ela que casa com o gatilho do
+  -- produto numa conclusão ao vivo desta semana. A da semana anterior
+  -- já foi arquivada pela virada (demo.virar_semana, passo 1).
   insert into public.aluno_eventos_progresso
     (id, escola_id, aluno_id, exam_tag, tipo_evento, origem, referencia_tabela, referencia_id,
      xp_delta, metadata, status, idempotency_key, criado_por, criado_em)
-  select g.id, demo.escola(), g.aluno_id, g.exam_tag, g.tipo_evento, g.origem, g.referencia_tabela,
+  select demo.id_na_semana(g.id, v_seg), demo.escola(), g.aluno_id, g.exam_tag, g.tipo_evento, g.origem, g.referencia_tabela,
          g.referencia_id, g.xp_delta, g.metadata, 'valido', g.idempotency_key, g.criado_por,
          ((v_seg + g.dia) + g.criado_hora) at time zone 'America/Sao_Paulo'
     from demo.fila f
@@ -302,7 +325,7 @@ declare
   v_seg  date := demo.segunda_de(v_hoje);
   v_srr  text := current_setting('session_replication_role');
   v_res  jsonb;
-  n_metas int; n_ma int; n_niv int; n_hist int;
+  n_metas int; n_ma int; n_niv int; n_hist int; n_arq int;
 begin
   perform demo.checar_tenant();
   if (select pausado from demo.estado) then
@@ -318,12 +341,53 @@ begin
     raise exception 'demo: a trilha mudou de número de semanas desde a gravação — regrave';
   end if;
 
+  -- a virada não volta no tempo: semanas já reproduzidas deram XP, e
+  -- XP não se apaga (decisão de 24/09)
+  if v_seg < (select ancora from demo.estado) then
+    raise exception 'demo: a âncora atual é % e % é anterior; a virada não volta semanas',
+      (select ancora from demo.estado), v_seg;
+  end if;
+
   execute 'set local session_replication_role = replica';
 
-  -- 1. apaga o dinâmico do Meridiano (filhos antes dos pais: sem cascata em replica)
+  -- 1. XP: nada é apagado.
+  --    a) o que é de ANTES desta segunda vira arquivo: continua valendo
+  --       (mesmo xp_delta, mesmo status, mesma data), mas solta a
+  --       referência e a chave de idempotência, porque registros,
+  --       simulados e atividades voltam com os MESMOS ids toda semana:
+  --       sem isso, (i) apagar ao vivo um registro estornaria o XP dele
+  --       em todas as semanas, e (ii) concluir ao vivo uma atividade
+  --       bateria na chave da semana passada e não daria XP nenhum.
+  --       Os valores originais ficam em metadata.demo_arquivo.
+  --       Eventos sem essas origens (conquista, ajuste) não mudam.
+  --    b) o que é DESTA semana e veio da gravação (id da semana) sai e
+  --       volta pela fila: é o que mantém "rodar duas vezes" e "virar
+  --       direto = segunda + liberação diária". Numa virada de verdade
+  --       (segunda nova) não há nada da semana ainda, e isto não apaga
+  --       nada. XP ganho ao vivo durante a semana nunca é apagado.
+  update public.aluno_eventos_progresso e
+     set referencia_id   = md5(e.id::text || ':demo-arquivo')::uuid,
+         idempotency_key = e.idempotency_key || '#demo-arquivo:' || e.id::text,
+         metadata        = e.metadata || jsonb_build_object('demo_arquivo', jsonb_build_object(
+                             'referencia_id', e.referencia_id,
+                             'idempotency_key', e.idempotency_key,
+                             'na_virada_de', v_seg))
+    from public.alunos a
+   where a.id = e.aluno_id and a.escola_id = demo.escola()
+     and e.escola_id = demo.escola()
+     and e.referencia_tabela in ('registros_estudo', 'simulados', 'meta_atividades')
+     and e.criado_em < (v_seg::timestamp at time zone 'America/Sao_Paulo')
+     and not (e.metadata ? 'demo_arquivo');
+  get diagnostics n_arq = row_count;
+
+  delete from public.aluno_eventos_progresso e
+   using demo.gravacao_eventos g
+   where e.escola_id = demo.escola()
+     and e.id = demo.id_na_semana(g.id, v_seg);
+
+  -- 2. apaga o resto do dinâmico do Meridiano (filhos antes dos pais: sem cascata em replica)
   delete from public.meta_atividades         where escola_id = demo.escola();
   delete from public.metas                   where escola_id = demo.escola();
-  delete from public.aluno_eventos_progresso where escola_id = demo.escola();
   delete from public.simulados               where escola_id = demo.escola();
   delete from public.registros_estudo        where escola_id = demo.escola();
   delete from public.aluno_missoes           where escola_id = demo.escola();
@@ -331,14 +395,14 @@ begin
   delete from public.aluno_niveis            where escola_id = demo.escola();
   delete from demo.fila;
 
-  -- 2. re-ancora as 9 semanas: a semana gravada vira a semana corrente
+  -- 3. re-ancora as 9 semanas: a semana gravada vira a semana corrente
   update public.trilha_semanas ts
      set inicio = v_seg + g.dia_inicio, fim = v_seg + g.dia_fim
     from demo.gravacao_semanas g
    where ts.trilha_id = demo.trilha() and ts.numero = g.numero;
   update demo.estado set ancora = v_seg, atualizado_em = now();
 
-  -- 3. metas e atividades existem desde a segunda (o motor gera a meta
+  -- 4. metas e atividades existem desde a segunda (o motor gera a meta
   --    da semana às 00:05); conclusões futuras nascem pendentes
   insert into public.metas
     (id, escola_id, aluno_id, trilha_id, semana_numero, inicio, fim, status, gerada_em)
@@ -359,7 +423,7 @@ begin
     join public.metas m on m.id = g.meta_id and m.escola_id = demo.escola();
   get diagnostics n_ma = row_count;
 
-  -- 4. estado derivado, como gravado
+  -- 5. estado derivado, como gravado
   insert into public.aluno_niveis
   select n.* from demo.gravacao_niveis n
     join public.alunos a on a.id = n.aluno_id and a.escola_id = demo.escola();
@@ -369,7 +433,9 @@ begin
     join public.alunos a on a.id = h.aluno_id and a.escola_id = demo.escola();
   get diagnostics n_hist = row_count;
 
-  -- 5. tudo o que "acontece" vai para a fila; o que já venceu sai agora
+  -- 6. tudo o que "acontece" vai para a fila; o que já venceu sai agora.
+  --    De XP, só a semana gravada (dia >= 0): o XP das semanas 1 a 3
+  --    já está no ledger desde a primeira virada e nunca sai dele.
   insert into demo.fila (tabela, id, libera_em)
   select 'registros_estudo', id, v_seg + libera_dia from demo.gravacao_registros
   union all
@@ -380,11 +446,12 @@ begin
     join public.metas m on m.id = g.meta_id
    where g.estado = 'concluida'
   union all
-  select 'aluno_eventos_progresso', id, v_seg + libera_dia from demo.gravacao_eventos;
+  select 'aluno_eventos_progresso', id, v_seg + libera_dia from demo.gravacao_eventos where dia >= 0;
 
   v_res := demo._aplicar_fila(v_hoje)
         || jsonb_build_object('ancora', v_seg, 'metas', n_metas, 'meta_atividades', n_ma,
-                              'niveis', n_niv, 'nivel_historico', n_hist);
+                              'niveis', n_niv, 'nivel_historico', n_hist,
+                              'eventos_arquivados', n_arq);
 
   execute 'set local session_replication_role = ' || quote_literal(v_srr);
 

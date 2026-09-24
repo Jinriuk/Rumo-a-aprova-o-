@@ -1,5 +1,5 @@
 // ============================================================
-// BLOCO 1 (23/09/2026) — A DEMONSTRAÇÃO NÃO ENVELHECE, E O XP NÃO CRESCE
+// BLOCO 1 (23/09/2026) — A DEMONSTRAÇÃO NÃO ENVELHECE, E O XP NUNCA CAI
 // ------------------------------------------------------------
 // O Instituto Meridiano (tenant de demonstração) tinha 90 registros de
 // 22/08 a 18/09 e ninguém registrando nada: a partir de 25/09 o painel
@@ -10,8 +10,12 @@
 // projeto de demonstração. Estes testes carregam os PRÓPRIOS arquivos
 // supabase/demo/01_schema.sql e 04_funcoes.sql num Meridiano de
 // mentira, dentro de uma transação que sempre faz rollback, e provam:
-//   • no sábado o estado é o da gravação, e o XP é o gravado;
-//   • o XP não cresce de uma semana para a outra;
+//   • no sábado o estado é o da gravação (registros, metas, atividades);
+//   • o XP nunca cai: de sábado para segunda fica igual, e cada semana
+//     repetida soma exatamente o XP da semana gravada (decisão de
+//     24/09/2026; até ali a virada apagava o XP e ele "voltava");
+//   • concluir ao vivo numa semana seguinte dá XP, e apagar ao vivo só
+//     estorna a semana corrente;
 //   • segunda + liberação diária chega ao MESMO estado da virada direta;
 //   • rodar duas vezes dá o mesmo resultado (estes dois são os que
 //     quebram se alguém trocar a reprodução com gatilhos desligados por
@@ -39,6 +43,7 @@ const TRILHA = "dddddddd-0000-4000-8000-000000000001";
 const HELENA = "dddddddd-a000-4000-8000-0000000000f1";
 const ENZO = "dddddddd-a000-4000-8000-0000000000f8";
 const ANCORA = "2026-09-14";   // segunda-feira da semana 4 na gravação
+const SEMANA_HELENA = 250;     // XP da semana 4 gravada: mat + por (2 × 100) + Simulado 2 (50)
 const DEMO_DIR = "supabase/demo";
 
 test.after(async () => { await pool.end(); });
@@ -142,6 +147,17 @@ async function montarMeridiano(c) {
                    from metas m, atividades_modelo am
                   where ma.meta_id = m.id and am.id = ma.atividade_modelo_id
                     and m.aluno_id = $1 and am.disciplina_codigo in ('mat', 'por')`, [HELENA]);
+  // os gatilhos gravam criado_em = agora; no demo de verdade cada evento
+  // tem a data do seu dia (a virada reinsere com v_seg + dia). Sem isto,
+  // o histórico "de hoje" nunca seria anterior à segunda de uma virada.
+  await c.query(`update aluno_eventos_progresso e
+                    set criado_em = ((coalesce(r.data, s.data, m.inicio + 4)) + time '20:00') at time zone 'America/Sao_Paulo'
+                   from aluno_eventos_progresso e2
+                   left join registros_estudo r on e2.referencia_tabela = 'registros_estudo' and r.id = e2.referencia_id
+                   left join simulados s        on e2.referencia_tabela = 'simulados' and s.id = e2.referencia_id
+                   left join meta_atividades ma on e2.referencia_tabela = 'meta_atividades' and ma.id = e2.referencia_id
+                   left join metas m            on m.id = ma.meta_id
+                  where e.id = e2.id and e.escola_id = $1`, [MERIDIANO]);
   // trilha de auditoria: não pode ser tocada pelo mecanismo
   await c.query(`insert into consentimentos (escola_id, aluno_id, responsavel_nome, registrado_por)
                  select $1, $2, 'Responsável Teste', id from usuarios limit 1`, [MERIDIANO, HELENA]);
@@ -209,7 +225,7 @@ test("a gravação guarda o XP de cada aluno e as semanas relativas à segunda d
   });
 });
 
-test("no sábado, a semana 4 reaparece inteira na semana corrente, com o XP gravado", async () => {
+test("no sábado, a semana 4 reaparece inteira na semana corrente, e o XP dela soma ao que já havia", async () => {
   await comDemo(async (c) => {
     // sábado duas semanas depois da gravação: tudo deslocado em +14 dias
     await virar(c, "2026-10-03");
@@ -218,7 +234,9 @@ test("no sábado, a semana 4 reaparece inteira na semana corrente, com o XP grav
     const r = await um(c, `select count(*)::int n, max(data)::text ult from registros_estudo where escola_id = $1`, [MERIDIANO]);
     assert.equal(r.n, 12);
     assert.equal(r.ult, "2026-10-02", "último registro é a sexta (o registro de um dia aparece no seguinte)");
-    assert.equal(await xp(c, HELENA), 900);
+    // 900 gravados (semanas 1–4) ficam; a semana repetida soma mat + por
+    // (2 × 100) + Simulado 2 (50)
+    assert.equal(await xp(c, HELENA), 900 + SEMANA_HELENA);
     assert.equal(await xp(c, ENZO), 0);
     const ativa = await um(c, `select count(*) filter (where ma.estado = 'concluida')::int feitas, count(*)::int total
                                  from metas m join meta_atividades ma on ma.meta_id = m.id
@@ -228,17 +246,80 @@ test("no sábado, a semana 4 reaparece inteira na semana corrente, com o XP grav
   });
 });
 
-test("o XP não cresce de uma semana para a outra (V6 igual em sábados seguidos)", async () => {
+test("o XP nunca cai: segunda igual ao sábado, e cada semana soma exatamente a semana gravada", async () => {
   await comDemo(async (c) => {
     await virar(c, "2026-09-26");
-    const antes = { helena: await xp(c, HELENA), eventos: (await um(c, "select count(*)::int n from aluno_eventos_progresso where escola_id = $1", [MERIDIANO])).n };
-    await liberar(c, "2026-09-28");          // segunda: autocorreção refaz a semana
+    const sabado = await xp(c, HELENA);
+    assert.equal(sabado, 900 + SEMANA_HELENA);
+    const linhas = async () => (await um(c, `select count(*)::int n, count(*) filter (where status = 'estornado')::int estornados
+                                               from aluno_eventos_progresso where escola_id = $1`, [MERIDIANO]));
+    const antes = await linhas();
+
+    await liberar(c, "2026-09-28");          // segunda: autocorreção faz a virada
+    assert.equal(await xp(c, HELENA), sabado, "de sábado para segunda o XP não cai");
+    let anterior = sabado;
+    for (const d of ["2026-09-29", "2026-09-30", "2026-10-01", "2026-10-02", "2026-10-03"]) {
+      await liberar(c, d);
+      const hoje = await xp(c, HELENA);
+      assert.ok(hoje >= anterior, `o XP caiu em ${d}: ${anterior} → ${hoje}`);
+      anterior = hoje;
+    }
+    assert.equal(anterior, sabado + SEMANA_HELENA, "a semana repetida soma exatamente a semana gravada");
+    assert.equal(await xp(c, ENZO), 0, "quem não estuda fica parado, não desce");
+
+    const semana = (await um(c, "select count(*)::int n from demo.gravacao_eventos where dia >= 0")).n;
+    const depois = await linhas();
+    assert.equal(depois.n, antes.n + semana, "o ledger ganha só os eventos da semana gravada");
+    assert.equal(depois.estornados, 0, "a virada não estorna nada");
+    const arq = await um(c, `select count(*)::int n from aluno_eventos_progresso
+                              where escola_id = $1 and metadata ? 'demo_arquivo' and status = 'valido'`, [MERIDIANO]);
+    assert.ok(arq.n > 0, "as semanas anteriores continuam valendo, arquivadas");
+  });
+});
+
+test("concluir ao vivo na semana seguinte dá XP, e a reprodução não duplica", async () => {
+  await comDemo(async (c) => {
+    await virar(c, "2026-09-26");
+    await liberar(c, "2026-09-28");
+    const segunda = await xp(c, HELENA);
+    // "por" de Helena: a gravação conclui na quarta; aqui ela conclui na terça, ao vivo
+    const por = await um(c, `select ma.id from metas m join meta_atividades ma on ma.meta_id = m.id
+                               join atividades_modelo am on am.id = ma.atividade_modelo_id
+                              where m.aluno_id = $1 and m.status = 'ativa' and am.disciplina_codigo = 'por'`, [HELENA]);
+    await c.query("update meta_atividades set estado = 'concluida' where id = $1", [por.id]);
+    const ev = await um(c, `select count(*)::int n, sum(xp_delta)::int xp from aluno_eventos_progresso
+                             where idempotency_key = 'meta_atividade:' || $1::text and status = 'valido'`, [por.id]);
+    assert.deepEqual(ev, { n: 1, xp: 100 },
+      "a chave da semana passada foi arquivada: o gatilho do produto grava o XP desta conclusão");
+    assert.equal(await xp(c, HELENA), segunda + 100);
     for (const d of ["2026-09-29", "2026-09-30", "2026-10-01", "2026-10-02", "2026-10-03"]) await liberar(c, d);
-    assert.equal(await xp(c, HELENA), antes.helena);
-    const depois = await um(c, `select count(*)::int n, count(*) filter (where status = 'estornado')::int estornados
-                                  from aluno_eventos_progresso where escola_id = $1`, [MERIDIANO]);
-    assert.equal(depois.n, antes.eventos, "o ledger não acumula linhas de uma semana para outra");
-    assert.equal(depois.estornados, 0, "nenhum evento estornado se acumula de uma semana para outra");
+    assert.equal(await xp(c, HELENA), segunda + SEMANA_HELENA, "a reprodução não soma a mesma conclusão de novo");
+  });
+});
+
+test("apagar ao vivo um simulado estorna só o desta semana, não o das anteriores", async () => {
+  await comDemo(async (c) => {
+    await virar(c, "2026-09-26");
+    await virar(c, "2026-10-03");
+    const antes = await xp(c, HELENA);
+    const sim = await um(c, `select id from simulados where aluno_id = $1 and nome = 'Simulado 2'`, [HELENA]);
+    await c.query("delete from simulados where id = $1", [sim.id]);   // gatilhos ligados: estorno do produto
+    const r = await um(c, `select count(*) filter (where status = 'estornado')::int estornados,
+                                  count(*) filter (where status = 'valido')::int validos
+                             from aluno_eventos_progresso
+                            where aluno_id = $1 and tipo_evento = 'simulado_finalizado'
+                              and coalesce(metadata->'demo_arquivo'->>'referencia_id', referencia_id::text) = $2::text`,
+      [HELENA, sim.id]);
+    assert.equal(r.estornados, 1, "só o evento da semana corrente aponta para o simulado apagado");
+    assert.equal(r.validos, 2, "gravação e semana anterior continuam valendo");
+    assert.equal(await xp(c, HELENA), antes - 50);
+  });
+});
+
+test("a virada não volta semanas (o XP de semanas já reproduzidas não se apaga)", async () => {
+  await comDemo(async (c) => {
+    await virar(c, "2026-09-28");
+    await assert.rejects(virar(c, "2026-09-21"), /não volta semanas/);
   });
 });
 
@@ -265,8 +346,8 @@ test("no meio da semana só aparece o que a gravação data até a véspera", as
                                  from metas m join meta_atividades ma on ma.meta_id = m.id
                                 where m.aluno_id = $1 and m.status = 'ativa'`, [HELENA]);
     assert.equal(ativa.feitas, 1);
-    // semanas 1–3 + mat da semana 4 = 3×200 + 50 (Simulado 1) + 100
-    assert.equal(await xp(c, HELENA), 750);
+    // o gravado (900) fica; a semana repetida já soma mat de segunda (100)
+    assert.equal(await xp(c, HELENA), 900 + 100);
   });
 });
 
