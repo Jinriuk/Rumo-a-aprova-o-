@@ -39,6 +39,7 @@ const admin = createClient(
 // `supabase functions deploy` quanto o MCP com os arquivos _shared/ no
 // payload resolvem este import relativo.
 import { buildCorsHeaders as corsHeaders } from "../_shared/cors.ts";
+import { escolaOperacional, RESPOSTA_ESCOLA_PARADA } from "../_shared/escola.ts";
 
 // sem 0/O/1/I/L pra credencial ser ditável por telefone sem erro
 const ALFABETO = "ABCDEFGHJKMNPQRSTUVWXYZ23456789";
@@ -216,6 +217,8 @@ Deno.serve(async (req) => {
     const quem = await chamador(req);
     if (!quem) return json({ error: "não autenticado" }, 401);
     if (quem.papel !== "coordenacao") return json({ error: "só a coordenação provisiona acesso" }, 403);
+    // Antes de qualquer escrita, inclusive das ações de credencial abaixo.
+    if (!(await escolaOperacional(admin, quem.escola_id))) return json(RESPOSTA_ESCOLA_PARADA, 403);
 
     const { tipo, aluno_id, nome, responsavel_id, usuario_id } = await req.json().catch(() => ({}));
 
