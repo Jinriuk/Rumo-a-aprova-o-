@@ -59,7 +59,7 @@ policy de SELECT, e a meta de B é invisível para o aluno de A.
 
 ## Estado corrente
 
-**Atualizado em:** 24/09/2026, fim da Fatia 2.
+**Atualizado em:** 24/09/2026, fim da Fatia 3.
 **SHA de referência:** `fc564124bf7f735ddbb32d89b65169e11be18a33` (`main`).
 
 | Item | Estado | O que falta | Prova |
@@ -67,7 +67,7 @@ policy de SELECT, e a meta de B é invisível para o aluno de A.
 | **C-S01** capture-oidc | **PENDENTE DO DONO** | Apagar a função no painel do Supabase (demo); apagar a branch `tmp/triliva-pack-build-20260919`; ler o JWT expiry no painel | [Fatia 1](#fatia-1--c-s01-com-o-estado-de-2409) |
 | C-S02 CORS | em andamento (Fatia 5) | — | — |
 | C-S03 credenciais no Vercel | em andamento (Fatia 6) | — | — |
-| C-S04 `tenant_operacional` | em andamento (Fatia 3) | — | — |
+| C-S04 `tenant_operacional` | **PENDENTE DO DONO** (correção pronta) | Aprovar a aplicação da 0056 (#140, empilhado no #138) em demo e produção | [Fatia 3](#fatia-3--c-s04-tenant_operacional-nega-por-padrão) |
 | C-S05 senha vazada | em andamento (Fatia 6) | — | — |
 | C-S06 SECURITY DEFINER | em andamento (Fatia 4) | — | — |
 | C-S07 chave anon | em andamento (Fatia 6) | — | — |
@@ -81,6 +81,7 @@ policy de SELECT, e a meta de B é invisível para o aluno de A.
 | 1 · C-S01 e sessões da captura | #131 (este) | CI verde. Não aplica nada em ambiente hospedado. Ver "Condição de merge" na Fatia 1. |
 | **URGENTE** · 0055 coerência de tenant | #138 | CI verde para o merge. **Aplicação em demo e produção só com aprovação do dono**, antes da segunda escola real. |
 | 2 · matriz de autorização | #139 | CI verde. Só testes e evidência; nada aplicado. Ordem com o #138 indiferente. |
+| 3 · C-S04 (0056) | #140, **base = #138** | Merge depois do #138 (numeração contígua de migrations). Aplicação só com aprovação. |
 
 ---
 
@@ -372,6 +373,57 @@ tabela.
 - **Catálogo** publicado é legível por qualquer token autenticado,
   inclusive de escola inexistente. Decisão registrada: não é dado de
   escola.
+
+---
+
+## Fatia 3 — C-S04: `tenant_operacional` nega por padrão
+
+**PR:** #140 (0056), empilhado sobre o #138, porque um teste exige
+numeração contígua de migrations. **Não aplicada em ambiente nenhum.**
+
+### Mapa de todo uso de `app.tenant_operacional()`
+
+| Onde | Uso | Quem passava só pelo fallback `true` |
+| --- | --- | --- |
+| 12 policies (alunos, usuarios, turmas, alunos_turmas, vínculos, consentimentos, escolas update, logs_acesso select, metas, registros, simulados) | `and app.tenant_operacional()` | **ninguém:** todas também exigem `escola_id = app.tenant_id()`, que não casa com escola inexistente nem nula |
+| `app.meu_aluno_id()` e `app.sou_responsavel_de()` | anulam a identidade de aluno e responsável | ninguém: exigem linha de aluno ou vínculo com `escola_id = tenant` |
+| `public.resumo_escola()` | devolve vazio | ninguém: filtra `a.escola_id = tenant` |
+| Turma de escola fantasma (inserção) | a RLS deixava passar | barrada pela FK de `escolas` |
+
+**Super admin:** não passa pelo porteiro. Opera pelas RPCs do backoffice
+(`eh_super_admin`), e as policies com porteiro exigem escola, que ele
+não tem. Com a 0056, recebe `true` por regra explícita.
+
+**Conclusão:** era regra incompleta, não furo explorável. A 0056 tira a
+dependência de duas coincidências (a policy exigir escola e a FK
+existir).
+
+### C-S04b, achado da matriz
+
+A 0027 deixou sem porteiro a escrita da coordenação em nove tabelas:
+`config_escola`, `missoes_escola`, `logs_coordenacao`,
+`aluno_xp_eventos`, `aluno_conquistas`, `aluno_missoes`, `aluno_niveis`,
+`aluno_onboarding` e `aluno_eventos_progresso`. Escola suspensa ou
+cancelada, com sessão aberta, seguia gravando. A 0056 põe o porteiro nas
+nove.
+
+### Encerramento
+
+| Campo | Valor |
+| --- | --- |
+| ID | C-S04 (e C-S04b) |
+| Decisão | Negar por padrão: escola ausente ou inexistente → `false`; super admin por regra explícita. Porteiro nas nove escritas descobertas. |
+| SHA | `c87815a` (branch do #140) |
+| Ambiente | Postgres 16.13 local. Hospedados: **não aplicado**. |
+| Teste | `tests/e2-cs04-tenant-operacional-db.test.mjs` (5), mais a matriz com 0055 + 0056 |
+| Esperado | Escola ausente, inexistente, suspensa e cancelada negadas; escola ativa e super admin ativo passam; nenhum caso legítimo da matriz regride |
+| Observado | 5/5. Contrafactual: 4/5 falham sem a migration (o quinto é controle). Matriz: os 20 casos C-S04/C-S04b batem, zero regressão, sobram só as 7 divergências de C-S06 e E1 |
+| Responsável | Dono: aprovar a aplicação da 0055 e depois da 0056 |
+| Estado | **PENDENTE DO DONO** (aplicação). Correção e prova prontas. |
+
+**Decisão deixada ao produto:** a coordenação de escola suspensa ainda
+lê a própria configuração, missões e gamificação. É dado da própria
+escola, sem impacto entre escolas.
 
 ---
 
