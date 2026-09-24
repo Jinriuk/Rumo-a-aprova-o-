@@ -59,13 +59,13 @@ policy de SELECT, e a meta de B é invisível para o aluno de A.
 
 ## Estado corrente
 
-**Atualizado em:** 24/09/2026, fim da Fatia 4.
+**Atualizado em:** 24/09/2026, fim da Fatia 5.
 **SHA de referência:** `fc564124bf7f735ddbb32d89b65169e11be18a33` (`main`).
 
 | Item | Estado | O que falta | Prova |
 | --- | --- | --- | --- |
 | **C-S01** capture-oidc | **PENDENTE DO DONO** | Apagar a função no painel do Supabase (demo); apagar a branch `tmp/triliva-pack-build-20260919`; ler o JWT expiry no painel | [Fatia 1](#fatia-1--c-s01-com-o-estado-de-2409) |
-| C-S02 CORS | em andamento (Fatia 5) | — | — |
+| C-S02 CORS | **PENDENTE DO DONO** (correção pronta) | Ler se `ALLOWED_ORIGINS` existe em cada projeto; aprovar o redeploy das 7 funções (#142); decidir se produção aceita preview | [Fatia 5](#fatia-5--c-s02-cors) |
 | C-S03 credenciais no Vercel | em andamento (Fatia 6) | — | — |
 | C-S04 `tenant_operacional` | **PENDENTE DO DONO** (correção pronta) | Aprovar a aplicação da 0056 (#140, empilhado no #138) em demo e produção | [Fatia 3](#fatia-3--c-s04-tenant_operacional-nega-por-padrão) |
 | C-S05 senha vazada | em andamento (Fatia 6) | — | — |
@@ -83,6 +83,7 @@ policy de SELECT, e a meta de B é invisível para o aluno de A.
 | 2 · matriz de autorização | #139 | CI verde. Só testes e evidência; nada aplicado. Ordem com o #138 indiferente. |
 | 3 · C-S04 (0056) | #140, **base = #138** | Merge depois do #138 (numeração contígua de migrations). Aplicação só com aprovação. |
 | 4 · C-S06 (0057) | #141, **base = #140** | Merge depois do #140. Aplicação só com aprovação. |
+| 5 · C-S02 CORS | #142 (da `main`) | CI verde. Aplicação = redeploy das 7 funções, só com aprovação. |
 
 ---
 
@@ -466,6 +467,38 @@ urgente. Depois da 0057, a resposta não muda nada para elas.
 | Teste | 8 testes, mais a matriz com 0055 + 0056 + 0057 (sobra só a E1-ACHADO-2) |
 | Observado | 8/8; contrafactual 2/8 falham sem a migration; os gatilhos continuam disparando; suíte 1076/1076 |
 | Estado | **PENDENTE DO DONO:** aplicação e leitura de "Exposed schemas" |
+
+---
+
+## Fatia 5 — C-S02: CORS
+
+**PR:** #142, a partir da `main`, independente. **Não aplicado:** a
+aplicação exige redeploy das 7 funções.
+
+**Achado confirmado por execução:** o `cors.ts` importado no Node, com
+`Deno.env` simulado, respondia `Access-Control-Allow-Origin:
+http://localhost:5173` sem `ALLOWED_ORIGINS`. O mesmo valia para
+`:3000`. Com a mudança, `localhost`, `127.0.0.1`, origem arbitrária, a
+string `null` e sufixo enganoso não recebem o cabeçalho. A resposta
+nunca é curinga, sempre tem `Vary: Origin`, e `ALLOWED_ORIGINS` substitui
+a lista inteira.
+
+**Registrado para o dono decidir:**
+- o `triliva-producao` tem as `VITE_` em Production **e Preview**, então
+  preview de qualquer branch fala com o banco de produção;
+- o CORS das funções aceita `triliva-producao-*.vercel.app` sempre, e o
+  `ALLOWED_ORIGINS` **não** desliga isso (um comentário do código dizia
+  que desligava; corrigido).
+
+| Campo | Valor |
+| --- | --- |
+| ID | C-S02 |
+| Decisão | Origens exatas por ambiente; `localhost` só pelo env local das funções |
+| SHA | `e540438` (branch do #142) |
+| Teste | 5 testes de comportamento em `onda1-cors-modais` |
+| Observado | 17/17 no arquivo; contrafactual: 2 falham com o `cors.ts` antigo; suíte 1060/1060 |
+| Pendente | (1) o dono lê se `ALLOWED_ORIGINS` existe em cada projeto e se tem `localhost`; (2) aprova o redeploy; (3) decide sobre o preview. OPTIONS por HTTP nas funções publicadas: PENDENTE-E3 |
+| Estado | **PENDENTE DO DONO** |
 
 ---
 
