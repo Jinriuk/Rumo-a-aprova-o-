@@ -1,0 +1,21 @@
+-- ============================================================
+-- DEMO 05 — gravação da "semana 4" (SÓ projeto de demonstração)
+-- ------------------------------------------------------------
+-- Rodado UMA vez em 23/09/2026, depois do 03 (D07/D09) e antes do 06.
+-- A âncora é a segunda-feira da semana 4 (14/09/2026). Tudo o que o
+-- Meridiano tinha até 20/09 vira dia relativo a ela.
+--
+-- NÃO rode de novo depois que o mecanismo estiver ligado sem pausar
+-- antes: a partir do 06 o banco mostra a gravação reancorada, e
+-- regravar com a âncora antiga (14/09) não encontra a semana 4 lá (a
+-- função aborta). Para mudar a história, ver docs/demo/HISTORIA.md,
+-- "Regravar".
+--
+-- Resultado em 23/09/2026:
+--   9 semanas · 89 registros · 14 simulados · 32 metas (semanas 1–4)
+--   176 atividades (89 concluídas) · 192 eventos de XP (os 3
+--   estornados do D07 ficam fora) · 33 níveis · 33 históricos
+--   XP: Beatriz 1060 · Camila 1720 · Enzo 0 · Gustavo 1260
+--       Helena 1720 · Larissa 800 · Rafael 1560 · Thiago 1160
+-- ============================================================
+select demo.gravar(date '2026-09-14');

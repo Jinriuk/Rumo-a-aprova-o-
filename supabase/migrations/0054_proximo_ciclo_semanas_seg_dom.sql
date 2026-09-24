@@ -1,12 +1,13 @@
 -- ============================================================
--- 0053 — D09: o próximo ciclo nasce com semanas de segunda a domingo
+-- 0054 — D09: o próximo ciclo nasce com semanas de segunda a domingo
 -- ------------------------------------------------------------
--- APROVAÇÃO: muda uma função em ambiente compartilhado com produção —
--- não aplicar sem a aprovação explícita no PR do Bloco 4.
--- NUMERAÇÃO: a 0053 do PR do Bloco 2 (consentimento_registrado_em)
--- também está aberta e também não foi aplicada em ambiente nenhum; a
--- que for mergeada por último vira 0054 (renomear migration NÃO
--- aplicada não cria drift de ledger).
+-- APROVAÇÃO: dada em 24/09/2026 (demonstração e produção).
+-- NUMERAÇÃO: escrita como 0053 no PR do Bloco 4; virou 0054 porque a
+-- 0053 do Bloco 2 (consentimento_registrado_em) entrou antes. Nenhum
+-- ambiente tinha aplicado esta com o nome antigo, então não há drift.
+-- DEPENDÊNCIA: reescreve app.abrir_proximo_ciclo, que nasce na 0051.
+-- Onde a 0051 não foi aplicada (produção, em 24/09), esta também não
+-- se aplica: a ordem é 0051 → 0052 → 0054.
 --
 -- O achado (auditoria de 22/09/2026, D09): a trilha do Instituto
 -- Meridiano tinha a semana 1 de 9 dias (sábado a domingo) e a 9 de 6
@@ -107,7 +108,7 @@ revoke all on function app.abrir_proximo_ciclo(uuid, date) from public, authenti
 grant execute on function app.abrir_proximo_ciclo(uuid, date) to service_role;
 
 comment on function app.abrir_proximo_ciclo(uuid, date) is
-  '0053 (D09): clona uma trilha numa EDIÇÃO nova com N semanas de segunda a '
+  '0054 (D09): clona uma trilha numa EDIÇÃO nova com N semanas de segunda a '
   'domingo, a última sendo a semana da âncora (próxima prova). Foco, '
   'simulado, meta e atividades de cada semana vêm da origem. O histórico '
   'fica na edição anterior. Idempotente pelo domingo da semana da âncora.';

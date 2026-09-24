@@ -5,7 +5,7 @@
 // D08         modais saem por portal no <body>, que não tinha fonte nem
 //             cor: o "Responsáveis de Helena" caía na serifa padrão.
 // D09         semanas sempre de segunda a domingo — na trilha-fonte do
-//             CN e no gerador (a 0053 cobre abrir_proximo_ciclo; os
+//             CN e no gerador (a 0054 cobre abrir_proximo_ciclo; os
 //             testes dela estão em ciclo-proxima-edicao-db).
 // D12         o exemplo do onboarding dizia "em 2026" numa turma 2027.
 // sequência   a ofensiva zerava de manhã para quem estudou ontem
@@ -108,7 +108,7 @@ test("D09: o gerador recusa semana que não seja de segunda a domingo", () => {
   assert.match(gerador, /não encosta na/);
 });
 
-test("D09: a tela do próximo ciclo diz o domingo da semana da prova (espelho da 0053)", () => {
+test("D09: a tela do próximo ciclo diz o domingo da semana da prova (espelho da 0054)", () => {
   assert.equal(domingoDaSemana("2027-08-07"), "2027-08-08", "prova no sábado → domingo seguinte");
   assert.equal(domingoDaSemana("2027-08-08"), "2027-08-08", "prova no domingo → o próprio dia");
   assert.equal(domingoDaSemana("2027-08-02"), "2027-08-08", "prova na segunda → domingo da mesma semana");

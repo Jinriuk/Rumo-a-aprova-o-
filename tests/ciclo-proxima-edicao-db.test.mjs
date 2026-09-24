@@ -48,7 +48,7 @@ test("cria uma edição nova cujas semanas terminam na semana da âncora", async
     // semanas: a âncora também é domingo, e a última semana termina nela
     assert.equal(await fimDoCiclo(c, nova), alvo, "a última semana deve terminar no domingo da semana da prova");
 
-    // mesmo número de semanas, todas de segunda a domingo e contíguas (D09, 0053)
+    // mesmo número de semanas, todas de segunda a domingo e contíguas (D09, 0054)
     const forma = await c.query(
       `select (select count(*) from trilha_semanas where trilha_id = $1)::int as n_origem,
               (select count(*) from trilha_semanas where trilha_id = $2)::int as n_nova,

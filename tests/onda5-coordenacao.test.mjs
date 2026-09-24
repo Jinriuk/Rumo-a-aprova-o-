@@ -204,18 +204,17 @@ test("T33: o título 'Alertas de risco' some quando os três estão zerados", ()
 
 // ── Bloco 5 (T32): "Destaques da semana" — janela mista no critério acerto ──
 test("T32: o critério 'acerto' de Destaques da semana usa accSem (7d), não acc (vida inteira)", () => {
-  const codigo = src("app/src/modules/desempenho/PainelGestao.jsx");
-  const linhaAcerto = codigo.match(/acerto:\s*\{[^}]*\}/)[0];
-  assert.match(
-    linhaAcerto,
-    /x\.accSem/,
-    "os outros três critérios do mesmo seletor já são de 7 dias — acerto não pode ser o único de janela geral",
-  );
-  assert.doesNotMatch(
-    linhaAcerto,
-    /x\.acc\b/,
-    "não pode sobrar nenhum x.acc (geral) no critério de acerto — só x.accSem",
-  );
+  // D05 (Bloco 3, 23/09/2026): o pódio do painel passou a ser o do
+  // Ranking (./ranking.js). As linhas chegam já na janela de 7 dias —
+  // linhaDeEstudo(..., "semana") põe accSem em r.acc —, então o
+  // critério lê r.acc e a garantia do T32 passa a morar em dois pontos.
+  const painel = src("app/src/modules/desempenho/PainelGestao.jsx");
+  assert.match(painel, /podioDaSemana\(ag, criterio\)/, "o pódio do painel precisa vir da função única do Ranking");
+  const linhaAcerto = painel.match(/acerto:\s*\{[^}]*\}/)[0];
+  assert.doesNotMatch(linhaAcerto, /x\.acc\b/, "não pode sobrar leitura de x.acc (geral) no critério de acerto");
+  const ranking = src("app/src/modules/desempenho/ranking.js");
+  assert.match(ranking, /linhaDeEstudo\(x\.aluno, x, "semana"\)/, "o pódio do painel é sempre da janela de 7 dias");
+  assert.match(ranking, /acc: r \? \(geral \? r\.acc : r\.accSem\) : null/, "fora da janela geral, acc é o accSem");
 });
 
 // ── Bloco 6 (T34/T35): ranking de ClassificacaoTurma.jsx ────────────────────
@@ -235,7 +234,10 @@ test("T34/T35: o critério padrão de ClassificacaoTurma passa a ser 'acerto' (e
 });
 
 test("T34/T35: o ranking separa quem tem volume (>= LIMIAR.VOLUME_MINIMO) de quem não tem", () => {
-  const codigo = src("app/src/modules/desempenho/ClassificacaoTurma.jsx");
+  // D05 (Bloco 3): a classificação saiu de ClassificacaoTurma.jsx para
+  // ./ranking.js, que o pódio do painel também usa.
+  assert.match(src("app/src/modules/desempenho/ClassificacaoTurma.jsx"), /classificarEstudo\(linhas, criterio\)/);
+  const codigo = src("app/src/modules/desempenho/ranking.js");
   assert.match(
     codigo,
     /\.filter\(\(x\)\s*=>\s*x\.q\s*>=\s*LIMIAR\.VOLUME_MINIMO\)/,
@@ -249,7 +251,7 @@ test("T34/T35: o ranking separa quem tem volume (>= LIMIAR.VOLUME_MINIMO) de que
 });
 
 test("T34/T35: quem não tem volume suficiente é ordenado por nome, não pelo critério escolhido", () => {
-  const codigo = src("app/src/modules/desempenho/ClassificacaoTurma.jsx");
+  const codigo = src("app/src/modules/desempenho/ranking.js");
   assert.match(
     codigo,
     /x\.q\s*<\s*LIMIAR\.VOLUME_MINIMO\)\s*\n?\s*\.sort\(\(x,\s*y\)\s*=>\s*x\.aluno\.nome\.localeCompare\(y\.aluno\.nome/,

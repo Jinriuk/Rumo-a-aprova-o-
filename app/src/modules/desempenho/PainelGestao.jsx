@@ -6,6 +6,8 @@ import React, { useState } from "react";
 import { SectionCard, StatCard, EmptyState } from "../../shared/ui/componentes.jsx";
 import { useTema } from "../../shared/branding/BrandingContext.jsx";
 import { fmtHorasCurto } from "../motor/jargao.js";
+import { acertoPonderadoSemana } from "../../shared/metricas/agregados.js";
+import { podioDaSemana, semPodioNaJanela } from "./ranking.js";
 
 // `resumo` já vem agregado por aluno (RPC resumo_escola, adaptado em
 // adaptarResumoEscola) — o painel só lê e exibe; nenhuma varredura de
@@ -34,25 +36,23 @@ export function PainelGestao({ resumo, aoIr, aoIrFiltrado }) {
   const semCredencial = ag.filter((x) => x.semCredencial).length;
   // semana em curso: meta incompleta é PENDÊNCIA (em aberto), não "atraso".
   const metaPendente = ag.filter((x) => x.metaIncompleta).length;
-  const comAcc = ag.filter((x) => x.acc != null);
-  const mediaAcerto = comAcc.length ? Math.round(comAcc.reduce((s, x) => s + x.acc, 0) / comAcc.length) : null;
+  // D04: acerto ponderado dos 7 dias (mesma janela dos cards vizinhos)
+  const acertoSemana = acertoPonderadoSemana(ag);
   const questoesSemana = ag.reduce((s, x) => s + x.qSem, 0);
 
-  // Destaques: a escola escolhe o critério (Fase 9 do doc central)
+  // Destaques: a escola escolhe o critério (Fase 9 do doc central).
+  // D05/D06 (Bloco 3): o pódio é o do Ranking — mesma função
+  // (./ranking.js), janela de 7 dias, piso de volume. As linhas já vêm
+  // na janela, então r.q/r.acc/r.minutos/r.dias são todos de 7 dias
+  // (T32: acerto não pode ser o único critério de janela geral).
   const CRITERIOS = {
-    // T32: os outros três critérios já são todos de 7 dias — "acerto" usava
-    // x.acc (acumulado da vida inteira do aluno), uma janela diferente
-    // misturada no mesmo seletor. x.accSem é a mesma métrica em 7 dias.
-    acerto: { rotulo: "Melhor acerto (7d)", v: (x) => x.accSem ?? -1, fmt: (x) => (x.accSem == null ? "—" : `${x.accSem}%`), sub: "acerto 7d" },
-    questoes: { rotulo: "Mais questões (7d)", v: (x) => x.qSem, fmt: (x) => x.qSem, sub: "questões 7d" },
-    tempo: { rotulo: "Mais tempo (7d)", v: (x) => x.minSem, fmt: (x) => fmtHorasCurto(x.minSem), sub: "tempo 7d" },
-    dias: { rotulo: "Mais dias (7d)", v: (x) => x.diasSem, fmt: (x) => `${x.diasSem}d`, sub: "dias 7d" },
+    acerto: { rotulo: "Melhor acerto (7d)", fmt: (r) => (r.acc == null ? "—" : `${r.acc}%`), sub: "acerto 7d" },
+    questoes: { rotulo: "Mais questões (7d)", fmt: (r) => r.q, sub: "questões 7d" },
+    tempo: { rotulo: "Mais tempo (7d)", fmt: (r) => fmtHorasCurto(r.minutos), sub: "tempo 7d" },
+    dias: { rotulo: "Mais dias (7d)", fmt: (r) => `${r.dias}d`, sub: "dias 7d" },
   };
   const crit = CRITERIOS[criterio];
-  const ranking = [...ag]
-    .filter((x) => x.q > 0)
-    .sort((a, b) => crit.v(b) - crit.v(a) || b.q - a.q)
-    .slice(0, 3);
+  const ranking = podioDaSemana(ag, criterio);
 
   const nomeTurma = (a) => (a.alunos_turmas ?? []).map((v) => v.turmas?.nome).filter(Boolean)[0];
 
@@ -90,7 +90,7 @@ export function PainelGestao({ resumo, aoIr, aoIrFiltrado }) {
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(140px,1fr))", gap: 10 }}>
         <StatCard rotulo="Alunos" valor={total} icone="👥" />
         <StatCard rotulo="Ativos na semana" valor={ativos} sub={`de ${total}`} icone="✦" tom={ativos >= total * 0.6 ? "ok" : "alerta"} />
-        <StatCard rotulo="Acerto médio" valor={mediaAcerto == null ? "—" : `${mediaAcerto}%`} icone="◎" tom={mediaAcerto == null ? "neutro" : mediaAcerto >= 70 ? "ok" : "alerta"} />
+        <StatCard rotulo="Acerto (7 dias)" valor={acertoSemana == null ? "—" : `${acertoSemana}%`} icone="◎" tom={acertoSemana == null ? "neutro" : acertoSemana >= 70 ? "ok" : "alerta"} />
         <StatCard rotulo="Questões (7 dias)" valor={questoesSemana} icone="📈" />
       </div>
 
@@ -133,7 +133,7 @@ export function PainelGestao({ resumo, aoIr, aoIrFiltrado }) {
         </div>
       } semPadding>
         {ranking.length === 0 ? (
-          <div style={{ padding: 8 }}><EmptyState icone="🏆" titulo="Sem dados para ranking" dica="Os destaques aparecem quando os alunos começam a registrar questões." /></div>
+          <div style={{ padding: 8 }}><EmptyState icone="🏆" titulo={semPodioNaJanela("semana")} dica="O pódio só compara quem tem volume para comparar. Quem está abaixo aparece no Ranking completo." /></div>
         ) : (
           <div style={{ display: "flex", flexDirection: "column" }}>
             {ranking.map((r, i) => (
@@ -141,7 +141,7 @@ export function PainelGestao({ resumo, aoIr, aoIrFiltrado }) {
                 <div className="num disp" style={{ width: 28, textAlign: "center", fontSize: 18, fontWeight: 800, color: T.gold }}>{["🥇", "🥈", "🥉"][i]}</div>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ fontSize: 14, fontWeight: 700 }}>{r.aluno.nome}</div>
-                  <div style={{ fontSize: 11, color: T.sub }}>{nomeTurma(r.aluno) || "sem turma"} · {r.q} questões</div>
+                  <div style={{ fontSize: 11, color: T.sub }}>{nomeTurma(r.aluno) || "sem turma"} · {r.q} questões em 7 dias</div>
                 </div>
                 <div style={{ textAlign: "right" }}>
                   <div className="num disp" style={{ fontSize: 16, fontWeight: 800, color: T.gold }}>{crit.fmt(r)}</div>
