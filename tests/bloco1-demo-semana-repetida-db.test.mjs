@@ -87,6 +87,20 @@ test("todo script de supabase/demo que escreve direto começa pela guarda do Mer
   }
 });
 
+test("todo script que mexe em trilha_semanas recusa trilha usada por outro tenant (aluno ou meta)", () => {
+  // Achado do Codex no #132: o 03 e o 90 só olhavam alunos; uma meta de
+  // outro tenant na trilha passava. demo.checar_tenant() já olhava os dois.
+  for (const f of ["03_d07_d09.sql", "90_restaurar_backup_20260923.sql"]) {
+    const sql = semComentarios(ler(`${DEMO_DIR}/${f}`));
+    const escrita = sql.search(/update\s+public\.trilha_semanas/i);
+    assert.ok(escrita >= 0, `${f} não mexe mais em trilha_semanas; revise este teste`);
+    for (const t of ["alunos", "metas"]) {
+      const g = sql.search(new RegExp(`from public\\.${t} where trilha_id = [^\\n]*\\s*and escola_id <>|from public\\.${t} where trilha_id = [^\\n]*escola_id <>`));
+      assert.ok(g >= 0 && g < escrita, `${f}: falta checar ${t} de outro tenant antes de mexer na trilha`);
+    }
+  }
+});
+
 // ── com banco: um Meridiano de mentira, tudo em rollback ───────────
 const semana = (n) => `date '${ANCORA}' + ${(n - 4) * 7}`;
 

@@ -22,6 +22,14 @@ begin
   if to_regclass('demo.backup_20260923_registros_estudo') is null then
     raise exception 'backup de 23/09 não encontrado — nada foi feito';
   end if;
+  -- as datas de trilha_semanas são globais (a tabela não tem escola_id):
+  -- se outro tenant usa a trilha, restaurar mudaria o calendário dele
+  if exists (select 1 from public.alunos where trilha_id = 'dddddddd-0000-4000-8000-000000000001'
+                                           and escola_id <> 'dddddddd-dddd-4ddd-8ddd-dddddddddddd')
+     or exists (select 1 from public.metas where trilha_id = 'dddddddd-0000-4000-8000-000000000001'
+                                            and escola_id <> 'dddddddd-dddd-4ddd-8ddd-dddddddddddd') then
+    raise exception 'a trilha do Meridiano é usada por outro tenant — nada foi feito';
+  end if;
 end $$;
 
 select cron.unschedule(jobid) from cron.job

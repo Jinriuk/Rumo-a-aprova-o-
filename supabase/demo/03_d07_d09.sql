@@ -41,7 +41,10 @@ begin
   if not exists (select 1 from public.escolas where id = v_escola and plano = 'demo') then
     raise exception 'D07/D09: Meridiano/plano demo ausente — abortado';
   end if;
-  if exists (select 1 from public.alunos where trilha_id = v_trilha and escola_id <> v_escola) then
+  -- a mesma guarda de demo.checar_tenant(): aluno OU meta de outro tenant
+  -- (uma meta pode ficar na trilha depois que o aluno mudou de trilha)
+  if exists (select 1 from public.alunos where trilha_id = v_trilha and escola_id <> v_escola)
+     or exists (select 1 from public.metas where trilha_id = v_trilha and escola_id <> v_escola) then
     raise exception 'D09: a trilha % é usada por outro tenant — abortado', v_trilha;
   end if;
   -- regra 4: backup antes
