@@ -1,6 +1,6 @@
 /* Cards de INSIGHT do desempenho (Fase 5 do doc central): leitura
    interpretada ANTES dos gráficos — melhor matéria, ponto de atenção,
-   volume, acerto geral, totais e a evolução semanal com seta. */
+   volume, acerto no ciclo, totais e a evolução semanal com seta. */
 import React from "react";
 import { InsightCard, StatCard } from "../../shared/ui/componentes.jsx";
 import { useTema } from "../../shared/branding/BrandingContext.jsx";
@@ -54,7 +54,7 @@ export function InsightsDesempenho({ m }) {
         )}
       </div>
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(150px,1fr))", gap: 10 }}>
-        <StatCard rotulo="Acerto geral" valor={m.acerto > 0 ? `${m.acerto}%` : "—"} icone="◎"
+        <StatCard rotulo="Acerto no ciclo" valor={m.acerto > 0 ? `${m.acerto}%` : "—"} icone="◎"
           tom={m.acerto >= 70 ? "ok" : m.acerto > 0 ? "alerta" : "neutro"} />
         <StatCard rotulo="Questões no total" valor={m.totDone.toLocaleString("pt-BR")} icone="✦" />
         <StatCard rotulo="Tempo total" valor={fmtHoras(m.minutosTotais ?? 0)} icone="◷" />
