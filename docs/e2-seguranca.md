@@ -59,7 +59,7 @@ policy de SELECT, e a meta de B é invisível para o aluno de A.
 
 ## Estado corrente
 
-**Atualizado em:** 24/09/2026, fim da Fatia 3.
+**Atualizado em:** 24/09/2026, fim da Fatia 4.
 **SHA de referência:** `fc564124bf7f735ddbb32d89b65169e11be18a33` (`main`).
 
 | Item | Estado | O que falta | Prova |
@@ -69,7 +69,7 @@ policy de SELECT, e a meta de B é invisível para o aluno de A.
 | C-S03 credenciais no Vercel | em andamento (Fatia 6) | — | — |
 | C-S04 `tenant_operacional` | **PENDENTE DO DONO** (correção pronta) | Aprovar a aplicação da 0056 (#140, empilhado no #138) em demo e produção | [Fatia 3](#fatia-3--c-s04-tenant_operacional-nega-por-padrão) |
 | C-S05 senha vazada | em andamento (Fatia 6) | — | — |
-| C-S06 SECURITY DEFINER | em andamento (Fatia 4) | — | — |
+| C-S06 SECURITY DEFINER | **PENDENTE DO DONO** (correção pronta) | Aprovar a 0057 (#141); conferir no painel se `app` está em "Exposed schemas" | [Fatia 4](#fatia-4--c-s06-security-definer) |
 | C-S07 chave anon | em andamento (Fatia 6) | — | — |
 | Matriz de autorização | **camada banco: FEITA** · camada HTTP: **PENDENTE DE ETAPA (E3)** | 45 divergências registradas, cada uma com a correção; 14 casos HTTP especificados para a E3 | #139, [Fatia 2](#fatia-2--matriz-de-autorização) |
 | Complementos G | em andamento (Fatia 7) | — | — |
@@ -82,6 +82,7 @@ policy de SELECT, e a meta de B é invisível para o aluno de A.
 | **URGENTE** · 0055 coerência de tenant | #138 | CI verde para o merge. **Aplicação em demo e produção só com aprovação do dono**, antes da segunda escola real. |
 | 2 · matriz de autorização | #139 | CI verde. Só testes e evidência; nada aplicado. Ordem com o #138 indiferente. |
 | 3 · C-S04 (0056) | #140, **base = #138** | Merge depois do #138 (numeração contígua de migrations). Aplicação só com aprovação. |
+| 4 · C-S06 (0057) | #141, **base = #140** | Merge depois do #140. Aplicação só com aprovação. |
 
 ---
 
@@ -424,6 +425,47 @@ nove.
 **Decisão deixada ao produto:** a coordenação de escola suspensa ainda
 lê a própria configuração, missões e gamificação. É dado da própria
 escola, sem impacto entre escolas.
+
+---
+
+## Fatia 4 — C-S06: SECURITY DEFINER
+
+**PR:** #141 (0057), empilhado sobre o #140. **Não aplicada.**
+
+**Recontagem (24/09, só leitura), idêntica em demo, produção e local:**
+50 SECURITY DEFINER em `public` e `app`, 28 com EXECUTE para `anon` ou
+`authenticated`, todas com `search_path` fixo, dono `postgres` (que tem
+BYPASSRLS nos hospedados). As três views são `security_invoker`, dono
+`postgres`. Com isso a RLS de quem consulta vale.
+
+| Classe | Funções | Decisão |
+| --- | --- | --- |
+| (a) exposta, confere autorização no corpo | 12 em `public` | mantém; a matriz prova cada checagem |
+| (b) helper de policy | `eh_super_admin`, `meu_aluno_id`, `sou_responsavel_de`, `tenant_operacional` | mantém; a policy roda como quem consulta; só leem |
+| (c) gatilho | 6 | revoga; o gatilho dispara sem EXECUTE (testado) |
+| (d) interna | `backfill_progresso`, `desbloquear_conquista_basica`, `motor_avaliar_aluno`, `motor_conquista_xp`, `motor_streak_dias`, `exam_tag_do_aluno` | revoga de public, anon e authenticated; `service_role` fica |
+| servidor | 22 | já não tinham EXECUTE de usuário |
+
+**Accept-Profile `app`: NÃO VERIFICADO por HTTP** (a rede da sessão não
+alcança `*.supabase.co`). O que o banco mostra:
+- `anon` não tem USAGE no schema `app` nos dois projetos;
+- `authenticated` tem;
+- não há `pgrst.db_schemas` gravado em papel nenhum;
+- `pg_graphql` não está instalado.
+
+A lista de schemas expostos mora no painel, não no banco. **O dono
+confere** em *Project Settings → Data API → Exposed schemas*. Se `app`
+estiver lá, as seis (d) eram alcançáveis pela API hoje, e a 0057 é
+urgente. Depois da 0057, a resposta não muda nada para elas.
+
+| Campo | Valor |
+| --- | --- |
+| ID | C-S06 |
+| Decisão | Classe e decisão por função, registradas no teste `e2-cs06-secdef-db` (função nova sem classe derruba o CI). Revogação só das (c) e (d), com justificativa por função. |
+| SHA | `4df4a3c` (branch do #141) |
+| Teste | 8 testes, mais a matriz com 0055 + 0056 + 0057 (sobra só a E1-ACHADO-2) |
+| Observado | 8/8; contrafactual 2/8 falham sem a migration; os gatilhos continuam disparando; suíte 1076/1076 |
+| Estado | **PENDENTE DO DONO:** aplicação e leitura de "Exposed schemas" |
 
 ---
 
