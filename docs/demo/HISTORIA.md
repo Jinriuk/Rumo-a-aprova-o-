@@ -13,16 +13,16 @@
 "Geometria pesada + sistemas", Simulado 2. As semanas 1 a 3 ficam no passado. As 5 a 9 ainda
 não começaram. Duas turmas, oito alunos, todos fictícios.
 
-| Aluno | Turma | Papel na história | Semana 4 (sábado) | Ciclo | XP sáb. / seg. |
+| Aluno | Turma | Papel na história | Semana 4 (sábado) | Ciclo | XP em 26/09 · por semana |
 |---|---|---|---|---|---|
-| **Helena Vasconcelos** | manhã | A aluna "no caminho": estuda quase todo dia, acerto bom, meta quase fechada. Única com responsável vinculado e com onboarding preenchido: é a aluna das telas do aluno e do responsável. | 5/7 atividades · 79 questões · 4h03m · 4 dias · 78% | 378 q · 77,8% | 1.720 / 1.210 (3º Sargento nos dois) |
-| **Camila Restrepo** | tarde | A melhor da tarde: volume e acerto altos. | 5/7 · 58 q · 72% · 3 dias | 288 q · 71,2% | 1.720 / 1.210 |
-| **Rafael Munhoz** | manhã | Regular, fecha o pódio de acerto em 7 dias (69%, 59 questões). | 4/7 · 59 q · 69% · 3 dias | 304 q · 65,1% | 1.560 / 1.110 |
-| **Gustavo Peçanha** | tarde | Estudou só um dia na semana (18 questões): é o caso que o pódio do painel e o do Ranking tratavam diferente (D05). | 3/7 · 18 q · 72% · 1 dia | 222 q · 62,6% | 1.260 / 910 |
-| **Beatriz Okamoto** | manhã | Pouco volume, dois dias na semana. | 2/7 · 29 q · 62% · 2 dias | 144 q · 58,3% | 1.060 / 810 |
-| **Thiago Albuquerque** | manhã | Estuda, mas acerta pouco: o caso de "matérias para reforçar". | 3/7 · 33 q · 42% · 2 dias | 198 q · 48,0% | 1.160 / 810 |
-| **Larissa Fontoura** | manhã | **Sem atividade**: último registro na semana 2. Tem credencial e consentimento; parou. | 0/7 · 0 q | 117 q · 55,6% | 800 / 800 |
-| **Enzo Bandeira** | tarde | **Sem credencial, sem consentimento, sem atividade.** Nunca acessou. Por isso não tem registro, simulado nem XP (D07). | 0/7 · 0 q | 0 q | 0 / 0 |
+| **Helena Vasconcelos** | manhã | A aluna "no caminho": estuda quase todo dia, acerto bom, meta quase fechada. Única com responsável vinculado e com onboarding preenchido: é a aluna das telas do aluno e do responsável. | 5/7 atividades · 79 questões · 4h03m · 4 dias · 78% | 378 q · 77,8% | 1.720 (3º Sargento) · +510 |
+| **Camila Restrepo** | tarde | A melhor da tarde: volume e acerto altos. | 5/7 · 58 q · 72% · 3 dias | 288 q · 71,2% | 1.720 · +510 |
+| **Rafael Munhoz** | manhã | Regular, fecha o pódio de acerto em 7 dias (69%, 59 questões). | 4/7 · 59 q · 69% · 3 dias | 304 q · 65,1% | 1.560 · +450 |
+| **Gustavo Peçanha** | tarde | Estudou só um dia na semana (18 questões): é o caso que o pódio do painel e o do Ranking tratavam diferente (D05). | 3/7 · 18 q · 72% · 1 dia | 222 q · 62,6% | 1.260 · +350 |
+| **Beatriz Okamoto** | manhã | Pouco volume, dois dias na semana. | 2/7 · 29 q · 62% · 2 dias | 144 q · 58,3% | 1.060 · +250 |
+| **Thiago Albuquerque** | manhã | Estuda, mas acerta pouco: o caso de "matérias para reforçar". | 3/7 · 33 q · 42% · 2 dias | 198 q · 48,0% | 1.160 · +350 |
+| **Larissa Fontoura** | manhã | **Sem atividade**: último registro na semana 2. Tem credencial e consentimento; parou. | 0/7 · 0 q | 117 q · 55,6% | 800 · +0 |
+| **Enzo Bandeira** | tarde | **Sem credencial, sem consentimento, sem atividade.** Nunca acessou. Por isso não tem registro, simulado nem XP (D07). | 0/7 · 0 q | 0 q | 0 · +0 |
 
 **Painel da coordenação no sábado:** 6 ativos na semana, 276 questões em 7 dias. Alertas: 2 sem
 atividade (Larissa e Enzo), 1 sem credencial (Enzo), 8 com pendências da semana. Turma da tarde:
@@ -30,8 +30,8 @@ atividade (Larissa e Enzo), 1 sem credencial (Enzo), 8 com pendências da semana
 
 **Consentimentos:** 7 de 8 (todos menos o Enzo). O mecanismo não toca em `consentimentos` nem em
 `logs_acesso`. São registros de auditoria: os acessos reais feitos durante as demonstrações ficam
-na trilha de acesso. Dado de demonstração pode ter `aceito_em` retroativo. Quando o N02 for
-aprovado, `registrado_em` passa a guardar o momento real da gravação.
+na trilha de acesso. Dado de demonstração pode ter `aceito_em` retroativo. Desde a 0053 (N02,
+aplicada em 23/09), `registrado_em` guarda o momento real da gravação.
 
 ## 2. Como a semana se repete
 
@@ -42,7 +42,7 @@ segunda da semana 1, `dia = 4` é a sexta da semana 4.
 
 | Quando (Brasília) | Job (UTC) | O que acontece |
 |---|---|---|
-| **Segunda 00:00** | `demo-virada-semanal` · `0 3 * * 1` | `demo.virar_semana()`. Apaga o dinâmico do Meridiano: registros, simulados, metas, atividades, eventos de XP, níveis e missões. Re-ancora as 9 semanas com a semana 4 começando hoje e reinsere a gravação. Tudo o que tem data de hoje em diante vai para `demo.fila`. |
+| **Segunda 00:00** | `demo-virada-semanal` · `0 3 * * 1` | `demo.virar_semana()`. Apaga o dinâmico do Meridiano: registros, simulados, metas, atividades, níveis e missões. **XP não é apagado** (ver "XP" abaixo). Re-ancora as 9 semanas com a semana 4 começando hoje e reinsere a gravação. Tudo o que tem data de hoje em diante vai para `demo.fila`. |
 | Segunda 00:05 | `virar-semana-diaria` · `5 3 * * *` (global, já existia) | Encontra a meta da semana 4 já criada e não gera nada para o Meridiano. |
 | **Todo dia 00:10** | `demo-liberacao-diaria` · `10 3 * * *` | `demo.liberar()`. Move da fila para o produto o que vence até hoje, ou seja, o que a gravação data de ontem. |
 
@@ -59,11 +59,28 @@ Consequências, dia a dia:
   a mesma matéria**. Sem isso, vai para o último dia com registro na semana; sem registro, para a
   sexta. Aparece no dia seguinte, como o resto. Helena: 0/7 na segunda, 2/7 na terça, 4/7 de
   quarta a sexta, 5/7 no sábado.
-- **XP**: não cresce de uma semana para a outra (V6 é o mesmo em sábados seguidos). Mas **volta
-  na segunda**: a Helena tem 1.720 no sábado e 1.210 na segunda, porque as conclusões e o
-  Simulado 2 da semana 4 voltam para a fila. Rafael (1.110 → 1.560) e Gustavo (910 → 1.260)
-  passam de Cabo a 3º Sargento durante a semana e voltam a Cabo na segunda. Isso é a semana se
-  repetindo, não um defeito. Para mostrar patente estável, apresente do meio da semana em diante.
+- **XP: nunca cai, e acumula** (decisão de 24/09/2026). Registros, metas e atividades voltam à
+  gravação toda segunda; o XP não. Na segunda cada aluno tem o XP do sábado anterior, e a semana
+  repetida soma de novo o que a semana 4 deu (coluna "por semana" acima), dia a dia. Quem não
+  estuda (Larissa, Enzo) fica parado, nunca desce. É o que o produto faz com um aluno real: XP só
+  diminui por estorno, quando o próprio aluno apaga um registro ou simulado dele.
+  - Sábados: Helena 1.720 (26/09), 2.230 (03/10), 2.740 (10/10), sempre +510.
+  - Patente da Helena (tabela de `app/src/modules/motor/jargao.js`): 2º Sargento (1.800) na terça
+    29/09; 1º Sargento (2.500) na semana de 05/10; Subtenente (3.400) na de 19/10; 2º Tenente
+    (4.500) na de 02/11; Coronel (13.500, o último posto) por volta de 08/03/2027. Depois disso a
+    patente para e o XP continua.
+  - O que isso custa: os números de XP e patente do sábado deixam de se repetir. O pack capturado
+    em 26/09 mostra 1.720; ao vivo, depois, vai estar maior. O resto do sábado (atividades,
+    questões, acerto, painel, alertas) continua igual toda semana.
+  - Como funciona: a virada não apaga evento de XP. Os eventos de antes da segunda viram arquivo
+    (`metadata.demo_arquivo`): continuam valendo, mas soltam a referência e a chave de
+    idempotência, porque registros, simulados e atividades voltam com os mesmos ids toda semana.
+    Sem isso, apagar ao vivo um registro estornaria o XP dele em todas as semanas, e concluir ao
+    vivo uma atividade bateria na chave da semana passada e não daria XP. Os eventos da semana
+    entram com id da semana (`demo.id_na_semana`). A virada também recusa voltar para uma semana
+    anterior à âncora atual.
+  - Até 23/09 a virada apagava o XP e ele "voltava" na segunda (Helena 1.720 → 1.210). A primeira
+    segunda sem queda é 28/09.
 
 ### Gatilhos: por que "reprodução" e não "recálculo"
 
@@ -71,9 +88,9 @@ A virada e a liberação rodam com `session_replication_role = replica`. Isso de
 de usuário só naquela transação: nenhuma outra sessão, de nenhum tenant, é afetada. Os eventos de
 XP e os níveis vêm da gravação, com os mesmos ids.
 
-Por que não "recálculo" (gatilhos ligados)? O XP até ficaria estável, porque a virada apaga todos
-os eventos do Meridiano antes de reinserir, e o teste confirmou isso. O problema está em outros
-dois pontos:
+Por que não "recálculo" (gatilhos ligados)? Na versão de 23/09, em que a virada apagava todos os
+eventos do Meridiano antes de reinserir, o XP até ficaria estável, e o teste confirmou isso. O
+problema estava em outros dois pontos, que continuam valendo:
 
 1. Cada rodada gera eventos com id e `criado_em` novos. A mesma data deixa de dar o mesmo estado,
    e rodar duas vezes deixa de ser idempotente. Com o `replica` removido, os testes de
@@ -88,9 +105,10 @@ Detalhes que valem para quem mexer:
   todo insert faz join com os alunos do Meridiano.
 - No Supabase, `set_config('session_replication_role', …)` é recusado. Só o comando `SET` passa
   (supautils), por isso o `EXECUTE 'set local …'`. Testado no pg_cron em 23/09.
-- Se alguém usar a demonstração ao vivo (registrar estudo, concluir atividade), vale até a próxima
-  segunda. A liberação não passa por cima: só conclui atividade que ainda está `pendente`, e o XP
-  de uma conclusão feita ao vivo não duplica (chave de idempotência).
+- Se alguém usar a demonstração ao vivo (registrar estudo, concluir atividade), o registro e a
+  atividade valem até a próxima segunda; o XP que isso deu fica para sempre. A liberação não passa
+  por cima: só conclui atividade que ainda está `pendente`, e o XP de uma conclusão feita ao vivo
+  não duplica (chave de idempotência).
 
 ### Guardas (regra 3 do documento)
 
@@ -176,5 +194,5 @@ select s.numero, s.inicio, s.fim, s.fim - s.inicio + 1 as dias, extract(isodow f
 | `05_gravar_semana4.sql` | `demo.gravar('2026-09-14')`. | 23/09 |
 | `06_ativar.sql` | Liga agora / paliativo manual. | 23/09 |
 | `07_agendamento.sql` | Os dois jobs do pg_cron. | 23/09 |
-| `90_restaurar_backup_20260923.sql` | Rollback completo. | ensaiado |
+| `90_restaurar_backup_20260923.sql` | Rollback completo. Volta o XP ao de 23/09: é a única operação que baixa XP, e só roda por decisão explícita. | ensaiado |
 | `91_desligar.sql` | Desliga sem desfazer dados. | · |

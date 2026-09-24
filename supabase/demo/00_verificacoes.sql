@@ -67,7 +67,7 @@ join alunos a on a.id = r.aluno_id
 join trilha_semanas ts on ts.trilha_id = a.trilha_id and app.hoje_local() between ts.inicio and ts.fim
 where a.escola_id = 'dddddddd-dddd-4ddd-8ddd-dddddddddddd' and a.nome ilike 'Helena%';
 
--- V6 · XP por aluno (estabilidade semana a semana, Bloco 1)
+-- V6 · XP por aluno (nunca cai; de um sábado para o seguinte sobe exatamente o ganho da semana gravada)
 select a.nome, coalesce(sum(v.xp_total), 0) as xp_total
 from alunos a
 left join vw_aluno_xp_total v on v.aluno_id = a.id
