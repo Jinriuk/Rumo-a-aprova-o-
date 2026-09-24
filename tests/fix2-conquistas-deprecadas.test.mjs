@@ -30,8 +30,12 @@ test("FIX2: registro de estudo não gera conquista nem evento de conquista (moto
       `insert into registros_estudo (escola_id, aluno_id, data, disciplina_codigo, topico, questoes, acertos, minutos)
        values ($1,$2, current_date, 'mat', 'FIX2 prova', 60, 55, 90)`,
       [ESCOLA_A, ALUNO_LUCAS]);
-    // e reprocessa o motor PED1 explicitamente (caminho premiado)
+    // e reprocessa o motor PED1 explicitamente (caminho premiado). Quem
+    // reprocessa é o servidor (gatilho SECURITY DEFINER ou operador): desde
+    // a 0057 o aluno não tem EXECUTE nas funções internas do motor (C-S06).
+    await c.query("reset role");
     await c.query("select app.motor_avaliar_aluno($1)", [ALUNO_LUCAS]);
+    await c.query("set local role authenticated");
 
     const depois = await c.query(
       "select (select count(*)::int from aluno_conquistas where aluno_id=$1) as conq, (select count(*)::int from aluno_eventos_progresso where aluno_id=$1 and tipo_evento='conquista_desbloqueada') as ev",
