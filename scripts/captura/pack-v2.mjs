@@ -57,7 +57,9 @@ const DIR_INTERNO = path.join(SAIDA, `interno-${DATA}${OFICIAL ? "" : "-ensaio"}
 const faltando = L.SEGREDOS.filter((n) => !env[n]);
 if (faltando.length) {
   const msg = `segredos ausentes no repositório: ${faltando.join(", ")}`;
-  if (MODO === "oficial") { console.error(`ERRO: ${msg}`); process.exit(2); }
+  // OFICIAL e não MODO: no modo auto dentro da janela a execução é oficial e
+  // não pode sair verde sem ter capturado nada (achado do Codex no #136)
+  if (OFICIAL) { console.error(`ERRO: ${msg}`); process.exit(2); }
   console.log(`::warning::${msg} — ensaio pulado, nada capturado.`);
   process.exit(0);
 }
@@ -216,46 +218,7 @@ async function entrar(perfil) {
 async function retangulos(page, ancora) {
   const alvo = ancora.first();
   await alvo.waitFor({ state: "visible", timeout: 15000 });
-  await page.evaluate(() => window.scrollTo(0, 0));
-  return alvo.evaluate((el) => {
-    const temCaixa = (n) => {
-      const cs = getComputedStyle(n);
-      return parseFloat(cs.borderTopWidth) > 0 || cs.boxShadow !== "none" || cs.backgroundColor !== "rgba(0, 0, 0, 0)";
-    };
-    const vw = document.documentElement.clientWidth;
-    // sobe até o componente: a primeira caixa larga o bastante
-    let comp = el;
-    for (let n = el; n && n !== document.body; n = n.parentElement) {
-      const r = n.getBoundingClientRect();
-      if (n.getAttribute("role") === "dialog" || (r.width >= Math.min(300, vw - 32) && r.height >= 90 && r.height <= 2400 && temCaixa(n))) { comp = n; break; }
-    }
-    const doc = (r) => ({ x: r.left + window.scrollX, y: r.top + window.scrollY, width: r.width, height: r.height });
-    // vizinhos que não podem sair cortados: caixas (borda, sombra ou
-    // fundo) e também TEXTO solto (uma linha cortada ao meio é o P03)
-    const temTextoProprio = (n) => [...n.childNodes].some((c) => c.nodeType === 3 && c.textContent.trim());
-    const componentes = [];
-    for (const n of document.body.querySelectorAll("*")) {
-      if (n === comp || n.contains(comp) || comp.contains(n)) continue;
-      const r = n.getBoundingClientRect();
-      if (r.width < 4 || r.height < 4) continue;
-      const caixa = temCaixa(n) && r.width >= 40 && r.height >= 24;
-      if (!caixa && !temTextoProprio(n) && !["IMG", "SVG", "svg", "CANVAS", "INPUT", "BUTTON"].includes(n.tagName)) continue;
-      const cs = getComputedStyle(n);
-      if (cs.visibility === "hidden" || cs.display === "none" || Number(cs.opacity) === 0) continue;
-      componentes.push(doc(r));
-      if (componentes.length > 5000) break;
-    }
-    // rolagem interna: a "página inteira" não mostraria o que está dentro
-    const internas = [...document.body.querySelectorAll("*")].filter((n) => {
-      const cs = getComputedStyle(n);
-      return /(auto|scroll)/.test(cs.overflowY) && n.scrollHeight > n.clientHeight + 4 && n.clientHeight > 200;
-    }).length;
-    return {
-      alvo: doc(comp.getBoundingClientRect()), componentes,
-      pagina: { width: document.documentElement.scrollWidth, height: document.documentElement.scrollHeight },
-      rolagemInterna: internas,
-    };
-  });
+  return alvo.evaluate(L.coletarGeometria);
 }
 
 async function capturar({ page, def, device, comercial = true, notaExtra = "" }) {
@@ -265,27 +228,32 @@ async function capturar({ page, def, device, comercial = true, notaExtra = "" })
   const dpr = DEVICES[device].deviceScaleFactor;
   const geo = await retangulos(page, def.ancora(page));
   const arquivo = path.join(dir, `${def.base}-${device}.png`);
-  const integral = await page.screenshot({ path: arquivo, fullPage: true, animations: "disabled" });
+  // modal: a integral é a janela (camada fixa); o resto, a página inteira
+  const integral = await page.screenshot({ path: arquivo, fullPage: !geo.modal, animations: "disabled" });
   let dobra = null;
-  if (device === "mobile" && !def.semDobra) {
+  if (device === "mobile" && !def.semDobra && !geo.modal) {
     dobra = path.join(dir, `${def.base}-${device}-dobra.png`);
     await page.screenshot({ path: dobra, fullPage: false, animations: "disabled" });
   }
   // P03: o recorte sai da imagem integral, não de outra captura
   const png = PNG.sync.read(integral);
-  const { rect, margens, aviso } = L.retanguloDeRecorte({ alvo: geo.alvo, componentes: geo.componentes, pagina: geo.pagina });
-  const px = L.paraPixels(rect, dpr, png);
-  const corte = new PNG({ width: px.width, height: px.height });
-  PNG.bitblt(png, corte, px.x, px.y, px.width, px.height, 0, 0);
-  const recorte = path.join(dir, `${def.base}-${device}-recorte.png`);
-  await fs.writeFile(recorte, PNG.sync.write(corte));
-  if (aviso) avisos.push({ tela: def.tela, device, aviso, margens });
+  const { rect, margens, aviso, cortados } = L.retanguloDeRecorte({ alvo: geo.alvo, componentes: geo.componentes, pagina: geo.pagina });
+  let recorte = null;
+  if (rect) { // sem recorte válido, fica só a integral: nunca um recorte com componente cortado
+    const px = L.paraPixels(rect, dpr, png);
+    const corte = new PNG({ width: px.width, height: px.height });
+    PNG.bitblt(png, corte, px.x, px.y, px.width, px.height, 0, 0);
+    recorte = path.join(dir, `${def.base}-${device}-recorte.png`);
+    await fs.writeFile(recorte, PNG.sync.write(corte));
+  }
+  if (aviso) avisos.push({ tela: def.tela, device, aviso, margens, ...(cortados ? { cortados } : {}) });
   if (geo.rolagemInterna) avisos.push({ tela: def.tela, device, aviso: "rolagem_interna", detalhe: "a página inteira pode não mostrar o conteúdo de um contêiner com rolagem própria" });
   textos[`${String(def.tela).padStart(2, "0")} ${device}`] = texto;
   manifesto.push({
     tela: def.tela, nome: def.nome, papel: def.papel, device,
     viewport: `${page.viewportSize().width}x${page.viewportSize().height}`, dpr,
-    arquivo: path.relative(raiz, arquivo), dobra: dobra && path.relative(raiz, dobra), recorte: path.relative(raiz, recorte),
+    integral: geo.modal ? "janela (modal em camada fixa)" : "página inteira",
+    arquivo: path.relative(raiz, arquivo), dobra: dobra && path.relative(raiz, dobra), recorte: recorte && path.relative(raiz, recorte),
     margensRecorte: margens, escola: L.ESCOLA_DEMO, aluno: def.aluno ?? "",
     nota: [def.nota, notaExtra].filter(Boolean).join(" "),
     comercial,
@@ -474,12 +442,12 @@ const captura = {
   naoIncluidas: [...NAO_RECAPTURADAS, ...naoIncluidas, ...faltantes()],
 };
 
-const linhaTela = (m) => `| ${String(m.tela).padStart(2, "0")} | ${m.nome} | ${m.device} | ${m.viewport} @${m.dpr}x | \`${m.arquivo}\`${m.dobra ? ` · \`${m.dobra}\`` : ""} · \`${m.recorte}\` | ${m.nota || "·"} |`;
+const linhaTela = (m) => `| ${String(m.tela).padStart(2, "0")} | ${m.nome} | ${m.device} | ${m.viewport} @${m.dpr}x | \`${m.arquivo}\` (${m.integral})${m.dobra ? ` · \`${m.dobra}\`` : ""} · ${m.recorte ? `\`${m.recorte}\`` : "sem recorte válido"} | ${m.nota || "·"} |`;
 const MANIFESTO = [
   `# ${PACK}`, "",
   `Capturado em ${DATA} (America/Sao_Paulo), ${OFICIAL ? "captura oficial" : "**ENSAIO, não usar em material**"}. Escola: ${L.ESCOLA_DEMO} (fictícia).`,
   "Navegador: Chromium, pt-BR, America/Sao_Paulo. Celular 390 px @3x; desktop 1440 px @2x.",
-  "Cada tela tem a captura integral (página inteira); no celular também a primeira dobra. O recorte sai da integral, com 24 px de margem, sem cortar componente.", "",
+  "Cada tela tem a captura integral: a página inteira, ou a janela quando a tela é um modal (camada fixa). No celular sai também a primeira dobra. O recorte sai da integral, com 24 px de margem e sem cortar componente; quando isso não é possível, não há recorte.", "",
   "| Tela | Nome | Aparelho | Janela | Arquivos | Nota |", "|---|---|---|---|---|---|",
   ...comerciais.map(linhaTela), "",
   "## Não incluídas", "",

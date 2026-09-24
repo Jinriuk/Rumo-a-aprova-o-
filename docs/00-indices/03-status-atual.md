@@ -44,7 +44,7 @@ ganhou motor **e** porta na coordenação.
 
 | Métrica | Valor | Como foi obtido |
 |---|---|---|
-| Testes | **978 / 978 verdes** | medido em 24/09 (Bloco 5, sobre a main) — `bash reset-db.sh && npm test` em Postgres 16 local dedicado (migrations + seed 2×) |
+| Testes | **982 / 982 verdes** | medido em 24/09 (Bloco 5, sobre a main) — `bash reset-db.sh && npm test` em Postgres 16 local dedicado (migrations + seed 2×) |
 | Arquivos de teste | **93** (95 `.mjs` em `tests/`) | medido — `grep -l 'node:test' tests/*.mjs \| wc -l` |
 | Lint | **0 errors / 256 warnings** | medido — `cd app && npm run lint` |
 | Build de produção | **verde** | medido — `cd app && npm run build` |

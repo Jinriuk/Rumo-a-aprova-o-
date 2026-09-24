@@ -66,7 +66,12 @@ remover essa função, e o v2 não depende dela.
   quatro escolas protegidas, um campo de senha preenchido ou um dos códigos de acesso.
 - **P03:** o recorte sai da captura integral, com 24 px de margem, e nenhum vizinho (caixa ou linha
   de texto) sai cortado ao meio. Quando o vizinho está a menos de 24 px, a margem daquele lado
-  encolhe até ele e o recorte fica marcado como `margem_reduzida` no interno, para revisão.
+  encolhe até ele e o recorte fica marcado como `margem_reduzida` no interno, para revisão. Se nem
+  assim fechar, não há recorte (`sem_recorte_valido`): fica só a integral. Decoração marcada
+  `aria-hidden` e camadas de fundo que contêm o alvo inteiro não contam como vizinho.
+- **Modais (21 e 22):** a integral é a janela, não a página inteira (uma camada `position: fixed`
+  não tem posição garantida numa captura de página inteira), e só contam os vizinhos de dentro do
+  modal: a lista atrás do fundo escuro está coberta.
 - **Conferência (P05):** `COERENCIA-HELENA.md` calcula os números esperados do banco no momento da
   captura (`resumo_escola`, alunos e XP, com a conta da coordenação) e diz em que tela cada um
   aparece: Helena (acerto no ciclo, D15; o resto da semana) e agregados da turma no Painel, em

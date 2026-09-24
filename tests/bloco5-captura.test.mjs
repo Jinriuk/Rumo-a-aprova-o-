@@ -74,6 +74,53 @@ test("P03: sem como fechar (vizinhos em cadeia), a margem encolhe e nada sai cor
   assert.equal(r.margens.base, 24);
 });
 
+test("P03: camada de fundo que contém o alvo não força o recorte a crescer", () => {
+  const alvo = { x: 40, y: 400, width: 300, height: 200 };
+  const fundo = { x: 0, y: 0, width: 390, height: 3000 }; // gradiente, estrelas
+  const r = L.retanguloDeRecorte({ alvo, componentes: [fundo], pagina });
+  assert.deepEqual(r.margens, { topo: 24, direita: 24, base: 24, esquerda: 24 });
+});
+
+test("P03 (Codex #136): no caminho de reserva, vizinho que SOBREPÕE o alvo entra inteiro", () => {
+  const alvo = { x: 40, y: 1400, width: 300, height: 100 };
+  const linhas = [];
+  for (let y = 0; y < 3000; y += 34) if (y + 20 <= alvo.y - 14 || y >= alvo.y + alvo.height + 14) linhas.push({ x: 20, y, width: 350, height: 20 });
+  const selo = { x: 300, y: 1380, width: 60, height: 40 }; // encostado no canto, por cima do alvo
+  const componentes = [...linhas, selo];
+  const r = L.retanguloDeRecorte({ alvo, componentes, pagina });
+  assert.equal(r.aviso, "margem_reduzida");
+  assert.equal(cortaAlgum(r.rect, componentes), false, "nem o selo nem as linhas saem cortados");
+  assert.ok(r.rect.x + r.rect.width >= 360 && r.rect.y <= 1380, "o selo está inteiro");
+});
+
+test("P03: todo recorte devolvido passa na conferência final (nenhum componente cortado)", () => {
+  // varredura: alvos e vizinhos em posições variadas; ou sai um recorte
+  // sem corte, ou sai "sem_recorte_valido" — nunca um recorte cortado
+  let seed = 7;
+  const rnd = (n) => { seed = (seed * 48271) % 2147483647; return seed % n; };
+  for (let k = 0; k < 300; k++) {
+    const alvo = { x: rnd(200), y: 200 + rnd(2000), width: 100 + rnd(180), height: 40 + rnd(300) };
+    const componentes = Array.from({ length: 25 }, () => ({ x: rnd(380), y: rnd(2900), width: 10 + rnd(300), height: 10 + rnd(120) }));
+    const r = L.retanguloDeRecorte({ alvo, componentes, pagina });
+    // o que conta é o visível: cada vizinho aparado na borda da página, e o
+    // pano de fundo (quem contém o alvo inteiro) fica de fora
+    const visiveis = componentes
+      .map((c) => ({ x: c.x, y: c.y, width: Math.min(pagina.width, c.x + c.width) - c.x, height: Math.min(pagina.height, c.y + c.height) - c.y }))
+      .filter((c) => !(c.x <= alvo.x && c.y <= alvo.y && c.x + c.width >= alvo.x + alvo.width && c.y + c.height >= alvo.y + alvo.height));
+    if (r.rect) assert.equal(cortaAlgum(r.rect, visiveis), false, `caso ${k}`);
+    else assert.equal(r.aviso, "sem_recorte_valido");
+  }
+});
+
+test("modal: vizinhos só da camada fixa, coordenadas da janela, integral da janela", () => {
+  const fn = L.coletarGeometria.toString();
+  assert.match(fn, /position === "fixed"\) camada = n/);
+  assert.match(fn, /\(camada \?\? document\.body\)\.querySelectorAll\("\*"\)/);
+  assert.match(fn, /if \(!modal\) window\.scrollTo\(0, 0\)/);
+  assert.match(fn, /n\.closest\('\[aria-hidden="true"\]'\)\) continue/, "decoração aria-hidden não é vizinho");
+  assert.match(src("scripts/captura/pack-v2.mjs"), /fullPage: !geo\.modal/);
+});
+
 test("P03: o recorte em pixels não sai da imagem integral", () => {
   const px = L.paraPixels({ x: 370, y: 2990, width: 40, height: 40 }, 3, { width: 1170, height: 9000 });
   assert.ok(px.x + px.width <= 1170 && px.y + px.height <= 9000);
@@ -196,6 +243,8 @@ test("runner: tela 18 nunca vai para o pack comercial", () => {
 
 test("runner: modo oficial fora da janela ou sem segredo aborta; ensaio sem segredo não captura nada", () => {
   assert.match(runner, /if \(OFICIAL && !janela\.ok\) \{[\s\S]*?process\.exit\(3\)/);
-  assert.match(runner, /if \(MODO === "oficial"\) \{ console\.error[\s\S]*?process\.exit\(2\)/);
+  // OFICIAL, não MODO: o auto dentro da janela também é oficial (Codex #136)
+  assert.match(runner, /if \(OFICIAL\) \{ console\.error\(`ERRO: \$\{msg\}`\); process\.exit\(2\); \}/);
+  assert.match(runner, /const OFICIAL = MODO === "oficial" \|\| \(MODO === "auto" && janela\.ok\)/);
   assert.match(runner, /ensaio pulado, nada capturado[\s\S]*?process\.exit\(0\)/);
 });

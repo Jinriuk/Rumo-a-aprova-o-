@@ -78,6 +78,10 @@ function expandir(r, m, pagina) {
     height: Math.min(pagina.height, base(r) + m) - y,
   };
 }
+function naPagina(r, pagina) {
+  const x = Math.max(0, r.x), y = Math.max(0, r.y);
+  return { x, y, width: Math.min(pagina.width, direita(r)) - x, height: Math.min(pagina.height, base(r)) - y };
+}
 function intersecta(a, b) {
   return a.x < direita(b) && b.x < direita(a) && a.y < base(b) && b.y < base(a);
 }
@@ -85,20 +89,30 @@ function contem(fora, dentro) {
   return dentro.x >= fora.x && dentro.y >= fora.y && direita(dentro) <= direita(fora) && base(dentro) <= base(fora);
 }
 
-// `alvo`: o componente a recortar. `componentes`: as outras caixas
-// visíveis da página (sem os ancestrais e os descendentes do alvo).
+// `alvo`: o componente a recortar. `componentes`: as outras caixas e
+// linhas de texto visíveis (sem os ancestrais e os descendentes do alvo).
 // Regra: margem de 24 px em volta, e nenhum componente pela metade.
-// Um vizinho que entra só em parte na margem é incluído inteiro (até
-// 4 rodadas e até 60% da página). Se isso não fechar, a margem daquele
-// lado encolhe até o vizinho, e o recorte sai marcado como
-// "margem_reduzida" para revisão humana: nunca meio componente.
+//   1. Quem contém o alvo inteiro é pano de fundo (camada decorativa,
+//      gradiente): pode ser recortado, é o fundo do recorte.
+//   2. Um vizinho que entra só em parte na margem é incluído inteiro (até
+//      4 rodadas e até 60% da página).
+//   3. Se isso não fechar: quem SOBREPÕE o alvo entra inteiro (não tem
+//      lado para onde encolher), e a margem de cada lado encolhe até o
+//      vizinho mais próximo; o recorte sai marcado "margem_reduzida".
+//   4. Conferência final: se ainda houver componente cortado, não há
+//      recorte válido ("sem_recorte_valido", rect null). Nunca meio
+//      componente.
 export function retanguloDeRecorte({ alvo, componentes = [], pagina, margem = MARGEM_RECORTE }) {
+  // só a parte visível conta: o que passa da borda da página (overflow-x:
+  // clip, faixa com rolagem lateral) já está fora da imagem integral
+  const vizinhos = componentes.map((c) => naPagina(c, pagina))
+    .filter((c) => c.width > 0 && c.height > 0 && !contem(c, alvo));
   const limiteArea = 0.6 * area(pagina);
   let caixa = { ...alvo };
   const incluidos = [];
   for (let rodada = 0; rodada < 4; rodada++) {
     const faixa = expandir(caixa, margem, pagina);
-    const parciais = componentes.filter((c) => intersecta(c, faixa) && !contem(faixa, c) && !contem(caixa, c));
+    const parciais = vizinhos.filter((c) => intersecta(c, faixa) && !contem(faixa, c) && !contem(caixa, c));
     if (!parciais.length) {
       return { rect: faixa, margens: margensDe(faixa, alvo), incluidos, aviso: null };
     }
@@ -107,19 +121,82 @@ export function retanguloDeRecorte({ alvo, componentes = [], pagina, margem = MA
     incluidos.push(...parciais);
     caixa = nova;
   }
-  // Não fechou: encolhe a margem de cada lado até o vizinho mais próximo.
-  const faixa = expandir(alvo, margem, pagina);
+  let nucleo = { ...alvo };
+  for (let i = 0; i < 10; i++) {
+    const sobre = vizinhos.filter((c) => intersecta(c, nucleo) && !contem(nucleo, c));
+    if (!sobre.length) break;
+    nucleo = uniao([nucleo, ...sobre]);
+  }
+  const faixa = expandir(nucleo, margem, pagina);
   let { x, y } = faixa;
   let dir = direita(faixa), bas = base(faixa);
-  for (const c of componentes) {
-    if (!intersecta(c, faixa) || contem(alvo, c)) continue;
-    if (base(c) <= alvo.y) y = Math.max(y, base(c));
-    else if (c.y >= base(alvo)) bas = Math.min(bas, c.y);
-    else if (direita(c) <= alvo.x) x = Math.max(x, direita(c));
-    else if (c.x >= direita(alvo)) dir = Math.min(dir, c.x);
+  for (const c of vizinhos) {
+    if (!intersecta(c, faixa) || contem(nucleo, c)) continue;
+    if (base(c) <= nucleo.y) y = Math.max(y, base(c));
+    else if (c.y >= base(nucleo)) bas = Math.min(bas, c.y);
+    else if (direita(c) <= nucleo.x) x = Math.max(x, direita(c));
+    else if (c.x >= direita(nucleo)) dir = Math.min(dir, c.x);
   }
   const rect = { x, y, width: dir - x, height: bas - y };
+  const cortados = vizinhos.filter((c) => intersecta(c, rect) && !contem(rect, c));
+  if (cortados.length) return { rect: null, margens: null, incluidos: [], aviso: "sem_recorte_valido", cortados: cortados.length };
   return { rect, margens: margensDe(rect, alvo), incluidos: [], aviso: "margem_reduzida" };
+}
+
+// Roda NO NAVEGADOR (locator.evaluate): precisa ser autocontida, sem
+// nada de fora. Sobe do elemento-âncora até o componente, lista os
+// vizinhos que não podem sair cortados e diz se a tela é um modal.
+// Modal = o componente mora numa camada position:fixed (portal com fundo
+// escuro). Aí só contam os vizinhos DESSA camada (a lista atrás do fundo
+// escuro não é vizinha, está coberta), as coordenadas são da janela e a
+// captura integral é a da janela: com "página inteira", uma camada fixa
+// não tem posição garantida na imagem.
+export function coletarGeometria(el) {
+  const temCaixa = (n) => {
+    const cs = getComputedStyle(n);
+    return parseFloat(cs.borderTopWidth) > 0 || cs.boxShadow !== "none" || cs.backgroundColor !== "rgba(0, 0, 0, 0)";
+  };
+  const temTextoProprio = (n) => [...n.childNodes].some((c) => c.nodeType === 3 && c.textContent.trim());
+  const vw = document.documentElement.clientWidth;
+  let comp = el;
+  for (let n = el; n && n !== document.body; n = n.parentElement) {
+    const r = n.getBoundingClientRect();
+    if (n.getAttribute("role") === "dialog" || (r.width >= Math.min(300, vw - 32) && r.height >= 90 && r.height <= 2400 && temCaixa(n))) { comp = n; break; }
+  }
+  let camada = null;
+  for (let n = comp; n && n !== document.body; n = n.parentElement) {
+    if (getComputedStyle(n).position === "fixed") camada = n;
+  }
+  const modal = !!camada;
+  if (!modal) window.scrollTo(0, 0);
+  const dx = modal ? 0 : window.scrollX, dy = modal ? 0 : window.scrollY;
+  const doc = (r) => ({ x: r.left + dx, y: r.top + dy, width: r.width, height: r.height });
+  const componentes = [];
+  for (const n of (camada ?? document.body).querySelectorAll("*")) {
+    if (n === comp || n.contains(comp) || comp.contains(n)) continue;
+    // decoração declarada (aria-hidden: anéis, brilhos, estrelas) é fundo,
+    // não conteúdo; na tela 03 o svg.portal-rings sobrepõe meio cartão
+    if (n.closest('[aria-hidden="true"]')) continue;
+    const r = n.getBoundingClientRect();
+    if (r.width < 4 || r.height < 4) continue;
+    const caixa = temCaixa(n) && r.width >= 40 && r.height >= 24;
+    if (!caixa && !temTextoProprio(n) && !["IMG", "SVG", "svg", "CANVAS", "INPUT", "BUTTON"].includes(n.tagName)) continue;
+    const cs = getComputedStyle(n);
+    if (cs.visibility === "hidden" || cs.display === "none" || Number(cs.opacity) === 0) continue;
+    componentes.push(doc(r));
+    if (componentes.length > 5000) break;
+  }
+  // rolagem interna: a "página inteira" não mostraria o que está dentro
+  const rolagemInterna = [...(camada ?? document.body).querySelectorAll("*")].filter((n) => {
+    const cs = getComputedStyle(n);
+    return /(auto|scroll)/.test(cs.overflowY) && n.scrollHeight > n.clientHeight + 4 && n.clientHeight > 200;
+  }).length;
+  return {
+    modal, alvo: doc(comp.getBoundingClientRect()), componentes, rolagemInterna,
+    pagina: modal
+      ? { width: document.documentElement.clientWidth, height: window.innerHeight }
+      : { width: document.documentElement.scrollWidth, height: document.documentElement.scrollHeight },
+  };
 }
 
 function margensDe(rect, alvo) {
