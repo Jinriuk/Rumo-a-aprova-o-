@@ -10,7 +10,7 @@ import { useTema } from "../../shared/branding/BrandingContext.jsx";
 import { fmtBR } from "../../shared/regras/regras.js";
 import { provaDoConcurso, notaPct, totalAcertos, totalQuestoes } from "../conteudo/provas.js";
 import { LIMIAR } from "../conteudo/niveisAluno.js";
-import { CRITERIOS_ESTUDO, linhaDeEstudo, classificarEstudo } from "./ranking.js";
+import { CRITERIOS_ESTUDO, linhaDeEstudo, classificarEstudo, semPodioNaJanela } from "./ranking.js";
 
 const MEDALHAS = ["🥇", "🥈", "🥉"];
 const fmtH = (min) => {
@@ -152,6 +152,11 @@ export function ClassificacaoTurma({ alunos, turmas, resumoPorAluno = {}, simula
           {comparaveis.map((r, i) => (
             <LinhaEstudo key={r.aluno.id} r={r} posicao={i} maxQ={maxQ} concursosPorId={concursosPorId} T={T} />
           ))}
+          {comparaveis.length === 0 && (
+            <div role="status" style={{ fontSize: 13, color: T.ink, fontWeight: 600, padding: "10px 10px 4px" }}>
+              {semPodioNaJanela(janela)}
+            </div>
+          )}
           {semDadosSuficientes.length > 0 && (
             <>
               <div style={{ fontSize: 11, color: T.sub, fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.6, margin: comparaveis.length ? "14px 2px 0" : "2px 2px 0" }}>

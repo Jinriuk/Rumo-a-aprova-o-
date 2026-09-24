@@ -7,8 +7,7 @@ import { SectionCard, StatCard, EmptyState } from "../../shared/ui/componentes.j
 import { useTema } from "../../shared/branding/BrandingContext.jsx";
 import { fmtHorasCurto } from "../motor/jargao.js";
 import { acertoPonderadoSemana } from "../../shared/metricas/agregados.js";
-import { podioDaSemana } from "./ranking.js";
-import { LIMIAR } from "../conteudo/niveisAluno.js";
+import { podioDaSemana, semPodioNaJanela } from "./ranking.js";
 
 // `resumo` já vem agregado por aluno (RPC resumo_escola, adaptado em
 // adaptarResumoEscola) — o painel só lê e exibe; nenhuma varredura de
@@ -134,7 +133,7 @@ export function PainelGestao({ resumo, aoIr, aoIrFiltrado }) {
         </div>
       } semPadding>
         {ranking.length === 0 ? (
-          <div style={{ padding: 8 }}><EmptyState icone="🏆" titulo="Sem dados para ranking" dica={`Os destaques aparecem quando algum aluno passa de ${LIMIAR.VOLUME_MINIMO} questões nos últimos 7 dias.`} /></div>
+          <div style={{ padding: 8 }}><EmptyState icone="🏆" titulo={semPodioNaJanela("semana")} dica="O pódio só compara quem tem volume para comparar. Quem está abaixo aparece no Ranking completo." /></div>
         ) : (
           <div style={{ display: "flex", flexDirection: "column" }}>
             {ranking.map((r, i) => (

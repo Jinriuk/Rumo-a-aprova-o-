@@ -58,3 +58,11 @@ export function podioDaSemana(resumo, criterio) {
   const linhas = (resumo ?? []).map((x) => linhaDeEstudo(x.aluno, x, "semana"));
   return classificarEstudo(linhas, criterio).comparaveis.slice(0, 3);
 }
+
+// Quando ninguém chega ao piso na janela, o bloco não fica vazio: diz
+// por quê (pedido de 23/09, vale para produção). "Chegou a" e não
+// "passou de": o piso é inclusivo (q >= VOLUME_MINIMO).
+export function semPodioNaJanela(janela = "semana") {
+  const onde = janela === "geral" ? "no ciclo" : "nos últimos 7 dias";
+  return `Ninguém chegou a ${LIMIAR.VOLUME_MINIMO} questões ${onde}.`;
+}

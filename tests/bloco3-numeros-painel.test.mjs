@@ -22,7 +22,7 @@ import { readFileSync } from "node:fs";
 import { resolve, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { adaptarResumoEscola, acertoPonderadoSemana } from "../app/src/shared/metricas/agregados.js";
-import { podioDaSemana, classificarEstudo, linhaDeEstudo } from "../app/src/modules/desempenho/ranking.js";
+import { podioDaSemana, classificarEstudo, linhaDeEstudo, semPodioNaJanela } from "../app/src/modules/desempenho/ranking.js";
 import { calcularMetricas } from "../app/src/modules/desempenho/metricas.js";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
@@ -118,6 +118,31 @@ test("D06: os destaques mostram as questões dos 7 dias, não o total do ciclo",
   assert.equal(helena.q, 79, "semana 4 da Helena; o ciclo seria 378");
   const codigo = src("app/src/modules/desempenho/PainelGestao.jsx");
   assert.match(codigo, /\{r\.q\} questões em 7 dias/);
+});
+
+// ── Pódio vazio (resposta de 23/09, item 6) ─────────────────────────
+// Semana em que ninguém chega a 20 questões: o bloco não fica vazio
+// nem vira "Sem dados", diz o motivo. Vale para produção.
+const SEMANA_FRACA = SEMANA4.map(([nome, , , , , qc, ac]) => [nome, 19, 12, 30, 1, qc, ac]);
+
+test("Pódio vazio: ninguém com 20 questões em 7 dias → pódio vazio e a frase pedida", () => {
+  assert.deepEqual(podioDaSemana(resumoDaSemana4(SEMANA_FRACA), "acerto"), []);
+  assert.equal(semPodioNaJanela("semana"), "Ninguém chegou a 20 questões nos últimos 7 dias.");
+  assert.equal(semPodioNaJanela("geral"), "Ninguém chegou a 20 questões no ciclo.");
+});
+
+test("Pódio vazio: 20 questões exatas já entram (o piso é inclusivo, a frase diz 'chegou a')", () => {
+  const umNoPiso = SEMANA_FRACA.map((l, i) => (i === 0 ? [l[0], 20, 12, 30, 1, l[5], l[6]] : l));
+  assert.deepEqual(nomes(podioDaSemana(resumoDaSemana4(umNoPiso), "acerto")), ["Helena"]);
+});
+
+test("Pódio vazio: Painel e Ranking usam a mesma frase, e o 'Sem dados para ranking' saiu", () => {
+  const painel = src("app/src/modules/desempenho/PainelGestao.jsx");
+  const ranking = src("app/src/modules/desempenho/ClassificacaoTurma.jsx");
+  assert.match(painel, /titulo=\{semPodioNaJanela\("semana"\)\}/);
+  assert.match(ranking, /comparaveis\.length === 0 && \(/);
+  assert.match(ranking, /\{semPodioNaJanela\(janela\)\}/);
+  assert.doesNotMatch(painel, /Sem dados para ranking/);
 });
 
 // ── D15 ────────────────────────────────────────────────────────────
