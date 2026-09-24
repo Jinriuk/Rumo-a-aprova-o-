@@ -1,0 +1,14 @@
+-- ============================================================
+-- DEMO 06 — ligar agora (e o PALIATIVO manual)
+-- ------------------------------------------------------------
+-- SÓ projeto de demonstração. Traz a gravação para a semana corrente:
+-- a semana 4 passa a começar na segunda desta semana, e tudo o que a
+-- gravação data até ontem já aparece. É o mesmo que a virada de
+-- segunda faz; rodar no meio da semana é seguro e idempotente.
+--
+-- Este é também o paliativo pedido no documento ("script manual que,
+-- rodado antes de uma reunião, traz a última semana gravada para a
+-- semana corrente"): se o agendamento falhar, rode isto antes da
+-- reunião e confira com a V1 e a V6 do 00_verificacoes.sql.
+-- ============================================================
+select demo.virar_semana();
