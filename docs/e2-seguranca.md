@@ -670,7 +670,7 @@ lista registra:
   `credencial_status`, e o banimento só impede o refresh. Janela = JWT
   expiry.
 
-**Recuperação de senha:** acontece no GoTrue (`PATCH /auth/v1/user` com o
+**Recuperação de senha:** acontece no GoTrue (`PUT /auth/v1/user` com o
 token do link, `app/src/shared/data/index.js:807-830`). Não há parte de
 banco para testar localmente. Se o reset feito pela coordenação encerra as
 sessões abertas do aluno: **PENDENTE-E3** (a `provisionar-aluno` não chama

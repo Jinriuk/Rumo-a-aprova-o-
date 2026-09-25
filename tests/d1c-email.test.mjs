@@ -254,11 +254,24 @@ describe("D1C — funções novas existem no data/index.js", () => {
   // compartilhado. `updateUser` aqui voltaria a exigir sessão carregada
   // no singleton — que é o que sobrescrevia a sessão de quem já estava
   // logado no mesmo navegador.
-  it("redefinirSenha faz PATCH direto em /auth/v1/user com o token do link", () => {
-    assert.ok(conteudo.includes("/auth/v1/user"), "endpoint do GoTrue ausente");
-    assert.ok(conteudo.includes('method: "PATCH"'), "PATCH ausente");
-    assert.ok(conteudo.includes("password"), "campo password ausente");
-    assert.ok(/Authorization:\s*`Bearer \$\{accessToken\}`/.test(conteudo), "token do link não vai no header");
+  //
+  // O método é PUT. O GoTrue só registra PUT em /user (é o que o
+  // `updateUser` do supabase-js manda); PATCH volta 405 e a senha não
+  // muda. Este teste exigia PATCH e travou o defeito até a produção
+  // (25/09/2026: redefinição e ativação de conta davam HTTP 405).
+  it("redefinirSenha faz PUT direto em /auth/v1/user com o token do link", () => {
+    const inicio = conteudo.indexOf("export async function redefinirSenha");
+    assert.ok(inicio >= 0, "redefinirSenha ausente");
+    const fim = conteudo.indexOf("\nexport ", inicio + 1);
+    const corpo = conteudo
+      .slice(inicio, fim < 0 ? undefined : fim)
+      .replace(/\/\*[\s\S]*?\*\//g, "")
+      .replace(/(^|[^:\\])\/\/.*$/gm, "$1");
+    assert.ok(corpo.includes("/auth/v1/user"), "endpoint do GoTrue ausente");
+    assert.match(corpo, /method:\s*"PUT"/, "redefinirSenha precisa usar PUT (é a rota do GoTrue)");
+    assert.doesNotMatch(corpo, /method:\s*"(PATCH|POST)"/, "PATCH/POST em /auth/v1/user voltam 405 no GoTrue");
+    assert.ok(corpo.includes("password"), "campo password ausente");
+    assert.ok(/Authorization:\s*`Bearer \$\{accessToken\}`/.test(corpo), "token do link não vai no header");
   });
 
   it("redefinirSenha NÃO usa updateUser nem setSession — REGRESSÃO de sessão trocada", () => {

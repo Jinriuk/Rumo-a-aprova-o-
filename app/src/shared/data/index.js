@@ -814,13 +814,18 @@ export async function recuperarSenha(email) {
 // o GoTrue troca a senha e NADA é escrito na sessão compartilhada. Quem
 // estava logado continua logado; quem redefiniu entra depois pelo login
 // normal, com a senha nova.
+//
+// O método é PUT, o mesmo que o `updateUser` do supabase-js usa. O GoTrue
+// só registra PUT em /user; PATCH volta 405 e a senha não muda (produção,
+// 25/09/2026). A ativação de conta passa por aqui também: o link que o
+// backoffice gera é do tipo recovery.
 export async function redefinirSenha(accessToken, novaSenha) {
   if (!accessToken) throw falha("redefinir senha", new Error("link sem token de recuperação"));
 
   let resposta;
   try {
     resposta = await fetch(`${SUPABASE_URL}/auth/v1/user`, {
-      method: "PATCH",
+      method: "PUT",
       headers: {
         apikey: SUPABASE_ANON_KEY,
         Authorization: `Bearer ${accessToken}`,
