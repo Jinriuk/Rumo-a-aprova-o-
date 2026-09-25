@@ -20,6 +20,9 @@ export default function AreaAluno({ perfil }) {
   const [erro, setErro] = useState(null);
   const [concurso, setConcurso] = useState(null);
   const [onboarding, setOnboarding] = useState(undefined); // undefined = carregando
+  // "Guia" no cabeçalho: cada toque sobe o contador e VisaoEstudo, que
+  // conhece as abas, abre o passo a passo.
+  const [pedidoGuia, setPedidoGuia] = useState(0);
   const [materiasProva, setMateriasProva] = useState([]);
 
   // PERF: a trilha é carregada UMA vez, aqui, e desce por prop para
@@ -84,7 +87,8 @@ export default function AreaAluno({ perfil }) {
 
   return (
     <div>
-      <Cabecalho subtitulo={subtitulo} diasProva={prova?.dias ?? null} provaRealizada={prova?.realizada ?? false} nomeUsuario={perfil.usuario.nome} />
+      <Cabecalho subtitulo={subtitulo} diasProva={prova?.dias ?? null} provaRealizada={prova?.realizada ?? false} nomeUsuario={perfil.usuario.nome}
+        aoAbrirGuia={aluno ? () => setPedidoGuia((n) => n + 1) : undefined} />
       <main className="com-sidebar" style={{ maxWidth: 1080, margin: "0 auto", padding: "18px max(16px, env(safe-area-inset-right)) calc(88px + env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left))" }}>
         {erro && <Erro>{erro}</Erro>}
         {aluno === undefined && !erro && <Empty txt="Preparando painel de estudos…" />}
@@ -102,7 +106,7 @@ export default function AreaAluno({ perfil }) {
             )}
             {concurso && <AvisoMaturidade codigo={concurso.codigo} style={{ marginBottom: 14 }} />}
             <VisaoEstudo aluno={aluno} podeEditar concurso={concurso}
-              trilhaEstado={trilhaEstado}
+              trilhaEstado={trilhaEstado} usuarioId={perfil.usuario.id} pedidoGuia={pedidoGuia}
               contexto={concurso ? concurso.nome.split(" (")[0] : "Plano de estudos"} />
           </>
         )}

@@ -7,6 +7,8 @@ import { nomeValido, limparNome } from "../../shared/validacao.js";
 import { MenuPrincipal } from "../../shared/ui/MenuPrincipal.jsx";
 import { useTema } from "../../shared/branding/BrandingContext.jsx";
 import { NovaTurma, PainelCadastroAlunos, CredencialGerada } from "../../modules/pessoas/CadastroAlunos.jsx";
+import { useGuia } from "../../shared/guia/GuiaPassoAPasso.jsx";
+import { ROTEIRO_COORDENACAO, chaveGuia } from "../../shared/guia/roteiros.js";
 import { ListaAlunos } from "../../modules/pessoas/ListaAlunos.jsx";
 import { Marca } from "../../modules/escola/Marca.jsx";
 import { ProximoCiclo } from "../../modules/escola/ProximoCiclo.jsx";
@@ -80,6 +82,16 @@ export default function AreaEscola({ perfil }) {
   useEffect(aoTopo, []); // entrar no sistema = nascer no topo
 
   function irPara(t) { despacharNav({ tipo: "ir", tab: t }); aoTopo(); }
+
+  // Passo a passo guiado (shared/guia): convida na primeira vez desta
+  // conta neste navegador, depois que a escola carregou; o botão "Guia"
+  // do cabeçalho reabre a qualquer hora.
+  const guia = useGuia({
+    roteiro: ROTEIRO_COORDENACAO,
+    chave: chaveGuia("coordenacao", perfil.usuario.id),
+    irPara,
+    podeIniciar: mostrarAbas,
+  });
   function irParaFiltrado(tab, filtro) { despacharNav({ tipo: "irFiltrado", tab, filtro }); aoTopo(); }
 
   function verAluno(aluno) {
@@ -135,7 +147,7 @@ export default function AreaEscola({ perfil }) {
 
   return (
     <div>
-      <Cabecalho subtitulo="Painel de gestão" nomeUsuario={perfil.usuario.nome} rotuloPapel="Coordenação" />
+      <Cabecalho subtitulo="Painel de gestão" nomeUsuario={perfil.usuario.nome} rotuloPapel="Coordenação" aoAbrirGuia={guia.abrir} />
       <main className="com-sidebar" style={{ maxWidth: 1080, margin: "0 auto", padding: "16px max(16px, env(safe-area-inset-right)) calc(88px + env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left))" }}>
         {/* C2: alunoAberto é um terceiro estado de tela que não está em
             nenhuma aba — sem rotuloExtra o título da aba do navegador
@@ -222,6 +234,7 @@ export default function AreaEscola({ perfil }) {
       </main>
 
       <CredencialGerada credencial={credencial} aoFechar={() => setCredencial(null)} />
+      {guia.elemento}
     </div>
   );
 }

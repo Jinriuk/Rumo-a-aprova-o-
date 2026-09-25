@@ -20,6 +20,8 @@ import { calcularXP, patente } from "../../modules/motor/jargao.js";
 import { InsightsDesempenho } from "../../modules/desempenho/Insights.jsx";
 import { NiveisPorMateria } from "../../modules/desempenho/Niveis.jsx";
 import { useEnvioUnico } from "../../shared/hooks/useEnvioUnico.js";
+import { useGuia } from "../../shared/guia/GuiaPassoAPasso.jsx";
+import { ROTEIRO_ALUNO, chaveGuia } from "../../shared/guia/roteiros.js";
 
 // ETAPA 3 — code-splitting: os painéis de gráfico carregam o recharts
 // (a maior dependência do bundle). Importados sob demanda (só quando o
@@ -48,7 +50,7 @@ function SecaoDesempenho({ rotulo }) {
 // O fallback mantém o componente utilizável sozinho (e é o mesmo hook, então
 // não há caminho de dado diferente): se ninguém passar `trilhaEstado`, ele
 // busca por conta própria, como antes.
-export function VisaoEstudo({ aluno, podeEditar, concurso = null, contexto = "Plano de estudos", trilhaEstado = null }) {
+export function VisaoEstudo({ aluno, podeEditar, concurso = null, contexto = "Plano de estudos", trilhaEstado = null, usuarioId = null, pedidoGuia = 0 }) {
   const T = useTema();
   const [tab, setTab] = useState("hoje");
   const [dados, setDados] = useState({ carregando: true, metas: [], registros: [], simulados: [], xpPersistido: null, erro: null, versao: -1 });
@@ -247,6 +249,18 @@ export function VisaoEstudo({ aluno, podeEditar, concurso = null, contexto = "Pl
     });
   }, [dados, trilha, semanaAtiva]);
 
+  // Passo a passo guiado (shared/guia). Só com a trilha carregada: sem
+  // ela esta tela não tem abas para mostrar. `pedidoGuia` sobe quando o
+  // aluno toca em "Guia" no cabeçalho (que mora em AreaAluno).
+  const guia = useGuia({
+    roteiro: ROTEIRO_ALUNO,
+    chave: chaveGuia("aluno", usuarioId ?? aluno?.id),
+    irPara: (k) => irAba(k),
+    podeIniciar: podeEditar && !!trilha && !carregandoTrilha && !dados.carregando,
+  });
+  const abrirGuia = guia.abrir;
+  useEffect(() => { if (pedidoGuia > 0) abrirGuia(); }, [pedidoGuia]); // eslint-disable-line react-hooks/exhaustive-deps
+
   if (carregandoTrilha || dados.carregando) return <CarregandoBloco titulo="Carregando seu painel de estudos…" cartoes={3} linhas={4} />;
   if (dados.erro) return <ErroComRetry aoTentar={recarregarTudo}>{dados.erro}</ErroComRetry>;
   if (erroTrilha) return <ErroComRetry aoTentar={recarregarTudo}>{erroTrilha}</ErroComRetry>;
@@ -287,6 +301,7 @@ export function VisaoEstudo({ aluno, podeEditar, concurso = null, contexto = "Pl
         </div>
       )}
 
+      {guia.elemento}
       <MenuPrincipal abas={ABAS} ativo={tab} aoTrocar={irAba}
         usuario={{ nome: aluno.nome, sub: `${patente(xp).nome} · ${xp.toLocaleString("pt-BR")} XP` }} />
 

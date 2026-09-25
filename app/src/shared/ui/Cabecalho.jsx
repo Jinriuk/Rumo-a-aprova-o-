@@ -5,7 +5,7 @@ import React from "react";
 import { useBranding, MarcaEscola } from "../branding/BrandingContext.jsx";
 import * as db from "../data/index.js";
 
-export function Cabecalho({ titulo, subtitulo, diasProva, diasProvaMedia, provaRealizada, nomeUsuario, rotuloPapel }) {
+export function Cabecalho({ titulo, subtitulo, diasProva, diasProvaMedia, provaRealizada, nomeUsuario, rotuloPapel, aoAbrirGuia }) {
   const { escola, tema: T } = useBranding();
   return (
     // I3: `top` lê a variável que FaixaDemo.jsx publica no :root — 0px
@@ -49,6 +49,14 @@ export function Cabecalho({ titulo, subtitulo, diasProva, diasProvaMedia, provaR
         )}
 
         <span className="hdr-user" title={nomeUsuario} style={{ fontSize: 12, color: T.sub, whiteSpace: "nowrap", flexShrink: 0, maxWidth: 120, overflow: "hidden", textOverflow: "ellipsis" }}>{nomeUsuario}</span>
+        {/* Passo a passo guiado (shared/guia): reabre o roteiro a
+            qualquer hora, não só no primeiro acesso. */}
+        {aoAbrirGuia && (
+          <button type="button" onClick={aoAbrirGuia} title="Guia do sistema, tela a tela" aria-label="Abrir o guia do sistema"
+            style={{ border: `1px solid ${T.gold}55`, background: `${T.gold}12`, color: T.gold, borderRadius: 8, padding: "7px 11px", minHeight: 38, fontSize: 12.5, fontWeight: 700, flexShrink: 0 }}>
+            Guia
+          </button>
+        )}
         <button type="button" onClick={() => db.sair().catch((e) => console.error(e))} title="Sair" aria-label="Sair"
           style={{ border: `1px solid ${T.line}`, background: T.card, color: T.sub, borderRadius: 8, padding: "7px 11px", minHeight: 38, fontSize: 12.5, fontWeight: 600, flexShrink: 0 }}>
           Sair
