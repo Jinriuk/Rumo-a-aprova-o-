@@ -34,7 +34,7 @@ lerHashRecuperacao(location.hash) → access_token extraído à mão
     ↓
 Usuário preenche senha + confirmação + valida força
     ↓
-fetch PATCH {URL}/auth/v1/user
+fetch PUT {URL}/auth/v1/user   (PATCH volta 405 no GoTrue; corrigido em 25/09/2026)
     headers: apikey + Authorization: Bearer <access_token do link>
     body:    { password }
     ↓

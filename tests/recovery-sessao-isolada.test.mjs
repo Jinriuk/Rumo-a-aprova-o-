@@ -136,7 +136,7 @@ describe("recovery — mensagens de erro (lógica pura)", () => {
     assert.ok(m.length > 20, "mensagem genérica demais");
   });
 
-  it("401 do PATCH vira 'link expirou ou já foi usado'", () => {
+  it("401 do PUT vira 'link expirou ou já foi usado'", () => {
     assert.equal(mensagemErroRedefinicao({ status: 401, message: "redefinir senha: invalid claim" }), LINK_INVALIDO);
     assert.equal(mensagemErroRedefinicao({ status: 403, message: "redefinir senha: bad_jwt" }), LINK_INVALIDO);
   });

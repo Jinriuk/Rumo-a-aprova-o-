@@ -84,7 +84,7 @@ export function mensagemLinkInvalido(codigo) {
   return "Não foi possível validar este link de recuperação. Solicite um novo na tela de login.";
 }
 
-// Falha do PATCH /auth/v1/user. Cada caso previsível ganha texto próprio:
+// Falha do PUT /auth/v1/user. Cada caso previsível ganha texto próprio:
 // mandar "tente novamente" para quem repetiu a senha antiga é o tipo de
 // mensagem que faz o usuário rodar em círculo.
 export function mensagemErroRedefinicao(erro) {
