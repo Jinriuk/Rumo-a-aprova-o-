@@ -347,6 +347,23 @@ export function linhaDoManifesto(m) {
   return `| ${doisDigitos(m.tela)} | ${m.nome} | ${m.device} | ${m.viewport} @${m.dpr}x | ${arquivos} | ${m.nota || "·"} |`;
 }
 
+// Guia passo a passo (#150): na PRIMEIRA entrada de cada conta, num
+// navegador, aparece um cartão fixo convidando para o guia. O runner
+// abre sempre um navegador limpo, então o cartão sairia em todas as
+// telas da coordenação e do aluno, cobrindo o canto de baixo. Esta
+// função roda dentro da página, antes do app, e responde "visto" para
+// as chaves do guia: a captura mostra a tela de quem já entrou antes.
+// Não escreve nada (nem no navegador). A chave vem de chaveGuia(), em
+// app/src/shared/guia/roteiros.js; o teste confere o prefixo.
+export const PREFIXO_GUIA = "triliva:guia:";
+export function guiaJaVistoNaPagina(prefixo) {
+  const original = Storage.prototype.getItem;
+  Storage.prototype.getItem = function (chave) {
+    if (typeof chave === "string" && chave.startsWith(prefixo)) return "visto";
+    return original.call(this, chave);
+  };
+}
+
 export function montarManifesto(captura) {
   const complementos = (captura.complementos ?? []).map((c) =>
     `- Tela ${doisDigitos(c.tela)} capturada por último, em execução própria${c.run ? ` (run ${c.run})` : ""}, com preparo e restauração da aluna de referência: ${c.resultado}.`);
@@ -355,6 +372,7 @@ export function montarManifesto(captura) {
     `Capturado em ${captura.dataLocal} (America/Sao_Paulo), ${captura.oficial ? "captura oficial" : "**ENSAIO, não usar em material**"}. Escola: ${captura.escola} (fictícia).`,
     "Navegador: Chromium, pt-BR, America/Sao_Paulo. Celular 390 px @3x; desktop 1440 px @2x.",
     "Cada tela tem a captura integral: a página inteira, ou a janela quando a tela é um modal (camada fixa). No celular sai também a primeira dobra. O recorte sai da integral, com 24 px de margem e sem cortar componente; quando isso não é possível, não há recorte.",
+    "O convite do guia passo a passo, que aparece só na primeira entrada de cada conta, foi dado como visto: as telas são as de quem já entrou antes.",
     ...(complementos.length ? ["", ...complementos] : []), "",
     "| Tela | Nome | Aparelho | Janela | Arquivos | Nota |", "|---|---|---|---|---|---|",
     ...[...captura.arquivos].sort(ordemArquivo).map(linhaDoManifesto), "",
