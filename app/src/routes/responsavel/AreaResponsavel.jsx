@@ -40,7 +40,8 @@ export default function AreaResponsavel({ perfil }) {
     setVersao((v) => v + 1); recarregarTrilha();
   };
 
-  useEffect(() => window.scrollTo({ top: 0, left: 0, behavior: "instant" }), []); // login nasce no topo
+  // Em bloco: ver AreaAluno.jsx (scrollTo devolve Promise nos Chromium novos).
+  useEffect(() => { window.scrollTo({ top: 0, left: 0, behavior: "instant" }); }, []); // login nasce no topo
 
   // 1) Quem são os alunos vinculados (todos — a RLS decide).
   useEffect(() => {
