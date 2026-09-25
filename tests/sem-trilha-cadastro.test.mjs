@@ -82,3 +82,17 @@ test("ficha: aluno sem trilha tem onde definir a trilha", () => {
   assert.match(bloco, /onChange=\{\(e\) => trocarTrilha\(e\.target\.value\)\}/);
   assert.match(bloco, /\{dialogo\.elemento\}/, "sem o elemento do diálogo a confirmação não aparece");
 });
+
+test("carga da escola em erro sem dado anterior: as abas não desenham o estado vazio", () => {
+  // Com o HTTP 300 o painel dizia "Nenhum aluno cadastrado ainda" e a
+  // lista "0 de 0" embaixo do aviso de erro, como se a escola estivesse
+  // vazia. Só a Marca (que não lê o núcleo) segue aberta.
+  const area = src("app/src/routes/escola/AreaEscola.jsx");
+  assert.match(area, /const semNucleo = !!erro && !carregado;/);
+  assert.match(area, /const mostrarAbas = !carregando && !semNucleo;/);
+  for (const aba of ["painel", "alunos", "ranking", "turmas", "ciclo", "conformidade"]) {
+    assert.match(area, new RegExp(`\\{mostrarAbas && !alunoAberto && tab === "${aba}"`), aba);
+  }
+  assert.match(area, /\{mostrarAbas && alunoAberto && \(/, "a ficha também depende do núcleo");
+  assert.doesNotMatch(area, /\{!carregando && !alunoAberto && tab === "(?!marca")/);
+});
