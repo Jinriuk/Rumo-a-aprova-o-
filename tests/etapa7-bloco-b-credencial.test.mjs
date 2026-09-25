@@ -333,9 +333,13 @@ describe("shared/data/index.js — seam das novas ações de credencial", () => 
     assert.ok(m[1].split(",").map((c) => c.trim()).includes("must_change_password"), `must_change_password ausente do SELECT: ${m[1]}`);
   });
 
+  // Desde 25/09/2026 os embeds nomeiam a FK: a 0055 deixou dois caminhos
+  // em cada par e o embed sem nome voltava HTTP 300 (PGRST201). Este teste
+  // exigia a forma sem hint e por isso travava o defeito. A guarda geral
+  // de embed ambíguo está em embeds-ambiguos.test.mjs.
   it("listarAlunos e listarVinculos trazem credencial_status/must_change_password embutidos", () => {
-    assert.match(src, /alunos_turmas\(turma_id, turmas\(nome\)\), usuarios\(credencial_status, must_change_password\)/);
-    assert.match(src, /usuarios\(nome, papel, credencial_status, must_change_password\)/);
+    assert.match(src, /alunos_turmas!alunos_turmas_aluno_id_fkey\(turma_id, turmas!alunos_turmas_turma_id_fkey\(nome\)\), usuarios!alunos_usuario_id_fkey\(credencial_status, must_change_password\)/);
+    assert.match(src, /usuarios!vinculos_responsaveis_responsavel_id_fkey\(nome, papel, credencial_status, must_change_password\)/);
   });
 });
 

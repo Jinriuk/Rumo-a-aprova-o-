@@ -627,11 +627,15 @@ export async function listarAlunos({ signal } = {}) {
   // saber se a conta está revogada e se a senha temporária já foi
   // trocada — sem isso a tela não teria como distinguir "revogar" de
   // "reativar", nem avisar quem ainda não fez a troca obrigatória.
-  // Sem FK ambígua entre alunos e usuarios (só usuario_id), o embed não
-  // precisa nomear a constraint.
+  //
+  // Os três embeds nomeiam a FK. Desde a 0055 cada par tem duas FKs (a
+  // simples e a composta `_mesma_escola_`) e embed sem nome volta HTTP 300
+  // (PGRST201). A escolhida é a SIMPLES: o join é o mesmo de antes da 0055
+  // e o rollback documentado da 0055 (drop das `_mesma_escola_`) não quebra
+  // esta tela. Guarda no CI: tests/embeds-ambiguos*.test.mjs.
   const { data, error } = await comSinal(
     supabase.from("alunos")
-      .select("*, alunos_turmas(turma_id, turmas(nome)), usuarios(credencial_status, must_change_password)")
+      .select("*, alunos_turmas!alunos_turmas_aluno_id_fkey(turma_id, turmas!alunos_turmas_turma_id_fkey(nome)), usuarios!alunos_usuario_id_fkey(credencial_status, must_change_password)")
       .order("nome"),
     signal,
   );
@@ -657,10 +661,11 @@ export async function listarTrilhas({ signal } = {}) {
   return data;
 }
 
+// FK nomeada no embed: o par tem duas desde a 0055 (ver listarAlunos).
 export async function listarVinculos(alunoId) {
   const { data, error } = await supabase
     .from("vinculos_responsaveis")
-    .select("id, responsavel_id, criado_em, usuarios(nome, papel, credencial_status, must_change_password)")
+    .select("id, responsavel_id, criado_em, usuarios!vinculos_responsaveis_responsavel_id_fkey(nome, papel, credencial_status, must_change_password)")
     .eq("aluno_id", alunoId)
     .order("criado_em");
   if (error) throw falha("responsáveis", error);
@@ -729,6 +734,12 @@ export async function listarSimuladosEscola({ signal } = {}) {
 
 /* ---------- provisão e servidor (Edge Functions) ---------- */
 
+// Estados que uma Edge Function devolve com status de erro mas que são
+// PREVISÍVEIS, não falha de sistema: saem do console.error como a
+// credencial inválida do login. `sem_trilha` é o 422 do gerar-meta para
+// aluno sem trilha atribuída, um estado válido do cadastro.
+const ESTADOS_ESPERADOS = new Set(["sem_trilha"]);
+
 async function invocar(fn, body) {
   const { data, error } = await supabase.functions.invoke(fn, { body });
   if (error) {
@@ -739,7 +750,7 @@ async function invocar(fn, body) {
       if (ctx?.error) detalhe = ctx.error;
       estado = ctx?.estado;
     } catch { /* corpo não-JSON: fica a mensagem original */ }
-    const e = falha(fn, new Error(detalhe));
+    const e = falha(fn, new Error(detalhe), { esperada: ESTADOS_ESPERADOS.has(estado) });
     if (estado) e.estado = estado;
     throw e;
   }
@@ -863,20 +874,22 @@ export async function redefinirSenha(accessToken, novaSenha) {
 
 /* ---------- motor (meta + registro) ---------- */
 
+// FK nomeada no embed: o par tem duas desde a 0055 (ver listarAlunos).
 export async function listarMetas(alunoId) {
   const { data, error } = await supabase
     .from("metas")
-    .select("*, meta_atividades(id, estado, atividade_modelo_id)")
+    .select("*, meta_atividades!meta_atividades_meta_id_fkey(id, estado, atividade_modelo_id)")
     .eq("aluno_id", alunoId)
     .order("semana_numero", { ascending: false });
   if (error) throw falha("metas", error);
   return data;
 }
 
+// FK nomeada no embed: o par tem duas desde a 0055 (ver listarAlunos).
 export async function metaAtual(alunoId) {
   const { data, error } = await supabase
     .from("metas")
-    .select("*, meta_atividades(id, estado, atividade_modelo_id)")
+    .select("*, meta_atividades!meta_atividades_meta_id_fkey(id, estado, atividade_modelo_id)")
     .eq("aluno_id", alunoId)
     .order("semana_numero", { ascending: false })
     .limit(1);

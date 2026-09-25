@@ -158,7 +158,8 @@ export default function AreaEscola({ perfil }) {
 
           {!carregando && !alunoAberto && tab === "alunos" && (
             <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-              <PainelCadastroAlunos turmas={dados.turmas} trilhas={dados.trilhas} concursos={dados.concursos} aoMudar={recarregarTudo} />
+              <PainelCadastroAlunos turmas={dados.turmas} trilhas={dados.trilhas} concursos={dados.concursos} aoMudar={recarregarTudo}
+                indisponivel={!!erro} />
               <ListaAlunos alunos={dados.alunos} consentimentos={dados.consentimentos} concursos={dados.concursos}
                 turmas={dados.turmas} trilhas={dados.trilhas} resumoPorAluno={resumoPorAluno}
                 aoMudar={recarregarTudo} aoGerarCredencial={setCredencial} aoVerAluno={verAluno}

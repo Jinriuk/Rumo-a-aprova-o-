@@ -115,7 +115,17 @@ export function ListaAlunos({ alunos, consentimentos, concursos = [], turmas = [
       rotuloConfirmar: "Trocar",
     });
     if (!ok) return;
-    return comAcao(a, () => db.atualizarAluno(a.id, { trilha_id: trilhaId || null }));
+    // Aluno que estava SEM trilha ganha a meta da semana na hora, como no
+    // cadastro. Sem isso a tela "Hoje" dele ficaria vazia até a virada.
+    // Troca de uma trilha para outra segue como antes: a meta nova vem na
+    // virada. Se o gerar-meta falhar, a trilha já está gravada e o aluno
+    // fica "pendente": a lista recarrega para mostrar o "Reprocessar meta".
+    const primeiraTrilha = !a.trilha_id && !!trilhaId;
+    return comAcao(a, async () => {
+      await db.atualizarAluno(a.id, { trilha_id: trilhaId || null });
+      if (!primeiraTrilha) return;
+      try { await db.gerarMeta(a.id); } catch (e) { aoMudar?.(); throw e; }
+    });
   };
   const renomear = async (a) => {
     const nome = await pedirNome("Renomear aluno", "Escolha o novo nome do aluno.", a.nome);
@@ -264,7 +274,9 @@ export function ListaAlunos({ alunos, consentimentos, concursos = [], turmas = [
                           {concursos.map((c) => <option key={c.id} value={c.id} style={{ background: T.bg2 }}>{c.nome}</option>)}
                         </select>
                       )}
-                      {trilhas.length > 1 && (
+                      {/* Com uma trilha só publicada o seletor sumia, e aluno
+                          cadastrado sem trilha ficava sem jeito de ganhar uma. */}
+                      {trilhas.length > 0 && (trilhas.length > 1 || !a.trilha_id) && (
                         <select value={a.trilha_id ?? ""} disabled={trabalhando} onChange={(e) => trocarTrilha(a, e.target.value)}
                           onWheel={(e) => e.currentTarget.blur()} title="Trilha de estudo"
                           aria-label={`Trilha de estudo de ${a.nome}`} style={selMini}>
