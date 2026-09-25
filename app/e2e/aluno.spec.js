@@ -1,7 +1,7 @@
 // @ts-check
 /* Aluno: tela inicial, cronômetro (iniciar/pausar/retomar), validações
    do registro (SEM salvar no banco) e navegação por todas as abas. */
-import { test, expect } from "@playwright/test";
+import { test, expect } from "./local/base.js";
 import { coletarErros, loginAluno, irParaAba, semEstouroHorizontal, campo, botaoVisivel } from "./_apoio.js";
 
 test.beforeEach(async ({ page }) => {

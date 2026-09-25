@@ -1,45 +1,37 @@
-# Suíte E2E — Fase 14.5 (estabilização antes da Fase 15)
+# Suíte E2E — stack Supabase LOCAL (Etapa 3)
 
-Testes de ponta a ponta com **Playwright**, dirigindo o app **real** (build de
-produção via `vite preview`) contra o **Supabase de demonstração**. Sem mocks:
-login real, RLS real, dados reais do seed (Colégio Vitrine Naval + Curso Beta).
+Testes de ponta a ponta com **Playwright** contra uma stack Supabase **local e
+descartável** que sobe no próprio runner: Postgres 17 (o mesmo major do remoto),
+Auth, PostgREST, Edge Functions e o capturador de e-mail (Mailpit). Nenhum projeto
+hospedado, nenhuma credencial de nuvem. Desenho completo e regras:
+[`docs/operacao/e2e-ambiente.md`](../../docs/operacao/e2e-ambiente.md).
 
 ## Como rodar
 
 ```bash
-cd app
-npm install
-npm run test:e2e:install   # baixa o Chromium do Playwright (1ª vez)
-npm run test:e2e           # roda a suíte (sobe o preview sozinho)
+(cd app && npm ci) && (cd tests && npm ci)
+cd app && npx playwright install chromium && cd ..
+bash scripts/e2e/rodar.sh            # stack → banco → fixture → front → suíte
+bash scripts/e2e/rodar.sh smoke      # só a fumaça
+E2E_MANTER_STACK=1 bash scripts/e2e/rodar.sh --project=http
 ```
 
-Relatório HTML: `app/playwright-report/index.html`.
-Modo interativo: `npm run test:e2e:ui`.
+Precisa de Docker, da CLI do Supabase (a versão do CI está em
+`.github/workflows/ci.yml`, `SUPABASE_CLI_VERSION`), `psql` e Node 22.
 
-> **Nota de ambiente:** na execução em nuvem do Claude Code o download do
-> Chromium é bloqueado pela política de eg. de rede (`cdn.playwright.dev` fora
-> do allowlist). Por isso a suíte é executada em ambiente local/CI com acesso
-> ao CDN do Playwright. O `--list` (abaixo) valida config e specs sem browser.
+## O que protege o demo e a produção
 
-```bash
-npx playwright test --list   # lista os testes sem abrir navegador
-```
+- **Trava de destino** (`scripts/e2e/trava.mjs`): antes do banco, da fixture, do
+  build e da suíte, exige host local, id de execução e o marcador da fixture no
+  próprio banco, e recusa qualquer `*.supabase.co`.
+- **Front do E2E** (`scripts/e2e/front.sh`): `vite build --mode e2e`, que não lê o
+  `app/.env.production` do demo; o bundle é conferido (URL local presente, nenhum
+  `*.supabase.co`).
+- **Guarda de rede** (`e2e/local/base.js`): o navegador só fala com `127.0.0.1`;
+  chamada a `*.supabase.co` reprova o teste.
 
-## O que está coberto
+## Contas
 
-| Arquivo | Fluxos |
-|---|---|
-| `auth.spec.js` | tela de login, código inválido, login+logout dos 3 papéis |
-| `aluno.spec.js` | missão atual, cronômetro (iniciar/pausar/retomar/finalizar), validações do registro (tópico obrigatório, acertos ≤ questões, tempo livre), navegação por todas as abas |
-| `responsavel.spec.js` | leitura do resumo do aluno; ausência de qualquer controle de edição |
-| `coordenacao.spec.js` | painel/KPIs/alertas, navegação (Alunos/Ranking/Turmas/LGPD/Marca), abrir ficha do aluno, critério de destaque, **persistência da marca** (altera→reload→restaura) |
-| `mobile.spec.js` | 390px: sem estouro horizontal e barra inferior nos papéis |
-
-Toda asserção liga um **coletor de erros de console** (`coletarErros`) e reprova
-o teste se houver erro não-conhecido. Os fluxos de escrita ou apenas validam
-(sem salvar) ou **restauram o estado** ao final (marca).
-
-## Credenciais usadas
-
-Definidas em `e2e/_apoio.js` (`CONTAS`), conferidas em `auth.users` do projeto
-de demo. Coordenação por e-mail+senha; aluno/responsável por código.
+Vêm de `scripts/e2e/contas.mjs` (fonte única, também usada por
+`scripts/e2e/semear.mjs`), criadas pela API admin do Auth local com os ids do
+seed 01 e da fixture da matriz de autorização. A senha só existe na stack local.

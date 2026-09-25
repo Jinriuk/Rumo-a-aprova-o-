@@ -1,6 +1,6 @@
 // @ts-check
 /* Autenticação: login dos três papéis, logout e rejeição de credencial. */
-import { test, expect } from "@playwright/test";
+import { test, expect } from "./local/base.js";
 import { CONTAS, coletarErros, loginAluno, loginResponsavel, loginCoordenacao, sair, botaoVisivel, campo } from "./_apoio.js";
 
 test("tela de login aparece com as duas formas de entrar", async ({ page }) => {

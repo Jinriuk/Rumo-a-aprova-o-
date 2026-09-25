@@ -51,7 +51,7 @@ const a11yComoWarn = Object.fromEntries(
 );
 
 export default [
-  { ignores: ["dist/**", "playwright-report/**", "test-results/**"] },
+  { ignores: ["dist/**", "dist-e2e/**", "e2e-resultados/**", "playwright-report/**", "test-results/**"] },
 
   js.configs.recommended,
 

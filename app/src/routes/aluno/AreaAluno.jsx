@@ -43,7 +43,10 @@ export default function AreaAluno({ perfil }) {
     [aluno?.data_prova_alvo, concurso],
   );
 
-  useEffect(() => window.scrollTo({ top: 0, left: 0, behavior: "instant" }), []); // login nasce no topo
+  // Em bloco, sem devolver nada: nos Chromium novos `scrollTo` devolve uma
+  // Promise, e um efeito que a devolve vira "limpeza". O React tenta
+  // chamá-la ao desmontar e a tela quebra no Sair (achado do E2E local).
+  useEffect(() => { window.scrollTo({ top: 0, left: 0, behavior: "instant" }); }, []); // login nasce no topo
 
   useEffect(() => {
     let vivo = true;

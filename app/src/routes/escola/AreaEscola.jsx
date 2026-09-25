@@ -78,8 +78,11 @@ export default function AreaEscola({ perfil }) {
   const recarregarTudo = () => { recarregar(); recarregarExtra(); };
   const [credencial, setCredencial] = useState(null);
 
-  const aoTopo = () => window.scrollTo({ top: 0, left: 0, behavior: "instant" });
-  useEffect(aoTopo, []); // entrar no sistema = nascer no topo
+  // Em bloco, sem devolver nada: usado como efeito, o que ele devolvesse
+  // viraria a "limpeza", e nos Chromium novos scrollTo devolve Promise
+  // (ver AreaAluno.jsx; achado do E2E local).
+  const aoTopo = () => { window.scrollTo({ top: 0, left: 0, behavior: "instant" }); };
+  useEffect(() => { aoTopo(); }, []); // entrar no sistema = nascer no topo
 
   function irPara(t) { despacharNav({ tipo: "ir", tab: t }); aoTopo(); }
 

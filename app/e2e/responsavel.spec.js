@@ -1,7 +1,7 @@
 // @ts-check
 /* Responsável: experiência de LEITURA. Vê resumo, meta, desempenho e
    último simulado — e NÃO tem nenhum controle de edição/registro. */
-import { test, expect } from "@playwright/test";
+import { test, expect } from "./local/base.js";
 import { coletarErros, loginResponsavel, semEstouroHorizontal } from "./_apoio.js";
 
 test.beforeEach(async ({ page }) => {

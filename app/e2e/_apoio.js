@@ -1,25 +1,27 @@
 // @ts-check
 /* Apoio comum aos testes: credenciais do seed de demonstração,
    funções de login por papel e um guarda de erros de console. */
-import { expect } from "@playwright/test";
+import { expect } from "./local/base.js";
 
-// Credenciais provisionadas pelo seed (supabase/seed/04_usuarios_auth_dev.sql
-// e scripts/seed-auth-usuarios.mjs). Conferidas em auth.users no projeto de demo.
-//
-// Etapa 7 / BLOCO B1: o login por código passou a exigir DOIS campos
-// (código identifica, senha autentica). As contas de seed são anteriores
-// a essa mudança e têm senha = o próprio código (era o modelo antigo,
-// `password: normalizarCodigo(codigo)`) — por isso `senha` repete o
-// `codigo` aqui. Isso NÃO é o modelo novo: conta provisionada de hoje em
-// diante nasce com senha temporária própria e `must_change_password`.
-// Se o seed for regerado pelo fluxo novo, estas senhas mudam junto.
+// ETAPA 3: as contas vêm da fixture do E2E local (scripts/e2e/contas.mjs),
+// criadas pela API admin do Auth local em scripts/e2e/semear.mjs, com os
+// ids do seed 01. A senha só existe na stack descartável do runner.
+import { CONTAS as FIXTURE, SENHA_E2E, SENHA_NOVA_E2E } from "../../scripts/e2e/contas.mjs";
+
+const porEmail = (c) => ({ email: c.email, senha: SENHA_E2E, id: c.id });
+const porCodigo = (c) => ({ codigo: c.codigo, senha: SENHA_E2E, id: c.id, alunoId: c.alunoId });
 export const CONTAS = {
-  coordenacaoVitrine: { email: "coordenacao@vitrine.demo", senha: "vitrine-coord-2026" },
-  coordenacaoBeta: { email: "coordenacao@beta.demo", senha: "beta-coord-2026" },
-  alunoLucas: { codigo: "LUCASDEMO2026", senha: "LUCASDEMO2026" },     // Vitrine
-  alunoBruno: { codigo: "BRUNODEMO2026", senha: "BRUNODEMO2026" },     // Beta
-  responsavelLucas: { codigo: "RESPDEMO2026X", senha: "RESPDEMO2026X" }, // Vitrine
+  coordenacaoVitrine: porEmail(FIXTURE.coordVitrine),
+  coordenacaoBeta: porEmail(FIXTURE.coordBeta),
+  coordenacaoRecuperacao: porEmail(FIXTURE.coordRecuperacao),
+  superAdmin: porEmail(FIXTURE.superAdmin),
+  alunoLucas: porCodigo(FIXTURE.lucas),     // Vitrine
+  alunoBruno: porCodigo(FIXTURE.bruno),     // Beta
+  responsavelLucas: porCodigo(FIXTURE.respLucas), // Vitrine
+  responsavelBruno: porCodigo(FIXTURE.respBruno), // Beta
+  alunaTroca: porCodigo(FIXTURE.alunaTroca), // entra exigindo troca de senha
 };
+export { SENHA_E2E, SENHA_NOVA_E2E };
 
 // Erros de console que NÃO devem reprovar o teste (ruído conhecido e
 // inofensivo de libs de terceiros / ambiente). Tudo o mais reprova.
@@ -51,37 +53,45 @@ export async function semEstouroHorizontal(page) {
   expect(estoura, "não deve haver rolagem horizontal (estouro lateral)").toBe(false);
 }
 
-/** Campo de formulário pelo rótulo. Os <label> do app NÃO são
- *  associados ao input (sem htmlFor) — são irmãos no DOM, então o
- *  getByLabel não acha. Selecionamos o input vizinho do label.
- *  (Associar labels de verdade fica anotado como melhoria de a11y.) */
+/** Campo de formulário pelo rótulo. Desde a UX1 cada <label> tem
+ *  htmlFor apontando para o seu controle, então o rótulo acessível é o
+ *  caminho estável (o seletor antigo, "label + input", parou de casar
+ *  quando o campo ganhou ícone e passou meses sem ninguém ver, porque o
+ *  E2E ficava pulado). `exact` separa "Senha" de "Mostrar senha". */
 export function campo(page, rotulo) {
-  return page.locator(`label:has-text("${rotulo}") + input`).first();
+  return page.getByLabel(rotulo, { exact: true });
+}
+
+/** O botão de entrar da tela de login ("Entrar na missão"). */
+export function botaoEntrar(page) {
+  return page.getByRole("button", { name: /^Entrar na missão/ });
 }
 
 /** Botão VISÍVEL pelo nome. O menu existe duplicado no DOM (sidebar
  *  do desktop + barra inferior do celular; um deles sempre escondido
  *  por CSS) — sem o filtro de visibilidade o strict mode estoura. */
 export function botaoVisivel(page, nome) {
-  return page.getByRole("button", { name: nome, exact: true }).filter({ visible: true }).first();
+  // aba pode trazer um contador no nome ("Hoje 6"): casa o rótulo no começo
+  const alvo = typeof nome === "string" ? new RegExp(`^${nome.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}(\\s+\\d+)?$`) : nome;
+  return page.getByRole("button", { name: alvo }).filter({ visible: true }).first();
 }
 
 async function abrirLogin(page) {
   await page.goto("/");
-  await expect(page.getByRole("button", { name: "Entrar" })).toBeVisible();
+  await expect(botaoEntrar(page)).toBeVisible();
 }
 
 export async function loginCoordenacao(page, conta = CONTAS.coordenacaoVitrine) {
   await abrirLogin(page);
   await page.getByRole("button", { name: /Coordenação/ }).click();
-  await page.locator('input[type="email"]').fill(conta.email);
-  await page.locator('input[type="password"]').fill(conta.senha);
-  await page.getByRole("button", { name: "Entrar" }).click();
+  await campo(page, "E-mail").fill(conta.email);
+  await campo(page, "Senha").fill(conta.senha);
+  await botaoEntrar(page).click();
   // entrou: o cabeçalho da coordenação aparece
   await expect(page.getByText("Painel de gestão")).toBeVisible({ timeout: 15_000 });
 }
 
-async function loginPorCodigo(page, conta) {
+export async function loginPorCodigo(page, conta) {
   await abrirLogin(page);
   await page.getByRole("button", { name: /Aluno \/ Responsável/ }).click();
   // Seletor por rótulo (label "Código de acesso" + input). Antes usava
@@ -91,8 +101,8 @@ async function loginPorCodigo(page, conta) {
   // Etapa 7 / BLOCO B1: sem preencher a senha o botão fica DESABILITADO
   // (o gate `pronto` exige os dois campos) e o clique abaixo não faz nada
   // — foi exatamente assim que esta suíte quebrou ao virar o modelo.
-  await page.locator('input[type="password"]').fill(conta.senha);
-  await page.getByRole("button", { name: "Entrar" }).click();
+  await campo(page, "Senha").fill(conta.senha);
+  await botaoEntrar(page).click();
 }
 
 const soPath = (u) => { try { return new URL(u).pathname; } catch { return u; } };
@@ -112,7 +122,7 @@ export async function loginAluno(page, conta = CONTAS.alunoLucas) {
   await loginPorCodigo(page, conta);
   try {
     await expect(botaoVisivel(page, "Hoje")).toBeVisible({ timeout: 15_000 });
-  } catch (_e) {
+  } catch {
     const corpo = await page.locator("body").innerText().catch(() => "(sem corpo)");
     throw new Error(
       "[DIAG] aluno não mostrou 'Hoje'." +
@@ -128,9 +138,29 @@ export async function loginResponsavel(page, conta = CONTAS.responsavelLucas) {
   await expect(page.getByRole("button", { name: "Sair" })).toBeVisible({ timeout: 15_000 });
 }
 
+/** Texto visível + URL, para embutir na mensagem de erro: o log do CI
+ *  mostra a mensagem mesmo quando o artefato não pode ser aberto. */
+export async function retratoDaTela(page) {
+  const corpo = await page.locator("body").innerText().catch(() => "(sem corpo)");
+  return `[url] ${page.url()}\n[tela] ${String(corpo).replace(/\s+/g, " ").trim().slice(0, 600)}`;
+}
+
 export async function sair(page) {
-  await page.getByRole("button", { name: "Sair" }).click();
-  await expect(page.getByRole("button", { name: "Entrar" })).toBeVisible({ timeout: 15_000 });
+  const erros = [];
+  const aoConsole = (m) => { if (m.type() === "error") erros.push("console: " + m.text()); };
+  const aoErro = (e) => erros.push("pageerror: " + String(e?.stack || e).slice(0, 800));
+  page.on("console", aoConsole);
+  page.on("pageerror", aoErro);
+  try {
+    await page.getByRole("button", { name: "Sair" }).filter({ visible: true }).first().click();
+    await expect(botaoEntrar(page)).toBeVisible({ timeout: 15_000 });
+  } catch {
+    throw new Error("[DIAG] depois de Sair, a tela de login não voltou.\n" + await retratoDaTela(page) +
+      "\n[erros] " + (erros.join(" | ") || "(nenhum)"));
+  } finally {
+    page.off("console", aoConsole);
+    page.off("pageerror", aoErro);
+  }
 }
 
 /** Navega para uma aba pelo rótulo, funcionando tanto na sidebar do

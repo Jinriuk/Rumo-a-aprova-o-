@@ -9,10 +9,43 @@ schemas = ["public"]
 
 [db]
 port = 54322
-major_version = 15
+# Mesmo major do remoto: demo e produção estão em PostgreSQL 17.6
+# (select version(), 25/09/2026). A stack local do E2E (Etapa 3) sobe
+# com este valor.
+major_version = 17
+
+[db.seed]
+# O E2E semeia com scripts/e2e/semear.mjs, depois da trava de destino
+# (usuários pela API admin local, não por SQL em auth.users).
+enabled = false
+
+# ------------------------------------------------------------
+# Serviços que o app não usa ficam desligados na stack local: menos
+# imagem para baixar e menos tempo de subida no CI (Etapa 3).
+# ------------------------------------------------------------
+[studio]
+enabled = false
+
+[analytics]
+enabled = false
+
+[realtime]
+enabled = false
+
+[storage]
+enabled = false
+
+# Capturador de e-mail local (Mailpit): o e-mail de recuperação de
+# senha do E2E cai aqui e nunca sai da máquina.
+[local_smtp]
+enabled = true
+port = 54324
 
 [auth]
 enabled = true
+# só valem na stack local (E2E): o front é servido em 127.0.0.1:4173
+site_url = "http://127.0.0.1:4173"
+additional_redirect_urls = ["http://127.0.0.1:4173/redefinir-senha"]
 # login provisionado: ninguém se cadastra sozinho (aluno é menor;
 # coordenação é provisionada pelo operador)
 enable_signup = false
