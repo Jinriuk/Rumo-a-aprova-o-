@@ -26,9 +26,15 @@ const CONCORRENCIA_GERAR_META = 10;
 // entra na lista: é um estado válido (concurso sem trilha semanal), não
 // uma falha. Usa comConcorrenciaLimitada mesmo pro caso de 1 aluno, pra
 // não duplicar o try/catch nos três pontos de cadastro.
+//
+// Aluno sem trilha nem chega ao gerar-meta: não há meta a gerar, e a
+// chamada só voltava 422 "sem_trilha" no console (produção, 25/09/2026).
+// A meta dele nasce quando a coordenação atribui a trilha na lista ou na
+// ficha (ver trocarTrilha).
 async function gerarMetasEmLote(alunos) {
   const pendentes = [];
-  await comConcorrenciaLimitada(alunos, CONCORRENCIA_GERAR_META, async (a) => {
+  const comTrilha = alunos.filter((a) => a.trilha_id);
+  await comConcorrenciaLimitada(comTrilha, CONCORRENCIA_GERAR_META, async (a) => {
     try {
       await db.gerarMeta(a.id);
     } catch (e) {
@@ -468,7 +474,7 @@ export function NovosAlunos({ turmas, trilhas = [], concursos = [], aoMudar }) {
 // ────────────────────────────────────────────────────────────
 // Card wrapper para as seções de cadastro (aba "Alunos")
 // ────────────────────────────────────────────────────────────
-export function PainelCadastroAlunos({ turmas, trilhas = [], concursos = [], aoMudar }) {
+export function PainelCadastroAlunos({ turmas, trilhas = [], concursos = [], aoMudar, indisponivel = false }) {
   const T = useTema();
   const [aba, setAba] = useState("individual");
   // Colapsado por padrão (UX1.2): o formulário de cadastro não empurra
@@ -502,7 +508,17 @@ export function PainelCadastroAlunos({ turmas, trilhas = [], concursos = [], aoM
             <button type="button" style={tabS(aba === "individual")} onClick={() => setAba("individual")}>Individual</button>
             <button type="button" style={tabS(aba === "lote")} onClick={() => setAba("lote")}>Em lote</button>
           </div>
-          {aba === "individual"
+          {/* Sem turmas, concursos e trilhas carregados o formulário
+              cadastrava do mesmo jeito, com as listas vazias: o aluno
+              nascia sem concurso e sem trilha (produção, 25/09/2026, o
+              "Joao"). Enquanto a carga da escola estiver com erro, não
+              há cadastro. */}
+          {indisponivel ? (
+            <div role="status" style={{ fontSize: 13, color: T.sub, lineHeight: 1.5 }}>
+              As turmas, os concursos e as trilhas da escola não carregaram. Use “Tentar de novo” no aviso acima
+              antes de cadastrar; sem eles o aluno ficaria sem concurso e sem trilha.
+            </div>
+          ) : aba === "individual"
             ? <NovoAluno turmas={turmas} trilhas={trilhas} concursos={concursos} aoMudar={aoMudar} />
             : <NovosAlunos turmas={turmas} trilhas={trilhas} concursos={concursos} aoMudar={aoMudar} />
           }

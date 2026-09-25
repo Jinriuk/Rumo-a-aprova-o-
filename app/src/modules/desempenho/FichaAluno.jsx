@@ -70,7 +70,14 @@ export function FichaAluno({ aluno, concurso, turmas = [], concursos = [], trilh
       rotuloConfirmar: "Trocar",
     });
     if (!ok) return;
-    return comAcao(() => db.atualizarAluno(aluno.id, { trilha_id: trilhaId || null }));
+    // Mesma regra da lista (ListaAlunos.trocarTrilha): primeira trilha gera
+    // a meta da semana na hora.
+    const primeiraTrilha = !aluno.trilha_id && !!trilhaId;
+    return comAcao(async () => {
+      await db.atualizarAluno(aluno.id, { trilha_id: trilhaId || null });
+      if (!primeiraTrilha) return;
+      try { await db.gerarMeta(aluno.id); } catch (e) { aoMudar?.(); throw e; }
+    });
   };
   const credencialAluno = () => comAcao(async () => aoGerarCredencial?.(await db.provisionarAluno(aluno.id)));
   const { dados: carregado, carregando: carregandoDados, erro: erroDados } = useRecurso(
@@ -108,7 +115,32 @@ export function FichaAluno({ aluno, concurso, turmas = [], concursos = [], trilh
 
   if (carregandoTrilha || carregandoDados) return <CarregandoBloco titulo="Carregando a ficha do aluno…" cartoes={3} linhas={4} />;
   if (erroTrilha || erroDados) return <Erro>{erroTrilha || erroDados}</Erro>;
-  if (!trilha) return <Empty txt="Aluno sem trilha de estudo." />;
+  // Sem trilha a ficha não tem semana nem métrica para mostrar, mas a
+  // coordenação precisa de um jeito de dar a trilha daqui: antes esta tela
+  // só dizia "sem trilha" e a barra de ações (com o seletor) nunca aparecia
+  // justamente para esses alunos.
+  if (!trilha) return (
+    <SectionCard titulo="Aluno sem trilha de estudo">
+      {dialogo.elemento}
+      <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+        <div style={{ fontSize: 13, color: T.sub, lineHeight: 1.5 }}>
+          {aluno.nome} ainda não tem trilha, então não tem meta semanal. Ao definir a trilha, a meta desta semana é gerada na hora.
+        </div>
+        {trilhas.length > 0 ? (
+          <select value="" disabled={ocupado} onChange={(e) => trocarTrilha(e.target.value)}
+            onWheel={(e) => e.currentTarget.blur()} title="Trilha de estudo"
+            aria-label={`Definir trilha de estudo de ${aluno.nome}`}
+            style={{ background: T.bg, border: `1px solid ${T.line}`, color: T.ink, borderRadius: 8, padding: "8px 10px", minHeight: 40, fontSize: 13, maxWidth: 360 }}>
+            <option value="">Definir trilha de estudo…</option>
+            {trilhas.map((t) => <option key={t.id} value={t.id}>{t.nome}</option>)}
+          </select>
+        ) : (
+          <Empty txt="Nenhuma trilha publicada disponível." />
+        )}
+        {erroAcao && <Erro>{erroAcao}</Erro>}
+      </div>
+    </SectionCard>
+  );
   if (!m || !semanaAtiva) return <Empty txt="Fora do período da trilha deste aluno." />;
 
   const meta = dados.metas.find((x) => x.status === "ativa") ?? dados.metas[0] ?? null;
@@ -172,7 +204,7 @@ export function FichaAluno({ aluno, concurso, turmas = [], concursos = [], trilh
               {concursos.map((c) => <option key={c.id} value={c.id}>{c.nome}</option>)}
             </select>
           )}
-          {trilhas.length > 1 && (
+          {trilhas.length > 0 && (trilhas.length > 1 || !aluno.trilha_id) && (
             <select value={aluno.trilha_id ?? ""} disabled={ocupado} onChange={(e) => trocarTrilha(e.target.value)}
               onWheel={(e) => e.currentTarget.blur()} title="Trilha de estudo"
               aria-label={`Trilha de estudo de ${aluno.nome}`} style={selMini}>
