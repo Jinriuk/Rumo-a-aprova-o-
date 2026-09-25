@@ -2,3 +2,5 @@
 playwright-report/
 test-results/
 playwright/.cache/
+dist-e2e/
+e2e-resultados/

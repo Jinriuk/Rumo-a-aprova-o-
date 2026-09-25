@@ -126,6 +126,57 @@ jobs:
           fi
 
   # ------------------------------------------------------------
+  # E2E LOCAL (Etapa 3) — stack Supabase inteira no próprio runner
+  # (Docker + CLI fixada), sem projeto hospedado e sem segredo: Postgres
+  # 17 como o remoto, Auth, PostgREST, Edge Functions e o capturador de
+  # e-mail. Migrations + seeds + usuários pela API admin local, front
+  # buildado com `--mode e2e` (não lê o .env.production do demo). A
+  # trava (scripts/e2e/trava.mjs) recusa *.supabase.co e exige host
+  # local, id de execução e marcador da fixture antes de escrever.
+  # Ainda NÃO é obrigatório na proteção da main (Etapa 5).
+  # ------------------------------------------------------------
+  e2e-local:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      SUPABASE_CLI_VERSION: "2.118.0"
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: |
+            app/package-lock.json
+            tests/package-lock.json
+
+      - name: CLI do Supabase (versão fixada)
+        uses: supabase/setup-cli@v1
+        with:
+          version: ${{ env.SUPABASE_CLI_VERSION }}
+
+      - name: Dependências (app e tests) e Chromium do Playwright
+        run: |
+          (cd app && npm ci)
+          (cd tests && npm ci)
+          (cd app && npx playwright install --with-deps chromium)
+
+      - name: Stack local + banco + fixture + front + suíte
+        run: bash scripts/e2e/rodar.sh smoke
+
+      - name: Resultado da suíte (em falha)
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: e2e-local-resultados
+          path: |
+            app/e2e-resultados/relatorio/
+            app/e2e-resultados/resultados.json
+            app/e2e-resultados/rede.jsonl
+          retention-days: 7
+
+  # ------------------------------------------------------------
   # 2) GUARDA da E2E: decide se há ambiente ISOLADO configurado.
   #    Secrets não podem ir direto num `if:` de job — então um job
   #    leve traduz a presença do secret num output booleano.

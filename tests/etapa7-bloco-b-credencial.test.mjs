@@ -441,15 +441,20 @@ describe("suíte E2E — acompanhou o login de dois campos", () => {
     const m = apoio.match(/async function loginPorCodigo\(page, conta\) \{([\s\S]+?)\n\}/);
     assert.ok(m, "loginPorCodigo(page, conta) não encontrada — assinatura mudou?");
     assert.match(m[1], /campo\(page, "Código de acesso"\)\.fill\(conta\.codigo\)/);
-    assert.match(m[1], /input\[type="password"\][\s\S]{0,40}?\.fill\(conta\.senha\)/, "sem preencher a senha o botão fica desabilitado e o teste trava");
+    // o seletor mudou para o rótulo acessível ("Senha") na Etapa 3, quando o
+    // E2E passou a rodar de verdade na stack local
+    assert.match(m[1], /(input\[type="password"\]|campo\(page, "Senha"\))[\s\S]{0,40}?\.fill\(conta\.senha\)/, "sem preencher a senha o botão fica desabilitado e o teste trava");
   });
 
   it("toda conta por código em CONTAS tem senha", () => {
+    // Etapa 3: as contas vêm da fixture local (scripts/e2e/contas.mjs) por
+    // um construtor único; a senha tem de estar nele
+    assert.match(apoio, /const porCodigo = \(c\) => \(\{ codigo: c\.codigo, senha: SENHA_E2E/);
     const bloco = apoio.match(/export const CONTAS = \{([\s\S]+?)\n\};/);
     assert.ok(bloco, "bloco CONTAS não encontrado");
     for (const linha of bloco[1].split("\n")) {
-      if (!linha.includes("codigo:")) continue;
-      assert.match(linha, /senha:/, `conta por código sem senha: ${linha.trim()}`);
+      if (!linha.includes("codigo:") && !linha.includes("porCodigo(")) continue;
+      assert.match(linha, /senha:|porCodigo\(/, `conta por código sem senha: ${linha.trim()}`);
     }
   });
 });

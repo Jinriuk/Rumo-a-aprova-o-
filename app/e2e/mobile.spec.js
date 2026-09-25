@@ -1,7 +1,7 @@
 // @ts-check
 /* Mobile (projeto "mobile", ~390px): sem estouro horizontal em cada
    papel e barra de navegação inferior presente para aluno/coordenação. */
-import { test, expect } from "@playwright/test";
+import { test, expect } from "./local/base.js";
 import {
   CONTAS, coletarErros, loginAluno, loginResponsavel, loginCoordenacao, semEstouroHorizontal, botaoVisivel,
 } from "./_apoio.js";

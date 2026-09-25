@@ -1,46 +1,57 @@
 // @ts-check
-/* Fase 14.5 — Suíte E2E de estabilização (antes da Fase 15).
-   Dirige o app REAL (build de produção via `vite preview`) contra o
-   Supabase de demonstração. Sem mock: login real, RLS real, dados
-   reais do seed (Vitrine + Beta). Os fluxos de escrita ou são apenas
-   de validação (não salvam) ou restauram o estado depois.
+/* ETAPA 3 — E2E contra a stack Supabase LOCAL e descartável.
+   Nenhum projeto hospedado: o front é o build `--mode e2e`
+   (scripts/e2e/front.sh → app/dist-e2e), que só conhece a URL local,
+   e o globalSetup roda a trava de destino (host local, sem
+   *.supabase.co, id de execução, marcador da fixture no banco) antes
+   de qualquer teste.
 
-   Pré-requisito de browser (uma vez):  npm run test:e2e:install
-   Rodar:                               npm run test:e2e            */
+   Subir tudo e rodar:  bash scripts/e2e/rodar.sh
+   (stack → banco → fixture → front → esta suíte). Ver
+   docs/operacao/e2e-ambiente.md.
+
+   Projetos: desktop e mobile (navegador) e http (casos da camada_http
+   da matriz de autorização, só API). Artefatos sem trace nem vídeo: o
+   trace guarda cabeçalhos com o token e o localStorage com a sessão. */
 import { defineConfig, devices } from "@playwright/test";
 
 const PORT = 4173;
-const baseURL = `http://localhost:${PORT}`;
+const baseURL = `http://127.0.0.1:${PORT}`;
+const executablePath = process.env.PW_CHROMIUM_PATH || undefined; // só em máquina sem o Chromium da versão
 
 export default defineConfig({
   testDir: "./e2e",
-  // o seed é compartilhado: rodar serial evita corrida em escritas/restauros
+  globalSetup: "./e2e/local/setup-global.js",
   fullyParallel: false,
   workers: 1,
   forbidOnly: !!process.env.CI,
-  retries: process.env.CI ? 1 : 0,
-  reporter: [["list"], ["html", { open: "never", outputFolder: "playwright-report" }]],
-  timeout: 30_000,
+  retries: 0,
+  reporter: [
+    ["list"],
+    ["json", { outputFile: "e2e-resultados/resultados.json" }],
+    ["html", { open: "never", outputFolder: "e2e-resultados/relatorio" }],
+  ],
+  outputDir: "e2e-resultados/saida",
+  timeout: 45_000,
   expect: { timeout: 10_000 },
   use: {
     baseURL,
-    // Fase 17 — evidência em qualquer falha (não só na 1ª retry):
-    // trace + vídeo + screenshot ficam anexados ao relatório/artefato.
-    trace: "retain-on-failure",
-    video: "retain-on-failure",
+    trace: "off",
+    video: "off",
     screenshot: "only-on-failure",
     locale: "pt-BR",
     timezoneId: "America/Sao_Paulo",
+    launchOptions: { executablePath },
   },
   projects: [
-    { name: "desktop", use: { ...devices["Desktop Chrome"], viewport: { width: 1366, height: 900 } } },
-    { name: "mobile", use: { ...devices["Pixel 7"] } }, // ~390px de largura
+    { name: "http", testMatch: /http\/.*\.spec\.js/ },
+    { name: "desktop", testIgnore: /http\//, use: { ...devices["Desktop Chrome"], viewport: { width: 1366, height: 900 } } },
+    { name: "mobile", testIgnore: /http\//, testMatch: /(mobile|jornada-mobile)\.spec\.js/, use: { ...devices["Pixel 7"] } },
   ],
-  // sobe o preview sozinho; reaproveita se já estiver no ar
   webServer: {
-    command: "npm run build && npm run preview -- --port " + PORT,
+    command: `npx vite preview --outDir dist-e2e --port ${PORT} --host 127.0.0.1 --strictPort`,
     url: baseURL,
     reuseExistingServer: !process.env.CI,
-    timeout: 120_000,
+    timeout: 60_000,
   },
 });

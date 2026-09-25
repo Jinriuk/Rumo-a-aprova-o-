@@ -7,7 +7,7 @@
 
    Pré-condição: migration 0022 aplicada + backfill executado.
    Roda contra o banco de demo real (sem mock). */
-import { test, expect } from "@playwright/test";
+import { test, expect } from "./local/base.js";
 import {
   coletarErros,
   loginCoordenacao,

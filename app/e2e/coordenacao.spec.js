@@ -1,7 +1,7 @@
 // @ts-check
 /* Coordenação: painel, navegação pelas abas, abrir aluno, ranking,
    LGPD e persistência da MARCA (altera e restaura o nome de exibição). */
-import { test, expect } from "@playwright/test";
+import { test, expect } from "./local/base.js";
 import { CONTAS, coletarErros, loginCoordenacao, irParaAba, semEstouroHorizontal, campo } from "./_apoio.js";
 
 test.beforeEach(async ({ page }) => {
