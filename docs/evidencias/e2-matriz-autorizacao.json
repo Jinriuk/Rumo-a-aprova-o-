@@ -13,8 +13,11 @@
     },
     "camada_http": {
       "casos": 15,
-      "provados": 0,
-      "pendente_e3": 15
+      "provados": 13,
+      "registrados": 1,
+      "parciais": 1,
+      "divergentes": 0,
+      "pendente_e3": 0
     }
   },
   "personas": {
@@ -8211,7 +8214,12 @@
       "esperado": "406 PGRST106 listando só os schemas expostos (sem app)",
       "motivo": "prova que as funções app.* com EXECUTE para authenticated não são alcançáveis pela API",
       "camada": "http",
-      "observado": "PENDENTE-E3"
+      "observado": "negado",
+      "classe": "provado",
+      "status_http": 406,
+      "detalhe": "PGRST106: Invalid schema: app",
+      "medido_em": "2026-09-25T23:46:40.565Z",
+      "execucao": "stack Supabase local e descartável (Etapa 3, app/e2e/http/camada-http.spec.js)"
     },
     {
       "id": "H.postgrest.rpc_app_backfill",
@@ -8221,7 +8229,12 @@
       "esperado": "406 (schema não exposto)",
       "motivo": "mesmo ponto, pelo caminho de escrita",
       "camada": "http",
-      "observado": "PENDENTE-E3"
+      "observado": "negado",
+      "classe": "provado",
+      "status_http": 406,
+      "detalhe": "PGRST106: Invalid schema: app; eventos inalterados",
+      "medido_em": "2026-09-25T23:46:40.747Z",
+      "execucao": "stack Supabase local e descartável (Etapa 3, app/e2e/http/camada-http.spec.js)"
     },
     {
       "id": "H.auth.login_por_persona",
@@ -8231,7 +8244,12 @@
       "esperado": "token com as claims da fixture",
       "motivo": "a camada banco simula as claims; aqui elas precisam vir do Auth",
       "camada": "http",
-      "observado": "PENDENTE-E3"
+      "observado": "conforme",
+      "classe": "provado",
+      "status_http": 200,
+      "detalhe": "17 personas com login real e claims app_metadata.{escola_id,papel} iguais às da fixture (coordA, coordB, coordS, coordX, coordFantasma, coordRebaixada, alunoA1, alunoA2, alunoB1, alunoS1, alunoX1, respA1, respSemVinculo, respRevogado, superAdminFalso, superAdminInativo, superAdmin)",
+      "medido_em": "2026-09-25T23:46:42.441Z",
+      "execucao": "stack Supabase local e descartável (Etapa 3, app/e2e/http/camada-http.spec.js)"
     },
     {
       "id": "H.postgrest.matriz_tabelas",
@@ -8241,7 +8259,12 @@
       "esperado": "mesmo esperado da camada banco; hash das tabelas conferido depois",
       "motivo": "a RLS é a mesma, mas o corpo da requisição e o filtro vêm do cliente",
       "camada": "http",
-      "observado": "PENDENTE-E3"
+      "observado": "conforme",
+      "classe": "provado",
+      "status_http": null,
+      "detalhe": "174 casos por HTTP (162 negações com hash conferido, 12 controles positivos); 0 divergentes; 0 sem tradução. À parte: PATCH na própria escola com representação completa (select=*) dá 403 42501 e não grava, porque a 0058 esconde observacao/contato_nome; o app pede select=id e não é afetado",
+      "medido_em": "2026-09-25T23:46:43.906Z",
+      "execucao": "stack Supabase local e descartável (Etapa 3, app/e2e/http/camada-http.spec.js)"
     },
     {
       "id": "H.postgrest.upsert_on_conflict",
@@ -8251,7 +8274,12 @@
       "esperado": "401/403 ou 0 linhas, sem mudar a linha da B",
       "motivo": "UPSERT pela API usa o mesmo caminho do caso T.*.upsert_id_B",
       "camada": "http",
-      "observado": "PENDENTE-E3"
+      "observado": "negado",
+      "classe": "provado",
+      "status_http": null,
+      "detalhe": "turmas: 403 42501; alunos: 403 42501; escolas: 403 42501; hash das tabelas igual",
+      "medido_em": "2026-09-25T23:46:43.941Z",
+      "execucao": "stack Supabase local e descartável (Etapa 3, app/e2e/http/camada-http.spec.js)"
     },
     {
       "id": "H.edge.escola_parada",
@@ -8261,7 +8289,12 @@
       "esperado": "403 escola_nao_operacional, sem efeito (depois do redeploy do #145)",
       "motivo": "a chave de serviço ignora a RLS: sem o porteiro, a suspensão não valia nas Edge Functions (Fatia 7)",
       "camada": "http",
-      "observado": "PENDENTE-E3"
+      "observado": "negado",
+      "classe": "provado",
+      "status_http": 403,
+      "detalhe": "coordS/gerar-meta: 403; coordS/lgpd-titular: 403; coordS/provisionar-aluno: 403; coordS/revogar-responsavel: 403; coordX/gerar-meta: 403; coordX/lgpd-titular: 403; coordX/provisionar-aluno: 403; coordX/revogar-responsavel: 403; estado escola_nao_operacional, sem efeito",
+      "medido_em": "2026-09-25T23:46:44.955Z",
+      "execucao": "stack Supabase local e descartável (Etapa 3, app/e2e/http/camada-http.spec.js)"
     },
     {
       "id": "H.edge.sem_bearer",
@@ -8271,7 +8304,12 @@
       "esperado": "401, sem efeito",
       "motivo": "verify_jwt=false nas 7: a checagem é do código",
       "camada": "http",
-      "observado": "PENDENTE-E3"
+      "observado": "negado",
+      "classe": "provado",
+      "status_http": null,
+      "detalhe": "gerar-meta 401; virar-semana 403; provisionar-aluno 401; lgpd-titular 401; backoffice-coordenador 403; revogar-responsavel 401; trocar-senha 401; sem efeito. virar-semana e backoffice-coordenador dão 403 (porteiro próprio: chave de serviço / super admin), não 401",
+      "medido_em": "2026-09-25T23:46:45.468Z",
+      "execucao": "stack Supabase local e descartável (Etapa 3, app/e2e/http/camada-http.spec.js)"
     },
     {
       "id": "H.edge.bearer_malformado",
@@ -8281,7 +8319,12 @@
       "esperado": "401, sem efeito e sem detalhe interno",
       "motivo": "idem",
       "camada": "http",
-      "observado": "PENDENTE-E3"
+      "observado": "negado",
+      "classe": "provado",
+      "status_http": null,
+      "detalhe": "gerar-meta 401; virar-semana 403; provisionar-aluno 401; lgpd-titular 401; backoffice-coordenador 403; revogar-responsavel 401; trocar-senha 401; sem efeito e sem detalhe interno no corpo",
+      "medido_em": "2026-09-25T23:46:45.577Z",
+      "execucao": "stack Supabase local e descartável (Etapa 3, app/e2e/http/camada-http.spec.js)"
     },
     {
       "id": "H.edge.token_expirado",
@@ -8291,7 +8334,12 @@
       "esperado": "401",
       "motivo": "idem",
       "camada": "http",
-      "observado": "PENDENTE-E3"
+      "observado": "negado",
+      "classe": "provado",
+      "status_http": 401,
+      "detalhe": "controle com exp futuro: gerar-meta 400 (passa do porteiro); com exp no passado: gerar-meta 401; virar-semana 403; provisionar-aluno 401; lgpd-titular 401; backoffice-coordenador 403; revogar-responsavel 401; trocar-senha 401",
+      "medido_em": "2026-09-25T23:46:45.718Z",
+      "execucao": "stack Supabase local e descartável (Etapa 3, app/e2e/http/camada-http.spec.js)"
     },
     {
       "id": "H.edge.outro_tenant",
@@ -8301,7 +8349,12 @@
       "esperado": "403/404 sem efeito",
       "motivo": "identidade tem que vir do token, não do payload",
       "camada": "http",
-      "observado": "PENDENTE-E3"
+      "observado": "negado",
+      "classe": "provado",
+      "status_http": null,
+      "detalhe": "provisionar-aluno/responsavel 404; provisionar-aluno/resetar-senha 404; provisionar-aluno/revogar-credencial 404; gerar-meta 404; lgpd-titular/exportar 404; lgpd-titular/excluir 404; revogar-responsavel 404; backoffice-coordenador 403; sem efeito",
+      "medido_em": "2026-09-25T23:46:46.183Z",
+      "execucao": "stack Supabase local e descartável (Etapa 3, app/e2e/http/camada-http.spec.js)"
     },
     {
       "id": "H.edge.metodo_errado",
@@ -8311,7 +8364,12 @@
       "esperado": "405",
       "motivo": "idem",
       "camada": "http",
-      "observado": "PENDENTE-E3"
+      "observado": "negado",
+      "classe": "provado",
+      "status_http": 405,
+      "detalhe": "21 chamadas, todas 405",
+      "medido_em": "2026-09-25T23:46:46.305Z",
+      "execucao": "stack Supabase local e descartável (Etapa 3, app/e2e/http/camada-http.spec.js)"
     },
     {
       "id": "H.edge.options_cors",
@@ -8321,7 +8379,12 @@
       "esperado": "cabeçalhos CORS só para a permitida",
       "motivo": "C-S02",
       "camada": "http",
-      "observado": "PENDENTE-E3"
+      "observado": "conforme",
+      "classe": "provado",
+      "status_http": 200,
+      "detalhe": "7 funções direto no Edge Runtime: http://127.0.0.1:4173 recebe Access-Control-Allow-Origin; http://localhost:5173, https://evil.example, https://app.trilivaedu.com.br, https://rumo-a-aprova-o-git-x-jinriuk.vercel.app não recebem. Pelo Kong LOCAL o preflight volta \"*\" (plugin de CORS da CLI, não existe no hospedado da mesma forma: conferir lá na Etapa 5)",
+      "medido_em": "2026-09-25T23:46:46.456Z",
+      "execucao": "stack Supabase local e descartável (Etapa 3, app/e2e/http/camada-http.spec.js)"
     },
     {
       "id": "H.auth.sessao_revogada",
@@ -8331,7 +8394,12 @@
       "esperado": "leitura do aluno negada já (vínculo); refresh: comportamento a registrar",
       "motivo": "claims antigas: a camada banco mostra só a parte que depende do vínculo",
       "camada": "http",
-      "observado": "PENDENTE-E3"
+      "observado": "negado",
+      "classe": "provado",
+      "status_http": null,
+      "detalhe": "leitura do aluno negada já com o access token anterior (0 linhas); refresh depois da revogação: 200 (a conta segue ativa: revogar o vínculo não encerra a sessão), e o token novo também lê 0 linhas",
+      "medido_em": "2026-09-25T23:46:46.930Z",
+      "execucao": "stack Supabase local e descartável (Etapa 3, app/e2e/http/camada-http.spec.js)"
     },
     {
       "id": "H.auth.refresh_reemite_claims",
@@ -8341,7 +8409,12 @@
       "esperado": "registrar se o token novo ainda diz coordenacao (app_metadata não muda com usuarios)",
       "motivo": "decide se a janela é 3600 s ou indefinida",
       "camada": "http",
-      "observado": "PENDENTE-E3"
+      "observado": "janela_indefinida",
+      "classe": "registrado",
+      "status_http": 200,
+      "detalhe": "refresh 200; o token novo diz papel=coordenacao (app_metadata não acompanha usuarios.papel) e lê 1 aluno(s) da A: a janela não é 3600 s, dura enquanto o app_metadata não for trocado no Auth",
+      "medido_em": "2026-09-25T23:46:47.040Z",
+      "execucao": "stack Supabase local e descartável (Etapa 3, app/e2e/http/camada-http.spec.js)"
     },
     {
       "id": "H.auth.login_codigo_limite",
@@ -8351,7 +8424,12 @@
       "esperado": "limite e resposta anti-enumeração",
       "motivo": "complemento G, fatia 7",
       "camada": "http",
-      "observado": "PENDENTE-E3"
+      "observado": "parcial",
+      "classe": "parcial",
+      "status_http": 400,
+      "detalhe": "anti-enumeração: código inexistente e senha errada dão 400 invalid_credentials com a mesma mensagem. Limite: 40 tentativas seguidas → nenhum 429. Na stack local o GoTrue não limita /token porque a CLI não define GOTRUE_RATE_LIMIT_HEADER; o limite do hospedado não é observável aqui e fica para a Etapa 5.",
+      "medido_em": "2026-09-25T23:46:47.515Z",
+      "execucao": "stack Supabase local e descartável (Etapa 3, app/e2e/http/camada-http.spec.js)"
     }
   ]
 }

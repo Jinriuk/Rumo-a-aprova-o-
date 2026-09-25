@@ -8,7 +8,7 @@
 // ============================================================
 import test from "node:test";
 import assert from "node:assert/strict";
-import { conferirDestino, criarMarcador, conferirMarcador, FIXTURE } from "../scripts/e2e/trava.mjs";
+import { conferirDestino, criarMarcador, conferirMarcador, FIXTURE, urlsDoAmbiente } from "../scripts/e2e/trava.mjs";
 import { pool } from "./identidades.mjs";
 
 test.after(async () => { await pool.end(); });
@@ -37,6 +37,18 @@ test("trava: projeto hospedado é recusado sempre, mesmo declarado como interno"
 test("trava: host que não é local nem interno declarado é recusado", () => {
   assert.throws(() => conferirDestino({ urls: { ...LOCAL, E2E_API_URL: "http://10.0.0.8:54321" }, runId: "gh-1-1" }), /não é local nem interno/);
   assert.throws(() => conferirDestino({ urls: { ...LOCAL, E2E_MAIL_URL: "https://mail.example.com" }, runId: "gh-1-1" }), /não é local nem interno/);
+});
+
+test("trava: o Edge Runtime direto (E2E_EDGE_URL) passa pela mesma regra quando existe", () => {
+  // ausente: não entra na conferência (stack sem o container achado)
+  assert.equal("E2E_EDGE_URL" in urlsDoAmbiente(LOCAL), false);
+  // presente: IP do container, só com ele declarado como interno
+  const comEdge = urlsDoAmbiente({ ...LOCAL, E2E_EDGE_URL: "http://172.18.0.7:8081" });
+  assert.throws(() => conferirDestino({ urls: comEdge, runId: "gh-1-1" }), /E2E_EDGE_URL aponta para 172\.18\.0\.7/);
+  conferirDestino({ urls: comEdge, runId: "gh-1-1", internos: ["172.18.0.7"] });
+  // e nunca um projeto hospedado, nem declarado
+  const hospedado = urlsDoAmbiente({ ...LOCAL, E2E_EDGE_URL: "https://zckyhihxjjbnqjqilymn.supabase.co/functions/v1" });
+  assert.throws(() => conferirDestino({ urls: hospedado, runId: "gh-1-1", internos: ["zckyhihxjjbnqjqilymn.supabase.co"] }), /recusado sempre/);
 });
 
 test("trava: sem id de execução, ou com URL ausente, não há E2E", () => {

@@ -27,6 +27,8 @@ RAIZ="$(cd "$(dirname "$0")/../.." && pwd)"
 W="${E2E_WORKDIR:-${RUNNER_TEMP:-/tmp}/triliva-e2e-stack}"
 SUPA="${SUPABASE_BIN:-supabase}"
 ENV_OUT="$W/local.env"
+# nome dos containers: supabase_<serviço>_<project_id do config.toml>
+PROJETO="$(sed -n 's/^project_id *= *"\(.*\)"/\1/p' "$RAIZ/supabase/config.toml" | head -1)"
 
 preparar_workdir() {
   rm -rf "$W/supabase"
@@ -80,6 +82,17 @@ gravar_env() {
     echo "E2E_SERVICE_ROLE_KEY=${SERVICE_ROLE_KEY}"
     echo "E2E_MAIL_URL=${INBUCKET_URL:-${MAILPIT_URL:-http://127.0.0.1:54324}}"
     echo "E2E_FUNCTIONS_URL=${API_URL}/functions/v1"
+    # O Edge Runtime direto, sem o Kong: o Kong local responde o preflight
+    # com CORS "*" antes do código das funções, e o caso H.edge.options_cors
+    # precisa da resposta DELAS. O IP é o do container desta stack, na
+    # rede do Docker, e entra como host interno declarado para a trava.
+    local ip_edge
+    ip_edge="$(docker inspect "supabase_edge_runtime_${PROJETO}" \
+      --format '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' 2>/dev/null | head -c 64)"
+    if [ -n "$ip_edge" ]; then
+      echo "E2E_EDGE_URL=http://${ip_edge}:8081"
+      echo "E2E_HOSTS_INTERNOS=${ip_edge}"
+    fi
   } > "$ENV_OUT"
   rm -f "$W/status.env"
   echo "ambiente da stack: $ENV_OUT"
@@ -102,6 +115,8 @@ case "${1:-}" in
     esperar "Auth (GoTrue)" curl -fsS "$E2E_API_URL/auth/v1/health" -H "apikey: $E2E_ANON_KEY"
     esperar "API (PostgREST)" curl -fsS "$E2E_API_URL/rest/v1/" -H "apikey: $E2E_ANON_KEY"
     esperar "capturador de e-mail" curl -fsS "$E2E_MAIL_URL/api/v1/messages"
+    # a primeira requisição compila as funções: espera responderem de fato
+    esperar "Edge Functions" curl -fsS -X OPTIONS "$E2E_FUNCTIONS_URL/gerar-meta"
     ;;
   parar)
     "$SUPA" stop --workdir "$W" --no-backup || true

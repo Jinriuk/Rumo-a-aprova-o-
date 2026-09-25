@@ -43,6 +43,14 @@ try {
        on conflict (id) do nothing`, [c.id, c.escola, c.papel, c.nome, c.email]);
   }
 
+  // 4b. vínculos que só o E2E precisa (idempotente pelo unique do par)
+  for (const c of Object.values(CONTAS)) {
+    if (!c.vinculoCom) continue;
+    await db.query(
+      `insert into vinculos_responsaveis (escola_id, responsavel_id, aluno_id) values ($1, $2, $3)
+       on conflict (responsavel_id, aluno_id) do nothing`, [c.escola, c.id, c.vinculoCom]);
+  }
+
   // 3. usuários no Auth local, pela API admin
   const admin = createClient(env.E2E_API_URL, env.E2E_SERVICE_ROLE_KEY, { auth: { persistSession: false } });
   const todas = { ...CONTAS, ...PERSONAS_HTTP };

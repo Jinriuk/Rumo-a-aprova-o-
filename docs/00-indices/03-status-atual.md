@@ -44,7 +44,7 @@ ganhou motor **e** porta na coordenação.
 
 | Métrica | Valor | Como foi obtido |
 |---|---|---|
-| Testes | **1159 / 1159 verdes** | medido em 25/09 (Etapa 3: trava de destino do E2E local e guarda de efeito sem retorno implícito) — `bash reset-db.sh && npm test` em Postgres 16 local dedicado (migrations + seed 2×), com `PGHOST=127.0.0.1` (a matriz de autorização recusa socket) |
+| Testes | **1160 / 1160 verdes** | medido em 25/09 (Etapa 3: jornadas E2E; trava de destino com o Edge Runtime direto) — `bash reset-db.sh && npm test` em Postgres 16 local dedicado (migrations + seed 2×), com `PGHOST=127.0.0.1` (a matriz de autorização recusa socket) |
 | Arquivos de teste | **110** (116 `.mjs` em `tests/`; 6 são apoio, sem `node:test`: `identidades.mjs`, `calendario-cn.mjs`, os dois da matriz e os dois da guarda de embed ambíguo, `embeds-postgrest.mjs` e `embeds-fks-multiplas.mjs`) | medido em 25/09 (Etapa 3: guarda de efeito sem retorno implícito) — `grep -l 'node:test' tests/*.mjs \| wc -l` |
 | Lint | **0 errors / 256 warnings** | medido — `cd app && npm run lint` |
 | Build de produção | **verde** | medido — `cd app && npm run build` |

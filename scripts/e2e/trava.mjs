@@ -19,7 +19,8 @@
 // Uso:  node scripts/e2e/trava.mjs destino   (1 a 3)
 //       node scripts/e2e/trava.mjs marcar    (1 a 3 + cria o marcador)
 //       node scripts/e2e/trava.mjs conferir  (1 a 4)
-// Lê E2E_API_URL, E2E_DB_URL, E2E_FUNCTIONS_URL, E2E_MAIL_URL, E2E_RUN_ID.
+// Lê E2E_API_URL, E2E_DB_URL, E2E_FUNCTIONS_URL, E2E_MAIL_URL, E2E_RUN_ID
+// e, quando existe, E2E_EDGE_URL (o Edge Runtime direto, sem o Kong).
 // ============================================================
 import { fileURLToPath } from "node:url";
 
@@ -63,6 +64,9 @@ export function urlsDoAmbiente(env = process.env) {
     E2E_DB_URL: env.E2E_DB_URL,
     E2E_FUNCTIONS_URL: env.E2E_FUNCTIONS_URL,
     E2E_MAIL_URL: env.E2E_MAIL_URL,
+    // opcional: só existe quando o stack.sh achou o container; se existir,
+    // passa pela mesma regra (local ou interno declarado, nunca hospedado)
+    ...(env.E2E_EDGE_URL ? { E2E_EDGE_URL: env.E2E_EDGE_URL } : {}),
   };
 }
 

@@ -162,8 +162,8 @@ jobs:
           (cd tests && npm ci)
           (cd app && npx playwright install --with-deps chromium)
 
-      - name: Stack local + banco + fixture + front + suíte
-        run: bash scripts/e2e/rodar.sh smoke
+      - name: Stack local + banco + fixture + front + suíte inteira (jornadas e camada_http)
+        run: bash scripts/e2e/rodar.sh
 
       - name: Resultado da suíte (em falha)
         if: failure()

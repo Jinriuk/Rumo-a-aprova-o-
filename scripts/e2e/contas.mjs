@@ -33,6 +33,14 @@ export const CONTAS = {
   respBruno: { id: "bbbbbbbb-0000-4000-8000-000000000003", codigo: "RESPBETA2026XX", escola: BETA, papel: "responsavel", nome: "Responsável do Bruno" },
   // aluna da vitrine (seed 13) que entra exigindo troca de senha
   alunaTroca: { id: "aaaaaaaa-1111-4111-8111-000000000002", codigo: "E2ETROCA2026X", escola: VITRINE, papel: "aluno", nome: "Maria Eduarda Santana", trocaObrigatoria: true },
+  // alunos da vitrine (seed 13, com meta ativa) dedicados às jornadas que
+  // ESCREVEM: a do aluno (concluir objetivo, registro, simulado) e a de
+  // concorrência. Assim o Lucas, que o responsável lê, fica como o seed fez.
+  alunoJornada: { id: "aaaaaaaa-1111-4111-8111-000000000037", codigo: "E2EIGOR2026XX", escola: VITRINE, papel: "aluno", nome: "Igor Fonseca Macedo", alunoId: "a0000000-0000-4000-8000-000000000037" },
+  alunoConcorrencia: { id: "aaaaaaaa-1111-4111-8111-000000000030", codigo: "E2ENATHALIA26", escola: VITRINE, papel: "aluno", nome: "Nathalia Freitas Campos", alunoId: "a0000000-0000-4000-8000-000000000030" },
+  // responsável dedicado à revogação: vinculado ao Lucas pela fixture; a
+  // jornada revoga pela tela da coordenação e o afterAll refaz o vínculo
+  respRevogacao: { id: "e3000000-0000-4000-8000-000000000002", codigo: "E2ERESPREV26X", escola: VITRINE, papel: "responsavel", nome: "E2E Responsável Revogação", criarUsuario: true, vinculoCom: "a0000000-0000-4000-8000-000000000001" },
   // coordenação extra da vitrine só para a recuperação por e-mail
   coordRecuperacao: { id: "e3000000-0000-4000-8000-000000000001", email: "recuperacao@vitrine.e2e.local", escola: VITRINE, papel: "coordenacao", nome: "E2E Coordenação Recuperação", criarUsuario: true },
   // super admin do backoffice (linha em internal_admins vem da fixture da matriz)
