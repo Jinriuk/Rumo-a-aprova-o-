@@ -146,11 +146,20 @@ export async function retratoDaTela(page) {
 }
 
 export async function sair(page) {
-  await page.getByRole("button", { name: "Sair" }).filter({ visible: true }).first().click();
+  const erros = [];
+  const aoConsole = (m) => { if (m.type() === "error") erros.push("console: " + m.text()); };
+  const aoErro = (e) => erros.push("pageerror: " + String(e?.stack || e).slice(0, 800));
+  page.on("console", aoConsole);
+  page.on("pageerror", aoErro);
   try {
+    await page.getByRole("button", { name: "Sair" }).filter({ visible: true }).first().click();
     await expect(botaoEntrar(page)).toBeVisible({ timeout: 15_000 });
   } catch {
-    throw new Error("[DIAG] depois de Sair, a tela de login não voltou.\n" + await retratoDaTela(page));
+    throw new Error("[DIAG] depois de Sair, a tela de login não voltou.\n" + await retratoDaTela(page) +
+      "\n[erros] " + (erros.join(" | ") || "(nenhum)"));
+  } finally {
+    page.off("console", aoConsole);
+    page.off("pageerror", aoErro);
   }
 }
 
