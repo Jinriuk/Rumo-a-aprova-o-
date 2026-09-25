@@ -29,7 +29,6 @@ const admin = createClient(
 // `supabase functions deploy` quanto o MCP com os arquivos _shared/ no
 // payload resolvem este import relativo.
 import { buildCorsHeaders as corsHeaders } from "../_shared/cors.ts";
-import { escolaOperacional, RESPOSTA_ESCOLA_PARADA } from "../_shared/escola.ts";
 
 async function chamador(req: Request) {
   const auth = req.headers.get("authorization") ?? "";
@@ -99,10 +98,6 @@ Deno.serve(async (req) => {
       papel = "superadmin";
     } else if (quem.papel !== "coordenacao") {
       return json({ error: "só a coordenação revoga acesso" }, 403);
-    } else if (!(await escolaOperacional(admin, quem.escola_id))) {
-      // coordenação de escola parada não revoga por aqui; o super_admin,
-      // pelo ramo de cima, continua podendo
-      return json(RESPOSTA_ESCOLA_PARADA, 403);
     } else {
       executorId = quem.id;
       escolaFiltro = quem.escola_id;
