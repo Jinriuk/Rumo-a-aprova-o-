@@ -138,9 +138,20 @@ export async function loginResponsavel(page, conta = CONTAS.responsavelLucas) {
   await expect(page.getByRole("button", { name: "Sair" })).toBeVisible({ timeout: 15_000 });
 }
 
+/** Texto visível + URL, para embutir na mensagem de erro: o log do CI
+ *  mostra a mensagem mesmo quando o artefato não pode ser aberto. */
+export async function retratoDaTela(page) {
+  const corpo = await page.locator("body").innerText().catch(() => "(sem corpo)");
+  return `[url] ${page.url()}\n[tela] ${String(corpo).replace(/\s+/g, " ").trim().slice(0, 600)}`;
+}
+
 export async function sair(page) {
-  await page.getByRole("button", { name: "Sair" }).click();
-  await expect(botaoEntrar(page)).toBeVisible({ timeout: 15_000 });
+  await page.getByRole("button", { name: "Sair" }).filter({ visible: true }).first().click();
+  try {
+    await expect(botaoEntrar(page)).toBeVisible({ timeout: 15_000 });
+  } catch {
+    throw new Error("[DIAG] depois de Sair, a tela de login não voltou.\n" + await retratoDaTela(page));
+  }
 }
 
 /** Navega para uma aba pelo rótulo, funcionando tanto na sidebar do
