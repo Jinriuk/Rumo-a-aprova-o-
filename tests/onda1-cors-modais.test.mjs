@@ -219,3 +219,76 @@ test("T44: o modal de vínculos é um diálogo nomeado, não uma div anônima", 
   assert.match(src, /aria-labelledby=\{tituloId\}/, "o leitor de tela precisa anunciar o título, não só 'diálogo'");
   assert.match(src, /id=\{tituloId\}/, "o título precisa carregar o id referenciado");
 });
+
+// ============================================================
+// ETAPA 2, FATIA 5 — C-S02: o COMPORTAMENTO do CORS, não só o fonte
+// ------------------------------------------------------------
+// _shared/cors.ts é importado de verdade (o Node 22 roda TypeScript sem
+// passo de build), com um Deno.env simulado por caso. Cada import leva
+// uma query diferente para o módulo ser avaliado de novo com o env novo.
+// O que a função faz com a requisição depois (exigir Bearer válido) fica
+// nos testes B1 acima e na camada HTTP da E3.
+// ============================================================
+let rodada = 0;
+async function corsCom(env = {}) {
+  globalThis.Deno = { env: { get: (k) => env[k] } };
+  const url = new URL(`../supabase/functions/_shared/cors.ts?caso=${++rodada}`, import.meta.url);
+  return import(url.href);
+}
+const cabecalhos = (m, origem, metodo = "OPTIONS") =>
+  m.buildCorsHeaders(new Request("https://projeto.supabase.co/functions/v1/gerar-meta", {
+    method: metodo, headers: origem === null ? {} : { origin: origem },
+  }));
+
+test("C-S02: sem ALLOWED_ORIGINS, a origem da marca recebe CORS e localhost NÃO recebe", async () => {
+  const m = await corsCom({});
+  for (const ok of ["https://app.trilivaedu.com.br", "https://www.trilivaedu.com.br", "https://trilivaedu.com.br", "https://rumo-a-aprova-o.vercel.app"]) {
+    assert.equal(cabecalhos(m, ok)["Access-Control-Allow-Origin"], ok, `${ok} devia ser permitida`);
+  }
+  for (const fora of ["http://localhost:5173", "http://localhost:3000", "http://127.0.0.1:5173", "https://evil.example", "https://app.trilivaedu.com.br.evil.example", "null", "", null]) {
+    const h = cabecalhos(m, fora);
+    assert.equal(h["Access-Control-Allow-Origin"], undefined, `${fora} recebeu Access-Control-Allow-Origin`);
+    assert.equal(h["Access-Control-Allow-Credentials"], undefined, "modelo Bearer: nunca credenciais de cookie");
+  }
+});
+
+test("C-S02: a resposta nunca é curinga, sempre varia por Origin e só anuncia POST/OPTIONS", async () => {
+  const m = await corsCom({});
+  for (const origem of ["https://app.trilivaedu.com.br", "https://evil.example"]) {
+    for (const metodo of ["OPTIONS", "POST"]) {
+      const h = cabecalhos(m, origem, metodo);
+      assert.notEqual(h["Access-Control-Allow-Origin"], "*");
+      assert.equal(h.Vary, "Origin", "sem Vary: Origin um cache intermediário serviria a resposta de uma origem para outra");
+      assert.equal(h["Access-Control-Allow-Methods"], "POST, OPTIONS");
+    }
+  }
+});
+
+test("C-S02: dev local entra só pelo ambiente — ALLOWED_ORIGINS substitui a lista inteira", async () => {
+  const m = await corsCom({ ALLOWED_ORIGINS: "http://localhost:5173" });
+  assert.equal(cabecalhos(m, "http://localhost:5173")["Access-Control-Allow-Origin"], "http://localhost:5173");
+  assert.equal(cabecalhos(m, "https://app.trilivaedu.com.br")["Access-Control-Allow-Origin"], undefined,
+    "com ALLOWED_ORIGINS só de dev, o domínio da marca sai: é substituição, não soma");
+});
+
+test("C-S02: o default no código não tem localhost nem 127.0.0.1", () => {
+  const src = ler("supabase/functions/_shared/cors.ts");
+  const m = src.match(/const DEFAULT_ORIGINS\s*=\s*\[([\s\S]*?)\];/);
+  assert.ok(m, "DEFAULT_ORIGINS precisa existir");
+  assert.doesNotMatch(m[1], /localhost|127\.0\.0\.1/, "origem de desenvolvimento voltou para o default publicado");
+});
+
+test("C-S02: previews dos projetos Vercel passam SEMPRE, com ou sem ALLOWED_ORIGINS (decisão do dono pendente)", async () => {
+  // Comportamento atual, registrado e não decidido nesta etapa: o
+  // triliva-producao tem as VITE_ em Preview, então preview de qualquer
+  // branch fala com o banco e com as funções de produção. Se o dono
+  // decidir fechar, o código e este teste mudam juntos.
+  const preview = "https://triliva-producao-git-qualquer-branch-jinriuks-projects.vercel.app";
+  for (const env of [{}, { ALLOWED_ORIGINS: "https://app.trilivaedu.com.br" }]) {
+    const m = await corsCom(env);
+    assert.equal(cabecalhos(m, preview)["Access-Control-Allow-Origin"], preview);
+  }
+  const m = await corsCom({});
+  assert.equal(cabecalhos(m, "https://outro-projeto-git-x-alguem.vercel.app")["Access-Control-Allow-Origin"], undefined,
+    "*.vercel.app de outro projeto não passa");
+});

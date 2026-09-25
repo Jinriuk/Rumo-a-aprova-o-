@@ -59,9 +59,13 @@ test("idempotência: reprocessar o aluno N vezes não duplica XP de missão", as
        values ($1,$2, current_date, 'mat', 'Geo', 40, 40)`, [ESCOLA_A, ALUNO_LUCAS]);
     const um = await xpMissao(c, ALUNO_LUCAS);
 
+    // reprocessar é do servidor (gatilho SECURITY DEFINER ou operador):
+    // desde a 0057 o aluno não tem EXECUTE nas funções internas (C-S06)
+    await c.query("reset role");
     await c.query("select app.motor_avaliar_aluno($1)", [ALUNO_LUCAS]);
     await c.query("select app.motor_avaliar_aluno($1)", [ALUNO_LUCAS]);
     await c.query("select app.motor_avaliar_aluno($1)", [ALUNO_LUCAS]);
+    await c.query("set local role authenticated");
 
     const dois = await xpMissao(c, ALUNO_LUCAS);
     assert.equal(dois.n, um.n, "nº de eventos de missão não muda");
