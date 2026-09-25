@@ -63,6 +63,13 @@ export default function AreaEscola({ perfil }) {
     [],
   );
   const dados = { ...VAZIO_NUCLEO, ...VAZIO_EXTRA, ...(carregado ?? {}), ...(carregadoExtra ?? {}) };
+  // Carga do núcleo falhou e não há dado anterior: as abas que dependem
+  // dele NÃO desenham. Antes elas caíam no VAZIO_NUCLEO e diziam "Nenhum
+  // aluno cadastrado ainda" / "0 de 0" embaixo do aviso de erro, como se a
+  // escola estivesse vazia (produção, 25/09/2026, com o HTTP 300). Numa
+  // recarga que falha, o dado anterior continua na tela com o aviso.
+  const semNucleo = !!erro && !carregado;
+  const mostrarAbas = !carregando && !semNucleo;
   // Toda mutação da tela pode mexer nas duas ondas (cadastrar aluno mexe no
   // núcleo; registrar consentimento mexe no extra), então o retry recarrega
   // as duas — o custo é o mesmo de antes e evita tela desatualizada.
@@ -143,7 +150,7 @@ export default function AreaEscola({ perfil }) {
           {erro && <ErroComRetry aoTentar={recarregarTudo}>{erro}</ErroComRetry>}
           {carregando && <CarregandoBloco titulo="Carregando dados da escola…" cartoes={4} linhas={4} />}
 
-          {!carregando && alunoAberto && (
+          {mostrarAbas && alunoAberto && (
             <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
               <button type="button" onClick={() => { despacharNav({ tipo: "fecharAluno" }); aoTopo(); }} style={{ alignSelf: "flex-start", border: `1px solid ${T.line}`, background: T.card, color: T.sub, borderRadius: 8, padding: "8px 14px", fontSize: 13, fontWeight: 600 }}>← voltar ao painel</button>
               <FichaAluno aluno={alunoAbertoFresco} concurso={concursoDoAluno}
@@ -152,11 +159,11 @@ export default function AreaEscola({ perfil }) {
             </div>
           )}
 
-          {!carregando && !alunoAberto && tab === "painel" && (
+          {mostrarAbas && !alunoAberto && tab === "painel" && (
             <PainelGestao resumo={resumoLista} aoIr={irPara} aoIrFiltrado={irParaFiltrado} />
           )}
 
-          {!carregando && !alunoAberto && tab === "alunos" && (
+          {mostrarAbas && !alunoAberto && tab === "alunos" && (
             <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
               <PainelCadastroAlunos turmas={dados.turmas} trilhas={dados.trilhas} concursos={dados.concursos} aoMudar={recarregarTudo}
                 indisponivel={!!erro} />
@@ -170,11 +177,11 @@ export default function AreaEscola({ perfil }) {
           {/* Ranking depende dos simulados, que vêm na onda extra: enquanto
               não chegam, a aba diz que está carregando em vez de desenhar
               uma classificação sem simulado nenhum. */}
-          {!carregando && !alunoAberto && tab === "ranking" && carregandoExtra && (
+          {mostrarAbas && !alunoAberto && tab === "ranking" && carregandoExtra && (
             <CarregandoBloco titulo="Carregando a classificação…" cartoes={2} linhas={4} />
           )}
 
-          {!carregando && !alunoAberto && tab === "ranking" && !carregandoExtra && (
+          {mostrarAbas && !alunoAberto && tab === "ranking" && !carregandoExtra && (
             <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
               <ClassificacaoTurma alunos={dados.alunos} turmas={dados.turmas}
                 resumoPorAluno={resumoPorAluno}
@@ -185,7 +192,7 @@ export default function AreaEscola({ perfil }) {
             </div>
           )}
 
-          {!carregando && !alunoAberto && tab === "turmas" && (
+          {mostrarAbas && !alunoAberto && tab === "turmas" && (
             <Turmas turmas={dados.turmas} alunos={dados.alunos} porAluno={resumoPorAluno}
               aoMudar={recarregarTudo} aoVerRanking={() => irPara("ranking")}
               aoVerAluno={verAluno} />
@@ -194,17 +201,17 @@ export default function AreaEscola({ perfil }) {
           {/* A porta do próximo ciclo (0051). Fica em aba própria porque
               é ação de coordenação com consequência estrutural — mover
               aluno de edição — e não um indicador do painel. */}
-          {!carregando && !alunoAberto && tab === "ciclo" && (
+          {mostrarAbas && !alunoAberto && tab === "ciclo" && (
             <ProximoCiclo resumo={resumoLista} trilhasPorId={trilhasPorId}
               concursosPorId={concursosPorId} aoMudar={recarregarTudo} />
           )}
 
           {/* LGPD depende dos logs de acesso, que vêm na onda extra. */}
-          {!carregando && !alunoAberto && tab === "conformidade" && carregandoExtra && (
+          {mostrarAbas && !alunoAberto && tab === "conformidade" && carregandoExtra && (
             <CarregandoBloco titulo="Carregando a trilha de acesso…" cartoes={2} linhas={5} />
           )}
 
-          {!carregando && !alunoAberto && tab === "conformidade" && !carregandoExtra && (
+          {mostrarAbas && !alunoAberto && tab === "conformidade" && !carregandoExtra && (
             <PainelConformidade consentimentos={dados.consentimentos} logs={dados.logs} logsTotal={dados.logsTotal} alunosPorId={alunosPorId} />
           )}
 
