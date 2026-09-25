@@ -35,7 +35,7 @@ e a anon key **públicas** do projeto demo — seguro por design).
 | `VITE_ERROR_REPORT_URL` | front (`shared/lib/observabilidade.js`) | endpoint próprio, não é segredo do Supabase | não — sem ela o sistema só loga no console (Fase A.4) |
 | `VITE_APP_ENV` | front (`shared/branding/ambiente.js`) — liga a faixa "AMBIENTE DE DEMONSTRAÇÃO" quando vale `demo` | pública | não — só no projeto Vercel de demo/vitrine (Production e Preview); ausência no projeto de produção real = produção, sem faixa |
 | `SUPABASE_URL` | scripts de operador (`scripts/*.mjs`) | pública | sim (scripts) |
-| `SUPABASE_SERVICE_ROLE_KEY` | scripts de operador, Edge Functions | **crítica — nunca no front/repo** | sim (scripts/funções) |
+| `SUPABASE_SERVICE_ROLE_KEY` | scripts de operador, Edge Functions | **crítica — nunca no front/repo nem no Vercel**. Chave legada: para de funcionar no fim de 2026; troca pela secreta nova em `plano-rotacao-chaves-supabase.md` | sim (scripts/funções) |
 | `PGHOST`/`PGPORT`/`PGUSER`/`PGPASSWORD`/`PGDATABASE` | `tests/` (suíte local) | local, sem dado real | sim (testes) |
 | `E2E_SUPABASE_URL`/`E2E_SUPABASE_ANON_KEY` | secrets do GitHub Actions (job `e2e`) | pública, mas de um projeto isolado | opcional (sem ela o E2E roda contra o demo — ver `e2e-ambiente.md`) |
 | `ALLOWED_ORIGINS` | secret das Edge Functions (CSV de origens; substitui a lista padrão) | pública (só origens) | não — sem ela vale o default de `_shared/cors.ts` (domínios `trilivaedu.com.br` + slug legado da Vercel; **sem localhost** desde a Etapa 2). Dev local: `ALLOWED_ORIGINS=http://localhost:5173` no env de `supabase functions serve`. Previews dos projetos Vercel passam sempre, pelo regex de `VERCEL_PREVIEW_PREFIXES`, com ou sem esta variável |
