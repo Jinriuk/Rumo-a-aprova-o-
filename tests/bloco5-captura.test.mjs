@@ -14,6 +14,7 @@ import { createRequire } from "node:module";
 import { resolve, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import * as L from "../scripts/captura/pack-v2-lib.mjs";
+import { chaveGuia, guiaJaVisto } from "../app/src/shared/guia/roteiros.js";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const src = (p) => readFileSync(resolve(root, p), "utf8");
@@ -463,4 +464,34 @@ test('supabase-js: signOut() sem escopo é GLOBAL — é o que o botão "Sair" d
   // Registrado em docs/e2-seguranca.md como comportamento de produto; se
   // um dia mudar, este teste e o registro mudam juntos.
   assert.match(src("app/src/shared/data/index.js"), /export async function sair\(\) \{\n  const \{ error \} = await supabase\.auth\.signOut\(\);/);
+});
+
+// ── guia passo a passo (#150) fora das capturas ───────────────
+test("o convite do guia não sai nas capturas: o runner dá o guia como visto, sem gravar nada", () => {
+  // a chave que o app usa começa pelo prefixo que o runner responde
+  for (const papel of ["coordenacao", "aluno"]) {
+    assert.ok(chaveGuia(papel, "u-1").startsWith(L.PREFIXO_GUIA), `chaveGuia(${papel}) mudou de formato`);
+  }
+  // dentro da página: responde "visto" para o guia e delega o resto
+  const StorageAntes = globalThis.Storage;
+  const escritas = [];
+  globalThis.Storage = class { getItem(k) { return k === "outra" ? "valor" : null; } setItem(k, v) { escritas.push([k, v]); } };
+  try {
+    L.guiaJaVistoNaPagina(L.PREFIXO_GUIA);
+    const armazenamento = new globalThis.Storage();
+    assert.equal(guiaJaVisto(chaveGuia("coordenacao", "u-1"), armazenamento), true, "coordenação");
+    assert.equal(guiaJaVisto(chaveGuia("aluno", "u-2"), armazenamento), true, "aluno");
+    assert.equal(armazenamento.getItem("outra"), "valor", "chave que não é do guia passa direto");
+    assert.equal(armazenamento.getItem("sb-token"), null);
+    assert.deepEqual(escritas, [], "não grava nada");
+  } finally {
+    globalThis.Storage = StorageAntes;
+  }
+  // e é instalado em todo contexto, antes de qualquer navegação
+  const runner = src("scripts/captura/pack-v2.mjs");
+  const contexto = runner.split("async function contexto(")[1].split("\n}\n")[0];
+  assert.match(contexto, /addInitScript\(L\.guiaJaVistoNaPagina, L\.PREFIXO_GUIA\)/);
+  assert.ok(contexto.indexOf("addInitScript") < contexto.indexOf("c.route("), "antes da guarda e de abrir página");
+  assert.match(L.montarManifesto({ pack: "p", dataLocal: "2026-09-26", oficial: true, escola: "E", arquivos: [], naoIncluidas: [] }),
+    /convite do guia passo a passo.*dado como visto/);
 });

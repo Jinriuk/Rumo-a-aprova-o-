@@ -145,6 +145,7 @@ async function contexto(device, estado = null, { credencialSimulada = false } = 
   const c = await browser.newContext({
     ...DEVICES[device], locale: "pt-BR", timezoneId: "America/Sao_Paulo", storageState: estado ?? undefined,
   });
+  await c.addInitScript(L.guiaJaVistoNaPagina, L.PREFIXO_GUIA);   // sem o convite do guia (#150) nas telas
   await c.route("**/*", async (route) => {
     const req = route.request();
     const metodo = req.method();

@@ -44,7 +44,7 @@ ganhou motor **e** porta na coordenação.
 
 | Métrica | Valor | Como foi obtido |
 |---|---|---|
-| Testes | **1055 / 1055 verdes** | medido em 24/09 (demonstração: XP acumula e nunca cai) — `bash reset-db.sh && npm test` em Postgres 16 local dedicado (migrations + seed 2×) |
+| Testes | **1152 / 1152 verdes** | medido em 25/09 (captura sem o convite do guia) — `bash reset-db.sh && npm test` em Postgres 16 local dedicado (migrations + seed 2×), com `PGHOST=127.0.0.1` (a matriz de autorização recusa socket) |
 | Arquivos de teste | **108** (114 `.mjs` em `tests/`; 6 são apoio, sem `node:test`: `identidades.mjs`, `calendario-cn.mjs`, os dois da matriz e os dois da guarda de embed ambíguo, `embeds-postgrest.mjs` e `embeds-fks-multiplas.mjs`) | medido em 25/09 (guarda de embed ambíguo, aluno sem trilha e guia passo a passo) — `grep -l 'node:test' tests/*.mjs \| wc -l` |
 | Lint | **0 errors / 256 warnings** | medido — `cd app && npm run lint` |
 | Build de produção | **verde** | medido — `cd app && npm run build` |
