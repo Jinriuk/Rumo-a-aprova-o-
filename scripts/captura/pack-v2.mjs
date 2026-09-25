@@ -14,6 +14,10 @@
 // navegador, com código e senha mascarados: clicar em "Gerar
 // credencial" de verdade daria credencial ao Enzo e desmancharia o D01.
 //
+// No fim, encerra as sessões que ela mesma abriu (os três logins e o da
+// conferência) com signOut scope "local": o login cria a sessão no Auth,
+// o logout apaga só ela, e as outras sessões da conta ficam intactas.
+//
 // Saída (CAPTURA_SAIDA, padrão .captura/):
 //   pack-triliva-v2-AAAA-MM-DD/   → pack comercial (sem id do projeto)
 //   interno-AAAA-MM-DD/           → id do projeto, commit, bloqueios,
@@ -237,12 +241,65 @@ async function entrar(perfil) {
     }
     await assentar(p);
     await conferirSeguranca(p);
-    return await c.storageState(); // só em memória: nunca com { path }
+    const estado = await c.storageState(); // só em memória: nunca com { path }
+    lembrarSessao(perfil, estado);
+    return estado;
   } catch (e) {
     const alerta = await p.locator('[role="alert"]').first().innerText().catch(() => "");
     throw new Error(redigir(`login de ${perfil} falhou: ${String(e.message ?? e).split("\n")[0]}${alerta ? ` (tela: ${alerta.slice(0, 120)})` : ""}`));
   } finally {
     await c.close();
+  }
+}
+
+// ── sessões abertas por esta execução ─────────────────────────
+// Cada login abre uma sessão no Auth, e not_after é nulo no projeto:
+// sem encerrar, ela fica lá para sempre. signOut() sem escopo é GLOBAL
+// e derrubaria qualquer outra sessão da conta (quem estiver
+// apresentando a vitrine), então o fim usa scope "local": o Auth apaga
+// só a sessão cujo id está no token, a que esta execução abriu.
+const sessoes = {}; // perfil → { access_token, refresh_token }, só em memória
+const sessoesEncerradas = []; // vai para o arquivo interno, sem token
+
+// Tokens entram na lista de valores que nunca podem sair em arquivo ou
+// log: redigir() os troca por •••, e a conferência do fim derruba o pack.
+function guardarTokens(s) {
+  for (const t of [s?.access_token, s?.refresh_token]) if (t && !VALORES_SECRETOS.includes(t)) VALORES_SECRETOS.push(t);
+}
+
+function lembrarSessao(perfil, estado) {
+  const s = L.sessaoDoEstado(estado, L.PROJETO_DEMO);
+  if (!s) {
+    avisos.push({ aviso: "sessao_nao_encontrada", detalhe: `o estado de ${perfil} não tem sessão do Auth; ela não será encerrada no fim` });
+    return;
+  }
+  guardarTokens(s);
+  sessoes[perfil] = s;
+}
+
+// Uma aba aberta com o estado pode renovar o token (o refresh token
+// gira). Guardar o estado mais novo mantém válido o par usado no fim.
+async function renovarEstado(perfil, c) {
+  if (!perfil || perfil === "publico") return;
+  const novo = await c.storageState().catch(() => null);
+  if (novo && L.sessaoDoEstado(novo, L.PROJETO_DEMO)) {
+    estados[perfil] = novo;
+    lembrarSessao(perfil, novo);
+  }
+}
+
+async function encerrarSessao(rotulo, sessao) {
+  const sb = createClient(SUPA_URL, ANON, { auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false } });
+  try {
+    const { error: eSessao } = await sb.auth.setSession(sessao);
+    if (eSessao) throw new Error(`a sessão já não vale (${eSessao.message})`);
+    const { error } = await sb.auth.signOut({ scope: "local" });
+    if (error) throw new Error(error.message);
+    sessoesEncerradas.push({ perfil: rotulo, resultado: "encerrada (scope local)" });
+  } catch (e) {
+    const motivo = redigir(String(e.message ?? e).split("\n")[0]).slice(0, 200);
+    sessoesEncerradas.push({ perfil: rotulo, resultado: `NÃO encerrada: ${motivo}` });
+    console.log(`::warning::sessão de ${rotulo} não foi encerrada: ${motivo}`);
   }
 }
 
@@ -415,7 +472,7 @@ async function capturarDef(def) {
         const notaExtra = def.antes ? await def.antes(p, device) : "";
         await assentar(p);
         await capturar({ page: p, def, device, comercial: !def.interna, notaExtra: typeof notaExtra === "string" ? notaExtra : "" });
-      } finally { await c.close(); }
+      } finally { await renovarEstado(def.papel, c); await c.close(); }
     });
   }
 }
@@ -429,7 +486,7 @@ async function checar360(tela, perfil, nomeAba) {
       if (nomeAba) await aba(p, nomeAba);
       const d = await p.evaluate(() => ({ sw: document.documentElement.scrollWidth, cw: document.documentElement.clientWidth }));
       checks360.push({ tela, ...d, ok: d.sw <= d.cw + 1 });
-    } finally { await c.close(); }
+    } finally { await renovarEstado(perfil, c); await c.close(); }
   });
 }
 
@@ -455,19 +512,27 @@ await browser.close();
 let esperado = null;
 if (!SO_TELA_24) await seguro("dados para a conferência", async () => {
   const sb = createClient(SUPA_URL, ANON, { auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false } });
-  const { error: eLogin } = await sb.auth.signInWithPassword({ email: env.TRILIVA_CAPTURA_COORD_EMAIL, password: env.TRILIVA_CAPTURA_COORD_SENHA });
+  const { data: login, error: eLogin } = await sb.auth.signInWithPassword({ email: env.TRILIVA_CAPTURA_COORD_EMAIL, password: env.TRILIVA_CAPTURA_COORD_SENHA });
   if (eLogin) throw new Error(`login da conferência: ${eLogin.message}`);
-  const [r, a, x] = await Promise.all([
-    sb.rpc("resumo_escola"),
-    sb.from("alunos").select("id,nome,usuario_id,alunos_turmas(turma_id,turmas(nome))"),
-    sb.from("vw_aluno_xp_total").select("aluno_id,xp_total"),
-  ]);
-  for (const q of [r, a, x]) if (q.error) throw new Error(q.error.message);
-  const xpPorAluno = {};
-  for (const l of x.data) xpPorAluno[l.aluno_id] = (xpPorAluno[l.aluno_id] ?? 0) + Number(l.xp_total);
-  esperado = L.esperadoDaEscola({ linhas: r.data, alunos: a.data, xpPorAluno });
-  // sem signOut: o padrão dele é global e derrubaria outras sessões da conta
+  guardarTokens(login.session);
+  try {
+    const [r, a, x] = await Promise.all([
+      sb.rpc("resumo_escola"),
+      sb.from("alunos").select("id,nome,usuario_id,alunos_turmas(turma_id,turmas(nome))"),
+      sb.from("vw_aluno_xp_total").select("aluno_id,xp_total"),
+    ]);
+    for (const q of [r, a, x]) if (q.error) throw new Error(q.error.message);
+    const xpPorAluno = {};
+    for (const l of x.data) xpPorAluno[l.aluno_id] = (xpPorAluno[l.aluno_id] ?? 0) + Number(l.xp_total);
+    esperado = L.esperadoDaEscola({ linhas: r.data, alunos: a.data, xpPorAluno });
+  } finally {
+    // também é uma sessão desta execução; scope "local" para não derrubar as outras da conta
+    const { error } = await sb.auth.signOut({ scope: "local" });
+    sessoesEncerradas.push({ perfil: "coordenacao (conferência)", resultado: error ? `NÃO encerrada: ${redigir(error.message).slice(0, 200)}` : "encerrada (scope local)" });
+  }
 });
+
+for (const [perfil, s] of Object.entries(sessoes)) await encerrarSessao(perfil, s);
 
 // ── arquivos do pack ──────────────────────────────────────────
 const commit = (() => { try { return execFileSync("git", ["rev-parse", "HEAD"], { cwd: RAIZ }).toString().trim(); } catch { return env.GITHUB_SHA ?? "desconhecido"; } })();
@@ -567,7 +632,7 @@ function fmtNum(n) { return L.fmtMilhar(n); }
 const INTERNO = {
   pack: PACK, projetoSupabase: L.PROJETO_DEMO, commit, run: env.GITHUB_RUN_ID ?? null,
   modo: MODO, somenteTela24: SO_TELA_24, janela: janela.motivo, oficial: OFICIAL, telaLgpd: COM_TELA_18,
-  falhas, avisos, requisicoesNaoLeitura: bloqueadas, checks360,
+  falhas, avisos, requisicoesNaoLeitura: bloqueadas, checks360, sessoesEncerradas,
   arquivosInternos: manifesto.filter((m) => !m.comercial),
 };
 

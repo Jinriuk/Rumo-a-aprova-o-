@@ -8,7 +8,9 @@
 // ============================================================
 import test from "node:test";
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
+import http from "node:http";
+import { readFileSync, existsSync } from "node:fs";
+import { createRequire } from "node:module";
 import { resolve, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import * as L from "../scripts/captura/pack-v2-lib.mjs";
@@ -330,4 +332,135 @@ test("tela 24 no runner: só a 24, só o login do aluno, sobre o pack do mesmo d
   assert.match(runner, /o onboarding da Helena não está pendente \(o preparo da tela 24 rodou\?\)/);
   // no modo principal a 24 aparece como capturada à parte, não como falha
   assert.match(runner, /\{ tela: 24, nome: "Onboarding", motivo: "NÃO INCLUÍDA nesta execução: estado especial, capturado por último/);
+});
+
+// ============================================================
+// ETAPA 2, FATIA 1 (24/09/2026) — a captura encerra só o que abriu
+// ------------------------------------------------------------
+// Cada execução fazia quatro logins (aluno, responsável, coordenação
+// e o da conferência) e não encerrava nenhum: o signOut() padrão do
+// supabase-js é GLOBAL e derrubaria as outras sessões da conta. Como
+// not_after é nulo nos dois projetos, as sessões ficavam para sempre.
+// Agora o runner encerra cada uma com scope "local".
+//
+// Três camadas de prova:
+//   1. a função pura que tira o par de tokens do estado do navegador;
+//   2. inspeção do runner (nenhum signOut sem escopo, nenhum estado em
+//      disco, encerramento depois da conferência);
+//   3. o supabase-js real contra um Auth falso local: o que o runner
+//      chama manda scope=local com o token DESTA sessão, e o que o
+//      botão "Sair" do app chama manda scope=global (comportamento de
+//      produto registrado em docs/e2-seguranca.md, não alterado).
+// ============================================================
+
+// ── 1. o par de tokens no estado do navegador ─────────────────
+const chave = `sb-${L.PROJETO_DEMO}-auth-token`;
+const estadoCom = (valor, nome = chave) => ({
+  cookies: [],
+  origins: [{ origin: "http://127.0.0.1:4173", localStorage: [{ name: "outra", value: "x" }, { name: nome, value: valor }] }],
+});
+
+test("sessaoDoEstado: acha o par na chave do projeto de demonstração", () => {
+  const s = L.sessaoDoEstado(estadoCom(JSON.stringify({ access_token: "a.b.c", refresh_token: "r1", user: { id: "u" } })));
+  assert.deepEqual(s, { access_token: "a.b.c", refresh_token: "r1" });
+});
+
+test("sessaoDoEstado: aceita o formato antigo (currentSession)", () => {
+  const s = L.sessaoDoEstado(estadoCom(JSON.stringify({ currentSession: { access_token: "a.b.c", refresh_token: "r1" } })));
+  assert.deepEqual(s, { access_token: "a.b.c", refresh_token: "r1" });
+});
+
+test("sessaoDoEstado: outro projeto, JSON quebrado, sem refresh ou sem estado → null", () => {
+  assert.equal(L.sessaoDoEstado(estadoCom(JSON.stringify({ access_token: "a", refresh_token: "r" }), "sb-outroprojeto-auth-token")), null);
+  assert.equal(L.sessaoDoEstado(estadoCom("{nao é json")), null);
+  assert.equal(L.sessaoDoEstado(estadoCom(JSON.stringify({ access_token: "a" }))), null);
+  assert.equal(L.sessaoDoEstado(null), null);
+  assert.equal(L.sessaoDoEstado({ origins: [] }), null);
+});
+
+// ── 2. o runner ───────────────────────────────────────────────
+test("runner: todo signOut tem scope local (o padrão global derrubaria as outras sessões)", () => {
+  const chamadas = runner.match(/\.signOut\([^)]*\)/g) ?? [];
+  assert.ok(chamadas.length >= 2, "encerra os logins pela tela e o da conferência");
+  for (const c of chamadas) assert.match(c, /\{ scope: "local" \}/, `signOut sem escopo local: ${c}`);
+});
+
+test("runner: o estado do navegador nunca vai para disco", () => {
+  assert.doesNotMatch(runner, /storageState\(\s*\{[^}]*path/, "storageState com path gravaria os tokens");
+  assert.doesNotMatch(runner, /writeFile[^\n]*(estado|sessao|token)/i);
+});
+
+test("runner: encerra as sessões depois da conferência e registra o resultado sem token", () => {
+  const conf = runner.indexOf('seguro("dados para a conferência"');
+  const fim = runner.indexOf("for (const [perfil, s] of Object.entries(sessoes)) await encerrarSessao(perfil, s);");
+  assert.ok(conf > 0 && fim > conf, "o encerramento vem depois da conferência");
+  assert.match(runner, /sessoesEncerradas\.push\(\{ perfil: rotulo, resultado: "encerrada \(scope local\)" \}\)/);
+  assert.match(runner, /falhas, avisos, requisicoesNaoLeitura: bloqueadas, checks360, sessoesEncerradas,/);
+  // os tokens entram na lista que redigir() troca por ••• e que derruba o pack
+  assert.match(runner, /function guardarTokens\(s\) \{[\s\S]*?VALORES_SECRETOS\.push\(t\)/);
+  assert.match(runner, /guardarTokens\(login\.session\)/);
+});
+
+// ── 3. supabase-js real contra um Auth falso ──────────────────
+const requireApp = createRequire(resolve(root, "app/package.json"));
+function supabaseJs() {
+  if (!existsSync(resolve(root, "app/node_modules/@supabase/supabase-js"))) {
+    throw new Error("este teste usa o supabase-js do app: rode `cd app && npm ci` antes (o CI já instala)");
+  }
+  return requireApp("@supabase/supabase-js");
+}
+
+const b64 = (o) => Buffer.from(JSON.stringify(o)).toString("base64url");
+const jwtFalso = (sessao) => `${b64({ alg: "HS256", typ: "JWT" })}.${b64({
+  sub: "11111111-1111-4111-8111-111111111111", role: "authenticated", session_id: sessao,
+  exp: Math.floor(Date.now() / 1000) + 3600, aud: "authenticated",
+})}.assinatura`;
+
+async function authFalso() {
+  const logouts = [];
+  const srv = http.createServer((req, res) => {
+    const u = new URL(req.url, "http://x");
+    if (req.method === "GET" && u.pathname === "/auth/v1/user") {
+      res.writeHead(200, { "content-type": "application/json" });
+      return res.end(JSON.stringify({ id: "11111111-1111-4111-8111-111111111111", aud: "authenticated", role: "authenticated", email: "x@y.z", app_metadata: {}, user_metadata: {}, created_at: new Date().toISOString() }));
+    }
+    if (req.method === "POST" && u.pathname === "/auth/v1/logout") {
+      logouts.push({ scope: u.searchParams.get("scope"), bearer: req.headers.authorization });
+      res.writeHead(204);
+      return res.end();
+    }
+    res.writeHead(404);
+    res.end();
+  });
+  await new Promise((r) => srv.listen(0, "127.0.0.1", r));
+  return { url: `http://127.0.0.1:${srv.address().port}`, logouts, fechar: () => new Promise((r) => srv.close(r)) };
+}
+
+test("supabase-js: o caminho do runner (setSession + signOut local) apaga só a sessão do token", async () => {
+  const { createClient } = supabaseJs();
+  const auth = await authFalso();
+  try {
+    const sb = createClient(auth.url, "anon-falsa", { auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false } });
+    const token = jwtFalso("sessao-da-captura");
+    const { error: e1 } = await sb.auth.setSession({ access_token: token, refresh_token: "r" });
+    assert.equal(e1, null);
+    const { error: e2 } = await sb.auth.signOut({ scope: "local" });
+    assert.equal(e2, null);
+    assert.deepEqual(auth.logouts, [{ scope: "local", bearer: `Bearer ${token}` }]);
+  } finally { await auth.fechar(); }
+});
+
+test('supabase-js: signOut() sem escopo é GLOBAL — é o que o botão "Sair" do app faz hoje', async () => {
+  const { createClient } = supabaseJs();
+  const auth = await authFalso();
+  try {
+    const sb = createClient(auth.url, "anon-falsa", { auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false } });
+    await sb.auth.setSession({ access_token: jwtFalso("sessao-do-app"), refresh_token: "r" });
+    await sb.auth.signOut();
+    assert.equal(auth.logouts[0].scope, "global");
+  } finally { await auth.fechar(); }
+  // o app chama sem escopo: sair num aparelho desloga a conta em todos.
+  // Registrado em docs/e2-seguranca.md como comportamento de produto; se
+  // um dia mudar, este teste e o registro mudam juntos.
+  assert.match(src("app/src/shared/data/index.js"), /export async function sair\(\) \{\n  const \{ error \} = await supabase\.auth\.signOut\(\);/);
 });

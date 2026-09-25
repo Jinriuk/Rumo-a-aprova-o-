@@ -512,3 +512,146 @@ describe("CredencialGerada — mostra código+senha na criação, só senha no r
     assert.match(src, /\{temCodigo && \(/);
   });
 });
+
+// ============================================================
+// Etapa 2 · Fatia 6 · C-S05 — troca de senha e credencial no banco
+// ------------------------------------------------------------
+// A proteção de senha vazada e os controles de sessão do Auth dependem
+// do plano Pro (lista de ativação em docs/e2-seguranca.md, Fatia 6). O que
+// existe hoje no plano Free, e roda no banco, é isto:
+//   • só o servidor (service_role, nas Edge Functions trocar-senha e
+//     provisionar-aluno) mexe em must_change_password e credencial_status;
+//   • ninguém com token de usuário mexe, nem na própria linha.
+// Grants como nos hospedados (lidos em 24/09): `authenticated` NÃO tem
+// UPDATE em usuarios; `anon` TEM (grant padrão), e só a RLS segura.
+// Os dois testes de REGISTRO no fim descrevem o comportamento atual, não
+// uma garantia: se mudarem, o registro da Etapa 2 tem de ser atualizado.
+// ============================================================
+describe("E2/C-S05 — troca de senha e credencial no banco (Postgres real)", () => {
+  const ALUNO = "aaaaaaaa-0000-4000-8000-000000000002"; // seed: aluno A, must_change_password = true
+  const ESCOLA = "11111111-1111-4111-8111-111111111111";
+  const COORD = "aaaaaaaa-0000-4000-8000-000000000001";
+  const claims = (sub, papel) =>
+    JSON.stringify({ sub, role: "authenticated", app_metadata: { escola_id: ESCOLA, papel } });
+
+  let db;
+  before(async () => {
+    db = new Client(clientCfg);
+    await db.connect();
+  });
+  after(async () => { await db?.end(); });
+
+  // transação sempre desfeita; `prep` roda como postgres antes da troca de papel
+  async function emTransacao(fn) {
+    await db.query("begin");
+    try {
+      return await fn();
+    } finally {
+      await db.query("rollback");
+    }
+  }
+  async function comoUsuario(sub, papel) {
+    await db.query("select set_config('request.jwt.claims', $1, true)", [claims(sub, papel)]);
+    await db.query("set local role authenticated");
+  }
+  const linha = async () =>
+    (await db.query(
+      "select must_change_password, credencial_status, papel, escola_id from usuarios where id = $1",
+      [ALUNO],
+    )).rows[0];
+
+  it("o seed tem o aluno com troca obrigatória pendente (sem isso os testes abaixo são vazios)", async () => {
+    const l = await linha();
+    assert.equal(l.must_change_password, true);
+    assert.equal(l.credencial_status, "ativa");
+  });
+
+  it("o aluno não zera o próprio must_change_password: sem grant de UPDATE, 42501", async () => {
+    await emTransacao(async () => {
+      await comoUsuario(ALUNO, "aluno");
+      await assert.rejects(
+        db.query("update usuarios set must_change_password = false where id = $1", [ALUNO]),
+        (e) => e.code === "42501",
+      );
+    });
+  });
+
+  it("nem com um grant vazado: sem policy de UPDATE, a própria linha não muda (senha, status, papel, escola)", async () => {
+    await emTransacao(async () => {
+      // controle: sem RLS o mesmo comando acharia a linha
+      const ctl = await db.query("update usuarios set must_change_password = must_change_password where id = $1", [ALUNO]);
+      assert.equal(ctl.rowCount, 1, "controle: a linha precisa existir");
+      await db.query("update usuarios set credencial_status = 'revogada' where id = $1", [ALUNO]);
+      const antes = await linha();
+
+      await db.query("grant update on usuarios to authenticated");
+      await comoUsuario(ALUNO, "aluno");
+      for (const sql of [
+        "update usuarios set must_change_password = false where id = $1",
+        "update usuarios set credencial_status = 'ativa' where id = $1",
+        "update usuarios set papel = 'coordenacao' where id = $1",
+        "update usuarios set escola_id = '22222222-2222-4222-8222-222222222222' where id = $1",
+      ]) {
+        const r = await db.query(sql, [ALUNO]);
+        assert.equal(r.rowCount, 0, `o próprio usuário alterou a linha: ${sql}`);
+      }
+      await db.query("reset role");
+      assert.deepEqual(await linha(), antes, "a linha mudou");
+    });
+  });
+
+  it("a coordenação também não mexe na credencial do aluno pelo banco, só pela Edge Function", async () => {
+    await emTransacao(async () => {
+      await db.query("grant update on usuarios to authenticated");
+      await comoUsuario(COORD, "coordenacao");
+      const r1 = await db.query("update usuarios set must_change_password = false where id = $1", [ALUNO]);
+      const r2 = await db.query("update usuarios set credencial_status = 'revogada' where id = $1", [ALUNO]);
+      assert.equal(r1.rowCount + r2.rowCount, 0, "coordenação alterou credencial direto no banco");
+    });
+  });
+
+  it("anon, com o SELECT e o UPDATE que o hospedado lhe dá em usuarios, altera 0 linhas", async () => {
+    await emTransacao(async () => {
+      await db.query("grant select, update on usuarios to anon");
+      await db.query("set local role anon");
+      const r = await db.query("update usuarios set must_change_password = false where id = $1", [ALUNO]);
+      assert.equal(r.rowCount, 0);
+    });
+  });
+
+  it("o caminho do servidor funciona: service_role zera a troca (trocar-senha) e revoga/reativa (provisionar-aluno)", async () => {
+    await emTransacao(async () => {
+      await db.query("set local role service_role");
+      const zera = await db.query("update usuarios set must_change_password = false where id = $1", [ALUNO]);
+      assert.equal(zera.rowCount, 1, "trocar-senha não conseguiria zerar a troca obrigatória");
+      const revoga = await db.query("update usuarios set credencial_status = 'revogada' where id = $1", [ALUNO]);
+      assert.equal(revoga.rowCount, 1, "revogar-credencial não conseguiria marcar a revogação");
+      const reativa = await db.query(
+        "update usuarios set credencial_status = 'ativa', must_change_password = true where id = $1", [ALUNO]);
+      assert.equal(reativa.rowCount, 1, "reativar-credencial não conseguiria reativar");
+    });
+  });
+
+  it("REGISTRO: must_change_password é trava de tela; o banco não a aplica", async () => {
+    // Quem tem a senha temporária e fala direto com a API lê e grava como o
+    // aluno, sem trocar a senha. Não cruza escola: é o mesmo acesso que o
+    // aluno teria. Registrado como decisão pendente em docs/e2-seguranca.md.
+    await emTransacao(async () => {
+      assert.equal((await linha()).must_change_password, true);
+      await comoUsuario(ALUNO, "aluno");
+      const r = await db.query("select id from alunos where usuario_id = $1", [ALUNO]);
+      assert.equal(r.rowCount, 1, "se o banco passou a aplicar a troca obrigatória, atualize o registro da E2");
+    });
+  });
+
+  it("REGISTRO: credencial revogada com token ainda válido continua lendo até o token expirar", async () => {
+    // A revogação bane no Auth (sem refresh) e marca a linha; nenhuma policy
+    // lê credencial_status. A janela é o JWT expiry (indício de 3600 s).
+    await emTransacao(async () => {
+      await db.query("update usuarios set credencial_status = 'revogada' where id = $1", [ALUNO]);
+      await comoUsuario(ALUNO, "aluno");
+      const r = await db.query("select id from alunos where usuario_id = $1", [ALUNO]);
+      assert.equal(r.rowCount, 1, "se as policies passaram a ler credencial_status, atualize o registro da E2");
+    });
+  });
+});

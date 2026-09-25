@@ -311,6 +311,27 @@ export function violacoesDoPackComercial(arquivos, { projeto = PROJETO_DEMO, seg
   return out;
 }
 
+// ── sessão do Auth guardada no estado do navegador ────────────
+// O supabase-js guarda a sessão no localStorage da origem do app, na
+// chave sb-<projeto>-auth-token. Devolve só o par de tokens, para o
+// runner encerrar ESTA sessão no fim, ou null se o estado não tem
+// sessão. Os tokens ficam em memória: não vão para log nem arquivo.
+export function sessaoDoEstado(estado, projeto = PROJETO_DEMO) {
+  const chave = `sb-${projeto}-auth-token`;
+  for (const origem of estado?.origins ?? []) {
+    const item = (origem.localStorage ?? []).find((i) => i.name === chave);
+    if (!item) continue;
+    let valor;
+    try { valor = JSON.parse(item.value); } catch { return null; }
+    const s = valor?.currentSession ?? valor; // formato antigo do supabase-js guardava em currentSession
+    if (typeof s?.access_token === "string" && typeof s?.refresh_token === "string") {
+      return { access_token: s.access_token, refresh_token: s.refresh_token };
+    }
+    return null;
+  }
+  return null;
+}
+
 // ── manifesto e junção da tela 24 ─────────────────────────────
 // O MANIFESTO.md sai sempre do CAPTURA.json (uma fonte só), para que a
 // execução da tela 24 possa reescrevê-lo depois de juntar a imagem dela.
