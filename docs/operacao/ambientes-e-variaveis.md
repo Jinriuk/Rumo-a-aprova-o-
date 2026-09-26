@@ -1,5 +1,9 @@
 # Ambientes e variáveis (Fase A.2)
 
+> **Inventário vigente:** [`matriz-configuracao.md`](./matriz-configuracao.md)
+> (26/09/2026). Trechos deste documento estão desatualizados; a seção 9 da
+> matriz lista quais.
+
 > Regra absoluta: **`service_role` nunca aparece no front, nunca entra no
 > repositório.** O front só recebe a chave `anon` pública — a segurança é
 > a RLS no banco, não o segredo da chave.
