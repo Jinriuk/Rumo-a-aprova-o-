@@ -68,8 +68,11 @@ aquele job. A camada HTTP da matriz é a jornada `limites_acesso` do E2E.
 
 O gate roda o código do próprio PR. Um PR que edite
 `scripts/ci/release-gate.mjs` ou o `ci.yml` pode afrouxar o gate que o
-julga. A defesa é revisão obrigatória nesses caminhos (CODEOWNERS em
-`.github/` e `scripts/ci/`), não o gate.
+julga. Não há CODEOWNERS: o dono é o único mantenedor e o GitHub não
+deixa aprovar o próprio PR, então revisão obrigatória não existe aqui.
+A defesa é o dono ler o diff de `.github/` e `scripts/ci/` antes de
+mesclar, e as guardas estáticas, que reprovam os afrouxamentos óbvios
+(tirar job do `needs`, `continue-on-error`, `if:` nos obrigatórios).
 
 ## Aceite negativo (26/09, rodada 2)
 
