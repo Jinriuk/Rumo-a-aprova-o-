@@ -33,10 +33,21 @@ Em **Settings → Secrets and variables → Actions**, crie:
 |---|---|
 | `PROD_SUPABASE_URL` | `https://<ref-de-producao>.supabase.co` |
 | `PROD_SUPABASE_ANON_KEY` | a chave anon do projeto de **produção** |
+| `DEMO_SUPABASE_URL` | `https://<ref-do-demo>.supabase.co` |
+| `DEMO_SUPABASE_ANON_KEY` | a chave anon do projeto de **demo** (vitrine) |
 
-Sem eles, o workflow **pula de forma explícita** com um `::warning::` — mesma
-regra do `e2e-guard`: nunca fingir que o seguro está ativo quando não está.
-Se você vir esse aviso nos Actions, o banco **não** está sendo mantido acordado.
+Sem o par de um ambiente, o passo daquele ambiente **reprova** com `exit 1` e
+um `::error::FALTA CONFIGURAÇÃO`, e o workflow fica vermelho. Secret ausente é
+o seguro desligado, e seguro desligado é falha.
+
+Até a Etapa 4 esse caminho saía com `exit 0` e um `::warning::PULADO`. O
+resultado foi dez execuções verdes sem nenhum `curl` (`docs/e0-baseline.md`,
+Bloco 3): o aviso só aparecia dentro do log, e ninguém abre log de execução
+verde. Os quatro secrets existem desde 25/09 (run `36133379313`, HTTP 200 nos
+dois passos).
+
+Um ambiente sem secret não impede a batida do outro: o passo do demo tem
+`if: always()` e roda mesmo com o de produção reprovado.
 
 A chave anon é publicável por design (ela já viaja no bundle para todo
 visitante; a segurança é a RLS). Está como secret só para não aparecer no log.

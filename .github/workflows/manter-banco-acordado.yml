@@ -77,11 +77,14 @@ jobs:
         run: |
           set -uo pipefail
 
-          # Mesma regra do e2e-guard: sem ambiente configurado, PULA de forma
-          # explícita. Nunca fingir que o seguro está ativo quando não está.
+          # Sem ambiente configurado, REPROVA. Até a Etapa 4 este caminho
+          # saía com exit 0 e um ::warning::, e o workflow ficou verde por
+          # dez execuções sem emitir um curl sequer (docs/e0-baseline.md,
+          # Bloco 3): o aviso só aparecia dentro do log. Secret ausente é o
+          # seguro desligado, e seguro desligado é falha, não pulo.
           if [ -z "${URL:-}" ] || [ -z "${ANON:-}" ]; then
-            echo "::warning::PULADO — sem PROD_SUPABASE_URL / PROD_SUPABASE_ANON_KEY. O projeto de produção NÃO está sendo mantido acordado, e pode pausar após 7 dias sem uso. Ver docs/operacao/manter-banco-acordado.md."
-            exit 0
+            echo "::error::FALTA CONFIGURAÇÃO — sem PROD_SUPABASE_URL / PROD_SUPABASE_ANON_KEY. O projeto de produção NÃO está sendo mantido acordado, e pode pausar após 7 dias sem uso. Ver docs/operacao/manter-banco-acordado.md."
+            exit 1
           fi
 
           alvo="${URL%/}/rest/v1/concursos?select=id&limit=1"
@@ -156,11 +159,11 @@ jobs:
         run: |
           set -uo pipefail
 
-          # Mesma regra do e2e-guard: sem ambiente configurado, PULA de forma
-          # explícita. Nunca fingir que o seguro está ativo quando não está.
+          # Sem ambiente configurado, REPROVA (mesma regra do passo de
+          # produção, acima).
           if [ -z "${URL:-}" ] || [ -z "${ANON:-}" ]; then
-            echo "::warning::PULADO — sem DEMO_SUPABASE_URL / DEMO_SUPABASE_ANON_KEY. A VITRINE não está sendo mantida acordada, e pode pausar após 7 dias sem uso. Ver docs/operacao/manter-banco-acordado.md."
-            exit 0
+            echo "::error::FALTA CONFIGURAÇÃO — sem DEMO_SUPABASE_URL / DEMO_SUPABASE_ANON_KEY. A VITRINE não está sendo mantida acordada, e pode pausar após 7 dias sem uso. Ver docs/operacao/manter-banco-acordado.md."
+            exit 1
           fi
 
           alvo="${URL%/}/rest/v1/concursos?select=id&limit=1"
