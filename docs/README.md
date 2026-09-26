@@ -67,7 +67,7 @@ Auditorias e fases de evolução, **por assunto**. Índice próprio em
 Runbooks e checklists vivos. Destaques:
 
 - **Deploy / rollback:** [deploy-checklist.md](./operacao/deploy-checklist.md) · [rollback.md](./operacao/rollback.md) · [runbook-migrations-supabase.md](./operacao/runbook-migrations-supabase.md)
-- **CI / publicação:** [release-gate.md](./operacao/release-gate.md) (o check da `main`, Etapa 5) · [e2e-ambiente.md](./operacao/e2e-ambiente.md) · [proposta-ordem-publicacao.md](./operacao/proposta-ordem-publicacao.md) (proposta, nada aplicado)
+- **CI / publicação:** [release-gate.md](./operacao/release-gate.md) (o check da `main`, Etapa 5) · [e2e-ambiente.md](./operacao/e2e-ambiente.md) · [proposta-ordem-publicacao.md](./operacao/proposta-ordem-publicacao.md) (banco antes do front: regra e guardas no CI; `publicar` na E8)
 - **Go-live:** [go-live-checklist.md](./operacao/go-live-checklist.md) (sistema) · [checklist-go-live-piloto.md](./operacao/checklist-go-live-piloto.md) (por escola)
 - **Infra / LGPD:** [matriz-configuracao.md](./operacao/matriz-configuracao.md) (inventário de configurações, 26/09) · [ambientes-e-variaveis.md](./operacao/ambientes-e-variaveis.md) · [lgpd-e-infra.md](./operacao/lgpd-e-infra.md) · [plano-migracao-sa-east-1.md](./operacao/plano-migracao-sa-east-1.md)
 - **Backup:** [backup-retencao-lgpd.md](./operacao/backup-retencao-lgpd.md) · [backup-e-plano-supabase.md](./operacao/backup-e-plano-supabase.md) · [monitoramento-backup.md](./operacao/monitoramento-backup.md)

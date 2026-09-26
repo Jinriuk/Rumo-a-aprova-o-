@@ -41,6 +41,12 @@ migration (banco)  ─►  checar-migrations (em dia)  ─►  merge/front (Verc
 
 Nunca publicar o front antes da migration que ele exige.
 
+Desde a Etapa 5 isso vira regra de CI: banco e front em PRs separados, e
+migration nova sem `DROP COLUMN`/`DROP FUNCTION`/`DROP TABLE`/`RENAME`
+fora de uma segunda fase declarada. A ordem completa (PR de banco,
+backup, aplicar nos dois ambientes, PR do front) e o que a guarda não
+cobre estão em `docs/operacao/proposta-ordem-publicacao.md`.
+
 ## Variáveis e segredos
 
 - Front (Vercel / `app/.env.production`): só `VITE_SUPABASE_URL` e

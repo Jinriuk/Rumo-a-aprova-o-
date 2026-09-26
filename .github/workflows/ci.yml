@@ -60,6 +60,9 @@ jobs:
       PGDATABASE: rumo_teste
     steps:
       - uses: actions/checkout@v7
+        with:
+          # histórico inteiro: a guarda de migrations precisa do merge-base
+          fetch-depth: 0
 
       - uses: actions/setup-node@v7
         with:
@@ -68,6 +71,18 @@ jobs:
           cache-dependency-path: |
             app/package-lock.json
             tests/package-lock.json
+
+      # Etapa 5: até o workflow `publicar` (E8), a ordem é PR de banco,
+      # backup, aplicar nos dois ambientes, e só então PR do front
+      # (docs/operacao/proposta-ordem-publicacao.md). Reprova o diff que
+      # adiciona migration E altera app/, e migration com DROP COLUMN,
+      # DROP FUNCTION, DROP TABLE ou RENAME sem "-- segunda-fase: <motivo>".
+      # Sem dependência nenhuma: roda antes do npm ci. Push na main dá
+      # diff vazio (o PR já passou aqui).
+      - name: Guardas de migration (banco e front separados; nada destrutivo sem segunda fase)
+        env:
+          GUARDA_BASE: ${{ github.event.pull_request.base.sha }}
+        run: node scripts/ci/guarda-migrations.mjs
 
       - name: Instalar dependências (app)
         working-directory: app
