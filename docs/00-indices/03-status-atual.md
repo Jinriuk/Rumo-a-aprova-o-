@@ -44,7 +44,7 @@ ganhou motor **e** porta na coordenação.
 
 | Métrica | Valor | Como foi obtido |
 |---|---|---|
-| Testes | **1213 / 1213 verdes** | medido em 26/09 (Etapa 6: guardas do backup e do restore) — `bash reset-db.sh && npm test` em Postgres 17 (container `postgres:17`, o mesmo do CI), com `app/dist` buildado (migrations + seed 2×), com `PGHOST=127.0.0.1` (a matriz de autorização recusa socket) |
+| Testes | **1214 / 1214 verdes** | medido em 26/09 (Etapa 6: guardas do backup e do restore) — `bash reset-db.sh && npm test` em Postgres 17 (container `postgres:17`, o mesmo do CI), com `app/dist` buildado (migrations + seed 2×), com `PGHOST=127.0.0.1` (a matriz de autorização recusa socket) |
 | Arquivos de teste | **115** (121 `.mjs` em `tests/`; 6 são apoio, sem `node:test`: `identidades.mjs`, `calendario-cn.mjs`, os dois da matriz e os dois da guarda de embed ambíguo, `embeds-postgrest.mjs` e `embeds-fks-multiplas.mjs`) | medido em 26/09 (Etapa 6: `ci-backup.test.mjs`, guardas do backup e do restore) — `grep -l 'node:test' tests/*.mjs \| wc -l` |
 | Lint | **0 errors / 256 warnings** | medido — `cd app && npm run lint` |
 | Build de produção | **verde** | medido — `cd app && npm run build` |

@@ -287,3 +287,8 @@ test("conexão do pg: TLS fora da máquina (como o prefer do pg_dump), sslmode d
   assert.doesNotMatch(remoto.connectionString, /sslmode/);
   assert.equal(configCliente("postgresql://postgres:postgres@127.0.0.1:54322/postgres").ssl, undefined);
 });
+
+test("dump.sh: não mascara nada da stack local (usuário e senha postgres apagariam a palavra do log)", () => {
+  const s = sem(DUMP);
+  assert.match(s, /if \(!\["127\.0\.0\.1", "localhost", "::1", "\[::1\]"\]\.includes\(u\.hostname\)\)/);
+});

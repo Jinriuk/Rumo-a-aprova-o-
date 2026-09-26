@@ -137,7 +137,7 @@ restore.
 | --- | --- | --- |
 | **RPO**, mudança em produção feita depois do clique | ~0 para o que a mudança estragar | o backup é tirado imediatamente antes |
 | **RPO**, desastre de plataforma (projeto apagado, conta perdida, corrupção) | **o tempo desde o último clique**, sem limite superior. Se o último artefato tiver expirado (30 dias), não há cópia | plano free sem backup gerenciado; workflow sem agendamento |
-| **RTO**, só o banco (decifrar + restaurar + recriar cron e event triggers) | **3,0 s** no ensaio sintético (dump de 0,7 MB); ordem de minutos para produção | ensaio (seção 9). O banco do demo tinha 21 MB em 26/09 |
+| **RTO**, só o banco (decifrar + restaurar + recriar cron e event triggers) | **1,1 s** no runner do Actions e 3,0 s na máquina de desenvolvimento, com dump sintético de 0,7 MB. Ordem de minutos para produção | ensaio (seção 9). O banco do demo tinha 21 MB em 26/09 |
 | **RTO**, retorno total num projeto novo | **estimado em 1 a 2 horas**, quase tudo configuração manual (seção 5.1, passos 3 e 5 a 8) | **não medido**: o retorno a um projeto hospedado nunca foi ensaiado |
 
 ## 5. Passo a passo de retorno
@@ -364,9 +364,45 @@ Com o Pro, faz sentido:
 
 ## 9. Evidência do ensaio
 
+### 9.1 No Actions (runner padrão)
+
+Execução [`36263340832`](https://github.com/Jinriuk/Rumo-a-aprova-o-/actions/runs/36263340832)
+do **Ensaio de restauração (manual)**, modo sintético, na `main` em
+`8c58c36`, em 26/09/2026 às 18:40 UTC.
+
+- Job: 2 min 2 s. O passo do ensaio levou 95 s.
+- Relatório no artefato `ensaio-restauro-sintetico-36263340832-1`, retido
+  30 dias.
+
+| Fase | Tempo |
+| --- | --- |
+| Origem sintética | 59,0 s |
+| Backup (`dump.sh`) | 0,8 s |
+| Stack nova e vazia | 23,9 s |
+| **Restore** | **1,1 s** |
+| Conferência origem × destino | 0,2 s |
+| Conferências funcionais | 1,1 s |
+| Contrato de RPCs | 0,1 s |
+| Matriz de autorização | 1,9 s |
+
+O restore, por fase:
+
+| Trava | Decifra | Estrutura e dados | ACLs | Auth | Cron e event triggers |
+| --- | --- | --- | --- | --- | --- |
+| 0,1 s | 0,2 s | 0,4 s | 0,1 s | 0,0 s | 0,2 s |
+
+O arquivo: `triliva-sintetico-20260926T184122Z.tar.gpg`, 737.391 bytes,
+SHA-256
+`59bf9f3c7607535985c957c8cba70ebadd238fff05ded2213e32c415cd55f5ac`.
+
+**Resultado:** igual ao da seção 9.2, item por item. Os 16 checks, a matriz
+(7/7) e o contrato de RPCs (11) passaram. O mesmo run provou, no runner, o
+cliente Postgres 17 via PGDG e o `dump.sh` que o workflow Backup usa.
+
+### 9.2 Na máquina de desenvolvimento
+
 Ensaio sintético de 26/09/2026, na stack local da E3: CLI 2.118.0, Postgres
-17.6, GoTrue v2.197.0. Numa máquina de desenvolvimento, não num runner do
-Actions.
+17.6, GoTrue v2.197.0.
 
 | Fase | Tempo |
 | --- | --- |
@@ -420,8 +456,15 @@ foi aleatória e descartada, e o arquivo morreu com a stack.
    do retorno nasceria sem RLS.
 3. **Os jobs do cron somem**, pelo mesmo motivo.
 
-O ensaio pelo Actions (runner padrão) fica registrado na seção 10 quando
-rodar.
+Também na máquina: o **modo real**, com um backup de senha conhecida,
+aprovado com as contagens redigidas. As provas negativas também reprovaram
+como deviam:
+
+- senha errada;
+- arquivo adulterado, pego pelo SHA do manifesto e, sem manifesto, pelo MDC
+  do gpg;
+- destino hospedado declarado como local;
+- restore por cima de banco com dado.
 
 ## 10. Arquivos
 
