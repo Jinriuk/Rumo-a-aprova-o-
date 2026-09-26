@@ -193,11 +193,6 @@ jobs:
       - name: Stack local + banco + fixture + front + suíte inteira (jornadas e camada_http)
         run: bash scripts/e2e/rodar.sh
 
-      - name: Relatório jornada → testes (reprova com zero, abaixo do mínimo, pulo ou falha)
-        id: relatorio
-        if: always()
-        run: node scripts/e2e/relatorio-jornadas.mjs
-
       - name: Artefatos sanitizados
         if: always()
         run: node scripts/e2e/sanitizar-artefatos.mjs e2e-artefatos
