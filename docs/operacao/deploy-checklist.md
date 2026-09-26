@@ -25,8 +25,11 @@
 3. **Conferir os advisors** (Supabase → Advisors, ou MCP `get_advisors`):
    sem ERROR de segurança; WARNs conhecidos documentados.
 
-4. **CI verde** no PR: `build-e-unitarios` e `e2e` (ou e2e flaky
-   documentado e isolado — ver Fase 17.2).
+4. **CI verde** no PR: o check `release-gate` (Etapa 5), que só passa
+   com `build-e-unitarios`, `e2e-local` e `matriz-autorizacao` em
+   `success` e o relatório de jornadas do mesmo commit. Ver
+   `docs/operacao/release-gate.md`. Verde no CI **não** diz que o banco
+   remoto tem as migrations: isso é o passo 1.
 
 5. **Publicar o front** (merge → deploy Vercel). Só agora.
 

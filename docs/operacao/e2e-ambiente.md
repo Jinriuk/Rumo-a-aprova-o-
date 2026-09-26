@@ -75,15 +75,18 @@ Nada de skip condicional. O projeto `mobile` só roda o `mobile.spec.js` e o
    - bundle que cita o demo;
    - bundle sem a URL local.
 2. Stack, banco, fixture, front e a **suíte inteira**.
-3. Relatório de jornadas: o portão descrito acima, com `if: always()`.
+3. Relatório de jornadas: o portão descrito acima, com `if: always()`. O
+   passo tem `id: relatorio` e publica o resumo como saída do job.
 4. **Artefatos sanitizados** (`scripts/e2e/sanitizar-artefatos.mjs`), com `if: always()`:
    - Sobem só os JSON e MD dos resultados, e o `error-context` e o screenshot de quem falhou.
    - Tudo passa por redação: JWT, chaves, access e refresh tokens, senhas da fixture. Depois há uma varredura final.
    - Nunca sobem trace, vídeo, relatório HTML nem estado de autenticação. Se existir estado de autenticação salvo no app, o passo reprova.
 5. **Derrubar a stack** com `if: always()`, mesmo em erro.
 
-O job **não usa secret nenhum** e **ainda não é obrigatório** na proteção
-da `main` (isso é a Etapa 5). A guarda estática
+O job **não usa secret nenhum**. Desde a Etapa 5, o `release-gate` exige
+que ele termine em `success` e refaz o portão a partir da saída
+`relatorio` do passo 3 (SHA do checkout e cada teste como arquivo:linha, tags e status):
+ver [`release-gate.md`](release-gate.md). A guarda estática
 `tests/ci-e2e-local.test.mjs` reprova, no gate `build-e-unitarios`, o PR
 que fizer uma destas coisas:
 - recolocar skip ou secret;
@@ -126,9 +129,9 @@ o observado dos 15 casos da `camada_http` em
   em três fusos.
 - **Porta:** o Postgres da suíte `node --test` e o da stack usam 54322. No
   CI estão em jobs separados. Na máquina, suba um dos dois em outra porta.
-- **Postgres da suíte unitária:** o `build-e-unitarios` roda em
-  `postgres:15`, dois majors abaixo do remoto (17.6). O E2E é o que roda no
-  17; alinhar o gate unitário fica registrado para a Etapa 5.
+- **Postgres da suíte unitária:** desde a Etapa 5, o `build-e-unitarios`
+  e o `matriz-autorizacao` rodam em `postgres:17` (vanilla), o mesmo major
+  do remoto (17.6) e da stack local. Até a Etapa 4 era o 15.
 
 ## Histórico
 

@@ -18,7 +18,9 @@ superfície é higiene.
 ### 2. Branch protection na `main`
 Settings → Branches → Add rule para `main`:
 - **Require status checks**: `build-e-unitarios` (o gate honesto da
-  S1.1).
+  S1.1). Etapa 5: acrescentar `release-gate` depois do aceite negativo
+  (ver `release-gate.md`); ele exige `build-e-unitarios`, `e2e-local` e
+  `matriz-autorizacao`.
 - Require PR before merging (+ 1 review, se houver time).
 
 ### 3. Secrets do CI (quando isolar a E2E — S1.2)

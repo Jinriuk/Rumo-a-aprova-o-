@@ -5,14 +5,21 @@
 # usa só chaves PÚBLICAS (app/.env.production: URL + anon key, publicáveis
 # por design — a segurança é a RLS). A service_role NUNCA entra aqui.
 #
-# HONESTIDADE DE STATUS (S1.1/S1.2):
-#   • O gate AUTORITATIVO do PR é `build-e-unitarios` — determinístico,
-#     sem dependência de rede externa, roda as migrations + seeds 2x e a
-#     suíte `node --test` (lógica pura + motor + RLS + suspensão).
+# HONESTIDADE DE STATUS (S1.1/S1.2, Etapa 5):
+#   • `build-e-unitarios` — determinístico, sem dependência de rede
+#     externa, roda as migrations + seeds 2x e a suíte `node --test`
+#     (lógica pura + motor + RLS + suspensão) em Postgres 17.
 #   • A E2E (job e2e-local, Etapa 3) sobe uma stack Supabase local e
 #     descartável no próprio runner: não usa projeto hospedado nem
 #     secret, NUNCA roda contra o demo ou a produção, e reprova em vez de
 #     pular. Ver docs/operacao/e2e-ambiente.md.
+#   • `matriz-autorizacao` — a matriz da camada banco num job próprio,
+#     para ser exigida pelo nome.
+#   • `release-gate` (Etapa 5) é o check que a proteção da main deve
+#     exigir: roda sempre (if: always()), só passa com os três acima em
+#     `success` e com o relatório de jornadas do e2e-local válido e do
+#     mesmo commit. Nenhum job ou passo deste arquivo usa
+#     continue-on-error (o gate confere). Ver docs/operacao/release-gate.md.
 name: CI
 
 on:
@@ -22,8 +29,8 @@ on:
 
 jobs:
   # ------------------------------------------------------------
-  # 1) GATE PRINCIPAL — build de produção + testes unitários.
-  #    É este job que protege a main. Não depende de secret nenhum.
+  # 1) BUILD + TESTES UNITÁRIOS — build de produção e a suíte inteira.
+  #    Exigido pelo release-gate. Não depende de secret nenhum.
   # ------------------------------------------------------------
   build-e-unitarios:
     runs-on: ubuntu-latest
@@ -31,9 +38,11 @@ jobs:
     # Postgres VANILLA de propósito: a migration 0001 cria as roles
     # (authenticated/anon/service_role) quando faltam, e a 0004 pula o
     # pg_cron quando indisponível — é o desenho do reset-db.sh.
+    # Major 17, o mesmo do remoto (17.6) e da stack do E2E (Etapa 5;
+    # até então era o 15).
     services:
       postgres:
-        image: postgres:15
+        image: postgres:17
         env:
           POSTGRES_PASSWORD: postgres
         ports:
@@ -142,11 +151,16 @@ jobs:
   # Artefatos: só o que sai de scripts/e2e/sanitizar-artefatos.mjs (sem
   # trace, vídeo, relatório HTML nem estado de autenticação).
   # A stack é derrubada no fim mesmo em erro (passo com if: always()).
-  # Ainda NÃO é obrigatório na proteção da main (Etapa 5).
+  # O relatório de jornadas sai como `outputs.relatorio` (SHA do
+  # checkout + cada teste como arquivo:linha, tags e status; sem título,
+  # que o runner pode tomar por segredo e descartar a saída) e o
+  # release-gate o refaz.
   # ------------------------------------------------------------
   e2e-local:
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    outputs:
+      relatorio: ${{ steps.relatorio.outputs.relatorio }}
     env:
       SUPABASE_CLI_VERSION: "2.118.0"
       # quem derruba a stack é o último passo (if: always()), não o trap
@@ -180,6 +194,7 @@ jobs:
         run: bash scripts/e2e/rodar.sh
 
       - name: Relatório jornada → testes (reprova com zero, abaixo do mínimo, pulo ou falha)
+        id: relatorio
         if: always()
         run: node scripts/e2e/relatorio-jornadas.mjs
 
@@ -199,3 +214,98 @@ jobs:
       - name: Derrubar a stack local (sempre, mesmo em erro)
         if: always()
         run: bash scripts/e2e/stack.sh parar
+
+  # ------------------------------------------------------------
+  # MATRIZ DE AUTORIZAÇÃO (Etapa 2, fatia 2; job próprio na Etapa 5)
+  # A camada banco inteira (tests/e2-matriz-autorizacao-db.test.mjs,
+  # 300+ casos sobre a fixture de cinco escolas, transação com rollback)
+  # num job com nome, para o release-gate exigir a matriz e não só "a
+  # suíte". Ela continua também dentro do `npm test` do
+  # build-e-unitarios: tirar de lá abriria um buraco enquanto a proteção
+  # da main ainda exige só aquele job. A camada HTTP da matriz é a
+  # jornada `limites_acesso` do e2e-local.
+  # Reprova se um teste do arquivo não passar, se algum for pulado ou
+  # marcado como todo, ou se o arquivo encolher abaixo de 7 testes.
+  # ------------------------------------------------------------
+  matriz-autorizacao:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 54322:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      PGHOST: 127.0.0.1
+      PGPORT: "54322"
+      PGUSER: postgres
+      PGPASSWORD: postgres
+      PGDATABASE: rumo_teste
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: tests/package-lock.json
+
+      - name: Instalar dependências (tests)
+        working-directory: tests
+        run: npm ci
+
+      - name: Migrations + seed
+        working-directory: tests
+        run: bash reset-db.sh
+
+      - name: Matriz de autorização (camada banco), todo teste executado e aprovado
+        working-directory: tests
+        run: |
+          set -o pipefail
+          node --test --test-reporter=tap e2-matriz-autorizacao-db.test.mjs | tee matriz.tap
+          conta() { sed -n "s/^# $1 \([0-9]\+\)$/\1/p" matriz.tap | tail -1; }
+          ESPERADO=$(grep -c '^test(' e2-matriz-autorizacao-db.test.mjs)
+          echo "testes no arquivo: $ESPERADO; pass $(conta pass), fail $(conta fail), skipped $(conta skipped), todo $(conta todo), cancelled $(conta cancelled)"
+          if [ "$ESPERADO" -lt 7 ] || [ "$(conta pass)" != "$ESPERADO" ] || [ "$(conta fail)" != 0 ] \
+             || [ "$(conta skipped)" != 0 ] || [ "$(conta todo)" != 0 ] || [ "$(conta cancelled)" != 0 ]; then
+            echo "::error::Matriz de autorização: nem todo teste do arquivo rodou e passou."
+            exit 1
+          fi
+
+  # ------------------------------------------------------------
+  # RELEASE GATE (Etapa 5) — o check que a proteção da main exige.
+  # Roda SEMPRE (if: always()), inclusive quando um job acima falha, é
+  # pulado ou cancelado, e reprova (scripts/ci/release-gate.mjs) quando:
+  #   • build-e-unitarios, e2e-local ou matriz-autorizacao está ausente
+  #     ou terminou em qualquer coisa que não seja success;
+  #   • este arquivo usa continue-on-error ou perdeu um desses jobs;
+  #   • o relatório de jornadas está ausente, é de outro SHA ou de outro
+  #     run, tem zero testes, jornada crítica abaixo do mínimo ou teste
+  #     crítico pulado, falho ou instável (avaliação refeita aqui).
+  # Guarda estática: tests/ci-release-gate.test.mjs.
+  # ------------------------------------------------------------
+  release-gate:
+    needs: [build-e-unitarios, e2e-local, matriz-autorizacao]
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+
+      - name: Jobs obrigatórios, ci.yml e relatório de jornadas
+        env:
+          NEEDS: ${{ toJSON(needs) }}
+        run: node scripts/ci/release-gate.mjs

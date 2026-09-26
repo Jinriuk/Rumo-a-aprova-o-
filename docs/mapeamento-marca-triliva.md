@@ -81,13 +81,13 @@ que `package.json` e lockfile não divergiram — é o modo que o CI usa e que f
 |---|---|
 | 1 | `# Triliva — sistema multi-tenant de acompanhamento de estudos` (era "Rumo à Aprovação") |
 | 4 | menção a **"Rumo ao Naval"** — nome **anterior e distinto** (o painel de uma escola só do qual o sistema nasceu; `docs/fundacao/01-visao-geral.md:5` conta a mesma origem). Uma troca da marca atual não decide sozinha se essa referência de origem fica. Pergunta em aberto para Gabriel. |
-| 28 | `rumo_teste` — nome do banco local de testes (também em `tests/reset-db.sh`, `.github/workflows/ci.yml:52`, `.env.example:27`) |
+| 28 | `rumo_teste` — nome do banco local de testes (também em `tests/reset-db.sh`, `.github/workflows/ci.yml:60`, `.env.example:27`) |
 
 ### 1.4 CI / configuração
 
 | Arquivo | Ocorrência | Observação |
 |---|---|---|
-| `.github/workflows/ci.yml:52` | `PGDATABASE: rumo_teste` | nome técnico do banco efêmero de CI, não é marca visível |
+| `.github/workflows/ci.yml:60` | `PGDATABASE: rumo_teste` | nome técnico do banco efêmero de CI, não é marca visível |
 | `.env.example:27` | `PGDATABASE=rumo_teste` | idem |
 | `vercel.json` | nenhuma | config genérica (build, headers, rewrites) |
 | `app/.env.production` | nenhuma | só URL/anon key do projeto `bdjkgrzfzoamchdpobbl` (ref técnico) |
