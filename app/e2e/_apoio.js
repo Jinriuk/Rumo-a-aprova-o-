@@ -139,7 +139,7 @@ export async function loginAluno(page, conta = CONTAS.alunoLucas) {
   // DIAGNÓSTICO (Fase 17): se a área do aluno não concluir, lança o erro
   // COM evidência embutida na MENSAGEM (console/página, falhas de rede e
   // o texto visível) — o reporter sempre mostra a mensagem da falha. Em
-  // paralelo, trace+vídeo+screenshot ficam no artefato (playwright.config).
+  // paralelo, o screenshot da falha sobe no artefato sanitizado (trace e vídeo ficam desligados: guardam token).
   // Só no caminho de erro — não mascara nada.
   const diag = [];
   const net = [];

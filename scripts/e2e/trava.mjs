@@ -64,9 +64,11 @@ export function urlsDoAmbiente(env = process.env) {
     E2E_DB_URL: env.E2E_DB_URL,
     E2E_FUNCTIONS_URL: env.E2E_FUNCTIONS_URL,
     E2E_MAIL_URL: env.E2E_MAIL_URL,
-    // opcional: só existe quando o stack.sh achou o container; se existir,
-    // passa pela mesma regra (local ou interno declarado, nunca hospedado)
+    // opcionais, conferidos quando existem, pela mesma regra (local ou
+    // interno declarado, nunca hospedado): o Edge Runtime direto, e o nome
+    // do E2E antigo, que só pode trazer o valor gerado pela stack local
     ...(env.E2E_EDGE_URL ? { E2E_EDGE_URL: env.E2E_EDGE_URL } : {}),
+    ...(env.E2E_SUPABASE_URL ? { E2E_SUPABASE_URL: env.E2E_SUPABASE_URL } : {}),
   };
 }
 

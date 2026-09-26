@@ -1,5 +1,5 @@
 # CI — build + testes unitários (lógica pura + motor/RLS em Postgres real
-# via Supabase CLI) e, OPCIONALMENTE, a suíte E2E Playwright.
+# via Supabase CLI) e a suíte E2E Playwright numa stack Supabase LOCAL.
 #
 # SEGURANÇA: nenhum secret é necessário para o gate principal. O front
 # usa só chaves PÚBLICAS (app/.env.production: URL + anon key, publicáveis
@@ -9,11 +9,10 @@
 #   • O gate AUTORITATIVO do PR é `build-e-unitarios` — determinístico,
 #     sem dependência de rede externa, roda as migrations + seeds 2x e a
 #     suíte `node --test` (lógica pura + motor + RLS + suspensão).
-#   • A E2E só roda contra um projeto Supabase ISOLADO (secrets
-#     E2E_SUPABASE_*). Sem esse ambiente, a E2E é PULADA de forma
-#     EXPLÍCITA (não fingimos verde) e NUNCA roda contra o banco de
-#     demo — evita poluir a vitrine e o falso-positivo de job cancelado.
-#     Ver docs/operacao/e2e-ambiente.md.
+#   • A E2E (job e2e-local, Etapa 3) sobe uma stack Supabase local e
+#     descartável no próprio runner: não usa projeto hospedado nem
+#     secret, NUNCA roda contra o demo ou a produção, e reprova em vez de
+#     pular. Ver docs/operacao/e2e-ambiente.md.
 name: CI
 
 on:
@@ -127,12 +126,22 @@ jobs:
 
   # ------------------------------------------------------------
   # E2E LOCAL (Etapa 3) — stack Supabase inteira no próprio runner
-  # (Docker + CLI fixada), sem projeto hospedado e sem segredo: Postgres
-  # 17 como o remoto, Auth, PostgREST, Edge Functions e o capturador de
-  # e-mail. Migrations + seeds + usuários pela API admin local, front
-  # buildado com `--mode e2e` (não lê o .env.production do demo). A
-  # trava (scripts/e2e/trava.mjs) recusa *.supabase.co e exige host
-  # local, id de execução e marcador da fixture antes de escrever.
+  # (Docker + CLI fixada), sem projeto hospedado e SEM SECRET NENHUM:
+  # Postgres 17 como o remoto, Auth, PostgREST, Edge Functions e o
+  # capturador de e-mail. Migrations + seeds + usuários pela API admin
+  # local, front buildado com `--mode e2e` (não lê o .env.production do
+  # demo). A trava (scripts/e2e/trava.mjs) recusa *.supabase.co e exige
+  # host local, id de execução e marcador da fixture antes de escrever.
+  #
+  # Reprova, nunca pula:
+  #   • configuração local errada (provas negativas, antes de tudo);
+  #   • qualquer teste falho;
+  #   • zero testes, jornada crítica abaixo do mínimo, teste crítico
+  #     pulado ou instável, navegador falando com projeto hospedado
+  #     (scripts/e2e/relatorio-jornadas.mjs, mínimos em jornadas.mjs).
+  # Artefatos: só o que sai de scripts/e2e/sanitizar-artefatos.mjs (sem
+  # trace, vídeo, relatório HTML nem estado de autenticação).
+  # A stack é derrubada no fim mesmo em erro (passo com if: always()).
   # Ainda NÃO é obrigatório na proteção da main (Etapa 5).
   # ------------------------------------------------------------
   e2e-local:
@@ -140,6 +149,8 @@ jobs:
     timeout-minutes: 30
     env:
       SUPABASE_CLI_VERSION: "2.118.0"
+      # quem derruba a stack é o último passo (if: always()), não o trap
+      E2E_MANTER_STACK: "1"
     steps:
       - uses: actions/checkout@v7
 
@@ -162,90 +173,29 @@ jobs:
           (cd tests && npm ci)
           (cd app && npx playwright install --with-deps chromium)
 
+      - name: Provas negativas (configuração local errada tem de falhar)
+        run: bash scripts/e2e/provas-negativas.sh
+
       - name: Stack local + banco + fixture + front + suíte inteira (jornadas e camada_http)
         run: bash scripts/e2e/rodar.sh
 
-      - name: Resultado da suíte (em falha)
-        if: failure()
+      - name: Relatório jornada → testes (reprova com zero, abaixo do mínimo, pulo ou falha)
+        if: always()
+        run: node scripts/e2e/relatorio-jornadas.mjs
+
+      - name: Artefatos sanitizados
+        if: always()
+        run: node scripts/e2e/sanitizar-artefatos.mjs e2e-artefatos
+
+      - name: Publicar artefatos sanitizados
+        if: always()
         uses: actions/upload-artifact@v7
         with:
-          name: e2e-local-resultados
-          path: |
-            app/e2e-resultados/relatorio/
-            app/e2e-resultados/resultados.json
-            app/e2e-resultados/rede.jsonl
+          name: e2e-local-${{ github.run_attempt }}
+          path: e2e-artefatos/
+          if-no-files-found: ignore
           retention-days: 7
 
-  # ------------------------------------------------------------
-  # 2) GUARDA da E2E: decide se há ambiente ISOLADO configurado.
-  #    Secrets não podem ir direto num `if:` de job — então um job
-  #    leve traduz a presença do secret num output booleano.
-  # ------------------------------------------------------------
-  e2e-guard:
-    runs-on: ubuntu-latest
-    timeout-minutes: 2
-    outputs:
-      isolado: ${{ steps.chk.outputs.isolado }}
-    steps:
-      - id: chk
-        env:
-          E2E_URL: ${{ secrets.E2E_SUPABASE_URL }}
-        run: |
-          if [ -n "$E2E_URL" ]; then
-            echo "isolado=true" >> "$GITHUB_OUTPUT"
-            echo "E2E: ambiente isolado configurado — a suíte vai rodar."
-          else
-            echo "isolado=false" >> "$GITHUB_OUTPUT"
-            echo "::warning::E2E PULADA — sem projeto Supabase isolado (E2E_SUPABASE_URL). Não rodamos E2E contra o banco de demo para não poluí-lo. Configure os secrets E2E_SUPABASE_URL/E2E_SUPABASE_ANON_KEY (ver docs/operacao/e2e-ambiente.md)."
-          fi
-
-  # ------------------------------------------------------------
-  # 3) E2E Playwright — SÓ contra o projeto isolado. Nunca toca o demo.
-  #    Pulada de forma explícita quando não há ambiente isolado.
-  # ------------------------------------------------------------
-  e2e:
-    needs: e2e-guard
-    if: needs.e2e-guard.outputs.isolado == 'true'
-    runs-on: ubuntu-latest
-    timeout-minutes: 25
-    defaults:
-      run:
-        working-directory: app
-    steps:
-      - uses: actions/checkout@v7
-
-      - uses: actions/setup-node@v7
-        with:
-          node-version: 22
-          cache: npm
-          cache-dependency-path: app/package-lock.json
-
-      - name: Instalar dependências
-        run: npm ci
-
-      - name: Apontar E2E para o projeto ISOLADO (obrigatório aqui)
-        env:
-          E2E_URL: ${{ secrets.E2E_SUPABASE_URL }}
-          E2E_KEY: ${{ secrets.E2E_SUPABASE_ANON_KEY }}
-        run: |
-          printf 'VITE_SUPABASE_URL=%s\nVITE_SUPABASE_ANON_KEY=%s\n' "$E2E_URL" "$E2E_KEY" > .env.production.local
-          echo "E2E isolado: build apontando para o projeto de teste (não toca no demo)."
-
-      - name: Build de produção
-        run: npm run build
-
-      - name: Instalar Chromium do Playwright
-        run: npx playwright install --with-deps chromium
-
-      - name: Suíte E2E (desktop + mobile)
-        run: npm run test:e2e
-        env:
-          CI: "true"
-
-      - name: Publicar relatório (em falha)
-        if: failure()
-        uses: actions/upload-artifact@v7
-        with:
-          name: playwright-report
-          path: app/playwright-report/
-          retention-days: 14
+      - name: Derrubar a stack local (sempre, mesmo em erro)
+        if: always()
+        run: bash scripts/e2e/stack.sh parar

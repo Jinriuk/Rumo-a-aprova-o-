@@ -10,3 +10,4 @@ dist/
 
 # pack de capturas (scripts/captura/pack-v2.mjs): saída local, nunca versionada
 .captura/
+e2e-artefatos/

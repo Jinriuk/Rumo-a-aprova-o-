@@ -82,6 +82,11 @@ gravar_env() {
     echo "E2E_SERVICE_ROLE_KEY=${SERVICE_ROLE_KEY}"
     echo "E2E_MAIL_URL=${INBUCKET_URL:-${MAILPIT_URL:-http://127.0.0.1:54324}}"
     echo "E2E_FUNCTIONS_URL=${API_URL}/functions/v1"
+    # Os nomes do E2E antigo, se algum script ainda os ler, recebem os
+    # valores GERADOS por esta stack, nunca um secret do GitHub. A trava
+    # confere E2E_SUPABASE_URL como qualquer outra URL.
+    echo "E2E_SUPABASE_URL=${API_URL}"
+    echo "E2E_SUPABASE_ANON_KEY=${ANON_KEY}"
     # O Edge Runtime direto, sem o Kong: o Kong local responde o preflight
     # com CORS "*" antes do código das funções, e o caso H.edge.options_cors
     # precisa da resposta DELAS. O IP é o do container desta stack, na

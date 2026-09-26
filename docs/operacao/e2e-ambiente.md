@@ -1,102 +1,139 @@
-# Ambiente E2E isolado (Fase 17.2)
+# Ambiente E2E: stack Supabase local e descartável (Etapa 3)
 
-> Problema que motivou: a suíte E2E (Playwright) escreve no banco — o
-> teste de marca altera o **nome da escola**. Rodando contra o projeto de
-> **demo compartilhado**, isso corrompe a vitrine (chegou a ficar
-> `"Matriz ⟦e2e⟧"`). Solução: o E2E roda contra um **projeto Supabase só
-> dele**, descartável e reseteável, sem valor comercial.
+> Regra que vale desde a Fase 17.2 e ficou mais forte: **o E2E nunca
+> escreve no demo nem na produção, e não depende de projeto na nuvem.**
+> A suíte sobe um Supabase inteiro no próprio runner, usa, e derruba.
+
+## Por que mudou
+
+Até a Etapa 3 o job `e2e` só rodava com um terceiro projeto hospedado
+(`secrets.E2E_SUPABASE_URL`) e, sem ele, pulava com `::warning::`. Esse
+projeto nunca existiu, então o E2E nunca rodou. Em 25/09 o teste manual de
+produção achou dois defeitos que um E2E teria pegado: `PATCH
+/auth/v1/user` dava 405 na redefinição de senha, e embeds ambíguos da 0055
+davam 300. O desenho antigo (projeto E2E hospedado, secrets, `e2e-guard`)
+saiu do CI.
 
 ## Os três ambientes
 
-| Ambiente | Para quê | Banco |
-|----------|----------|-------|
-| **Produção** | clientes reais | projeto sa-east-1 (ver `lgpd-e-infra.md`) |
-| **Demo comercial** | apresentação/vendas | projeto demo — **não** usado por teste destrutivo |
-| **E2E / teste** | CI Playwright | projeto próprio, reseteável, descartável |
+| Ambiente | Para quê | Onde |
+|---|---|---|
+| Produção | clientes reais | projeto Supabase de produção. O E2E nunca aponta para ele |
+| Demo comercial | apresentação e vendas | projeto do demo. O E2E nunca aponta para ele |
+| **E2E** | CI e máquina de quem desenvolve | **stack local da CLI do Supabase**, criada e destruída a cada execução |
 
-Regra: **o E2E nunca escreve no demo nem na produção.**
+## O desenho
 
-## O que já está pronto no código
+```
+scripts/e2e/rodar.sh
+  ├─ stack.sh subir        CLI fixada → Postgres 17, Auth, PostgREST, Kong,
+  │                        Edge Runtime (7 funções), Mailpit; prontidão real
+  ├─ banco.sh              trava (marcar) → 59 migrations por psql → seeds
+  │                        (menos 04 e 21) → tira o cron da virada → trava (conferir)
+  ├─ semear.mjs            trava → fixture da matriz → usuários pela API admin local
+  ├─ front.sh              trava → vite build --mode e2e → conferir-bundle.sh
+  └─ playwright test       globalSetup = trava inteira → projetos http, desktop, mobile
+```
 
-O job `e2e` do CI (`.github/workflows/ci.yml`) builda apontando para o
-projeto isolado **quando os secrets existirem**:
+| Peça | O que garante |
+|---|---|
+| `stack.sh` | CLI **2.118.0** (a mesma versão fixa as imagens). O Postgres é **17**, o mesmo major do remoto (17.6). A espera é pela prontidão real de Postgres, Auth, PostgREST, Mailpit e Edge Functions, não por tempo fixo. Studio, analytics, realtime e storage ficam desligados. Diretório temporário com `migrations/` vazio, porque a CLI para no prefixo 0047 duplicado e a cadeia vai por `psql`. |
+| Segredos das funções | Todos locais: `ALLOWED_ORIGINS` é o front do runner, o link de redefinição volta para ele, e `RESEND_API_KEY` não existe (nenhum e-mail sai). Nada de chave do demo, da produção ou `capture-oidc`. |
+| `local.env` | É gerado pela stack: URLs, chave anon, chave de serviço, Mailpit e Edge Runtime direto. Os nomes antigos `E2E_SUPABASE_URL`/`E2E_SUPABASE_ANON_KEY` também são escritos aqui, **com os valores da stack local**. Nunca vêm de secret do GitHub, e a trava confere os dois. |
+| `trava.mjs` | Antes de criar usuário, rodar seed, buildar ou testar, exige três coisas: host local (`127.0.0.1`, `localhost` ou interno declarado em `E2E_HOSTS_INTERNOS`), id de execução e o marcador da fixture **no próprio banco** (`e2e_local.execucao`). Recusa `*.supabase.co/.com/.in` sempre, mesmo declarado como interno. |
+| `front.sh` + `conferir-bundle.sh` | `--mode e2e` não lê o `app/.env.production`. O bundle tem de conter a URL local e não pode citar nenhum projeto hospedado. |
+| Guarda de rede (`app/e2e/local/base.js`) | Todo contexto de navegador do teste fala só com `127.0.0.1`. Chamada a `*.supabase.co` reprova. A contagem por teste vai para `rede.jsonl`. |
+| E-mail | Recuperação e ativação chegam ao **Mailpit local**. O teste lê o link por lá. |
 
-- `secrets.E2E_SUPABASE_URL`
-- `secrets.E2E_SUPABASE_ANON_KEY`
+## Jornadas e o portão do job
 
-**Atualização S1.1/S1.2 — comportamento honesto:** um job `e2e-guard`
-traduz a presença do secret num booleano e o job `e2e` só roda
-`if: needs.e2e-guard.outputs.isolado == 'true'`. Ou seja:
+As jornadas obrigatórias e o mínimo de testes críticos de cada uma estão
+em `scripts/e2e/jornadas.mjs`. Cada teste leva a tag `@j:<jornada>`, e os
+que contam para o mínimo levam também `@critica`. A tabela está em
+`app/e2e/README.md`.
 
-- **Com** os secrets: o E2E roda contra o projeto isolado (escreve
-  `app/.env.production.local`, ignorado pelo git, com prioridade sobre
-  `.env.production`).
-- **Sem** os secrets: o E2E é **PULADO de forma explícita** (estado
-  "skipped" no GitHub, com `::warning::`) — **nunca mais roda contra o
-  banco de demo**. Antes, o comportamento era rodar contra o demo com um
-  aviso; isso foi removido porque (a) poluía a vitrine e (b) um job
-  cancelado/timeout contra o demo compartilhado podia parecer "verde".
+`scripts/e2e/relatorio-jornadas.mjs` roda depois da suíte, mesmo quando
+ela falha. Ele liga cada jornada aos testes executados, escreve a tabela no
+resumo do job e **reprova** quando:
+- nenhum teste rodou;
+- uma jornada crítica rodou menos que o mínimo, inclusive zero;
+- um teste crítico foi pulado, falhou ou só passou na repetição;
+- o navegador tentou falar com projeto hospedado;
+- nenhum teste de navegador chamou a API local.
 
-O **gate autoritativo do PR** passa a ser só `build-e-unitarios`
-(determinístico, sem rede externa, com guarda anti-"verde vazio" que
-falha se a suíte rodar < 200 testes). O E2E é um sinal complementar,
-opcional e isolado — não um portão que finge passar.
+Nada de skip condicional. O projeto `mobile` só roda o `mobile.spec.js` e o
+`desktop` o exclui, então nenhum teste nasce pulado por viewport.
 
-## Passos manuais (uma vez) — só você consegue fazer
+## O job no CI (`e2e-local`)
 
-1. **Criar o projeto E2E** no Supabase (custo **$0**, free tier). Região
-   pode ser us-east-1 (é teste, sem dado real).
-2. **Subir o schema + seed** no projeto E2E (mantém o tracking de
-   migrations correto — ver `deploy-checklist.md`):
-   ```bash
-   supabase link --project-ref <REF_DO_PROJETO_E2E>
-   supabase db push                       # aplica migrations 0001..NNNN
-   # seeds (catálogo + dados de demo, todos idempotentes):
-   for f in supabase/seed/[0-9][0-9]_*.sql; do
-     case "$f" in */04_*) continue;; esac   # 04 é Auth (abaixo)
-     psql "$E2E_DB_URL" -f "$f"
-   done
-   SUPABASE_URL=... SUPABASE_SERVICE_ROLE_KEY=... node scripts/seed-auth-usuarios.mjs
-   ```
-3. **Adicionar os secrets no GitHub** (Settings → Secrets and variables →
-   Actions): `E2E_SUPABASE_URL` e `E2E_SUPABASE_ANON_KEY` com os valores
-   do projeto E2E (anon key é pública por design).
-4. Pronto: o próximo CI roda o E2E isolado. Como o banco é só de teste,
-   o teste de marca pode sujar à vontade.
+1. **Provas negativas** (`scripts/e2e/provas-negativas.sh`): cada configuração errada tem de falhar, e os dois controles têm de passar. Os casos:
+   - API ou banco num projeto hospedado;
+   - `E2E_SUPABASE_URL` hospedado;
+   - projeto hospedado declarado como interno;
+   - host que não é local;
+   - execução sem id;
+   - bundle que cita o demo;
+   - bundle sem a URL local.
+2. Stack, banco, fixture, front e a **suíte inteira**.
+3. Relatório de jornadas: o portão descrito acima, com `if: always()`.
+4. **Artefatos sanitizados** (`scripts/e2e/sanitizar-artefatos.mjs`), com `if: always()`:
+   - Sobem só os JSON e MD dos resultados, e o `error-context` e o screenshot de quem falhou.
+   - Tudo passa por redação: JWT, chaves, access e refresh tokens, senhas da fixture. Depois há uma varredura final.
+   - Nunca sobem trace, vídeo, relatório HTML nem estado de autenticação. Se existir estado de autenticação salvo no app, o passo reprova.
+5. **Derrubar a stack** com `if: always()`, mesmo em erro.
 
-## Reset entre execuções
+O job **não usa secret nenhum** e **ainda não é obrigatório** na proteção
+da `main` (isso é a Etapa 5). A guarda estática
+`tests/ci-e2e-local.test.mjs` reprova, no gate `build-e-unitarios`, o PR
+que fizer uma destas coisas:
+- recolocar skip ou secret;
+- tirar o `if: always()`;
+- publicar artefato cru.
 
-O seed é **idempotente** e os testes restauram o que mudam (o de marca
-restaura no `finally`). Para um reset forte do projeto E2E, reaplique os
-seeds (ou `supabase db reset` apontando para o projeto E2E). Como o banco
-não tem valor comercial, resetar é seguro.
+## Como rodar na máquina
 
-## Critério de conclusão (17.2)
-O E2E roda N vezes sem corromper a escola demo. Atingido quando os secrets
-`E2E_SUPABASE_*` apontam para o projeto de teste.
+```bash
+(cd app && npm ci) && (cd tests && npm ci)
+(cd app && npx playwright install chromium)
+bash scripts/e2e/rodar.sh                    # tudo, derruba a stack no fim
+E2E_MANTER_STACK=1 bash scripts/e2e/rodar.sh # mantém a stack para iterar
+cd app && npx playwright test aluno.spec     # contra a stack já de pé
+node scripts/e2e/relatorio-jornadas.mjs      # o portão, localmente
+bash scripts/e2e/stack.sh parar
+```
 
-## Registro: episódio de flaky na área do aluno (Fase 17)
+Requisitos: Docker, CLI do Supabase na versão do CI, `psql` e Node 22.
+Máquina atrás de proxy com TLS próprio: `E2E_EXTRA_CA=<bundle.crt>` (o
+Deno das funções baixa módulos do `jsr.io`). Onde o ECR da Supabase não é
+alcançável: `SUPABASE_INTERNAL_IMAGE_REGISTRY=docker.io`. Chromium de
+outra versão: `PW_CHROMIUM_PATH`.
 
-Durante o fechamento da Fase 16/17, o E2E da **área do aluno** ficou
-vermelho em vários runs (o menu "Hoje" não aparecia em 15s) e depois
-**passou com o mesmo código de aplicação** (login do aluno em ~1.5s).
-Conclusões:
+Depois de uma execução, `node scripts/e2e/registrar-camada-http.mjs` grava
+o observado dos 15 casos da `camada_http` em
+`docs/evidencias/e2-matriz-autorizacao.json`.
 
-- **Não era bug de produto:** as queries do aluno (metas/registros/
-  simulados/trilha/concursos) funcionam; coordenação e responsável
-  passavam; o aluno é o único teste que espera a tela carregar por
-  inteiro, logo o "canário" de degradação do banco demo **remoto e
-  compartilhado**.
-- **Não era latência determinística:** medida ~50ms; a falha foi
-  intermitente (concentrada em janelas de degradação do demo).
-- **Mitigações aplicadas (ficam):**
-  - `useSessao` não checa `souSuperAdmin()` em login por código
-    (aluno/responsável nunca são super_admin) → um round-trip a menos no
-    caminho mais sensível a latência.
-  - **Evidência no CI em qualquer falha do aluno** (`_apoio.loginAluno`):
-    a mensagem do erro embute console/página, **falhas de rede
-    (4xx/5xx)** e o texto visível da tela; e `playwright.config` retém
-    **trace + vídeo + screenshot** (além do HTML report). Não dá mais
-    para "não aparecer no log".
-- **Pendência obrigatória:** isolar o E2E em projeto Supabase próprio
-  (acima) elimina a causa-raiz da fragilidade.
+## Diferenças da stack local (o que ela NÃO prova)
+
+- **CORS:** o Kong local responde o preflight das funções com `*` antes do
+  código delas. O caso `H.edge.options_cors` fala direto com o Edge Runtime
+  (`E2E_EDGE_URL`, IP do container, declarado como interno para a trava).
+- **Limite de login:** o GoTrue da CLI não limita `/token` (falta
+  `GOTRUE_RATE_LIMIT_HEADER`). O limite do hospedado não é observável aqui.
+- **Intervalo entre e-mails:** 1 s na stack local. No hospedado é maior. A
+  jornada do super admin espera o intervalo a partir do `recovery_sent_at`.
+- **Data:** a virada roda com `p_hoje` controlado. `now()` do Postgres não é
+  congelado. A regra de `app.hoje_local()` é conferida à parte, com a sessão
+  em três fusos.
+- **Porta:** o Postgres da suíte `node --test` e o da stack usam 54322. No
+  CI estão em jobs separados. Na máquina, suba um dos dois em outra porta.
+- **Postgres da suíte unitária:** o `build-e-unitarios` roda em
+  `postgres:15`, dois majors abaixo do remoto (17.6). O E2E é o que roda no
+  17; alinhar o gate unitário fica registrado para a Etapa 5.
+
+## Histórico
+
+Até a Etapa 3 este documento descrevia o projeto E2E hospedado (Fase
+17.2), os secrets `E2E_SUPABASE_*` e o `e2e-guard`. Esse desenho foi
+retirado. O registro do episódio de flaky da área do aluno (Fase 17)
+também ficou para trás: a causa era o banco do demo, remoto e
+compartilhado, que o E2E não usa mais.
