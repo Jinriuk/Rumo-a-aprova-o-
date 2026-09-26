@@ -2,12 +2,12 @@
 /* ETAPA 3 — os 15 casos da camada_http (docs/evidencias/e2-matriz-autorizacao.json),
    contra o Auth, o PostgREST e as Edge Functions da stack LOCAL.
 
-   Cada teste leva o id do caso no título e grava o observado em
-   e2e-resultados/camada-http.json (lido por scripts/e2e/registrar-camada-http.mjs
-   para atualizar a evidência). Negação só conta com o hash das tabelas
-   igual antes e depois, como na camada banco. */
+   Cada teste leva o id do caso no título e registra o observado como
+   ANOTAÇÃO do próprio teste (tipo "camada_http"): quem grava é o reporter
+   JSON do Playwright, e scripts/e2e/registrar-camada-http.mjs lê de lá
+   para atualizar a evidência. O spec não escreve arquivo. Negação só
+   conta com o hash das tabelas igual antes e depois, como na camada banco. */
 import { test, expect } from "@playwright/test";
-import { mkdirSync, writeFileSync } from "node:fs";
 import { ESC, U, AL, R } from "../../../tests/matriz-autorizacao.mjs";
 import { PERSONAS_HTTP, SENHA_E2E } from "../../../scripts/e2e/contas.mjs";
 import {
@@ -19,12 +19,9 @@ import { casosTAR, executarHttp, deveBater } from "./matriz-http.js";
 const observados = {};
 function registrar(id, { observado, status, detalhe }) {
   observados[id] = { observado, status, detalhe, em: new Date().toISOString() };
+  test.info().annotations.push({ type: "camada_http", description: JSON.stringify({ id, ...observados[id] }) });
 }
-test.afterAll(async () => {
-  mkdirSync("e2e-resultados", { recursive: true });
-  writeFileSync("e2e-resultados/camada-http.json", `${JSON.stringify(observados, null, 2)}\n`);
-  await fecharBanco();
-});
+test.afterAll(async () => { await fecharBanco(); });
 
 const sessoes = {};
 async function sessao(persona) {
@@ -102,8 +99,8 @@ test.describe("camada_http", { tag: ["@j:limites_acesso", "@critica"] }, () => {
     const escolasIntactas = mesmoHash(antesEsc, await hashTabelas(["escolas"]));
     expect(completa.status, "PATCH com select=* na própria escola").toBe(403);
     expect(escolasIntactas, "o 403 do RETURNING desfaz o UPDATE").toBe(true);
-    mkdirSync("e2e-resultados", { recursive: true });
-    writeFileSync("e2e-resultados/matriz-http.json", `${JSON.stringify(resultados, null, 2)}\n`);
+    // o caso a caso fica na anotação do teste (vai para o resultados.json)
+    test.info().annotations.push({ type: "matriz_http", description: JSON.stringify(resultados) });
     registrar("H.postgrest.matriz_tabelas", {
       observado: divergentes.length || semProva.length ? "divergente" : "conforme",
       status: null,

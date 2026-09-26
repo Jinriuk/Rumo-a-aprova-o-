@@ -23,13 +23,5 @@ VITE_SUPABASE_URL="$E2E_API_URL" VITE_SUPABASE_ANON_KEY="$E2E_ANON_KEY" \
   npx vite build --mode e2e --outDir dist-e2e --emptyOutDir > "$W/front-build.log" 2>&1 \
   || { tail -30 "$W/front-build.log" >&2; exit 1; }
 
-if grep -rIl -E "[a-z0-9]{20}\.supabase\.co" dist-e2e >/dev/null; then
-  echo "::error::o bundle do E2E cita um projeto *.supabase.co — o build pegou configuração que não é a local" >&2
-  grep -rIo -E "[a-z0-9]{20}\.supabase\.co" dist-e2e | sort -u >&2
-  exit 1
-fi
-if ! grep -rIq "$E2E_API_URL" dist-e2e; then
-  echo "::error::o bundle do E2E não contém $E2E_API_URL — as variáveis locais não entraram no build" >&2
-  exit 1
-fi
+bash "$RAIZ/scripts/e2e/conferir-bundle.sh" dist-e2e "$E2E_API_URL"
 echo "front do E2E: app/dist-e2e aponta para $E2E_API_URL"

@@ -1,9 +1,10 @@
 // ============================================================
 // ETAPA 3 — grava o resultado da camada_http na evidência da matriz
 // ------------------------------------------------------------
-// Lê app/e2e-resultados/camada-http.json (escrito pelo spec
-// app/e2e/http/camada-http.spec.js numa execução da stack LOCAL) e
-// atualiza docs/evidencias/e2-matriz-autorizacao.json:
+// Lê o relatório JSON do Playwright (app/e2e-resultados/resultados.json)
+// de uma execução na stack LOCAL, pega as anotações "camada_http" que o
+// spec app/e2e/http/camada-http.spec.js registra em cada caso, e atualiza
+// docs/evidencias/e2-matriz-autorizacao.json:
 //   • camada_http[].observado / detalhe / status / medido_em / execucao;
 //   • placar.camada_http (provados, parciais, registrados, pendentes).
 // Não inventa nada: caso sem observado no arquivo fica como estava, e o
@@ -16,10 +17,26 @@ import { fileURLToPath } from "node:url";
 import { CASOS_HTTP } from "../../tests/matriz-autorizacao.mjs";
 
 const RAIZ = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
-const origem = resolve(process.argv[2] ?? `${RAIZ}/app/e2e-resultados/camada-http.json`);
+const origem = resolve(process.argv[2] ?? `${RAIZ}/app/e2e-resultados/resultados.json`);
 const destino = `${RAIZ}/docs/evidencias/e2-matriz-autorizacao.json`;
 
-const obs = JSON.parse(readFileSync(origem, "utf8"));
+/** Anotações de um tipo, em todo o relatório do Playwright. */
+export function anotacoes(relatorio, tipo) {
+  const achadas = [];
+  const andar = (suite) => {
+    for (const spec of suite.specs ?? []) {
+      for (const t of spec.tests ?? []) {
+        const todas = [...(t.annotations ?? []), ...(t.results ?? []).flatMap((r) => r.annotations ?? [])];
+        for (const a of todas) if (a.type === tipo) achadas.push(JSON.parse(a.description));
+      }
+    }
+    for (const filho of suite.suites ?? []) andar(filho);
+  };
+  for (const s of relatorio.suites ?? []) andar(s);
+  return achadas;
+}
+
+const obs = Object.fromEntries(anotacoes(JSON.parse(readFileSync(origem, "utf8")), "camada_http").map((o) => [o.id, o]));
 const faltam = CASOS_HTTP.map((c) => c.id).filter((id) => !obs[id]);
 if (faltam.length) {
   console.error(`::error::camada_http incompleta no resultado (${faltam.join(", ")})`);
