@@ -157,6 +157,8 @@ jobs:
   # release-gate o refaz.
   # ------------------------------------------------------------
   e2e-local:
+    # ACEITE NEGATIVO (Etapa 5): job pulado de propósito. NÃO MESCLAR.
+    if: false
     runs-on: ubuntu-latest
     timeout-minutes: 30
     outputs:
