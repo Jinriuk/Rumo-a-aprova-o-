@@ -11,12 +11,23 @@
 //     navegador chamou a API local.
 // Escreve a tabela em app/e2e-resultados/jornadas.md e, no Actions, no
 // resumo do job ($GITHUB_STEP_SUMMARY).
+//
+// Etapa 5: escreve também app/e2e-resultados/jornadas.json e, no Actions,
+// a saída `relatorio` do passo (uma linha de JSON). É o que o job
+// release-gate lê: o SHA do checkout, o run e cada teste com tags e
+// status (sem mensagem de erro, sem corpo de requisição). O gate refaz a
+// avaliação com o jornadas.mjs do próprio checkout, sem confiar no
+// veredito daqui.
 // Uso: node scripts/e2e/relatorio-jornadas.mjs [resultados.json] [rede.jsonl]
 // ============================================================
 import { readFileSync, writeFileSync, appendFileSync, existsSync, mkdirSync } from "node:fs";
+import { execFileSync } from "node:child_process";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { JORNADAS } from "./jornadas.mjs";
+
+/** Versão do formato lido pelo release-gate (scripts/ci/release-gate.mjs). */
+export const VERSAO_RELATORIO = 1;
 
 /** Achata o JSON do Playwright em uma linha por (teste, projeto). */
 export function achatar(relatorio) {
@@ -42,9 +53,13 @@ export function achatar(relatorio) {
   return linhas;
 }
 
-/** Avalia as jornadas; devolve { linhas, problemas, tabela }. */
+/** Avalia as jornadas; devolve { testes, problemas, tabela, rede }. */
 export function avaliar(relatorio, rede = [], jornadas = JORNADAS) {
-  const testes = achatar(relatorio);
+  return avaliarTestes(achatar(relatorio), rede, jornadas);
+}
+
+/** O mesmo, a partir da lista já achatada (é o que o release-gate recebe). */
+export function avaliarTestes(testes, rede = [], jornadas = JORNADAS) {
   const problemas = [];
   const executado = (t) => t.status !== "skipped" && t.execucoes.length > 0;
   if (!testes.some(executado)) problemas.push("nenhum teste foi executado");
@@ -75,6 +90,18 @@ export function avaliar(relatorio, rede = [], jornadas = JORNADAS) {
   if (rede.length && !chamadasLocais) problemas.push("nenhum teste de navegador chamou a API local");
 
   return { testes, problemas, tabela, rede: { testes: rede.length, chamadasLocais, hospedado: hospedado.length } };
+}
+
+/** O relatório que o release-gate valida: só tags, status e contagens. */
+export function resumoParaGate({ testes, problemas, rede }, { sha, runId, runAttempt }, redeBruta = []) {
+  return {
+    versao: VERSAO_RELATORIO,
+    sha, run_id: runId, run_attempt: runAttempt,
+    total: testes.length,
+    testes: testes.map(({ titulo, projeto, tags, status, execucoes }) => ({ titulo, projeto, tags, status, execucoes })),
+    rede: { ...rede, hospedados: [...new Set(redeBruta.flatMap((r) => r.hospedado ?? []))] },
+    problemas,
+  };
 }
 
 export function markdown({ testes, problemas, tabela, rede }) {
@@ -111,6 +138,13 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
   mkdirSync(dirname(arqResultados), { recursive: true });
   writeFileSync(resolve(dirname(arqResultados), "jornadas.md"), md);
   if (process.env.GITHUB_STEP_SUMMARY) appendFileSync(process.env.GITHUB_STEP_SUMMARY, md);
+  // o SHA é o do checkout que rodou a suíte, não o GITHUB_SHA do evento
+  const sha = execFileSync("git", ["rev-parse", "HEAD"], { cwd: raiz }).toString().trim();
+  const resumo = resumoParaGate(r, {
+    sha, runId: process.env.GITHUB_RUN_ID ?? null, runAttempt: process.env.GITHUB_RUN_ATTEMPT ?? null,
+  }, rede);
+  writeFileSync(resolve(dirname(arqResultados), "jornadas.json"), `${JSON.stringify(resumo, null, 2)}\n`);
+  if (process.env.GITHUB_OUTPUT) appendFileSync(process.env.GITHUB_OUTPUT, `relatorio=${JSON.stringify(resumo)}\n`);
   console.log(md);
   if (r.problemas.length) {
     for (const p of r.problemas) console.error(`::error::E2E: ${p}`);
