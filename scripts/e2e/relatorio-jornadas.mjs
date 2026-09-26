@@ -14,10 +14,13 @@
 //
 // Etapa 5: escreve também app/e2e-resultados/jornadas.json e, no Actions,
 // a saída `relatorio` do passo (uma linha de JSON). É o que o job
-// release-gate lê: o SHA do checkout, o run e cada teste com tags e
-// status (sem mensagem de erro, sem corpo de requisição). O gate refaz a
-// avaliação com o jornadas.mjs do próprio checkout, sem confiar no
-// veredito daqui.
+// release-gate lê: o SHA do checkout, o run e cada teste como
+// arquivo:linha, projeto, tags e status. O gate refaz a avaliação com o
+// jornadas.mjs do próprio checkout, sem confiar no veredito daqui.
+// SEM TÍTULO DE TESTE nem frase de problema: o runner descarta a saída
+// inteira ("Skip output ... may contain secret") quando ela casa com um
+// padrão de segredo, e o título "... com Bearer abc" casou no primeiro
+// run. Só dado estruturado sai por aqui.
 // Uso: node scripts/e2e/relatorio-jornadas.mjs [resultados.json] [rede.jsonl]
 // ============================================================
 import { readFileSync, writeFileSync, appendFileSync, existsSync, mkdirSync } from "node:fs";
@@ -39,6 +42,7 @@ export function achatar(relatorio) {
         linhas.push({
           titulo: [...caminho, spec.title].filter(Boolean).join(" › "),
           arquivo: spec.file,
+          linha: spec.line,
           projeto: t.projectName,
           tags,
           // expected | unexpected | flaky | skipped
@@ -92,15 +96,18 @@ export function avaliarTestes(testes, rede = [], jornadas = JORNADAS) {
   return { testes, problemas, tabela, rede: { testes: rede.length, chamadasLocais, hospedado: hospedado.length } };
 }
 
-/** O relatório que o release-gate valida: só tags, status e contagens. */
+/** O relatório que o release-gate valida: referência, tags, status e
+ *  contagens. Nada de título nem texto livre (ver o cabeçalho). */
 export function resumoParaGate({ testes, problemas, rede }, { sha, runId, runAttempt }, redeBruta = []) {
   return {
     versao: VERSAO_RELATORIO,
     sha, run_id: runId, run_attempt: runAttempt,
     total: testes.length,
-    testes: testes.map(({ titulo, projeto, tags, status, execucoes }) => ({ titulo, projeto, tags, status, execucoes })),
+    testes: testes.map(({ arquivo, linha, projeto, tags, status, execucoes }) => ({
+      ref: `${arquivo}:${linha}`, projeto, tags, status, execucoes,
+    })),
     rede: { ...rede, hospedados: [...new Set(redeBruta.flatMap((r) => r.hospedado ?? []))] },
-    problemas,
+    problemas: problemas.length,
   };
 }
 

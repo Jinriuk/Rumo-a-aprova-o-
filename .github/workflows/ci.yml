@@ -152,7 +152,9 @@ jobs:
   # trace, vídeo, relatório HTML nem estado de autenticação).
   # A stack é derrubada no fim mesmo em erro (passo com if: always()).
   # O relatório de jornadas sai como `outputs.relatorio` (SHA do
-  # checkout + cada teste com tags e status) e o release-gate o refaz.
+  # checkout + cada teste como arquivo:linha, tags e status; sem título,
+  # que o runner pode tomar por segredo e descartar a saída) e o
+  # release-gate o refaz.
   # ------------------------------------------------------------
   e2e-local:
     runs-on: ubuntu-latest

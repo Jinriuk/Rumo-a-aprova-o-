@@ -57,7 +57,7 @@ export function conferirWorkflow(texto, obrigatorios = OBRIGATORIOS) {
 /** O relatório de jornadas (saída do e2e-local), revalidado do zero. */
 export function conferirRelatorio(bruto, { sha, runId }, jornadas = JORNADAS) {
   if (bruto === undefined || bruto === null || String(bruto).trim() === "") {
-    return { problemas: ["relatório de jornadas ausente (o e2e-local não publicou a saída `relatorio`)"], resumo: null };
+    return { problemas: ["relatório de jornadas ausente (o e2e-local não publicou a saída `relatorio`; se o passo rodou, procure \"Skip output 'relatorio'\" no fim do log do e2e-local)"], resumo: null };
   }
   let r;
   try { r = JSON.parse(bruto); } catch { return { problemas: ["relatório de jornadas ilegível (não é JSON)"], resumo: null }; }
@@ -71,10 +71,15 @@ export function conferirRelatorio(bruto, { sha, runId }, jornadas = JORNADAS) {
   if (r.total !== r.testes.length) problemas.push(`relatório incoerente: total ${r.total}, ${r.testes.length} testes listados`);
 
   const rede = r.rede?.testes ? [{ api: r.rede.chamadasLocais ?? 0, hospedado: r.rede.hospedados ?? [] }] : [];
-  const refeito = avaliarTestes(r.testes, rede, jornadas);
+  // o título não viaja (ver relatorio-jornadas.mjs): arquivo:linha no lugar
+  const testes = r.testes.map((t) => ({ ...t, titulo: t.ref }));
+  const refeito = avaliarTestes(testes, rede, jornadas);
   problemas.push(...refeito.problemas);
-  // o que o próprio e2e-local acusou e a reavaliação não repetiu
-  for (const p of r.problemas ?? []) if (!refeito.problemas.includes(p)) problemas.push(`e2e-local acusou: ${p}`);
+  // o e2e-local também se reprovou: o gate não contradiz, mesmo sem repetir o motivo
+  if (typeof r.problemas !== "number") problemas.push("relatório incoerente: contagem de problemas do e2e-local ausente");
+  else if (r.problemas > 0 && !refeito.problemas.length) {
+    problemas.push(`o e2e-local acusou ${r.problemas} problema(s) que a reavaliação não repetiu; ver o resumo do job e2e-local`);
+  }
   return { problemas, resumo: { ...refeito, sha: r.sha } };
 }
 

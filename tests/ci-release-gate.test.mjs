@@ -22,7 +22,7 @@ function playwright(testes) {
     suites: [{
       title: "x.spec.js",
       specs: testes.map((t, i) => ({
-        title: t.titulo ?? `teste ${i}`, file: "x.spec.js", tags: t.tags,
+        title: t.titulo ?? `teste ${i}`, file: "x.spec.js", line: i + 1, tags: t.tags,
         tests: [{ projectName: "desktop", status: t.status ?? "expected", results: t.status === "skipped" ? [] : [{ status: t.status === "unexpected" ? "failed" : "passed" }] }],
       })),
     }],
@@ -106,7 +106,7 @@ test("release-gate: jornada que sumiu do relatório reprova pelo jornadas.mjs do
   // declarado limpo; o gate usa a lista deste checkout e acusa
   const semPrivacidade = completo().filter((t) => t.tags[0] !== "j:privacidade");
   const rel = JSON.parse(saida(semPrivacidade));
-  rel.problemas = [];
+  rel.problemas = 0;
   const p = gate(needsVerdes(JSON.stringify(rel))).problemas;
   assert.ok(p.some((x) => /^privacidade: 0 teste\(s\) crítico\(s\)/.test(x)), p.join("\n"));
 });
@@ -123,6 +123,28 @@ test("release-gate: problema que só o e2e-local viu (rede hospedada) também re
   const rede = [{ api: 3, hospedado: ["abc.supabase.co"] }];
   const p = gate(needsVerdes(saida(completo(), { rede }))).problemas;
   assert.ok(p.some((x) => /projeto hospedado: abc\.supabase\.co/.test(x)), p.join("\n"));
+  // o e2e-local se reprovou por algo que a reavaliação não enxerga: reprova igual
+  const rel = JSON.parse(saida());
+  rel.problemas = 2;
+  assert.ok(gate(needsVerdes(JSON.stringify(rel))).problemas.some((x) => /acusou 2 problema\(s\)/.test(x)));
+  delete rel.problemas;
+  assert.ok(gate(needsVerdes(JSON.stringify(rel))).problemas.some((x) => /contagem de problemas do e2e-local ausente/.test(x)));
+});
+
+test("relatório: a saída do job não leva título nem texto livre (o runner a descartaria)", () => {
+  // run 36245732923: "Skip output 'relatorio' since it may contain secret",
+  // por causa do título "H.edge.bearer_malformado: as 7 funções com Bearer abc"
+  const t = completo();
+  t[0].titulo = "H.edge.bearer_malformado: as 7 funções com Bearer abc";
+  t[1].status = "unexpected";
+  const bruto = saida(t);
+  assert.doesNotMatch(bruto, /Bearer|bearer_malformado|teste crítico|FALHOU/);
+  const r = JSON.parse(bruto);
+  assert.deepEqual(Object.keys(r.testes[0]).sort(), ["execucoes", "projeto", "ref", "status", "tags"]);
+  assert.equal(r.testes[0].ref, "x.spec.js:1");
+  assert.equal(typeof r.problemas, "number");
+  // e o gate continua dizendo QUAL teste, por arquivo:linha
+  assert.ok(gate(needsVerdes(bruto)).problemas.includes("auth: teste crítico FALHOU: x.spec.js:2"));
 });
 
 test("release-gate: continue-on-error no ci.yml ou job obrigatório removido reprova", () => {

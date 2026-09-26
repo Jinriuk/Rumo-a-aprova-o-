@@ -37,8 +37,17 @@ job segue verde com o passo vermelho. Nos dois casos o `needs` mentiria.
 O passo `Relatório jornada → testes` do `e2e-local` (`id: relatorio`,
 `if: always()`) escreve `app/e2e-resultados/jornadas.json` e a saída
 `relatorio` do job: versão do formato, SHA de `git rev-parse HEAD`, run,
-cada teste com tags e status, contagem de rede e os problemas que ele
-viu. Não leva mensagem de erro nem corpo de requisição.
+cada teste como `arquivo:linha` + projeto + tags + status, contagem de
+rede e o número de problemas que ele viu.
+
+**Nenhum texto livre na saída.** No primeiro run (`36245732923`) o runner
+descartou a saída inteira (`Skip output 'relatorio' since it may contain
+secret`) porque o título de um teste terminava em "Bearer abc", que casa
+com o padrão de segredo do runner. O gate reprovou por relatório
+ausente, o que é o comportamento certo, mas com o E2E verde. Por isso a
+saída não leva título nem frase de problema, e o teste
+`tests/ci-release-gate.test.mjs` garante isso. Os títulos continuam no
+resumo do job `e2e-local`.
 
 ## Matriz de autorização
 

@@ -85,7 +85,7 @@ Nada de skip condicional. O projeto `mobile` só roda o `mobile.spec.js` e o
 
 O job **não usa secret nenhum**. Desde a Etapa 5, o `release-gate` exige
 que ele termine em `success` e refaz o portão a partir da saída
-`relatorio` do passo 3 (SHA do checkout e cada teste com tags e status):
+`relatorio` do passo 3 (SHA do checkout e cada teste como arquivo:linha, tags e status):
 ver [`release-gate.md`](release-gate.md). A guarda estática
 `tests/ci-e2e-local.test.mjs` reprova, no gate `build-e-unitarios`, o PR
 que fizer uma destas coisas:
