@@ -853,10 +853,12 @@ export async function executarMatriz(pool) {
   }
 }
 
-// ── camada HTTP: especificação para a Etapa 3 ────────────────
-// Esta sessão não tem stack Supabase (Docker) nem rede para *.supabase.co.
-// Cada caso abaixo é PENDENTE-E3: token real do Auth local, PostgREST e
-// Edge Functions de verdade. PENDENTE não é seguro.
+// ── camada HTTP ───────────────────────────────────────────────
+// Especificada na Etapa 2 e medida na Etapa 3, contra a stack Supabase
+// LOCAL (app/e2e/http/camada-http.spec.js): token real do Auth local,
+// PostgREST e Edge Functions de verdade. O observado é gravado na
+// evidência por scripts/e2e/registrar-camada-http.mjs; o --gerar abaixo
+// preserva esse registro ao refazer a camada banco.
 export const CASOS_HTTP = [
   { id: "H.postgrest.accept_profile_app", alvo: "PostgREST", persona: "anon", operacao: "GET /rest/v1/concursos com Accept-Profile: app", esperado: "406 PGRST106 listando só os schemas expostos (sem app)", motivo: "prova que as funções app.* com EXECUTE para authenticated não são alcançáveis pela API" },
   { id: "H.postgrest.rpc_app_backfill", alvo: "PostgREST", persona: "coordA", operacao: "POST /rest/v1/rpc/backfill_progresso com Content-Profile: app", esperado: "406 (schema não exposto)", motivo: "mesmo ponto, pelo caminho de escrita" },
@@ -890,19 +892,29 @@ if (souPrincipal && process.argv.includes("--gerar")) {
   const sha = (() => { try { return execFileSync("git", ["rev-parse", "HEAD"], { cwd: raiz }).toString().trim(); } catch { return null; } })();
   const comAchado = resultados.map((r) => (ACHADOS_ABERTOS[r.id] ? { ...r, achado: ACHADOS_ABERTOS[r.id].achado } : r));
   const divergentes = comAchado.filter((r) => r.esperado !== r.observado);
+  // a camada HTTP é medida na stack local (Etapa 3): o que já está na
+  // evidência fica; caso novo nasce PENDENTE-E3
+  const destinoAtual = resolve(raiz, "docs/evidencias/e2-matriz-autorizacao.json");
+  const anterior = existsSync(destinoAtual) ? JSON.parse(readFileSync(destinoAtual, "utf8")) : {};
+  const httpAnterior = Object.fromEntries((anterior.camada_http ?? []).map((h) => [h.id, h]));
+  const camadaHttp = CASOS_HTTP.map((h) => (httpAnterior[h.id]?.observado && httpAnterior[h.id].observado !== "PENDENTE-E3"
+    ? { ...httpAnterior[h.id], ...h }
+    : { ...h, camada: "http", observado: "PENDENTE-E3" }));
   const placar = {
     camada_banco: { casos: resultados.length, conforme: resultados.length - divergentes.length, divergentes: divergentes.length, divergentes_registrados: divergentes.filter((r) => r.achado).length },
-    camada_http: { casos: CASOS_HTTP.length, provados: 0, pendente_e3: CASOS_HTTP.length },
+    camada_http: anterior.placar?.camada_http && camadaHttp.every((h) => h.observado !== "PENDENTE-E3")
+      ? anterior.placar.camada_http
+      : { casos: CASOS_HTTP.length, provados: 0, pendente_e3: camadaHttp.filter((h) => h.observado === "PENDENTE-E3").length },
   };
   const saida = {
     gerado_em: new Date().toISOString(), sha, postgres_local: postgres, postgres_hospedado: "17.6 (demo e produção)",
     nota_versao: "a camada banco roda no Postgres local; os projetos hospedados estão no 17.6. RLS, SECURITY DEFINER e grants usados aqui não mudaram entre 16 e 17.",
     placar, personas: DESCRICAO_PERSONAS, achados: ACHADOS_ABERTOS,
     casos: comAchado,
-    camada_http: CASOS_HTTP.map((h) => ({ ...h, camada: "http", observado: "PENDENTE-E3" })),
+    camada_http: camadaHttp,
   };
   const destino = resolve(raiz, "docs/evidencias/e2-matriz-autorizacao.json");
   mkdirSync(dirname(destino), { recursive: true });
   writeFileSync(destino, `${JSON.stringify(saida, null, 2)}\n`);
-  console.log(`matriz: ${resultados.length} casos na camada banco (${placar.camada_banco.conforme} conformes, ${divergentes.length} divergentes), ${CASOS_HTTP.length} PENDENTE-E3 → ${destino}`);
+  console.log(`matriz: ${resultados.length} casos na camada banco (${placar.camada_banco.conforme} conformes, ${divergentes.length} divergentes), camada HTTP ${JSON.stringify(placar.camada_http)} → ${destino}`);
 }

@@ -95,9 +95,9 @@ dois ambientes, e produção sem nenhuma coluna interna preenchida.
 | C-S04 `tenant_operacional` | **PENDENTE DO DONO** (correção pronta) | Aprovar a aplicação da 0056 (#140, empilhado no #138) em demo e produção | [Fatia 3](#fatia-3--c-s04-tenant_operacional-nega-por-padrão) |
 | C-S05 senha vazada | **PENDENTE DE ETAPA (E8)** | Ligar e testar na ativação do Pro, pela lista em `auth-credenciais-checklist.md` (#143). Testar se a checagem vale no caminho da `trocar-senha` (API de admin) | [Fatia 6](#fatia-6--c-s03-c-s05-e-c-s07) |
 | C-S06 SECURITY DEFINER | **PENDENTE DO DONO** (correção pronta) | Aprovar a 0057 (#141); conferir no painel se `app` está em "Exposed schemas" (o advisor da Supabase indica que não está, ver Fatia 6) | [Fatia 4](#fatia-4--c-s06-security-definer) |
-| C-S07 chave anon | **PENDENTE DE ETAPA (E3)**, só a leitura do deploy de produção | Banco provado: `anon` não lê, não altera, não executa nada. Falta ver, por HTTP, que o bundle publicado em produção usa uma chave de papel `anon` do projeto de produção (o valor no Vercel não é legível e a rede desta sessão não alcança o domínio) | [Fatia 6](#fatia-6--c-s03-c-s05-e-c-s07) |
-| Matriz de autorização | **camada banco: FEITA** · camada HTTP: **PENDENTE DE ETAPA (E3)** | 328 casos; 53 divergências registradas, cada uma com a correção (com 0055 a 0058 juntas sobra 1, a E1-ACHADO-2); 15 casos HTTP especificados para a E3 | #139, [Fatia 2](#fatia-2--matriz-de-autorização) |
-| Complementos G | **PENDENTE DO DONO** (2 correções urgentes prontas) e **PENDENTE DE ETAPA (E3)** | Aprovar a 0058 (#144) e o redeploy das 4 funções (#145); ler os limites de login do Auth, o secret `PASSWORD_RESET_REDIRECT_URL` de produção e o objeto `IMG_9712.jpeg` do demo; sondagens HTTP na E3 | [Fatia 7](#fatia-7--complementos-do-relatório-g) |
+| C-S07 chave anon | **PENDENTE**, só a leitura do deploy de produção (fora do alcance da stack local da E3) | Banco provado: `anon` não lê, não altera, não executa nada. Falta ver, por HTTP, que o bundle publicado em produção usa uma chave de papel `anon` do projeto de produção (o valor no Vercel não é legível e a rede desta sessão não alcança o domínio) | [Fatia 6](#fatia-6--c-s03-c-s05-e-c-s07) |
+| Matriz de autorização | **camada banco: FEITA** · camada HTTP: **FEITA na stack local (E3)** | 328 casos; 53 divergências registradas, cada uma com a correção (com 0055 a 0058 juntas sobra 1, a E1-ACHADO-2). HTTP: 15 casos medidos, 13 provados, 1 comportamento registrado, 1 parcial, 0 divergentes; 174 casos T/A/R repetidos por HTTP sem divergência | #139, [Fatia 2](#fatia-2--matriz-de-autorização), [camada HTTP](#etapa-3--camada-http-medida-na-stack-local) |
+| Complementos G | **PENDENTE DO DONO** (2 correções urgentes prontas) e **PENDENTE DE ETAPA (E3)** | Aprovar a 0058 (#144) e o redeploy das 4 funções (#145); ler os limites de login do Auth, o secret `PASSWORD_RESET_REDIRECT_URL` de produção e o objeto `IMG_9712.jpeg` do demo; sondagens HTTP: feitas na stack local (E3), falta repetir as sem efeito nas funções publicadas | [Fatia 7](#fatia-7--complementos-do-relatório-g) |
 
 ## PRs da etapa
 
@@ -394,7 +394,7 @@ tabela.
 | Camada | Provados | Divergentes (registrados) | PENDENTE-E3 |
 | --- | --- | --- | --- |
 | Banco | 275 conformes de 328 | 53: FK cruzada e cenários (18) → 0055/#138 · C-S04 (20) → 0056/#140 · C-S06 (6) → 0057/#141 · colunas do backoffice em `escolas` (8) → 0058/#144 · E1-ACHADO-2 (1) | — |
-| HTTP | 0 | — | 15 (ver `camada_http` no JSON: Accept-Profile, login por persona, PostgREST, as 7 Edge Functions sem bearer / malformado / expirado / outro tenant / método / OPTIONS, escola parada nas funções da coordenação (#145), refresh com claims antigas, limite do login por código) |
+| HTTP (stack local, E3) | 13 de 15 · mais 174 casos T/A/R por HTTP, todos conformes | 0 · 1 comportamento registrado (`H.auth.refresh_reemite_claims`) · 1 parcial (`H.auth.login_codigo_limite`: limite não observável localmente) | 0 (ver [camada HTTP](#etapa-3--camada-http-medida-na-stack-local)) |
 
 Atualizado na Fatia 7 (eram 318 casos, 45 divergentes e 14 HTTP). Com
 0055, 0056, 0057 e 0058 aplicadas juntas no banco local, sobra 1
@@ -438,8 +438,10 @@ divergente: a E1-ACHADO-2.
   continua coordenação enquanto o token valer, porque as policies leem o
   papel do JWT. A janela é o JWT expiry (indício de 3600 s). Se o
   `app_metadata` não for trocado no Auth, o refresh reemite as claims
-  antigas e a janela vira indefinida. Esse teste é HTTP: PENDENTE-E3
-  (`H.auth.refresh_reemite_claims`).
+  antigas e a janela vira indefinida. **Medido na E3** (stack local,
+  `H.auth.refresh_reemite_claims`): o refresh devolve 200 e o token novo
+  ainda diz `coordenacao`, lendo os alunos da escola. A janela é
+  indefinida enquanto o `app_metadata` não for trocado no Auth.
 - **Responsável revogado:** perde o aluno na hora, porque o vínculo é
   lido ao vivo. A conta segue autenticada e lê a configuração da escola.
 - **Catálogo** publicado é legível por qualquer token autenticado,
@@ -447,6 +449,49 @@ divergente: a E1-ACHADO-2.
   escola.
 
 ---
+
+## Etapa 3 — camada HTTP medida na stack local
+
+Os 15 casos da `camada_http` rodaram contra o Auth, o PostgREST e as 7
+Edge Functions de uma stack Supabase **local e descartável** (Etapa 3,
+`app/e2e/http/camada-http.spec.js`), com o mesmo critério da camada banco:
+negação só conta com o hash das tabelas igual antes e depois. O observado
+está em `camada_http` de `docs/evidencias/e2-matriz-autorizacao.json`
+(gravado por `scripts/e2e/registrar-camada-http.mjs`). Nada tocou demo nem
+produção.
+
+| Caso | Observado |
+| --- | --- |
+| `H.postgrest.accept_profile_app` | 406 `PGRST106`: o schema `app` não é exposto |
+| `H.postgrest.rpc_app_backfill` | 406 com `Content-Profile: app`; eventos de progresso intactos |
+| `H.auth.login_por_persona` | 17 personas com login real; claims `app_metadata.{escola_id,papel}` iguais às da fixture |
+| `H.postgrest.matriz_tabelas` | 174 casos T.*, A.* e R.* por HTTP (162 negações com hash conferido, 12 controles positivos), 0 divergentes, 0 sem tradução |
+| `H.postgrest.upsert_on_conflict` | `resolution=merge-duplicates` com id da B: 403 em turmas, alunos e escolas; tabelas intactas |
+| `H.edge.escola_parada` | coordenação de escola suspensa e cancelada: 403 `escola_nao_operacional` nas 4 funções, sem efeito |
+| `H.edge.sem_bearer` | 401 em 5 funções; 403 em `virar-semana` e `backoffice-coordenador` (porteiro próprio: chave de serviço e super admin). Sem efeito |
+| `H.edge.bearer_malformado` | idem, e o corpo não traz detalhe interno |
+| `H.edge.token_expirado` | controle: o mesmo token com `exp` futuro passa do porteiro (400 de validação); com `exp` passado, 401 (403 nas duas de porteiro próprio) |
+| `H.edge.outro_tenant` | aluno, conta, vínculo e escola da B no payload da coordA: 404 nas funções da coordenação, 403 no backoffice; sem efeito |
+| `H.edge.metodo_errado` | GET, PUT e DELETE nas 7: 405 |
+| `H.edge.options_cors` | direto no Edge Runtime: só a origem permitida recebe `Access-Control-Allow-Origin`; `localhost:5173`, origem arbitrária, domínio de produção e preview não recebem |
+| `H.auth.sessao_revogada` | o MESMO access token lê 0 linhas logo depois da revogação; refresh 200 (revogar o vínculo não encerra a conta) e o token novo também lê 0 |
+| `H.auth.refresh_reemite_claims` | **registrado:** refresh 200 e o token novo ainda diz `coordenacao`; janela indefinida enquanto o `app_metadata` não mudar |
+| `H.auth.login_codigo_limite` | **parcial:** anti-enumeração provada (inexistente e senha errada: `400 invalid_credentials`, mesma mensagem); limite não observável na stack local |
+
+Medições extras, pendências do texto abaixo (`app/e2e/http/pendencias-e3.spec.js`):
+
+| Medição | Observado |
+| --- | --- |
+| `E3.reset_encerra_sessao` | o reset pela coordenação mata o refresh token antigo; o access token já emitido vale até expirar |
+| `E3.conta_banida_login` | **achado baixo:** conta revogada responde `user_banned` mesmo com senha errada, diferente da inexistente |
+
+Limites da stack local, que ficam para a Etapa 5:
+- o Kong local responde o preflight com CORS `*` antes da função (o caso
+  foi medido direto no Edge Runtime);
+- o GoTrue local não limita `/token` (ver `H.auth.login_codigo_limite`);
+- `PATCH` com representação completa (`select=*`) na própria escola dá 403
+  porque a 0058 esconde `observacao` e `contato_nome` do `RETURNING`; o app
+  pede `select=id` e não é afetado (registrado no caso da matriz HTTP).
 
 ## Fatia 3 — C-S04: `tenant_operacional` nega por padrão
 
@@ -567,7 +612,7 @@ a lista inteira.
 | SHA | `e540438` (branch do #142) |
 | Teste | 5 testes de comportamento em `onda1-cors-modais` |
 | Observado | 17/17 no arquivo; contrafactual: 2 falham com o `cors.ts` antigo; suíte 1060/1060 |
-| Pendente | (1) o dono lê se `ALLOWED_ORIGINS` existe em cada projeto e se tem `localhost`; (2) aprova o redeploy; (3) decide sobre o preview. OPTIONS por HTTP nas funções publicadas: PENDENTE-E3 |
+| Pendente | (1) o dono lê se `ALLOWED_ORIGINS` existe em cada projeto e se tem `localhost`; (2) aprova o redeploy; (3) decide sobre o preview. OPTIONS por HTTP: **conforme na stack local** (E3, `H.edge.options_cors`: só a origem permitida recebe CORS); nas funções publicadas, falta repetir (sem efeito, pode rodar na Etapa 5) |
 | Estado | **PENDENTE DO DONO** |
 
 ---
@@ -673,8 +718,11 @@ lista registra:
 **Recuperação de senha:** acontece no GoTrue (`PUT /auth/v1/user` com o
 token do link, `app/src/shared/data/index.js:807-830`). Não há parte de
 banco para testar localmente. Se o reset feito pela coordenação encerra as
-sessões abertas do aluno: **PENDENTE-E3** (a `provisionar-aluno` não chama
-nenhum encerramento de sessão).
+sessões abertas do aluno: **medido na E3** (stack local,
+`E3.reset_encerra_sessao`): a senha antiga deixa de entrar e o refresh token
+antigo morre (`400 refresh_token_not_found`), mas o access token já emitido
+segue lendo até expirar (jwt_expiry, 3600 s). A sessão não se renova; o
+resto de validade do token continua.
 
 | Campo | Valor |
 | --- | --- |
@@ -714,7 +762,8 @@ INSERT prova. Contraprova: policy para `anon`, RLS desligada, USAGE em
 **O que falta:** ver, por HTTP, que o bundle **publicado** em produção
 usa uma chave de papel `anon` do projeto de produção. O valor no Vercel é
 `sensitive` (ilegível), e a rede desta sessão não alcança o domínio.
-PENDENTE-E3; o dono pode adiantar abrindo `app.trilivaedu.com.br` e
+Fora do alcance da stack local da E3 (é sobre o deploy publicado): segue
+pendente; o dono pode adiantar abrindo `app.trilivaedu.com.br` e
 conferindo, na aba de rede do navegador, que as chamadas vão para
 `zckyhihxjjbnqjqilymn.supabase.co`.
 
@@ -749,7 +798,8 @@ do painel continua sendo o fechamento.
 URGENTE, da `main`). A matriz (#139) ganhou 9 casos e 1 caso HTTP.
 **Nada aplicado nem publicado.** A rede desta sessão continua sem
 alcançar `*.supabase.co` (`curl` devolve `000`), então nenhuma sondagem
-HTTP foi feita: todas ficam PENDENTE-E3.
+HTTP foi feita. Na E3 elas rodaram na stack local (ver
+[camada HTTP](#etapa-3--camada-http-medida-na-stack-local)).
 
 ### As 7 Edge Functions, lidas uma a uma
 
@@ -763,7 +813,7 @@ devolvem erro genérico no `catch`.
 | --- | --- | --- | --- | --- |
 | `gerar-meta` | gera a meta da semana de um aluno | coordenação (`index.ts:33-35`) | `alunoDaEscola` (`:40`) | Devolve à coordenação a mensagem de erro do motor (`:73`). Sem porteiro de escola parada até o #145. |
 | `lgpd-titular` | exporta o dossiê ou apaga o aluno e as contas | coordenação (`:47-51`) | `alunoDaEscola` (`:58`) | A lista de contas que caem vem de `lgpd_usuarios_do_aluno`, que a 0055 corrige (falha do topo). Sem porteiro de escola parada até o #145. |
-| `provisionar-aluno` | cria conta de aluno ou responsável; reseta, revoga e reativa credencial; vincula responsável | coordenação (`:216-218`) | `alunoDaEscola` (`:239`), `usuarioDaEscola` com papel aluno/responsável (`:152`), responsável da escola (`:248-254`) | A senha temporária só volta na resposta, uma vez. O reset não encerra sessões abertas (PENDENTE-E3). Sem porteiro de escola parada até o #145. |
+| `provisionar-aluno` | cria conta de aluno ou responsável; reseta, revoga e reativa credencial; vincula responsável | coordenação (`:216-218`) | `alunoDaEscola` (`:239`), `usuarioDaEscola` com papel aluno/responsável (`:152`), responsável da escola (`:248-254`) | A senha temporária só volta na resposta, uma vez. O reset derruba o refresh token; o access token já emitido vale até expirar (medido na E3). Sem porteiro de escola parada até o #145. |
 | `revogar-responsavel` | apaga o vínculo | coordenação (`:88-105`) ou super_admin ativo (`:94-98`) | `escola_id` do token no filtro (`:114`); super_admin em qualquer escola | Sem porteiro de escola parada até o #145 (só no ramo da coordenação). |
 | `trocar-senha` | troca a própria senha e zera a troca obrigatória | qualquer usuário autenticado (`:115-116`) | sempre `quem.id`, nunca id do corpo (`:129`, `:136`) | Regra de força e "senha diferente do código" no servidor. Troca pela API de admin (ver C-S05). |
 | `backoffice-coordenador` | cria ou revincula coordenação; reenvia link de acesso | super_admin ativo em `internal_admins` (`:53-67`, `:213-214`) | escola existe (`:255-258`) | O link de recuperação nunca volta na resposta nem vai para log. Dois pontos de endurecimento abaixo. |
@@ -788,7 +838,9 @@ a escola está suspensa ou cancelada. Detalhe no topo deste registro.
   dono confere** se ele existe em produção (os secrets das funções não
   são legíveis por ferramenta).
 
-**Sondagens HTTP seguras: PENDENTE-E3.** O código mostra que as seis
+**Sondagens HTTP seguras: feitas na stack local (E3)**, as 7 funções
+sem bearer, com bearer malformado, com token expirado e com método errado,
+todas recusadas e sem efeito (hash das tabelas igual). O código mostra que as seis
 funções de usuário recusam antes de qualquer escrita quando não há
 bearer, quando o token é inválido e quando o método não é `POST`
 (`chamador` ou `superAdmin` rodam antes de ler o corpo). A
@@ -811,11 +863,18 @@ efeito colateral e podem rodar no demo quando a rede permitir.
 - **Anti-enumeração:** o código tem 12 caracteres de um alfabeto de 31
   (cerca de 59 bits) e, desde a Etapa 7, não basta: é preciso a senha,
   que começa com 16 caracteres aleatórios. O Auth responde a mesma
-  mensagem para e-mail inexistente e senha errada; se conta banida
-  responde diferente: PENDENTE-E3.
+  mensagem para e-mail inexistente e senha errada (medido na E3:
+  `400 invalid_credentials` nos dois). **Conta banida responde diferente,
+  mesmo sem a senha** (medido na E3, `E3.conta_banida_login`): `user_banned`
+  contra `invalid_credentials` da inexistente. Quem tem um código revogado
+  descobre que ele existe e foi revogado sem saber a senha. O front mostra a
+  mesma frase nos dois casos. Gravidade baixa (código de ~59 bits), achado
+  registrado, sem correção nesta etapa.
 - **O teste de limite por HTTP não pode rodar no demo:** tentativa de
-  login falha grava no log de auditoria do Auth, e isso é escrita. Vai para
-  o projeto isolado da E3.
+  login falha grava no log de auditoria do Auth, e isso é escrita. Na E3
+  ele rodou na stack local: 40 tentativas seguidas, nenhum 429. O GoTrue da
+  CLI só limita o `/token` quando `GOTRUE_RATE_LIMIT_HEADER` está definido,
+  e a CLI não define. O limite do hospedado segue para o dono ler no painel.
 
 ### Dados sensíveis em log
 

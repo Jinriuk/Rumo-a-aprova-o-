@@ -45,8 +45,10 @@ export default defineConfig({
   },
   projects: [
     { name: "http", testMatch: /http\/.*\.spec\.js/ },
-    { name: "desktop", testIgnore: /http\//, use: { ...devices["Desktop Chrome"], viewport: { width: 1366, height: 900 } } },
-    { name: "mobile", testIgnore: /http\//, testMatch: /(mobile|jornada-mobile)\.spec\.js/, use: { ...devices["Pixel 7"] } },
+    // cada spec roda em UM projeto: nenhum teste nasce pulado por viewport
+    // (a regra da Etapa 3 é zero skip nas jornadas críticas)
+    { name: "desktop", testIgnore: [/http\//, /mobile\.spec\.js/], use: { ...devices["Desktop Chrome"], viewport: { width: 1366, height: 900 } } },
+    { name: "mobile", testMatch: /mobile\.spec\.js/, use: { ...devices["Pixel 7"] } },
   ],
   webServer: {
     command: `npx vite preview --outDir dist-e2e --port ${PORT} --host 127.0.0.1 --strictPort`,

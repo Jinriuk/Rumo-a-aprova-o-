@@ -20,6 +20,9 @@ export const CONTAS = {
   responsavelLucas: porCodigo(FIXTURE.respLucas), // Vitrine
   responsavelBruno: porCodigo(FIXTURE.respBruno), // Beta
   alunaTroca: porCodigo(FIXTURE.alunaTroca), // entra exigindo troca de senha
+  responsavelRevogacao: porCodigo(FIXTURE.respRevogacao), // vínculo com o Lucas que a jornada revoga
+  alunoJornada: porCodigo(FIXTURE.alunoJornada), // jornada do aluno (escreve)
+  alunoConcorrencia: porCodigo(FIXTURE.alunoConcorrencia), // duplo clique, duas abas, falha de API
 };
 export { SENHA_E2E, SENHA_NOVA_E2E };
 
@@ -74,6 +77,31 @@ export function botaoVisivel(page, nome) {
   // aba pode trazer um contador no nome ("Hoje 6"): casa o rótulo no começo
   const alvo = typeof nome === "string" ? new RegExp(`^${nome.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}(\\s+\\d+)?$`) : nome;
   return page.getByRole("button", { name: alvo }).filter({ visible: true }).first();
+}
+
+/** Sufixo único por execução de teste (nomes de turma, aluno etc.). */
+export function sufixo() {
+  return `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 5)}`;
+}
+
+/** Diálogo modal visível (confirmações do app). */
+export function dialogoAberto(page) {
+  return page.getByRole("dialog").filter({ visible: true }).last();
+}
+
+/** Entra com credencial arbitrária ({ email } ou { codigo }) e senha,
+ *  sem esperar área nenhuma: quem chama decide o que deve aparecer. */
+export async function entrarCom(page, { email, codigo }, senha) {
+  await abrirLogin(page);
+  if (email) {
+    await page.getByRole("button", { name: /Coordenação/ }).click();
+    await campo(page, "E-mail").fill(email);
+  } else {
+    await page.getByRole("button", { name: /Aluno \/ Responsável/ }).click();
+    await campo(page, "Código de acesso").fill(codigo);
+  }
+  await campo(page, "Senha").fill(senha);
+  await botaoEntrar(page).click();
 }
 
 async function abrirLogin(page) {
@@ -177,8 +205,10 @@ export async function irParaAba(page, rotulo) {
     await alvo.click();
     return;
   }
-  // está escondida atrás de "Mais" (barra inferior do celular)
+  // está escondida atrás de "Mais" (barra inferior do celular): a folha
+  // abre como role="menu" e cada aba é um menuitem, não um button
   await mais.click();
-  await botaoVisivel(page, rotulo).click();
+  const nome = typeof rotulo === "string" ? new RegExp(`^${rotulo.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}(\\s+\\d+)?$`) : rotulo;
+  await page.getByRole("menu", { name: "Mais opções de navegação" }).getByRole("menuitem", { name: nome }).click();
 }
 
