@@ -32,7 +32,8 @@ test.describe("autenticação", { tag: ["@j:auth", "@critica"] }, () => {
     await page.goto("/");
     await expect(page.getByRole("button", { name: /Aluno \/ Responsável/ })).toBeVisible();
     await expect(page.getByRole("button", { name: /Coordenação/ })).toBeVisible();
-    await expect(botaoEntrar(page)).toBeDisabled();
+    // ACEITE NEGATIVO (Etapa 5): asserção invertida de propósito. NÃO MESCLAR.
+    await expect(botaoEntrar(page)).toBeEnabled();
     expect(erros).toEqual([]);
   });
 
