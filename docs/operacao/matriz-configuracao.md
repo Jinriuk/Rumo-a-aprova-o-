@@ -72,6 +72,9 @@ O `ci.yml` não usa secret nenhum. O `codeql.yml` também não.
 | `DEMO_SUPABASE_URL` | URL | `manter-banco-acordado.yml:157` | GitHub → D | obrigatório | secret | idem | **ok**: HTTP 200, batida no log de D em 25/09 12:10:07 | dono | 25/09 |
 | `DEMO_SUPABASE_ANON_KEY` | chave | `manter-banco-acordado.yml:158` | GitHub → D | obrigatório | secret | idem | **ok**: idem, **anon legada** | dono | 25/09 |
 | `TRILIVA_CAPTURA_COORD_EMAIL`, `_COORD_SENHA`, `_ALUNO_CODIGO`, `_ALUNO_SENHA`, `_RESP_CODIGO`, `_RESP_SENHA` (um conjunto, usado junto) | credenciais das contas de captura do D | `captura-pack-v2.yml:97-102` → `scripts/captura/pack-v2.mjs` | GitHub → D | condicional: o modo oficial exige; o ensaio sem segredo não captura | secrets de repositório | **não verificada**: a última execução (`36164451664`, 25/09 17:01, 26 s) não deixou requisição no log do D | **pendente** | dono | 25/09 |
+| `PROD_DB_URL` | string de conexão do banco de P (Session pooler, leva a senha) | `backup.yml` (job `backup`, projeto prod) → `scripts/backup/dump.sh` | GitHub → P | obrigatório para o backup de P; sem ele o job reprova | secret do **environment `backup`**, restrito à `main` (Etapa 6) | **ausente** em 26/09 (a cadastrar pelo dono, `backup-e-restauracao.md` 2.1) | **pendente**: nenhum backup de P | dono | 26/09 |
+| `DEMO_DB_URL` | idem, do D | `backup.yml` (projeto demo) | GitHub → D | idem para D | environment `backup` | **ausente** em 26/09 | **pendente** | dono | 26/09 |
+| `BACKUP_PASSPHRASE` | senha que cifra os backups (32+ caracteres aleatórios) | `backup.yml` → `dump.sh` (cifra); `ensaio-restauro.yml`, job `real` (decifra) | GitHub | obrigatório; sem ela, ou com menos de 32 caracteres, o job reprova | environment `backup`; cópia no gerenciador de senhas do dono | **ausente** em 26/09 | **pendente**. O ensaio sintético (sem secret) passou na stack local em 26/09 | dono | 26/09 |
 | `CAPTURA_MODO`, `CAPTURA_TELA_18`, `CAPTURA_TELA`, `CAPTURA_BASE`, `CAPTURA_SAIDA`, `CAPTURA_BASE_URL` | parâmetros | `pack-v2.mjs:54-59` | runner | condicional | inputs do `workflow_dispatch` | não se aplica | não se aplica | repo | — |
 
 ## 4. Scripts de operador e de teste
@@ -169,7 +172,7 @@ configuração.
 | Lacuna | Hoje | Opção recomendada | Custo |
 | --- | --- | --- | --- |
 | 8.1 Erro do front | só console | Edge Function própria + tabela | R$ 0 |
-| 8.2 Backup | **nenhum backup** de P ou D registrado | dump criptografado por workflow agendado, com teste de restauração | R$ 0 |
+| 8.2 Backup | workflow manual cifrado desde a Etapa 6; **nenhum backup** de P ou D ainda (secrets a cadastrar) | dump criptografado por workflow agendado, com teste de restauração | R$ 0 |
 | 8.3 Monitoramento | nenhum monitor externo | monitor gratuito (Better Stack ou UptimeRobot) no site e na REST | R$ 0 |
 | 8.4 Falha da virada | sinal existe, ninguém é avisado | heartbeat externo chamado pelo banco ao fim da virada | R$ 0 |
 | 8.5 Falha do keepalive | job vermelho desde o #155 | e-mail de falha do próprio GitHub | R$ 0 |
@@ -220,6 +223,15 @@ de alerta de falha de backup, falta o backup.
 **Recomendação:** A, com restauração testada antes do primeiro aluno real e um
 heartbeat no fim do job (como em 8.6) para avisar quando o backup não rodar.
 B quando houver receita.
+
+> **Atualização da Etapa 6 (26/09/2026):** feito o workflow **Backup
+> (manual)**, por decisão do dono **sem agendamento** e com **senha**
+> (`BACKUP_PASSPHRASE`) em vez da chave pública desta recomendação; os dois
+> custos estão em `backup-e-restauracao.md`, seção 7. A restauração foi
+> ensaiada com dump sintético na stack local. Duas afirmações da tabela acima
+> não valem mais: o `pg_dump` como `postgres` **leva** o `auth` (SELECT nas 27
+> tabelas, medido no demo), e o artefato do workflow vive 30 dias. O
+> heartbeat de falha continua pendente.
 
 ### 8.3 Monitoramento (disponibilidade)
 

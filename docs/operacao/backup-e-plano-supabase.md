@@ -1,5 +1,10 @@
 # Backup e plano Supabase (S1.6)
 
+> **Procedimento vigente: [`backup-e-restauracao.md`](backup-e-restauracao.md)**
+> (Etapa 6, 26/09/2026): workflow manual cifrado, ensaio de restore,
+> RPO/RTO e o que muda com o Pro. Este arquivo fica como histórico da
+> decisão de plano.
+
 > Complementa `backup-retencao-lgpd.md` e `monitoramento-backup.md` com
 > os **fatos apurados na S1** e o passo a passo de decisão.
 

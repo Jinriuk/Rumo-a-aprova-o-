@@ -10,9 +10,9 @@
 | Item | Status | Responsável |
 |---|---|---|
 | Backup automático do Supabase (PITR/snapshot diário, conforme plano) | ⚠ pendente — depende do plano contratado (free tier tem retenção curta) | operador/infra |
-| Export manual periódico (dump `pg_dump`), guardado fora do Supabase | ⚠ pendente — recomendado enquanto o automático não está confirmado | operador |
+| Export manual (dump `pg_dump`), guardado fora do Supabase | ✓ workflow **Backup (manual)**, cifrado, 30 dias de artefato (`backup-e-restauracao.md`, Etapa 6). Depende de clique: sem agendamento | operador (dono) |
 | Backup **antes de toda migration sensível** (que apaga/transforma dado) | ✓ já é processo documentado (`deploy-checklist.md`) | quem aplica a migration |
-| Teste de restauração (validar que o backup realmente restaura) | ⚠ pendente — fazer ao menos uma vez antes do piloto real | operador/infra |
+| Teste de restauração (validar que o backup realmente restaura) | ◐ ensaio sintético aprovado (26/09, stack local); ensaio com o backup real de produção pendente dos secrets do environment `backup` | operador/infra |
 
 **Pendência clara para o piloto**: antes de qualquer escola real, confirmar
 no painel do Supabase (Settings → Database → Backups) qual é a janela de

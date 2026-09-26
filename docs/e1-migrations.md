@@ -454,6 +454,13 @@ funções, views, constraints, índices, triggers.
 - `auth.users`, `auth.sessions`, `auth.refresh_tokens` — `pg_dump` sem
   superuser não lê o schema `auth` do Supabase. Restaurar este dump **não
   traz as contas de volta**.
+
+  > **Corrigido na Etapa 6 (26/09/2026).** A afirmação não vinha de uma
+  > execução (este comando nunca foi rodado) e não se sustenta: o papel
+  > `postgres` do demo tinha `SELECT` nas 27 tabelas do `auth` e nas
+  > sequências. O backup vigente leva as contas, e o ensaio entrou com a
+  > senha original depois do restore:
+  > [`docs/operacao/backup-e-restauracao.md`](operacao/backup-e-restauracao.md).
 - `storage.objects` e os arquivos em si.
 - Edge Functions, secrets de função, configuração de Auth, policies de
   Storage — nada disso vive no Postgres.

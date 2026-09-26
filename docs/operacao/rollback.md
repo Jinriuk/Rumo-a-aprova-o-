@@ -34,8 +34,9 @@
 3. Aplicar a migration de reversão (mesmo processo de
    `deploy-checklist.md`: `checar-migrations.mjs` antes e depois).
 4. Se a migration quebrada já tiver apagado/transformado dado: restaurar
-   do backup mais recente (ver `docs/operacao/backup-retencao-lgpd.md`) antes de
-   reaplicar a correção.
+   do backup mais recente antes de reaplicar a correção: retorno parcial
+   (as linhas, a partir de uma cópia local) ou total (projeto novo), em
+   `docs/operacao/backup-e-restauracao.md`, seção 5.
 
 ## Cenário 3 — uma Edge Function quebrou
 
