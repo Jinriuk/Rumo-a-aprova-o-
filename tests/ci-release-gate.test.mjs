@@ -127,7 +127,7 @@ test("release-gate: problema que só o e2e-local viu (rede hospedada) também re
 
 test("release-gate: continue-on-error no ci.yml ou job obrigatório removido reprova", () => {
   assert.deepEqual(conferirWorkflow(CI), [], "o ci.yml de hoje tem de passar");
-  const comCoe = CI.replace("  e2e-local:\n    runs-on: ubuntu-latest\n", "  e2e-local:\n    runs-on: ubuntu-latest\n    continue-on-error: true\n");
+  const comCoe = CI.replace("\n  e2e-local:\n", "\n  e2e-local:\n    continue-on-error: true\n");
   assert.notEqual(comCoe, CI);
   assert.ok(gate(needsVerdes(), comCoe).problemas.some((p) => /usa continue-on-error/.test(p)));
   const passo = CI.replace("      - name: Provas negativas", "      - continue-on-error: true\n        name: Provas negativas");
