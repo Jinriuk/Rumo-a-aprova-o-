@@ -71,17 +71,27 @@ O gate roda o código do próprio PR. Um PR que edite
 julga. A defesa é revisão obrigatória nesses caminhos (CODEOWNERS em
 `.github/` e `scripts/ci/`), não o gate.
 
-## Aceite negativo
+## Aceite negativo (26/09, rodada 2)
 
 Três PRs de teste contra `claude/etapa-5-release-gate-qri6ri`, fechados
-sem merge. O resultado fica registrado no PR da Etapa 5 e na resposta ao
-dono.
+sem merge. Base de todos: `9bd881e`. Controle positivo no mesmo commit:
+run `36246202687`, os quatro jobs `success`, o gate leu o relatório
+(SHA `9bd881e`, 74 testes, 10 jornadas no mínimo) e aprovou.
 
-| Cenário | O que o PR muda | Esperado do gate |
-| --- | --- | --- |
-| E2E quebrado | uma asserção de teste crítico passa a falhar | `job e2e-local falhou` + teste crítico `FALHOU` |
-| Relatório removido | tira o passo do relatório do `e2e-local` | `relatório de jornadas ausente` |
-| Job pulado | `if: false` no `e2e-local` | `job e2e-local pulado` + relatório ausente |
+| PR | Cenário | O que muda | Run (pull_request) | release-gate disse |
+| --- | --- | --- | --- | --- |
+| #157 | E2E quebrado | `auth.spec.js:30` com `toBeEnabled()` no botão desabilitado | `36246208416` | `job e2e-local falhou`; `auth: teste crítico FALHOU: auth.spec.js:30` |
+| #158 | Relatório removido | sai o passo `id: relatorio` do `e2e-local` | `36246210760` | `job build-e-unitarios falhou` (guarda estática); `relatório de jornadas ausente`, com o `e2e-local` **verde** |
+| #159 | Job pulado | `if: false` no `e2e-local` | `36246211643` | `job build-e-unitarios falhou` (guarda estática); `job e2e-local pulado`; `relatório de jornadas ausente` |
+
+No #157 o relatório chegou mesmo com o passo vermelho, e o gate apontou
+o teste por `arquivo:linha`. No #158 o E2E passou inteiro e só o gate
+(e a guarda estática) segurou.
+
+**Rodada 1 não conta.** Nela os três PRs ficaram vermelhos, mas o
+controle positivo também (runs `36245732923` e `36245800988`): o runner
+descartou a saída `relatorio` por causa do título "Bearer abc" (ver
+"O relatório" acima). Corrigido em `9bd881e`.
 
 ## Tornar obrigatório
 
