@@ -68,7 +68,7 @@ Runbooks e checklists vivos. Destaques:
 
 - **Deploy / rollback:** [deploy-checklist.md](./operacao/deploy-checklist.md) · [rollback.md](./operacao/rollback.md) · [runbook-migrations-supabase.md](./operacao/runbook-migrations-supabase.md)
 - **Go-live:** [go-live-checklist.md](./operacao/go-live-checklist.md) (sistema) · [checklist-go-live-piloto.md](./operacao/checklist-go-live-piloto.md) (por escola)
-- **Infra / LGPD:** [ambientes-e-variaveis.md](./operacao/ambientes-e-variaveis.md) · [lgpd-e-infra.md](./operacao/lgpd-e-infra.md) · [plano-migracao-sa-east-1.md](./operacao/plano-migracao-sa-east-1.md)
+- **Infra / LGPD:** [matriz-configuracao.md](./operacao/matriz-configuracao.md) (inventário de configurações, 26/09) · [ambientes-e-variaveis.md](./operacao/ambientes-e-variaveis.md) · [lgpd-e-infra.md](./operacao/lgpd-e-infra.md) · [plano-migracao-sa-east-1.md](./operacao/plano-migracao-sa-east-1.md)
 - **Backup:** [backup-retencao-lgpd.md](./operacao/backup-retencao-lgpd.md) · [backup-e-plano-supabase.md](./operacao/backup-e-plano-supabase.md) · [monitoramento-backup.md](./operacao/monitoramento-backup.md)
 - **Acesso / coordenação:** [auth-codigos-alunos.md](./operacao/auth-codigos-alunos.md) · [auth-credenciais-checklist.md](./operacao/auth-credenciais-checklist.md) · [backoffice-superoperador.md](./operacao/backoffice-superoperador.md)
 - **Pack de capturas:** [pack/README.md](./pack/README.md) (como o pack comercial é capturado, segredos, o que é interno)
