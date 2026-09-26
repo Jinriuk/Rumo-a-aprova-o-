@@ -39,11 +39,7 @@ Deno.serve(async (req) => {
     const { aluno_id } = await req.json().catch(() => ({}));
     if (!aluno_id) return json({ error: "informe aluno_id" }, 400);
 
-    // PROVA DE ACEITE DA ETAPA 3 (falha introduzida de propósito, revertida
-    // no commit seguinte): busca o aluno SEM o filtro de escola.
-    const { data: aluno } = await admin.from("alunos")
-      .select("id, escola_id, nome, usuario_id, trilha_id").eq("id", aluno_id).maybeSingle();
-    void alunoDaEscola;
+    const aluno = await alunoDaEscola(aluno_id, quem.escola_id);
     if (!aluno) return json({ error: "aluno não encontrado nesta escola" }, 404);
     if (!aluno.trilha_id) return json({ error: "aluno sem trilha atribuída", estado: "sem_trilha" }, 422);
 
