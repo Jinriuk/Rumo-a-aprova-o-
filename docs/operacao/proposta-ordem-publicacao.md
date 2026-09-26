@@ -45,8 +45,9 @@ numa migration antiga também é analisada.
 
 1. **PR de banco:** migrations, testes em `tests/`, docs. Sem `app/`.
    O merge republica o front de antes, sem efeito.
-2. **Backup** do demo e da produção antes de aplicar
-   (`docs/operacao/backup-e-plano-supabase.md`).
+2. **Backup** do demo e da produção antes de aplicar: workflow
+   **Backup (manual)**, projeto `ambos`
+   (`docs/operacao/backup-e-restauracao.md`).
 3. **Aplicar nos dois ambientes**, demo e produção, e conferir em cada
    um: `scripts/manifesto-rpcs.mjs` (toda RPC que o front vai chamar
    existe) e `scripts/fingerprint-schema.sql` (o ledger sozinho não

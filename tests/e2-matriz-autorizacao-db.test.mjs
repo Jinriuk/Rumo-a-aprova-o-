@@ -26,7 +26,8 @@ const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const corrigido = (a) => !!a.corrigidoPor && existsSync(resolve(root, "supabase/migrations", `${a.corrigidoPor}.sql`));
 
 let resultados;
-test.before(async () => { ({ resultados } = await executarMatriz(pool)); });
+// MATRIZ_ENSAIO_RESTAURO: só no ensaio de restore da Etapa 6 (scripts/backup/ensaio.sh)
+test.before(async () => { ({ resultados } = await executarMatriz(pool, { ensaioRestauro: process.env.MATRIZ_ENSAIO_RESTAURO })); });
 test.after(async () => { await pool.end(); });
 
 test("matriz: a trava de destino recusa qualquer banco que não seja o local de teste", () => {

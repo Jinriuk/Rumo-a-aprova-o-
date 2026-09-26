@@ -1,0 +1,163 @@
+# Ensaio de restore na stack Supabase LOCAL da E3 — Etapa 6.
+# Documentação: docs/operacao/backup-e-restauracao.md
+#
+# SÓ À MÃO (workflow_dispatch). Dois modos:
+#   • sintético (backup_run_id vazio): sobe a stack, aplica migrations e
+#     seeds, tira um backup com o MESMO scripts/backup/dump.sh do
+#     workflow Backup (senha aleatória, descartada), derruba a stack,
+#     sobe outra vazia e restaura. Não usa secret nenhum e não fala com
+#     projeto hospedado (a trava da E3 recusa *.supabase.co);
+#   • real (backup_run_id = id de uma execução do workflow Backup):
+#     baixa o artefato daquela execução, decifra com BACKUP_PASSPHRASE
+#     (environment `backup`, só main) e restaura na stack local.
+# Nos dois: origem × destino (estrutura, ACLs, contagens, ledger, cron,
+# event triggers), login, escola, aluno, vínculos, progresso, RPC,
+# event trigger, cron desligado e sem disparo externo, contrato de RPCs
+# e a matriz de autorização inteira sobre o banco restaurado. O tempo de
+# cada fase vai para o resumo da execução. No modo real nada de
+# contagem ou nome de linha sai no log (o repositório é público).
+# Publica só o relatório (JSON e MD). A stack cai no fim, mesmo em erro.
+name: Ensaio de restauração (manual)
+
+on:
+  workflow_dispatch:
+    inputs:
+      backup_run_id:
+        description: "Id da execução do workflow Backup a restaurar. Vazio = dump sintético"
+        type: string
+        default: ""
+      projeto:
+        description: "Qual artefato daquela execução (modo real)"
+        type: choice
+        options: [prod, demo]
+        default: prod
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ensaio-restauro
+  cancel-in-progress: false
+
+env:
+  SUPABASE_CLI_VERSION: "2.118.0"
+  PG_MAJOR: "17"
+
+jobs:
+  sintetico:
+    if: inputs.backup_run_id == ''
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: |
+            app/package-lock.json
+            tests/package-lock.json
+
+      - name: CLI do Supabase (versão fixada)
+        uses: supabase/setup-cli@v1
+        with:
+          version: ${{ env.SUPABASE_CLI_VERSION }}
+
+      - name: Dependências (app e tests) e cliente Postgres ${{ env.PG_MAJOR }}
+        run: |
+          (cd app && PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1 npm ci)
+          (cd tests && npm ci)
+          sudo /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh -y > /dev/null
+          sudo apt-get install -y -q "postgresql-client-${PG_MAJOR}" > /dev/null
+
+      - name: Ensaio (origem sintética → backup → stack nova → restore → conferências)
+        env:
+          PG_BIN: /usr/lib/postgresql/${{ env.PG_MAJOR }}/bin
+          ENSAIO_SAIDA: ${{ runner.temp }}/ensaio
+        run: bash scripts/backup/ensaio.sh
+
+      - name: Relatório
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: ensaio-restauro-sintetico-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            ${{ runner.temp }}/ensaio/ensaio-restauro.json
+            ${{ runner.temp }}/ensaio/ensaio-restauro.md
+            ${{ runner.temp }}/ensaio/manifesto-backup-sintetico.json
+          if-no-files-found: ignore
+          retention-days: 30
+
+      - name: Derrubar a stack local (sempre, mesmo em erro)
+        if: always()
+        run: bash scripts/e2e/stack.sh parar
+
+  real:
+    if: inputs.backup_run_id != '' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    environment: backup
+    permissions:
+      contents: read
+      actions: read # baixar o artefato de outra execução
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: |
+            app/package-lock.json
+            tests/package-lock.json
+
+      - name: CLI do Supabase (versão fixada)
+        uses: supabase/setup-cli@v1
+        with:
+          version: ${{ env.SUPABASE_CLI_VERSION }}
+
+      - name: Dependências (app e tests) e cliente Postgres ${{ env.PG_MAJOR }}
+        run: |
+          (cd app && PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1 npm ci)
+          (cd tests && npm ci)
+          sudo /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh -y > /dev/null
+          sudo apt-get install -y -q "postgresql-client-${PG_MAJOR}" > /dev/null
+
+      - name: Artefato da execução ${{ inputs.backup_run_id }} (${{ inputs.projeto }})
+        uses: actions/download-artifact@v7
+        with:
+          pattern: backup-${{ inputs.projeto }}-${{ inputs.backup_run_id }}-*
+          run-id: ${{ inputs.backup_run_id }}
+          github-token: ${{ github.token }}
+          path: ${{ runner.temp }}/artefato
+          merge-multiple: true
+
+      - name: Ensaio (restore do backup real na stack local → conferências)
+        env:
+          PG_BIN: /usr/lib/postgresql/${{ env.PG_MAJOR }}/bin
+          ENSAIO_SAIDA: ${{ runner.temp }}/ensaio
+          RESTAURO_PASSPHRASE: ${{ secrets.BACKUP_PASSPHRASE }}
+        run: |
+          set -euo pipefail
+          [ -n "$RESTAURO_PASSPHRASE" ] || { echo "::error::BACKUP_PASSPHRASE não cadastrado no environment backup"; exit 1; }
+          # mais de uma tentativa naquela execução: vale a mais nova
+          RESTAURO_ARQUIVO="$(ls -t "$RUNNER_TEMP"/artefato/triliva-*.tar.gpg | head -1)"
+          export RESTAURO_ARQUIVO RESTAURO_MANIFESTO="${RESTAURO_ARQUIVO%.tar.gpg}.json"
+          test -s "$RESTAURO_ARQUIVO" && test -s "$RESTAURO_MANIFESTO"
+          bash scripts/backup/ensaio.sh
+
+      - name: Relatório (sem contagem nem dado)
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: ensaio-restauro-${{ inputs.projeto }}-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            ${{ runner.temp }}/ensaio/ensaio-restauro.json
+            ${{ runner.temp }}/ensaio/ensaio-restauro.md
+          if-no-files-found: ignore
+          retention-days: 30
+
+      - name: Derrubar a stack local (sempre, mesmo em erro)
+        if: always()
+        run: bash scripts/e2e/stack.sh parar

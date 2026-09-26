@@ -33,6 +33,10 @@
 //   Recusa rodar fora de 127.0.0.1/localhost e fora de um banco cujo
 //   nome comece por `rumo_teste`. A fixture cria escolas, usuários e
 //   dados fictícios; jamais pode apontar para demo ou produção.
+//   Única exceção (Etapa 6): o ensaio de restore roda a matriz no banco
+//   `postgres` da stack LOCAL restaurada, e só com o id do ensaio
+//   (MATRIZ_ENSAIO_RESTAURO) gravado no próprio banco, em
+//   ensaio_restauro.execucao. Banco hospedado nunca tem esse marcador.
 // ============================================================
 import { fileURLToPath } from "node:url";
 import { resolve, dirname } from "node:path";
@@ -137,9 +141,9 @@ export const DESCRICAO_PERSONAS = {
 };
 
 // ── trava de destino ──────────────────────────────────────────
-export function conferirAlvoLocal({ host, database }) {
+export function conferirAlvoLocal({ host, database, ensaioRestauro }) {
   const hostOk = ["127.0.0.1", "localhost", "::1"].includes(String(host));
-  const dbOk = /^rumo_teste/.test(String(database));
+  const dbOk = /^rumo_teste/.test(String(database)) || (!!ensaioRestauro && String(database) === "postgres");
   if (!hostOk || !dbOk) {
     throw new Error(`matriz recusada: só roda em Postgres local descartável (host ${host}, banco ${database}). Nunca contra demo ou produção.`);
   }
@@ -835,11 +839,16 @@ function classificar(caso, { res, erro, antes, depois, efeito, semRls }) {
   };
 }
 
-export async function executarMatriz(pool) {
+export async function executarMatriz(pool, { ensaioRestauro } = {}) {
   const cfg = pool.options;
-  conferirAlvoLocal({ host: cfg.host, database: cfg.database });
+  conferirAlvoLocal({ host: cfg.host, database: cfg.database, ensaioRestauro });
   const c = await pool.connect();
   try {
+    if (ensaioRestauro && !/^rumo_teste/.test(String(cfg.database))) {
+      const { rows: [m] } = await c.query("select to_regclass('ensaio_restauro.execucao') as t");
+      const marcado = m.t && (await c.query("select 1 from ensaio_restauro.execucao where run_id = $1", [ensaioRestauro])).rows.length;
+      if (!marcado) throw new Error(`matriz recusada: o banco ${cfg.database} não tem o marcador do ensaio de restore ${ensaioRestauro}`);
+    }
     await c.query("begin isolation level repeatable read");
     await montarFixture(c);
     const casos = montarCasos();

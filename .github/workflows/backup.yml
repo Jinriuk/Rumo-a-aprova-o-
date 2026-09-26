@@ -1,0 +1,128 @@
+# Backup lógico cifrado — Etapa 6. Documentação:
+# docs/operacao/backup-e-restauracao.md
+#
+# SÓ À MÃO (workflow_dispatch). Sem schedule e sem pull_request: o job
+# lê as credenciais de banco de produção e do demo, e nenhum evento que
+# um PR dispara pode chegar perto delas. Quando clicar: antes de cada
+# mudança em produção (migration, SQL à mão, script de operador) e sob
+# demanda.
+#
+# O QUE FAZ, POR PROJETO (prod, demo ou os dois)
+#   1. confere que a URL é do projeto pedido (ref no usuário do pooler
+#      e presença do schema `demo` só no demo): secret trocado reprova;
+#   2. numa transação SÓ DE LEITURA, retrato + pg_dump no mesmo
+#      snapshot: public, app, demo (se existir), supabase_migrations e
+#      auth (sem sessões e tokens de uso único). Nada é escrito na
+#      origem;
+#   3. cifra com gpg (AES-256, senha BACKUP_PASSPHRASE) ANTES de sair do
+#      job, decifra de volta e compara o SHA-256;
+#   4. publica como artefato SÓ o .tar.gpg e o manifesto .json (data com
+#      fuso, versão do Postgres, última migration, tamanho, SHA-256),
+#      retidos 30 dias. O mesmo resumo vai para a página da execução.
+# Falha de dump, de conferência ou de cifra reprova o job.
+#
+# SECRETS: no environment `backup`, restrito à branch main (Settings >
+# Environments > backup > Deployment branches). Nomes: PROD_DB_URL,
+# DEMO_DB_URL, BACKUP_PASSPHRASE. Onde pegar cada valor: no doc acima.
+#
+# ⚠️ REPOSITÓRIO PÚBLICO: qualquer conta do GitHub baixa o artefato
+# enquanto ele existir, e o log desta execução é público. Por isso a
+# cifra acontece dentro do job, a senha tem mínimo de 32 caracteres, e
+# host, usuário e senha do banco são mascarados antes do primeiro
+# comando.
+name: Backup (manual)
+
+on:
+  workflow_dispatch:
+    inputs:
+      projeto:
+        description: "Qual banco copiar"
+        type: choice
+        options: [ambos, prod, demo]
+        default: ambos
+
+permissions:
+  contents: read
+
+concurrency:
+  group: backup
+  cancel-in-progress: false
+
+jobs:
+  backup:
+    # O environment é a fronteira de verdade (secrets só saem para a
+    # main). Esta condição é a segunda camada: execução de outra branch
+    # nem começa.
+    if: github.ref == 'refs/heads/main'
+    name: backup (${{ matrix.projeto }})
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    environment: backup
+    strategy:
+      # um projeto falhar não cancela o outro; os dois reprovam o workflow
+      fail-fast: false
+      matrix:
+        projeto: ${{ fromJSON(inputs.projeto == 'ambos' && '["prod","demo"]' || format('["{0}"]', inputs.projeto)) }}
+    env:
+      # refs públicos (docs/operacao/matriz-configuracao.md): a URL do
+      # secret tem de ser deste projeto
+      REF_PROD: zckyhihxjjbnqjqilymn
+      REF_DEMO: bdjkgrzfzoamchdpobbl
+      # major do cliente; o dump reprova se o servidor for mais novo
+      PG_MAJOR: "17"
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: tests/package-lock.json
+
+      - name: Dependências (pg)
+        working-directory: tests
+        run: npm ci
+
+      - name: Cliente Postgres ${{ env.PG_MAJOR }} (PGDG)
+        run: |
+          sudo /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh -y > /dev/null
+          sudo apt-get install -y -q "postgresql-client-${PG_MAJOR}" > /dev/null
+          "/usr/lib/postgresql/${PG_MAJOR}/bin/pg_dump" --version
+
+      - name: Dump, cifra e registro (${{ matrix.projeto }})
+        id: dump
+        env:
+          BACKUP_PROJETO: ${{ matrix.projeto }}
+          PROD_DB_URL: ${{ secrets.PROD_DB_URL }}
+          DEMO_DB_URL: ${{ secrets.DEMO_DB_URL }}
+          BACKUP_PASSPHRASE: ${{ secrets.BACKUP_PASSPHRASE }}
+          BACKUP_SAIDA: ${{ runner.temp }}/backup
+        # A URL é escolhida aqui, no shell, e não com `a && b || c` na
+        # expressão: com PROD_DB_URL vazio, a expressão cairia na URL do
+        # demo e o job de prod copiaria o demo.
+        run: |
+          set -euo pipefail
+          case "$BACKUP_PROJETO" in
+            prod) export BACKUP_DB_URL="$PROD_DB_URL" BACKUP_REF_ESPERADO="$REF_PROD" ;;
+            demo) export BACKUP_DB_URL="$DEMO_DB_URL" BACKUP_REF_ESPERADO="$REF_DEMO" ;;
+            *) echo "::error::projeto desconhecido"; exit 1 ;;
+          esac
+          unset PROD_DB_URL DEMO_DB_URL
+          PG_BIN="/usr/lib/postgresql/${PG_MAJOR}/bin" bash scripts/backup/dump.sh
+
+      # Lista fechada: só o cifrado e o manifesto. Qualquer outro arquivo
+      # derruba a publicação.
+      - name: Confere o que vai ser publicado
+        run: |
+          fora="$(find "$RUNNER_TEMP/backup/publicar" -type f ! -name 'triliva-*.tar.gpg' ! -name 'triliva-*.json')"
+          if [ -n "$fora" ]; then echo "::error::arquivo fora da lista publicável:"; echo "$fora"; exit 1; fi
+          test "$(find "$RUNNER_TEMP/backup/publicar" -name '*.tar.gpg' | wc -l)" = 1
+          test ! -e "$RUNNER_TEMP/backup/claro"
+
+      - name: Artefato (cifrado, 30 dias)
+        uses: actions/upload-artifact@v7
+        with:
+          name: backup-${{ matrix.projeto }}-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/backup/publicar/
+          if-no-files-found: error
+          retention-days: 30
