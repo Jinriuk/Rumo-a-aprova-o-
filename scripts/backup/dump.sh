@@ -45,9 +45,12 @@ if [ "${GITHUB_ACTIONS:-}" = "true" ]; then
   node -e '
     const u = new URL(process.env.BACKUP_DB_URL);
     const usuario = decodeURIComponent(u.username);
-    // "postgres" puro não é segredo e mascará-lo apagaria a palavra do log inteiro
-    for (const v of [u.hostname, usuario === "postgres" ? "" : usuario, decodeURIComponent(u.password)])
-      if (v && v.length > 3) console.log("::add-mask::" + v);'
+    // A stack local do ensaio usa usuário e senha "postgres": nada ali é
+    // segredo, e mascarar a palavra a apagaria do log inteiro (run
+    // 36263340832). Fora da máquina, host, usuário do pooler e senha.
+    if (!["127.0.0.1", "localhost", "::1", "[::1]"].includes(u.hostname))
+      for (const v of [u.hostname, usuario === "postgres" ? "" : usuario, decodeURIComponent(u.password)])
+        if (v && v.length > 3) console.log("::add-mask::" + v);'
 fi
 
 command -v gpg >/dev/null || falhar "gpg ausente"
