@@ -9,8 +9,9 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import {
   TIPOS_TRILHA, tipoTrilhaPorPrazo, missaoCabeNoAlvo, missoesDoAlvo,
-  missoesParaNivel, aplicarAjusteEscola, montarMissoesDoAluno, desviosDeMissao,
+  missoesParaNivel, aplicarAjusteEscola, montarMissoesDoAluno, desviosDeMissao, filaDeMissoes,
 } from "../app/src/modules/conteudo/missoes.js";
+import { readFileSync } from "node:fs";
 
 const M = (over) => ({
   id: "m", exam_tag: "cn", materia_codigo: "mat", nivel: "intermediario",
@@ -83,4 +84,111 @@ test("desviosDeMissao lista só as missões com ajuste divergente", () => {
   const missoes = [M({ id: "a", nome: "A" }), M({ id: "b", nome: "B" })];
   const ajustes = [{ missao_id: "a", desvio_do_edital: true }, { missao_id: "b", desvio_do_edital: false }];
   assert.deepEqual(desviosDeMissao(missoes, ajustes), [{ missao_id: "a", nome: "A" }]);
+});
+
+// ── FILA DE MISSÕES (0061): a tela mostra a fila inteira da matéria ──
+const ler = (rel) => readFileSync(new URL(`../${rel}`, import.meta.url), "utf8");
+const MAT = [
+  M({ id: "f", nome: "Funções integradas", materia_codigo: "mat", ordem: 12, meta_questoes: 70, meta_acuracia: 82, xp_sugerido: 90 }),
+  M({ id: "ga", nome: "Geometria Analítica", materia_codigo: "mat", ordem: 13, meta_questoes: 60, meta_acuracia: 82, xp_sugerido: 90 }),
+  M({ id: "gp", nome: "Geometria Plana fechada", materia_codigo: "mat", ordem: 14, meta_questoes: 70, meta_acuracia: 82, xp_sugerido: 90 }),
+  M({ id: "red", nome: "Redação", materia_codigo: "red", ordem: 3, meta_questoes: null }),
+  M({ id: "fis", nome: "Eletricidade", materia_codigo: "fis", ordem: 6, meta_questoes: 45, meta_acuracia: 78 }),
+];
+
+test("fila: concluídas, a atual e as próximas como 'a seguir', na ordem do catálogo", () => {
+  const fila = filaDeMissoes({
+    catalogo: MAT,
+    progresso: [
+      { missao_id: "f", estado: "concluida", questoes_acumuladas: 70, acuracia: 86, xp_concedido: 90 },
+      { missao_id: "ga", estado: "em_andamento", questoes_acumuladas: 30, acuracia: 80 },
+    ],
+  });
+  assert.deepEqual(fila.map((g) => g.materia_codigo), ["fis", "mat"], "matérias na ordem da primeira missão; sem meta (red) fora");
+  const mat = fila.find((g) => g.materia_codigo === "mat").missoes;
+  assert.deepEqual(mat.map((m) => [m.nome, m.estado, m.questoes]), [
+    ["Funções integradas", "concluida", 70], ["Geometria Analítica", "atual", 30], ["Geometria Plana fechada", "a_seguir", 0]]);
+  assert.deepEqual(fila.find((g) => g.materia_codigo === "fis").missoes.map((m) => m.estado), ["a_seguir"], "não esconde a matéria que ainda não começou");
+});
+
+test("fila: meta e XP da escola valem; missão desativada sai, mas a concluída fica", () => {
+  const fila = filaDeMissoes({
+    catalogo: MAT,
+    ajustesEscola: [
+      { missao_id: "f", ativa: true, qtd_questoes: 30, xp: 40 },
+      { missao_id: "ga", ativa: false },
+      { missao_id: "gp", ativa: false },
+    ],
+    progresso: [{ missao_id: "gp", estado: "concluida", questoes_acumuladas: 70, acuracia: 90, xp_concedido: 90 }],
+  });
+  const mat = fila.find((g) => g.materia_codigo === "mat").missoes;
+  assert.deepEqual(mat.map((m) => [m.nome, m.estado, m.meta_questoes, m.xp]),
+    [["Funções integradas", "a_seguir", 30, 40], ["Geometria Plana fechada", "concluida", 70, 90]]);
+});
+
+test("fila: no máximo uma missão atual por matéria, mesmo com o motor antigo (todas em andamento)", () => {
+  // banco sem a 0061: o motor antigo deixa todas as missões com meta em
+  // andamento, com o histórico inteiro somado em cada uma
+  const fila = filaDeMissoes({
+    catalogo: MAT,
+    progresso: ["f", "ga", "gp", "fis"].map((id) => ({ missao_id: id, estado: "em_andamento", questoes_acumuladas: 70, acuracia: 85 })),
+  });
+  for (const g of fila) assert.equal(g.missoes.filter((m) => m.estado === "atual").length, 1, g.materia_codigo);
+  const mat = fila.find((g) => g.materia_codigo === "mat").missoes;
+  assert.deepEqual(mat.map((m) => [m.id, m.estado, m.questoes, m.acuracia]),
+    [["f", "atual", 70, 85], ["ga", "a_seguir", 0, null], ["gp", "a_seguir", 0, null]],
+    "a seguir não exibe o volume que o motor antigo somou nela");
+});
+
+test("fila: sem atual na matéria, a primeira 'a seguir' é a próxima (começa no próximo registro)", () => {
+  const nova = filaDeMissoes({ catalogo: MAT });
+  const mat = nova.find((g) => g.materia_codigo === "mat").missoes;
+  assert.deepEqual(mat.map((m) => m.proxima), [true, false, false], "aluno novo: a primeira não espera anterior");
+  const depois = filaDeMissoes({ catalogo: MAT, progresso: [{ missao_id: "f", estado: "concluida", questoes_acumuladas: 70 }] });
+  assert.deepEqual(depois.find((g) => g.materia_codigo === "mat").missoes.map((m) => [m.estado, m.proxima]),
+    [["concluida", false], ["a_seguir", true], ["a_seguir", false]], "depois de concluir, a seguinte começa no próximo registro");
+  const comAtual = filaDeMissoes({ catalogo: MAT, progresso: [{ missao_id: "f", estado: "em_andamento", questoes_acumuladas: 5 }] });
+  assert.ok(comAtual.find((g) => g.materia_codigo === "mat").missoes.every((m) => !m.proxima), "com atual, as seguintes esperam a anterior");
+});
+
+test("fila: a barra da atual é o menor entre volume e acurácia (volume batido não enche a barra)", () => {
+  const de = (questoes, acuracia) => filaDeMissoes({
+    catalogo: MAT, progresso: [{ missao_id: "f", estado: "em_andamento", questoes_acumuladas: questoes, acuracia }],
+  }).find((g) => g.materia_codigo === "mat").missoes[0];
+  const travada = de(70, 50); // 70/70 a 50% contra 82%
+  assert.deepEqual([travada.pct, travada.volume_batido, travada.falta_acerto], [61, true, true]);
+  const meio = de(35, 90);
+  assert.deepEqual([meio.pct, meio.volume_batido, meio.falta_acerto], [50, false, false], "acurácia acima do alvo: vale o volume");
+  const semAcerto = de(14, null);
+  assert.deepEqual([semAcerto.pct, semAcerto.falta_acerto], [20, false], "sem acurácia medida: só volume");
+  assert.ok(de(140, 50).pct < 100, "volume além da meta não compensa acurácia baixa");
+});
+
+test("tela: matéria fora da trilha fica 'Com a coordenação', sem 'Atual' nem 'começa no próximo registro'", () => {
+  const painel = ler("app/src/modules/motor/ProgressoVivido.jsx");
+  assert.match(painel, /const coordenacao = inalcancavel && mi\.estado !== "concluida"/);
+  assert.match(painel, /coordenacao \? "Com a coordenação" : ROTULO_ESTADO\[mi\.estado\]/);
+  // o ramo da coordenação vem antes dos ramos de atual e de a seguir
+  const iCoord = painel.indexOf(") : coordenacao ? (");
+  assert.ok(iCoord > 0 && iCoord < painel.indexOf(') : mi.estado === "atual" ? (') && iCoord < painel.indexOf("mi.proxima ?"));
+  assert.match(painel, /<BarraXP pct=\{mi\.pct\}/);
+});
+
+test("tela: a VisaoEstudo monta a fila com catálogo + ajustes + progresso e não esconde as próximas", () => {
+  const visao = ler("app/src/routes/aluno/VisaoEstudo.jsx");
+  assert.match(visao, /filaDeMissoes\(\{/);
+  assert.match(visao, /db\.carregarMissoes\(examTag\), db\.carregarMissoesEscola\(examTag\)/);
+  assert.match(visao, /<MissoesPersistidas fila=\{filaMissoes\}/);
+  const painel = ler("app/src/modules/motor/ProgressoVivido.jsx");
+  assert.match(painel, /a_seguir: "A seguir"/);
+  assert.match(painel, /atual: "Atual"/);
+  assert.match(painel, /começa depois da anterior/);
+  assert.match(painel, /mi\.proxima \? "começa no seu próximo registro desta matéria com acertos"/);
+});
+
+test("tela: o Registrar avisa que, sem acertos, o estudo não conta para a missão", () => {
+  const src = ler("app/src/modules/motor/Registrar.jsx");
+  assert.match(src, /const semAcertos = f\.questoes !== "" && \+f\.questoes > 0 && String\(f\.acertos\)\.trim\(\) === ""/);
+  assert.match(src, /Sem acertos, este estudo fica no seu histórico mas não conta para a missão\./);
+  assert.match(src, /aria-describedby=\{semAcertos \? id\("dica-acertos"\) : undefined\}/);
 });

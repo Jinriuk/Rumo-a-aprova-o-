@@ -16,6 +16,7 @@ import { Registrar } from "../../modules/motor/Registrar.jsx";
 import { Arquivo } from "../../modules/motor/Arquivo.jsx";
 import { Conquistas, ConquistasRecentes } from "../../modules/motor/Conquistas.jsx";
 import { TrilhaConcurso } from "../../modules/conteudo/TrilhaConcurso.jsx";
+import { filaDeMissoes } from "../../modules/conteudo/missoes.js";
 import { calcularXP, patente } from "../../modules/motor/jargao.js";
 import { InsightsDesempenho } from "../../modules/desempenho/Insights.jsx";
 import { NiveisPorMateria } from "../../modules/desempenho/Niveis.jsx";
@@ -106,6 +107,28 @@ export function VisaoEstudo({ aluno, podeEditar, concurso = null, contexto = "Pl
       });
     return () => { vivo = false; };
   }, [aluno?.id, examTag, versao]);
+
+  // Fila inteira de missões (0061): o catálogo do concurso e os ajustes da
+  // escola dizem quais missões existem e em que ordem; aluno_missoes diz
+  // quais já começaram ou fecharam. As que ainda não começaram aparecem
+  // como "a seguir" (o banco não cria linha para elas antes da hora).
+  const [catalogoMissoes, setCatalogoMissoes] = useState({ examTag: null, missoes: [], ajustes: [] });
+  useEffect(() => {
+    if (!examTag) return;
+    let vivo = true;
+    Promise.all([db.carregarMissoes(examTag), db.carregarMissoesEscola(examTag)])
+      .then(([missoes, ajustes]) => { if (vivo) setCatalogoMissoes({ examTag, missoes: missoes ?? [], ajustes: ajustes ?? [] }); })
+      .catch(() => { /* complementar: sem catálogo, o painel some, a tela fica */ });
+    return () => { vivo = false; };
+  }, [examTag]);
+  const filaMissoes = useMemo(() => {
+    const doAlvo = catalogoMissoes.examTag === examTag;
+    return filaDeMissoes({
+      catalogo: doAlvo ? catalogoMissoes.missoes : [],
+      ajustesEscola: doAlvo ? catalogoMissoes.ajustes : [],
+      progresso: gam.missoes,
+    });
+  }, [catalogoMissoes, examTag, gam.missoes]);
 
   // feedback no MOMENTO DA AÇÃO: compara o XP do ledger (fonte de verdade
   // C0) e as missões fechadas entre recargas, e celebra o delta (só para
@@ -337,7 +360,7 @@ export function VisaoEstudo({ aluno, podeEditar, concurso = null, contexto = "Pl
               <MissaoAtual meta={meta} trilha={trilha} m={m} metas={dados.metas} ciclo={ciclo.estado}
                 aoAvancar={podeEditar ? irAba : undefined} />
             </div>
-            {!essencial && examTag && gam.missoes.length > 0 && <MissoesPersistidas missoes={gam.missoes} disciplinas={trilha.disciplinas} />}
+            {!essencial && examTag && filaMissoes.length > 0 && <MissoesPersistidas fila={filaMissoes} disciplinas={trilha.disciplinas} />}
             <MetaSemana meta={meta} trilha={trilha} podeEditar={podeEditar} aoMudar={recarregar}
               compacta aoPraticar={(alvo) => irAba("registrar", alvo)}
               aoAbrirDesempenho={() => irAba("desempenho")} />

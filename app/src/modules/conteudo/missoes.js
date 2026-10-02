@@ -100,3 +100,70 @@ export function desviosDeMissao(missoes = [], ajustesEscola = []) {
     .filter((a) => a.desvio_do_edital && porId.has(a.missao_id))
     .map((a) => ({ missao_id: a.missao_id, nome: porId.get(a.missao_id).nome }));
 }
+
+/* FILA DE MISSÕES DO ALUNO, por matéria (motor 0061). Espelha a regra do
+   banco: missão automática = meta efetiva (a da escola, senão a do
+   catálogo) > 0 e não desativada pela escola; ordem do catálogo
+   (`ordem`, desempate por id); uma em andamento por matéria. Cada missão
+   sai com estado:
+     concluida  linha do aluno concluída (inclui legado e desativadas
+                depois de concluídas: o que concluiu fica)
+     atual      a em andamento
+     a_seguir   ainda não começou (o banco não cria linha antes disso)
+   Só a primeira em andamento da matéria é a atual: com o motor antigo
+   (banco sem a 0061) todas as missões com meta ficam em andamento ao
+   mesmo tempo, e a tela não pode mostrar várias "atuais". Sem atual na
+   matéria, a primeira "a seguir" sai com `proxima: true` (começa no
+   próximo registro com acertos; não há anterior para esperar).
+   `progresso` = linhas de aluno_missoes (carregarMissoesAluno).
+   Devolve [{ materia_codigo, missoes: [...] }] na ordem da primeira
+   missão de cada matéria. Puro: testado em tests/missoes.test.mjs. */
+export function filaDeMissoes({ catalogo = [], ajustesEscola = [], progresso = [] }) {
+  const ajustePorMissao = new Map(ajustesEscola.map((a) => [a.missao_id, a]));
+  const linhaPorMissao = new Map(progresso.map((p) => [p.missao_id, p]));
+  const porMateria = new Map();
+  const ordenado = [...catalogo].sort((a, b) => (a.ordem ?? 0) - (b.ordem ?? 0) || String(a.id).localeCompare(String(b.id)));
+  for (const m of ordenado) {
+    const ajuste = ajustePorMissao.get(m.id);
+    const linha = linhaPorMissao.get(m.id);
+    const metaQuestoes = ajuste?.qtd_questoes ?? m.meta_questoes ?? null;
+    const automatica = metaQuestoes != null && metaQuestoes > 0 && ajuste?.ativa !== false;
+    const concluida = linha?.estado === "concluida";
+    if (!automatica && !concluida) continue;
+    if (!porMateria.has(m.materia_codigo)) porMateria.set(m.materia_codigo, { temAtual: false, missoes: [] });
+    const grupo = porMateria.get(m.materia_codigo);
+    const atual = !concluida && linha?.estado === "em_andamento" && !grupo.temAtual;
+    if (atual) grupo.temAtual = true;
+    const estado = concluida ? "concluida" : atual ? "atual" : "a_seguir";
+    // Progresso da atual: a missão fecha com volume E acurácia, então a
+    // barra é o menor dos dois (70/70 a 50% contra 82% não pode aparecer
+    // cheia). Sem acurácia medida ainda, vale só o volume.
+    const questoes = estado === "a_seguir" ? 0 : linha?.questoes_acumuladas ?? 0;
+    const acuracia = estado === "a_seguir" ? null : linha?.acuracia ?? null;
+    const metaAcuracia = m.meta_acuracia ?? null;
+    const pctVolume = metaQuestoes > 0 ? Math.min(100, Math.round((100 * questoes) / metaQuestoes)) : 0;
+    const faltaAcerto = metaAcuracia != null && acuracia != null && acuracia < metaAcuracia;
+    const pctAcerto = faltaAcerto ? Math.round((100 * acuracia) / metaAcuracia) : 100;
+    grupo.missoes.push({
+      id: m.id,
+      nome: m.nome,
+      materia_codigo: m.materia_codigo,
+      estado,
+      meta_questoes: metaQuestoes,
+      meta_acuracia: metaAcuracia,
+      xp: ajuste?.xp ?? m.xp_sugerido ?? 0,
+      questoes,
+      acuracia,
+      pct: Math.min(pctVolume, pctAcerto),
+      volume_batido: pctVolume >= 100,
+      falta_acerto: faltaAcerto,
+      xp_concedido: linha?.xp_concedido ?? 0,
+      proxima: false,
+    });
+  }
+  return [...porMateria.entries()].map(([materia_codigo, { temAtual, missoes }]) => {
+    const primeira = temAtual ? null : missoes.find((mi) => mi.estado === "a_seguir");
+    if (primeira) primeira.proxima = true;
+    return { materia_codigo, missoes };
+  });
+}

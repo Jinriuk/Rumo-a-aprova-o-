@@ -126,71 +126,83 @@ export function FeedbackProgresso({ feedback, aoFechar }) {
 
 const ROTULO_MATERIA = { mat: "Matemática", por: "Português", ing: "Inglês", fis: "Física", qui: "Química", bio: "Biologia", his: "História", geo: "Geografia", red: "Redação", soc: "Estudos Sociais" };
 
-/* Lista das missões do aluno COMO O BANCO as vê: fechadas com check,
-   em andamento com a barra de volume/acurácia. Substitui a leitura de
-   "missão é só texto" — agora a missão fecha sozinha e isso aparece.
+/* Fila de missões do aluno, por matéria, como o motor da 0061 a vê:
+   concluídas, a atual e as próximas ("a seguir"), na ordem do catálogo.
+   Uma missão por vez em cada matéria; cada registro conta para uma só, e
+   só registros com acertos informados contam (o Registrar avisa).
 
-   EST1-A5: mostra o critério REAL que o motor aplica (meta_questoes +
-   meta_acuracia), não o texto aspiracional (achado PEDAGOGIA-04); e
-   marca honestamente as missões cuja matéria o aluno não pode registrar
-   na própria trilha — em vez de deixá-las travadas em 0% para sempre
-   (achado PEDAGOGIA-05, ex.: missão de Biologia numa trilha CN sem
-   disciplina de Biologia). `disciplinas` = as disciplinas registráveis
-   da trilha do aluno (mesma lista do seletor do Registrar). */
-export function MissoesPersistidas({ missoes = [], disciplinas = [] }) {
+   EST1-A5 segue valendo: o alvo mostrado é o critério REAL que fecha a
+   missão (meta da escola, senão a do catálogo, + acurácia), não o texto
+   aspiracional; e a matéria que o aluno não registra na própria trilha
+   aparece marcada, em vez de travada em 0% para sempre.
+   `fila` = filaDeMissoes() (modules/conteudo/missoes.js);
+   `disciplinas` = as registráveis da trilha (mesma lista do Registrar). */
+export function MissoesPersistidas({ fila = [], disciplinas = [] }) {
   const T = useTema();
-  if (!missoes.length) return null;
+  const todas = fila.flatMap((g) => g.missoes);
+  if (!todas.length) return null;
   const registraveis = new Set((disciplinas ?? []).map((d) => d.codigo));
   const podeRegistrar = (cod) => registraveis.size === 0 || !cod || registraveis.has(cod);
-  const ordem = { concluida: 0, em_andamento: 1 };
-  const lista = [...missoes].sort((a, b) => (ordem[a.estado] ?? 9) - (ordem[b.estado] ?? 9));
-  const fechadas = missoes.filter((m) => m.estado === "concluida").length;
+  const fechadas = todas.filter((m) => m.estado === "concluida").length;
+  const ROTULO_ESTADO = { concluida: "✓ Concluída", atual: "Atual", a_seguir: "A seguir" };
+  const TOM_ESTADO = { concluida: "ok", atual: "alerta", a_seguir: "neutro" };
 
   return (
-    <SectionCard titulo="Missões" sub={`${fechadas} de ${missoes.length} concluída${fechadas === 1 ? "" : "s"} — fecham sozinhas quando você bate o critério.`}>
-      <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-        {lista.map((mi) => {
-          const nome = mi.missoes?.nome ?? "Missão";
-          const codMateria = mi.missoes?.materia_codigo;
-          const materia = ROTULO_MATERIA[codMateria] ?? codMateria ?? "";
-          const fechada = mi.estado === "concluida";
-          const pct = mi.acuracia ?? 0;
-          // critério REAL do motor (mesmo que fecha a missão): volume + acerto.
-          const metaQ = mi.missoes?.meta_questoes ?? null;
-          const metaAcc = mi.missoes?.meta_acuracia ?? null;
-          const alvo = metaQ != null
-            ? `alvo: ${metaQ} questões${metaAcc != null ? ` e ≥${metaAcc}% de acerto` : ""}`
-            : "acompanhamento da coordenação (sem fechamento automático)";
-          // não fecha sozinha se a matéria não é registrável na trilha do aluno.
-          const inalcancavel = !fechada && metaQ != null && !podeRegistrar(codMateria);
+    <SectionCard titulo="Missões" sub={`${fechadas} de ${todas.length} concluída${fechadas === 1 ? "" : "s"} — uma por vez em cada matéria; fecham sozinhas quando você bate o critério.`}>
+      <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+        {fila.map(({ materia_codigo: cod, missoes }) => {
+          const materia = ROTULO_MATERIA[cod] ?? cod ?? "";
+          const inalcancavel = !podeRegistrar(cod);
           return (
-            <div key={mi.id} style={{ background: T.card, border: `1px solid ${fechada ? T.green : T.line}`, borderRadius: 10, padding: "11px 13px" }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-                <span style={{ fontWeight: 700, fontSize: 13.5 }}>{nome}</span>
-                {materia && <span style={{ fontSize: 11, color: T.sub }}>· {materia}</span>}
-                <span style={{ marginLeft: "auto" }}>
-                  <StatusBadge tom={fechada ? "ok" : inalcancavel ? "neutro" : "alerta"}>
-                    {fechada ? "✓ Concluída" : inalcancavel ? "Com a coordenação" : "Em andamento"}
-                  </StatusBadge>
-                </span>
-              </div>
-              {fechada ? (
-                <div style={{ fontSize: 11.5, color: T.green, marginTop: 6, fontWeight: 600 }}>
-                  +{mi.xp_concedido} XP concedidos · {mi.questoes_acumuladas} questões{mi.acuracia != null ? ` · ${mi.acuracia}% de acerto` : ""}
-                </div>
-              ) : inalcancavel ? (
-                <div style={{ fontSize: 11.5, color: T.sub, marginTop: 6, lineHeight: 1.5 }}>
-                  {materia} não está entre as matérias que você registra nesta trilha — esta missão é
-                  acompanhada com a coordenação, não fecha sozinha pelo seu registro de estudo.
-                </div>
-              ) : (
-                <div style={{ marginTop: 8 }}>
-                  <BarraXP pct={Math.min(100, pct)} alt={5} brilho={false} />
-                  <div style={{ fontSize: 11, color: T.sub, marginTop: 4 }}>
-                    {mi.questoes_acumuladas}{metaQ != null ? `/${metaQ}` : ""} questões{mi.acuracia != null ? ` · ${mi.acuracia}% de acerto` : " · registre acertos para medir o domínio"} · {alvo}
-                  </div>
+            <div key={cod}>
+              <div style={{ fontSize: 12, fontWeight: 700, color: T.sub, textTransform: "uppercase", letterSpacing: 0.4, marginBottom: 6 }}>{materia}</div>
+              {inalcancavel && (
+                <div style={{ fontSize: 11.5, color: T.sub, marginBottom: 6, lineHeight: 1.5 }}>
+                  {materia} não está entre as matérias que você registra nesta trilha — estas missões são
+                  acompanhadas com a coordenação, não fecham sozinhas pelo seu registro de estudo.
                 </div>
               )}
+              <ol style={{ listStyle: "none", margin: 0, padding: 0, display: "flex", flexDirection: "column", gap: 8 }}>
+                {missoes.map((mi) => {
+                  const alvo = `alvo: ${mi.meta_questoes} questões${mi.meta_acuracia != null ? ` e ≥${mi.meta_acuracia}% de acerto` : ""}`;
+                  // matéria fora da trilha: o aluno não registra, então não há
+                  // "atual" nem "começa no próximo registro" (EST1-A5)
+                  const coordenacao = inalcancavel && mi.estado !== "concluida";
+                  const borda = mi.estado === "concluida" ? T.green : mi.estado === "atual" && !coordenacao ? T.gold : T.line;
+                  return (
+                    <li key={mi.id} data-estado={coordenacao ? "coordenacao" : mi.estado}
+                      style={{ background: T.card, border: `1px solid ${borda}`, borderRadius: 10, padding: "11px 13px", opacity: mi.estado === "a_seguir" || coordenacao ? 0.75 : 1 }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                        <span style={{ fontWeight: 700, fontSize: 13.5 }}>{mi.nome}</span>
+                        <span style={{ marginLeft: "auto" }}>
+                          <StatusBadge tom={coordenacao ? "neutro" : TOM_ESTADO[mi.estado]}>{coordenacao ? "Com a coordenação" : ROTULO_ESTADO[mi.estado]}</StatusBadge>
+                        </span>
+                      </div>
+                      {mi.estado === "concluida" ? (
+                        <div style={{ fontSize: 11.5, color: T.green, marginTop: 6, fontWeight: 600 }}>
+                          +{mi.xp_concedido} XP concedidos · {mi.questoes} questões{mi.acuracia != null ? ` · ${mi.acuracia}% de acerto` : ""}
+                        </div>
+                      ) : coordenacao ? (
+                        <div style={{ fontSize: 11, color: T.sub, marginTop: 4 }}>
+                          {alvo} · +{mi.xp} XP
+                        </div>
+                      ) : mi.estado === "atual" ? (
+                        <div style={{ marginTop: 8 }}>
+                          {/* fecha com volume E acurácia: a barra é o menor dos dois */}
+                          <BarraXP pct={mi.pct} alt={5} brilho={false} />
+                          <div style={{ fontSize: 11, color: T.sub, marginTop: 4 }}>
+                            {mi.questoes}/{mi.meta_questoes} questões{mi.acuracia != null ? ` · ${mi.acuracia}% de acerto` : ""} · {mi.volume_batido && mi.falta_acerto ? `volume batido; falta chegar a ≥${mi.meta_acuracia}% de acerto` : alvo}
+                          </div>
+                        </div>
+                      ) : (
+                        <div style={{ fontSize: 11, color: T.sub, marginTop: 4 }}>
+                          {mi.proxima ? "começa no seu próximo registro desta matéria com acertos" : "começa depois da anterior"} · {alvo} · +{mi.xp} XP
+                        </div>
+                      )}
+                    </li>
+                  );
+                })}
+              </ol>
             </div>
           );
         })}

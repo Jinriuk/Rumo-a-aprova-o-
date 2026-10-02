@@ -76,6 +76,7 @@ export function Registrar({
   const acertosDemais = !!validacao.erros.acertos;
   const podeSalvar = validacao.ok && !ocupado;
   const faltaTopico = f.questoes !== "" && +f.questoes > 0 && f.topico.trim() === "";
+  const semAcertos = f.questoes !== "" && +f.questoes > 0 && String(f.acertos).trim() === "";
 
   // resumo do dia
   const hoje = todayISO();
@@ -187,6 +188,7 @@ export function Registrar({
             <label htmlFor={id("ac")} style={lbl}>Acertos</label>
             <input id={id("ac")} type="number" inputMode="numeric" min="0" value={f.acertos} onChange={(e) => set("acertos", e.target.value)} placeholder="0"
               aria-invalid={acertosDemais ? true : undefined}
+              aria-describedby={semAcertos ? id("dica-acertos") : undefined}
               style={{ ...inputS, borderColor: acertosDemais ? T.red : T.line }} />
           </div>
           <div>
@@ -197,6 +199,13 @@ export function Registrar({
           </div>
         </div>
         {acertosDemais && <div style={{ fontSize: 12, color: T.red, marginTop: 8 }}>Acertos não podem passar do número de questões.</div>}
+        {/* 0061: a missão só conta registro com acertos informados; o aviso
+            aparece antes de salvar, não depois de o aluno estranhar. */}
+        {semAcertos && (
+          <div id={id("dica-acertos")} role="status" aria-live="polite" style={{ fontSize: 12, color: T.sub, marginTop: 8 }}>
+            Sem acertos, este estudo fica no seu histórico mas não conta para a missão.
+          </div>
+        )}
         {tempoInvalido && <div style={{ fontSize: 12, color: T.red, marginTop: 8 }}>Tempo não entendido — use formatos como “45min”, “1h” ou “1h30”.</div>}
         {!tempoInvalido && minutosParse > 0 && <div style={{ fontSize: 11.5, color: T.sub, marginTop: 8 }}>◷ {minutosParse} minutos {minutosSugeridos > 0 ? "— puxado do cronômetro, pode ajustar" : ""}</div>}
 
