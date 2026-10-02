@@ -68,7 +68,7 @@ bash "$RAIZ/scripts/e2e/front.sh"
 
 (cd "$RAIZ/app" && exec npx vite preview --outDir dist-e2e --port 4173 --host 127.0.0.1 --strictPort > "$PROVAS_SAIDA/preview.log" 2>&1) &
 PREVIEW=$!
-for _ in $(seq 1 60); do curl -fsS -o /dev/null http://127.0.0.1:4173/ && break; sleep 1; done
+for _ in $(seq 1 60); do curl -fs -o /dev/null http://127.0.0.1:4173/ 2>/dev/null && break; sleep 1; done
 
 # o front da Etapa 4 manda release, papel e correlation_id; o anterior
 # só mensagem/pilha/origem/rota. A P4 confere os campos novos quando o

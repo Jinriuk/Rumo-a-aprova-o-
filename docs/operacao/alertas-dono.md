@@ -188,6 +188,27 @@ P6 5xx de outra função entra no coletor, P7 heartbeat da virada pelo pg_net e
 Vault reais. O relatório sai no resumo do job e no artefato
 `provas-alertas-*`.
 
+**Execução registrada (02/10/2026, commit `43c4e82`):**
+[run 36949719476](https://github.com/Jinriuk/Rumo-a-aprova-o-/actions/runs/36949719476),
+as 7 provas passaram:
+
+| Prova | O que a execução mostrou |
+| --- | --- |
+| P1 | 403 para origem estranha, sem `Origin` e com sufixo forjado (`app.trilivaedu.com.br.evil.example`); preflight sem `Access-Control-Allow-Origin`; nenhuma linha nova |
+| P2 | linha gravada: `prova P2: falha para [email] token=[redigido] senha=[redigido] código [codigo] cpf [numero] tel ([numero]`, rota `/aluno/[id]`; o IP não aparece em nenhuma das 4 tabelas; e-mail sem dado pessoal |
+| P3 | mesmo IP: 20 aceitos e 30 recusados (429), 1 e-mail; 50 IPs: 50 aceitos num grupo só, 1 e-mail |
+| P4 | erro de render do React (ErroFronteira real) e promessa rejeitada chegaram à tabela; 1 e-mail para cada, para `ALERTA_EMAIL` |
+| P5 | coletor recusando, com 503 e pendurado: a tela de entrada responde e a fronteira mostra "Atualizar página"; nada chega ao banco |
+| P6 | `virar-semana` com escola inexistente → HTTP 500 → linha `edge:virar-semana`, `HTTP 500 em virar-semana`, mesmo `correlation_id` do cabeçalho, sem pilha |
+| P7 | virada real (44 metas geradas, 0 com erro) → ping em `/hc/<uuid>`; linha com 2 alunos em erro → `/fail`; sem o segredo, a virada grava e nada é chamado; o pg_net registrou HTTP 200 |
+
+Essa execução usou o front da `main` (anterior ao PR do front), que já
+manda mensagem, pilha, origem e rota; por isso a P4 não conferiu release,
+papel e correlation_id. Esses três foram provados no PR do front, em
+Chromium com o coletor interceptado (`scripts/alertas/prova-front.mjs`),
+e passam a ser exigidos pela P4 automaticamente quando o front do checkout
+os manda (o `provas.sh` detecta).
+
 Testes permanentes no CI: `tests/e4-coletor-db.test.mjs` (limites, grupos,
 e-mails, permissões), `tests/e4-coletor-edge.test.mjs` (redação, fingerprint,
 relato de 5xx), `tests/e4-heartbeat-virada-db.test.mjs` (gatilho da virada) e
