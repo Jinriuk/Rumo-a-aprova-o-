@@ -270,10 +270,10 @@ test("XP da missão é o da primeira conclusão: a escola muda o XP e a missão 
       `insert into missoes_escola (escola_id, missao_id, ativa, xp)
        select $1, id, true, 40 from missoes where exam_tag = 'espcex' and nome = $2`, [al.escola, MAT[0]]);
     await c.query("update registros_estudo set topico = 'editado' where id = $1", [r1]);   // recalcula, continua concluída
-    assert.deepEqual(await linha(c), { xp_concedido: 90, xp_delta: 90, status: "valido" });
+    assert.deepEqual(await linha(), { xp_concedido: 90, xp_delta: 90, status: "valido" });
     await c.query("delete from registros_estudo where id = $1", [r1]);  // estorna
     await registrar(c, al, 70, 60);                                     // reconclui: revalida a mesma linha
-    assert.deepEqual(await linha(c), { xp_concedido: 90, xp_delta: 90, status: "valido" });
+    assert.deepEqual(await linha(), { xp_concedido: 90, xp_delta: 90, status: "valido" });
     assert.equal((await ledger(c, al.aluno)).xp, 90);
   });
 });
