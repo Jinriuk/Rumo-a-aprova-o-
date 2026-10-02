@@ -30,6 +30,8 @@ const admin = createClient(
 // payload resolvem este import relativo.
 import { buildCorsHeaders as corsHeaders } from "../_shared/cors.ts";
 import { escolaOperacional, RESPOSTA_ESCOLA_PARADA } from "../_shared/escola.ts";
+// Etapa 4: resposta 5xx vira relato no coletor de erros (sem dado pessoal).
+import { comRelato5xx } from "../_shared/coletor-servidor.ts";
 
 async function chamador(req: Request) {
   const auth = req.headers.get("authorization") ?? "";
@@ -74,7 +76,7 @@ async function registrarLogCoordenacao(
   if (error) console.error("log revogar-responsavel:", error.message);
 }
 
-Deno.serve(async (req) => {
+Deno.serve(comRelato5xx("revogar-responsavel", async (req) => {
   const cors = corsHeaders(req);
   const json = (body: unknown, status = 200) =>
     new Response(JSON.stringify(body), {
@@ -146,4 +148,4 @@ Deno.serve(async (req) => {
     console.error("revogar-responsavel:", (e as Error)?.message ?? "erro desconhecido");
     return json({ error: "falha ao revogar acesso" }, 500);
   }
-});
+}));

@@ -15,6 +15,8 @@
 //   escola_id, mantém a virada GLOBAL (motor_virar_semana).
 // ============================================================
 import { admin, corsHeaders } from "../_shared/contexto.ts";
+// Etapa 4: resposta 5xx vira relato no coletor de erros (sem dado pessoal).
+import { comRelato5xx } from "../_shared/coletor-servidor.ts";
 
 // Comparação de strings em tempo constante. Web Crypto (Deno) não traz
 // um timingSafeEqual pronto; esta versão compara byte a byte sem ramo
@@ -33,7 +35,7 @@ async function timingSafeEqual(a: string, b: string): Promise<boolean> {
   return diff === 0;
 }
 
-Deno.serve(async (req) => {
+Deno.serve(comRelato5xx("virar-semana", async (req) => {
   const cors = corsHeaders(req);
   const json = (body: unknown, status = 200) =>
     new Response(JSON.stringify(body), {
@@ -72,4 +74,4 @@ Deno.serve(async (req) => {
     console.error("virar-semana:", e);
     return json({ error: "falha na virada de semana" }, 500);
   }
-});
+}));
