@@ -1,7 +1,7 @@
 /* Casca do app: sessão e roteamento por PAPEL. Magra de propósito —
    o monólito ficou na versão antiga (Doc 5). O papel vem do token;
    o banco aplica a mesma matriz por RLS. */
-import React, { Suspense, lazy } from "react";
+import React, { Suspense, lazy, useEffect } from "react";
 import Login from "./routes/publico/Login.jsx";
 import { useSessao } from "./shared/hooks/useSessao.js";
 import { BrandingProvider, useTema } from "./shared/branding/BrandingContext.jsx";
@@ -11,6 +11,7 @@ import { FaixaDemo } from "./shared/branding/FaixaDemo.jsx";
 import { FONTES_CSS } from "./shared/ui/tema.js";
 import { ehRotaRecuperacao } from "./shared/lib/recuperacao.js";
 import * as db from "./shared/data/index.js";
+import { definirPapel, papelDaSessao } from "./shared/lib/observabilidade.js";
 
 // FIX1 (OBS-RC1-006): cada área vira um chunk próprio — o usuário baixa
 // só a dele (o aluno no celular não paga pelo painel da coordenação nem
@@ -68,6 +69,12 @@ const AREAS = {
 // por props.
 export default function App() {
   const sessaoEstado = useSessao();
+  // Etapa 4: o relato de erro diz o PAPEL de quem estava na tela (nunca
+  // quem é a pessoa). Atualiza a cada troca de sessão ou de perfil.
+  const { sessao, perfil, superAdmin } = sessaoEstado;
+  useEffect(() => {
+    definirPapel(papelDaSessao({ sessao, perfil, superAdmin }));
+  }, [sessao, perfil, superAdmin]);
   const mostrarFaixaDemo = EH_DEMO || escolaEhDemo(sessaoEstado.perfil?.escola);
   return (
     <>
