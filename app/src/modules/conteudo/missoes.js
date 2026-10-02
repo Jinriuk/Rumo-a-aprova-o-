@@ -135,16 +135,28 @@ export function filaDeMissoes({ catalogo = [], ajustesEscola = [], progresso = [
     const atual = !concluida && linha?.estado === "em_andamento" && !grupo.temAtual;
     if (atual) grupo.temAtual = true;
     const estado = concluida ? "concluida" : atual ? "atual" : "a_seguir";
+    // Progresso da atual: a missão fecha com volume E acurácia, então a
+    // barra é o menor dos dois (70/70 a 50% contra 82% não pode aparecer
+    // cheia). Sem acurácia medida ainda, vale só o volume.
+    const questoes = estado === "a_seguir" ? 0 : linha?.questoes_acumuladas ?? 0;
+    const acuracia = estado === "a_seguir" ? null : linha?.acuracia ?? null;
+    const metaAcuracia = m.meta_acuracia ?? null;
+    const pctVolume = metaQuestoes > 0 ? Math.min(100, Math.round((100 * questoes) / metaQuestoes)) : 0;
+    const faltaAcerto = metaAcuracia != null && acuracia != null && acuracia < metaAcuracia;
+    const pctAcerto = faltaAcerto ? Math.round((100 * acuracia) / metaAcuracia) : 100;
     grupo.missoes.push({
       id: m.id,
       nome: m.nome,
       materia_codigo: m.materia_codigo,
       estado,
       meta_questoes: metaQuestoes,
-      meta_acuracia: m.meta_acuracia ?? null,
+      meta_acuracia: metaAcuracia,
       xp: ajuste?.xp ?? m.xp_sugerido ?? 0,
-      questoes: estado === "a_seguir" ? 0 : linha?.questoes_acumuladas ?? 0,
-      acuracia: estado === "a_seguir" ? null : linha?.acuracia ?? null,
+      questoes,
+      acuracia,
+      pct: Math.min(pctVolume, pctAcerto),
+      volume_batido: pctVolume >= 100,
+      falta_acerto: faltaAcerto,
       xp_concedido: linha?.xp_concedido ?? 0,
       proxima: false,
     });

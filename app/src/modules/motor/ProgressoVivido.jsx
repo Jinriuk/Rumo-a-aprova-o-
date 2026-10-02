@@ -165,25 +165,33 @@ export function MissoesPersistidas({ fila = [], disciplinas = [] }) {
               <ol style={{ listStyle: "none", margin: 0, padding: 0, display: "flex", flexDirection: "column", gap: 8 }}>
                 {missoes.map((mi) => {
                   const alvo = `alvo: ${mi.meta_questoes} questões${mi.meta_acuracia != null ? ` e ≥${mi.meta_acuracia}% de acerto` : ""}`;
-                  const borda = mi.estado === "concluida" ? T.green : mi.estado === "atual" ? T.gold : T.line;
+                  // matéria fora da trilha: o aluno não registra, então não há
+                  // "atual" nem "começa no próximo registro" (EST1-A5)
+                  const coordenacao = inalcancavel && mi.estado !== "concluida";
+                  const borda = mi.estado === "concluida" ? T.green : mi.estado === "atual" && !coordenacao ? T.gold : T.line;
                   return (
-                    <li key={mi.id} data-estado={mi.estado}
-                      style={{ background: T.card, border: `1px solid ${borda}`, borderRadius: 10, padding: "11px 13px", opacity: mi.estado === "a_seguir" ? 0.75 : 1 }}>
+                    <li key={mi.id} data-estado={coordenacao ? "coordenacao" : mi.estado}
+                      style={{ background: T.card, border: `1px solid ${borda}`, borderRadius: 10, padding: "11px 13px", opacity: mi.estado === "a_seguir" || coordenacao ? 0.75 : 1 }}>
                       <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
                         <span style={{ fontWeight: 700, fontSize: 13.5 }}>{mi.nome}</span>
                         <span style={{ marginLeft: "auto" }}>
-                          <StatusBadge tom={TOM_ESTADO[mi.estado]}>{ROTULO_ESTADO[mi.estado]}</StatusBadge>
+                          <StatusBadge tom={coordenacao ? "neutro" : TOM_ESTADO[mi.estado]}>{coordenacao ? "Com a coordenação" : ROTULO_ESTADO[mi.estado]}</StatusBadge>
                         </span>
                       </div>
                       {mi.estado === "concluida" ? (
                         <div style={{ fontSize: 11.5, color: T.green, marginTop: 6, fontWeight: 600 }}>
                           +{mi.xp_concedido} XP concedidos · {mi.questoes} questões{mi.acuracia != null ? ` · ${mi.acuracia}% de acerto` : ""}
                         </div>
+                      ) : coordenacao ? (
+                        <div style={{ fontSize: 11, color: T.sub, marginTop: 4 }}>
+                          {alvo} · +{mi.xp} XP
+                        </div>
                       ) : mi.estado === "atual" ? (
                         <div style={{ marginTop: 8 }}>
-                          <BarraXP pct={Math.min(100, Math.round(100 * mi.questoes / Math.max(1, mi.meta_questoes)))} alt={5} brilho={false} />
+                          {/* fecha com volume E acurácia: a barra é o menor dos dois */}
+                          <BarraXP pct={mi.pct} alt={5} brilho={false} />
                           <div style={{ fontSize: 11, color: T.sub, marginTop: 4 }}>
-                            {mi.questoes}/{mi.meta_questoes} questões{mi.acuracia != null ? ` · ${mi.acuracia}% de acerto` : ""} · {alvo}
+                            {mi.questoes}/{mi.meta_questoes} questões{mi.acuracia != null ? ` · ${mi.acuracia}% de acerto` : ""} · {mi.volume_batido && mi.falta_acerto ? `volume batido; falta chegar a ≥${mi.meta_acuracia}% de acerto` : alvo}
                           </div>
                         </div>
                       ) : (

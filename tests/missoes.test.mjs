@@ -151,6 +151,29 @@ test("fila: sem atual na matéria, a primeira 'a seguir' é a próxima (começa 
   assert.ok(comAtual.find((g) => g.materia_codigo === "mat").missoes.every((m) => !m.proxima), "com atual, as seguintes esperam a anterior");
 });
 
+test("fila: a barra da atual é o menor entre volume e acurácia (volume batido não enche a barra)", () => {
+  const de = (questoes, acuracia) => filaDeMissoes({
+    catalogo: MAT, progresso: [{ missao_id: "f", estado: "em_andamento", questoes_acumuladas: questoes, acuracia }],
+  }).find((g) => g.materia_codigo === "mat").missoes[0];
+  const travada = de(70, 50); // 70/70 a 50% contra 82%
+  assert.deepEqual([travada.pct, travada.volume_batido, travada.falta_acerto], [61, true, true]);
+  const meio = de(35, 90);
+  assert.deepEqual([meio.pct, meio.volume_batido, meio.falta_acerto], [50, false, false], "acurácia acima do alvo: vale o volume");
+  const semAcerto = de(14, null);
+  assert.deepEqual([semAcerto.pct, semAcerto.falta_acerto], [20, false], "sem acurácia medida: só volume");
+  assert.ok(de(140, 50).pct < 100, "volume além da meta não compensa acurácia baixa");
+});
+
+test("tela: matéria fora da trilha fica 'Com a coordenação', sem 'Atual' nem 'começa no próximo registro'", () => {
+  const painel = ler("app/src/modules/motor/ProgressoVivido.jsx");
+  assert.match(painel, /const coordenacao = inalcancavel && mi\.estado !== "concluida"/);
+  assert.match(painel, /coordenacao \? "Com a coordenação" : ROTULO_ESTADO\[mi\.estado\]/);
+  // o ramo da coordenação vem antes dos ramos de atual e de a seguir
+  const iCoord = painel.indexOf(") : coordenacao ? (");
+  assert.ok(iCoord > 0 && iCoord < painel.indexOf(') : mi.estado === "atual" ? (') && iCoord < painel.indexOf("mi.proxima ?"));
+  assert.match(painel, /<BarraXP pct=\{mi\.pct\}/);
+});
+
 test("tela: a VisaoEstudo monta a fila com catálogo + ajustes + progresso e não esconde as próximas", () => {
   const visao = ler("app/src/routes/aluno/VisaoEstudo.jsx");
   assert.match(visao, /filaDeMissoes\(\{/);
