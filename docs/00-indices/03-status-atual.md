@@ -44,7 +44,7 @@ ganhou motor **e** porta na coordenação.
 
 | Métrica | Valor | Como foi obtido |
 |---|---|---|
-| Testes | **1278 / 1278 verdes** | medido em 02/10 (Etapa 4, alertas ao dono: coletor de erros, heartbeat da virada e do keepalive; 0061, missões em sequência) — `bash reset-db.sh && npm test` em Postgres **16** local (o container `postgres:17` não baixou na sessão: limite do Docker Hub), com `app/dist` buildado (migrations + seed 2×), com `PGHOST=127.0.0.1`; o CI roda o mesmo em Postgres 17. Em 26/09 (Etapa 6): 1214 em Postgres 17 |
+| Testes | **1281 / 1281 verdes** | medido em 02/10 (Etapa 4, alertas ao dono: coletor de erros, heartbeat da virada e do keepalive; 0061, missões em sequência) — `bash reset-db.sh && npm test` em Postgres **16** local (o container `postgres:17` não baixou na sessão: limite do Docker Hub), com `app/dist` buildado (migrations + seed 2×), com `PGHOST=127.0.0.1`; o CI roda o mesmo em Postgres 17. Em 26/09 (Etapa 6): 1214 em Postgres 17 |
 | Arquivos de teste | **120** (126 `.mjs` em `tests/`; 6 são apoio, sem `node:test`: `identidades.mjs`, `calendario-cn.mjs`, os dois da matriz e os dois da guarda de embed ambíguo, `embeds-postgrest.mjs` e `embeds-fks-multiplas.mjs`) | medido em 02/10 (Etapa 4: `e4-coletor-db`, `e4-coletor-edge`, `e4-heartbeat-virada-db` e `e4-keepalive-heartbeat`; 0061: `missoes-sequenciais-db`) — `grep -l 'node:test' tests/*.mjs \| wc -l` |
 | Lint | **0 errors / 256 warnings** | medido — `cd app && npm run lint` |
 | Build de produção | **verde** | medido — `cd app && npm run build` |

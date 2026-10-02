@@ -109,6 +109,50 @@ delete from aluno_missoes
 create unique index if not exists uq_aluno_missoes_uma_em_andamento
   on aluno_missoes (aluno_id, materia_codigo) where estado = 'em_andamento';
 
+-- Escrita fora do motor. O motor (SECURITY DEFINER) sempre grava
+-- iniciada_em. Linha sem início, ou escrita por papel de cliente (a
+-- coordenação tem INSERT/UPDATE pela API desde a 0042; restauração de
+-- backup também cai aqui), é ajuste manual:
+--   concluída     → 'legado': congelada, o motor não refaz e a fila pula
+--   em andamento  → recusada pela CHECK abaixo: seria uma "atual" que o
+--                   motor não conhece e que bloquearia a fila da matéria
+-- O gatilho só normaliza e nunca recusa: a CHECK é avaliada depois da
+-- RLS, então quem não tem permissão nenhuma (anon) continua recusado
+-- pela RLS (C-S07), e a coordenação, pela CHECK. A matéria vem da
+-- missão quando não é informada. SECURITY INVOKER de propósito:
+-- current_user é quem escreve.
+create or replace function app.aluno_missoes_guarda() returns trigger
+language plpgsql set search_path = '' as $$
+begin
+  if new.materia_codigo is null and new.missao_id is not null then
+    select m.materia_codigo into new.materia_codigo from public.missoes m where m.id = new.missao_id;
+  end if;
+  if new.regra = 'sequencial'
+     and (new.iniciada_em is null or current_user in ('authenticated', 'anon')) then
+    if new.estado = 'concluida' then
+      new.regra := 'legado';
+    else
+      new.iniciada_em := null;   -- papel de cliente não começa missão: a CHECK recusa
+    end if;
+  end if;
+  return new;
+end $$;
+
+drop trigger if exists trg_aluno_missoes_guarda on aluno_missoes;
+create trigger trg_aluno_missoes_guarda
+  before insert or update on aluno_missoes
+  for each row execute function app.aluno_missoes_guarda();
+
+-- Linha da regra nova sempre tem início (as antigas sem início já viraram
+-- legado ou saíram acima).
+do $$
+begin
+  if not exists (select 1 from pg_constraint where conname = 'aluno_missoes_sequencial_com_inicio') then
+    alter table aluno_missoes add constraint aluno_missoes_sequencial_com_inicio
+      check (regra <> 'sequencial' or iniciada_em is not null);
+  end if;
+end $$;
+
 -- no máximo um evento válido de missão do motor por aluno e missão
 create unique index if not exists uq_evprog_missao_motor_valida
   on aluno_eventos_progresso (aluno_id, referencia_id)
@@ -166,6 +210,8 @@ alter table app.missao_registros    enable row level security;
 --    com ?despachar=1 (ou no próximo relato do front), envia e marca.
 -- ------------------------------------------------------------
 alter table app.erros_emails add column if not exists fila boolean not null default false;
+-- empréstimo do despacho: até quando um despacho em curso segura o e-mail
+alter table app.erros_emails add column if not exists despacho_ate timestamptz;
 
 create or replace function app.relatar_falha_servidor(p_funcao text, p_sqlstate text)
 returns void
@@ -206,8 +252,12 @@ exception when others then
 end $$;
 
 -- Pega até p_limite e-mails reservados pelo banco (fila = true) e devolve
--- o que a função precisa para montar cada um. Tirar da fila na mesma
--- transação evita que dois despachos mandem o mesmo e-mail.
+-- o que a função precisa para montar cada um. Empresta cada um por 5
+-- minutos em vez de tirar da fila: dois despachos ao mesmo tempo não
+-- mandam o mesmo e-mail, e se a função morrer antes de marcar (ou a
+-- marcação falhar), o despacho seguinte, passado o prazo, tenta de novo.
+-- Pode repetir um alerta; não perde. Sai da fila de vez quando
+-- coletor_marcar_email (0059) tira a situação de 'reservado'.
 create or replace function public.coletor_despachar_pendentes(p_limite int default 10)
 returns jsonb
 language plpgsql security definer set search_path = '' as $$
@@ -217,11 +267,12 @@ begin
   with alvo as (
     select e.id from app.erros_emails e
      where e.situacao = 'reservado' and e.fila
+       and (e.despacho_ate is null or e.despacho_ate < now())
      order by e.id
      for update skip locked
      limit greatest(1, least(coalesce(p_limite, 10), 20))
   ), tirados as (
-    update app.erros_emails e set fila = false
+    update app.erros_emails e set despacho_ate = now() + interval '5 minutes'
       from alvo where e.id = alvo.id
     returning e.id, e.fingerprint
   )
@@ -432,6 +483,14 @@ begin
           'historico', coalesce(ev.metadata -> 'historico', '[]'::jsonb)
                        || pg_catalog.jsonb_build_array(pg_catalog.jsonb_build_object('revalidado_em', now())))
       where ev.status = 'estornado';
+      -- O XP da missão é o da primeira conclusão: o ledger muda de status
+      -- (estorno, revalidação), nunca de valor. Se a escola mudou o XP
+      -- depois, a linha da missão espelha o ledger, não o valor novo.
+      update public.aluno_missoes am set xp_concedido = ev.xp_delta
+        from public.aluno_eventos_progresso ev
+       where am.id = v_id
+         and ev.idempotency_key = 'missao_motor:' || p_aluno::text || ':' || v_ordem[v_i]::text
+         and am.xp_concedido is distinct from ev.xp_delta;
     end if;
   end loop;
 
@@ -601,6 +660,8 @@ revoke all on function app.missoes_fila(uuid, text) from public, anon, authentic
 revoke all on function app.missoes_reprocessar(uuid, text, uuid, uuid) from public, anon, authenticated;
 revoke all on function app.missoes_aplicar(text, public.registros_estudo, public.registros_estudo) from public, anon, authenticated;
 revoke all on function app.missoes_reavaliar_aluno(uuid) from public, anon, authenticated;
+-- gatilho SECURITY INVOKER: dispara sem EXECUTE do papel; ninguém o chama direto
+revoke all on function app.aluno_missoes_guarda() from public, anon, authenticated;
 grant execute on function public.coletor_despachar_pendentes(int) to service_role;
 grant execute on function app.relatar_falha_servidor(text, text) to service_role;
 grant execute on function app.missoes_fila(uuid, text) to service_role;
@@ -620,13 +681,16 @@ comment on table app.registros_recebidos is
 --   recriar app.motor_avaliar_aluno e app.trg_ped1_registro com os
 --   corpos da 0033;
 --   drop trigger trg_missao_recebido on registros_estudo;
+--   drop trigger trg_aluno_missoes_guarda on aluno_missoes;
+--   alter table aluno_missoes drop constraint aluno_missoes_sequencial_com_inicio;
 --   drop function app.missoes_aplicar(text, public.registros_estudo, public.registros_estudo),
 --     app.missoes_reavaliar_aluno(uuid), app.missoes_reprocessar(uuid, text, uuid, uuid),
 --     app.missoes_fila(uuid, text), app.registrar_recebimento(),
---     app.relatar_falha_servidor(text, text), public.coletor_despachar_pendentes(int);
+--     app.relatar_falha_servidor(text, text), public.coletor_despachar_pendentes(int),
+--     app.aluno_missoes_guarda();
 --   drop table app.missao_registros, app.registros_recebidos;
 --   drop index uq_aluno_missoes_uma_em_andamento, uq_evprog_missao_motor_valida;
---   (as colunas novas de aluno_missoes e app.erros_emails.fila podem ficar)
+--   (as colunas novas de aluno_missoes e app.erros_emails.fila/despacho_ate podem ficar)
 --   Física EsPCEx: ordem 6 Mecânica, 7 Eletricidade, 8 Termologia.
 -- O XP concedido pela regra nova fica no ledger (append-only).
 -- ============================================================

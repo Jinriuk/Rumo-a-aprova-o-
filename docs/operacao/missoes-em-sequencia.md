@@ -59,6 +59,13 @@ para o registro apagado, e o evento de missão aponta para `missoes`.
 10. **Fora da regra:** nível por matéria, conquistas e o motor C0 não mudam.
     Missão concluída que a escola desativa fica como está; a em andamento
     sai da fila e os registros dela vão para a próxima.
+11. **XP da primeira conclusão.** O ledger muda de status (estorno,
+    revalidação), nunca de valor. Se a escola muda o XP da missão depois, a
+    linha da missão continua igual ao ledger.
+12. **Escrita fora do motor** (coordenação pela API, restauração de backup):
+    conclusão vira `legado` (congelada, a fila pula); missão em andamento é
+    recusada pela CHECK `aluno_missoes_sequencial_com_inicio`. Só o motor
+    começa missão.
 
 Também na 0061: a Física da EsPCEx tem o avançado por último (Eletricidade 6,
 Termologia 7, Mecânica 8), na migration e na fonte da seed 20
@@ -75,6 +82,9 @@ O e-mail: o banco reserva o envio (tetos da 0059) e pede, pelo `pg_net`, que
 a Edge Function `registrar-erro` o despache (`?despachar=1`). A URL do projeto
 vem do Vault, com o nome `project_url` (ver `alertas-dono.md`, 2.5). Sem ele,
 o e-mail fica na fila e sai no próximo relato de erro do front.
+O despacho empresta o e-mail por 5 minutos em vez de tirá-lo da fila: se a
+função cair antes de marcar o envio, o despacho seguinte tenta de novo.
+Pode repetir um alerta; não perde.
 
 ## 4. Ordem de aplicação
 
