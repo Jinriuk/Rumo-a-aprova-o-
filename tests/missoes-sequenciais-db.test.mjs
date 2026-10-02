@@ -258,6 +258,65 @@ test("missão desativada pela escola sai da fila; a concluída fica", async () =
   });
 });
 
+test("XP da missão é o da primeira conclusão: a escola muda o XP e a missão continua igual ao ledger", async () => {
+  await emTransacao(async (c, al) => {
+    const linha = async () => (await c.query(
+      `select am.xp_concedido, ev.xp_delta, ev.status from aluno_missoes am
+         join missoes m on m.id = am.missao_id
+         join aluno_eventos_progresso ev on ev.aluno_id = am.aluno_id and ev.referencia_id = am.missao_id and ev.origem = 'motor_missao'
+        where am.aluno_id = $1 and m.nome = $2`, [al.aluno, MAT[0]])).rows[0];
+    const r1 = await registrar(c, al, 70, 60);                         // fecha Funções a 90 XP
+    await c.query(
+      `insert into missoes_escola (escola_id, missao_id, ativa, xp)
+       select $1, id, true, 40 from missoes where exam_tag = 'espcex' and nome = $2`, [al.escola, MAT[0]]);
+    await c.query("update registros_estudo set topico = 'editado' where id = $1", [r1]);   // recalcula, continua concluída
+    assert.deepEqual(await linha(c), { xp_concedido: 90, xp_delta: 90, status: "valido" });
+    await c.query("delete from registros_estudo where id = $1", [r1]);  // estorna
+    await registrar(c, al, 70, 60);                                     // reconclui: revalida a mesma linha
+    assert.deepEqual(await linha(c), { xp_concedido: 90, xp_delta: 90, status: "valido" });
+    assert.equal((await ledger(c, al.aluno)).xp, 90);
+  });
+});
+
+test("escrita fora do motor: conclusão manual vira legado, em andamento é recusada, a matéria vem da missão", async () => {
+  await emTransacao(async (c, al) => {
+    const id = async (nome) => (await c.query("select id from missoes where exam_tag = 'espcex' and nome = $1", [nome])).rows[0].id;
+    // como servidor e sem início (ex.: restauração de backup)
+    await c.query(
+      `insert into aluno_missoes (escola_id, aluno_id, missao_id, exam_tag, estado, xp_concedido)
+       values ($1, $2, $3, 'espcex', 'concluida', 90)`, [al.escola, al.aluno, await id(MAT[0])]);
+    const r = (await c.query("select regra, materia_codigo from aluno_missoes where aluno_id = $1", [al.aluno])).rows;
+    assert.deepEqual(r, [{ regra: "legado", materia_codigo: "mat" }]);
+    await c.query("savepoint s");
+    await assert.rejects(c.query(
+      `insert into aluno_missoes (escola_id, aluno_id, missao_id, exam_tag, estado)
+       values ($1, $2, $3, 'espcex', 'em_andamento')`, [al.escola, al.aluno, await id(MAT[1])]),
+      /aluno_missoes_sequencial_com_inicio/);
+    await c.query("rollback to savepoint s");
+    // o motor segue: a conclusão manual é pulada e a próxima da fila fecha
+    await registrar(c, al, 60, 55);
+    assert.deepEqual((await missoes(c, al.aluno)).map((m) => [m.nome, m.estado, m.regra]),
+      [[MAT[0], "concluida", "legado"], [MAT[1], "concluida", "sequencial"]]);
+  });
+});
+
+test("escrita fora do motor: a coordenação pela API só registra conclusão (congelada), nunca uma missão em andamento", async () => {
+  await como(IDS.coordA, async (c) => {
+    const m = (await c.query("select id from missoes where exam_tag = 'cn' order by ordem, id limit 2")).rows.map((x) => x.id);
+    await c.query("delete from aluno_missoes where aluno_id = $1 and missao_id = any($2::uuid[])", [ALUNO_LUCAS, m]);
+    const ins = await c.query(
+      `insert into aluno_missoes (escola_id, aluno_id, missao_id, exam_tag, estado, iniciada_em)
+       values ($1, $2, $3, 'cn', 'concluida', now()) returning regra`, [ESCOLA_A, ALUNO_LUCAS, m[0]]);
+    assert.equal(ins.rows[0].regra, "legado", "mesmo com início informado, a escrita da coordenação fica congelada");
+    await c.query("savepoint s");
+    await assert.rejects(c.query(
+      `insert into aluno_missoes (escola_id, aluno_id, missao_id, exam_tag, estado, iniciada_em, materia_codigo)
+       values ($1, $2, $3, 'cn', 'em_andamento', now(), 'mat')`, [ESCOLA_A, ALUNO_LUCAS, m[1]]),
+      /aluno_missoes_sequencial_com_inicio/);
+    await c.query("rollback to savepoint s");
+  });
+});
+
 test("concorrência: no máximo uma missão em andamento por aluno e matéria (índice no banco)", async () => {
   await emTransacao(async (c, al) => {
     await registrar(c, al, 10, 9);
@@ -327,6 +386,15 @@ test("falha do motor: o registro é gravado, a falha vira ocorrência sem dado d
     assert.equal(d1.length, 1);
     assert.equal(d1[0].evento.origem, "banco:motor_missoes");
     assert.ok(d1[0].email_id && d1[0].fingerprint);
+    assert.deepEqual((await c.query("select public.coletor_despachar_pendentes(10) as d")).rows[0].d, [],
+      "emprestado a um despacho em curso: outro despacho não pega o mesmo e-mail");
+    // a função morreu antes de marcar: passado o empréstimo, o e-mail volta (pode repetir, não se perde)
+    await c.query("update app.erros_emails set despacho_ate = now() - interval '1 second' where id = $1", [d1[0].email_id]);
+    const d2 = (await c.query("select public.coletor_despachar_pendentes(10) as d")).rows[0].d;
+    assert.deepEqual(d2.map((x) => x.email_id), [d1[0].email_id]);
+    // marcado como enviado: sai de vez, mesmo com o empréstimo vencido
+    await c.query("select public.coletor_marcar_email($1, true)", [d1[0].email_id]);
+    await c.query("update app.erros_emails set despacho_ate = now() - interval '1 second' where id = $1", [d1[0].email_id]);
     assert.deepEqual((await c.query("select public.coletor_despachar_pendentes(10) as d")).rows[0].d, []);
   });
 });
