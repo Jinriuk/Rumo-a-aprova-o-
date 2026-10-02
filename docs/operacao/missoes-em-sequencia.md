@@ -80,6 +80,8 @@ o e-mail fica na fila e sai no próximo relato de erro do front.
 
 1. PR dos alertas (#170) mesclado e aplicado (0059, 0060, funções).
 2. Este PR: 0061 no demo, conferir, depois na produção.
+   No demo, as missões continuam sem meta até o alinhamento do catálogo
+   (`demo-catalogo-missoes.md`, proposta à parte, só depois da 0061).
 3. Publicar `registrar-erro` de novo (ganhou o despacho) e as funções que
    importam `_shared/coletor-servidor.ts`.
 4. `project_url` no Vault dos dois projetos.
