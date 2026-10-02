@@ -152,8 +152,9 @@ função (Edge Functions › Logs) junto do erro detalhado, e no cabeçalho
 | Trava | Valor |
 | --- | --- |
 | Corpo do relato | 16 KB (413 acima) |
+| Total de relatos | 600 por minuto (429 acima), checado antes de qualquer linha por IP: girar o IP não enche a tabela de limites |
 | Por IP (HMAC do IP com o segredo da função e a data; o IP não é gravado) | 20 por minuto (429 acima) |
-| Ocorrências gravadas | 500 em 24 h; acima disso só conta, e o grupo `teto-diario` alerta |
+| Ocorrências gravadas | 500 em 24 h, contadas e gravadas sob trava (relatos simultâneos não passam juntos do teto); acima disso só conta, e o grupo `teto-diario` alerta |
 | E-mail por erro | 1 por hora |
 | E-mails no total | 20 em 24 h por projeto (40 com demo e produção), dentro dos 100/dia do Resend gratuito, que é dividido com os e-mails de acesso da coordenação |
 | Retenção | ocorrências e e-mails 30 dias; grupos 90 dias sem ocorrer |

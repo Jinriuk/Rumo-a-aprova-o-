@@ -309,7 +309,7 @@ const md = [
   "",
   "| Prova | Resultado | Detalhe |",
   "| --- | --- | --- |",
-  ...resultados.map((r) => `| ${r.id} ${r.titulo} | ${r.ok ? "passou" : "**FALHOU**"} | ${String(r.detalhe).replace(/\|/g, "\\|").replace(/\n/g, " ")} |`),
+  ...resultados.map((r) => `| ${r.id} ${r.titulo} | ${r.ok ? "passou" : "**FALHOU**"} | ${String(r.detalhe).replace(/\\/g, "\\\\").replace(/\|/g, "\\|").replace(/\n/g, " ")} |`),
   "",
   `E-mails recebidos pelo Resend simulado: ${emails().length}. Pings recebidos pelo healthchecks simulado: ${simulador().filter((x) => x.tipo === "healthchecks").length}.`,
 ].join("\n");

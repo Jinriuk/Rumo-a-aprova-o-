@@ -80,6 +80,40 @@ test("E4/0059: a mesma chave passa de 20 por minuto e é limitada, sem gravar na
   });
 });
 
+test("E4/0059: acima de 600 relatos no minuto, recusa ANTES de criar linha para a chave nova", async () => {
+  await emTransacao(async (c) => {
+    // quem gira a chave a cada pedido não pode encher app.erros_limite
+    await c.query("insert into app.erros_limite (chave, janela, contagem) values ('global', date_trunc('minute', now()), 600)");
+    const r = await registrar(c, { chave: "ip:nunca-visto" });
+    assert.equal(r.resultado, "limitado");
+    const linhas = (await c.query("select count(*)::int n from app.erros_limite where chave = 'ip:nunca-visto'")).rows[0].n;
+    assert.equal(linhas, 0, "o pedido recusado pelo teto global criou linha para a chave");
+    assert.equal((await c.query("select count(*)::int n from app.erros_ocorrencias")).rows[0].n, 0);
+  });
+});
+
+test("E4/0059: contar e gravar o teto de 24 h é serializado entre relatos simultâneos", async () => {
+  // dois relatos de chaves e fingerprints diferentes, em transações
+  // paralelas: o segundo espera o primeiro terminar (não lê a mesma
+  // contagem abaixo do teto ao mesmo tempo)
+  const a = await pool.connect();
+  const b = await pool.connect();
+  try {
+    await a.query("begin");
+    await b.query("begin");
+    await a.query("set local role service_role");
+    await b.query("set local role service_role");
+    await registrar(a, { chave: "ip:a", fp: "c".repeat(32) });
+    await b.query("set local statement_timeout = 300");
+    await assert.rejects(registrar(b, { chave: "ip:b", fp: "d".repeat(32) }), /statement timeout/);
+  } finally {
+    await a.query("rollback").catch(() => {});
+    await b.query("rollback").catch(() => {});
+    a.release();
+    b.release();
+  }
+});
+
 test("E4/0059: depois de 1 hora o mesmo grupo pode mandar outro e-mail", async () => {
   await emTransacao(async (c) => {
     assert.equal((await registrar(c)).enviar_email, true);

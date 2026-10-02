@@ -37,8 +37,7 @@ HOST_IP="${HOST_IP:-172.17.0.1}"
 
 export SIMULADOR_LOG="$PROVAS_SAIDA/simulador.jsonl"
 export SIMULADOR_PORTA="$PORTA"
-: > "$SIMULADOR_LOG"
-node "$RAIZ/scripts/alertas/simulador.mjs" &
+node "$RAIZ/scripts/alertas/simulador.mjs" > "$SIMULADOR_LOG" &
 SIM=$!
 PREVIEW=""
 encerrar() {
