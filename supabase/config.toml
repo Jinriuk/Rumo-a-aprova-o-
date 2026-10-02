@@ -104,3 +104,9 @@ verify_jwt = false
 [functions.trocar-senha]
 # exige sessão válida do próprio dono da senha (chamador → 401)
 verify_jwt = false
+
+[functions.registrar-erro]
+# coletor de erro do front (Etapa 4): recebe relato SEM login, inclusive
+# da tela de entrada. A trava é a origem da allowlist, o teto de corpo,
+# o limite por IP e os tetos globais da 0059 (ver o cabeçalho da função).
+verify_jwt = false

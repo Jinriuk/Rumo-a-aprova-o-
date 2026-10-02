@@ -26,6 +26,12 @@
 # e sem avisar. Se houver um período longo sem commits, entre no Actions e
 # reative este workflow à mão (ou rode uma vez pelo "Run workflow").
 #
+# QUEM VIGIA ESTE WORKFLOW (Etapa 4)
+# Execução atrasada, descartada ou desativada não fica vermelha: só não
+# acontece. O último passo pinga o healthchecks.io (secret HC_KEEPALIVE_URL)
+# quando as duas batidas passaram, e /fail quando uma delas falhou; sem ping
+# no período + folga, o healthchecks manda e-mail ao dono.
+#
 # O QUE A BATIDA FAZ
 # Um GET no endpoint REST com a chave anon. A tabela `concursos` tem GRANT de
 # SELECT para `anon`, mas RLS ligada e NENHUMA policy para esse papel — então
@@ -65,6 +71,7 @@ jobs:
     timeout-minutes: 5
     steps:
       - name: Bater no REST de produção
+        id: prod
         env:
           # A chave anon é PUBLICÁVEL por design (ela já viaja no bundle para
           # todo visitante; a segurança é a RLS). Está como secret aqui só
@@ -146,6 +153,7 @@ jobs:
       # Isto não mascara a falha de produção; o `exit 1` dela continua
       # reprovando o job.
       - name: Bater no REST do demo (vitrine)
+        id: demo
         if: always()
         env:
           # A chave anon é PUBLICÁVEL por design (ela já viaja no bundle para
@@ -216,3 +224,54 @@ jobs:
 
           echo "::error::A batida NÃO chegou ao projeto após 3 tentativas (última: HTTP ${codigo}). O projeto pode pausar se isso persistir por 7 dias."
           exit 1
+
+      # ------------------------------------------------------------------
+      # HEARTBEAT EXTERNO (Etapa 4, lacunas 8.5 e 8.6 da matriz)
+      # Execução que não acontece (atraso do agendador, descarte, workflow
+      # desativado depois de 60 dias) não gera e-mail do GitHub. Quem avisa
+      # é o healthchecks.io, check `keepalive`: sem ping dentro do período
+      # + folga, ele manda e-mail ao dono.
+      #
+      # Sem `if:` = `if: success()`: este passo só roda quando OS DOIS
+      # passos acima passaram. Um banco sem batida não pode resetar o
+      # cronômetro do check.
+      #
+      # Secret ausente REPROVA (mesma regra do #155): sem ele o vigia está
+      # desligado. Cadastre em Settings > Secrets and variables > Actions:
+      #   HC_KEEPALIVE_URL   ex.: https://hc-ping.com/<uuid do check keepalive>
+      # ------------------------------------------------------------------
+      - name: Avisar o healthchecks (as duas batidas passaram)
+        env:
+          HC_URL: ${{ secrets.HC_KEEPALIVE_URL }}
+        run: |
+          set -uo pipefail
+          if [ -z "${HC_URL:-}" ]; then
+            echo "::error::FALTA CONFIGURAÇÃO — sem HC_KEEPALIVE_URL. As batidas passaram, mas o healthchecks não foi avisado: ele vai acusar atraso do keepalive. Ver docs/operacao/alertas-dono.md."
+            exit 1
+          fi
+          # URL do healthchecks no log daria a qualquer um o poder de pingar
+          # o check; o GitHub mascara secret, e o curl roda sem -v.
+          if curl -fsS -o /dev/null --max-time 10 --retry 3 --retry-delay 5 "${HC_URL%/}"; then
+            echo "healthchecks avisado: keepalive ok."
+          else
+            echo "::error::O ping ao healthchecks falhou depois de 4 tentativas. As batidas passaram; o check keepalive vai acusar atraso se isso se repetir."
+            exit 1
+          fi
+
+      # Falha de uma das BATIDAS: avisa o healthchecks NA HORA (/fail), sem
+      # esperar a folga do check. Não depende da notificação de Actions
+      # estar ligada na conta (8.5). Falha só do ping acima (healthchecks
+      # fora do ar) não entra aqui: as batidas passaram, e /fail mentiria.
+      - name: Avisar o healthchecks da falha
+        if: failure() && (steps.prod.outcome == 'failure' || steps.demo.outcome == 'failure')
+        env:
+          HC_URL: ${{ secrets.HC_KEEPALIVE_URL }}
+        run: |
+          set -uo pipefail
+          if [ -z "${HC_URL:-}" ]; then
+            echo "::error::Sem HC_KEEPALIVE_URL: a falha deste job não chegou ao healthchecks."
+            exit 1
+          fi
+          curl -fsS -o /dev/null --max-time 10 --retry 3 --retry-delay 5 "${HC_URL%/}/fail" \
+            && echo "healthchecks avisado: keepalive FALHOU." \
+            || echo "::error::Nem o /fail chegou ao healthchecks."
