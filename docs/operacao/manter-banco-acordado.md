@@ -52,6 +52,26 @@ Um ambiente sem secret não impede a batida do outro: o passo do demo tem
 A chave anon é publicável por design (ela já viaja no bundle para todo
 visitante; a segurança é a RLS). Está como secret só para não aparecer no log.
 
+## Quem vigia o vigia (Etapa 4)
+
+Execução atrasada, descartada ou desativada não fica vermelha: simplesmente
+não acontece, e o GitHub não manda e-mail. Por isso o job termina pingando o
+healthchecks.io:
+
+| Situação | O que o job faz |
+|---|---|
+| as duas batidas passaram | GET em `HC_KEEPALIVE_URL` |
+| uma batida falhou | GET em `HC_KEEPALIVE_URL/fail` (o healthchecks avisa na hora) |
+| o job não rodou | nada; o healthchecks avisa quando passar o período + folga |
+| `HC_KEEPALIVE_URL` ausente | o passo reprova com `::error::FALTA CONFIGURAÇÃO` |
+
+| Secret | Valor |
+|---|---|
+| `HC_KEEPALIVE_URL` | Ping URL do check `keepalive` (`https://hc-ping.com/<uuid>`) |
+
+Check no healthchecks: período 1 dia, folga 12 horas. Passo a passo e o resto
+dos alertas em [`alertas-dono.md`](./alertas-dono.md).
+
 ## ⚠️ O prazo de validade deste seguro
 
 O GitHub **desativa automaticamente workflows agendados após 60 dias sem

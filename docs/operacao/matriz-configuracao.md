@@ -181,6 +181,17 @@ configuração.
 Um único plano gratuito do Better Stack (10 monitores, 10 heartbeats) comporta
 os 4 monitores de 8.3 e os 4 heartbeats de 8.2, 8.4 (P e D) e 8.6.
 
+> **Atualização da Etapa 4 (02/10/2026), no repositório e não aplicada:**
+> 8.1 virou a Edge Function `registrar-erro` gravando em `app.erros_*`
+> (migration 0059) e mandando e-mail pelo Resend para o secret novo
+> `ALERTA_EMAIL`; as 7 funções relatam 5xx ao mesmo coletor. 8.4 virou a
+> opção A com healthchecks.io: gatilho da 0060 ao fim da virada global,
+> `pg_net` e a URL no Vault com o nome `hc_virada_url`. 8.5 e 8.6 viraram o
+> passo final do keepalive pingando `HC_KEEPALIVE_URL` (e `/fail` quando uma
+> batida falha). Onde cadastrar cada um, ordem e limites:
+> [`alertas-dono.md`](./alertas-dono.md). 8.2 (heartbeat do backup) e 8.3
+> (monitor de disponibilidade) seguem pendentes.
+
 ### 8.1 Erro do front
 
 **Hoje:** `observabilidade.js` escreve no console e, se `VITE_ERROR_REPORT_URL`

@@ -40,6 +40,8 @@ const admin = createClient(
 // payload resolvem este import relativo.
 import { buildCorsHeaders as corsHeaders } from "../_shared/cors.ts";
 import { escolaOperacional, RESPOSTA_ESCOLA_PARADA } from "../_shared/escola.ts";
+// Etapa 4: resposta 5xx vira relato no coletor de erros (sem dado pessoal).
+import { comRelato5xx } from "../_shared/coletor-servidor.ts";
 
 // sem 0/O/1/I/L pra credencial ser ditável por telefone sem erro
 const ALFABETO = "ABCDEFGHJKMNPQRSTUVWXYZ23456789";
@@ -202,7 +204,7 @@ async function lidarComCredencial(
   return json({ error: "tipo de ação de credencial desconhecido", estado: "erro_validacao" }, 400);
 }
 
-Deno.serve(async (req) => {
+Deno.serve(comRelato5xx("provisionar-aluno", async (req) => {
   const cors = corsHeaders(req);
   const json = (body: unknown, status = 200) =>
     new Response(JSON.stringify(body), {
@@ -380,4 +382,4 @@ Deno.serve(async (req) => {
     console.error("provisionar-aluno:", e);
     return json({ error: "falha ao provisionar acesso", estado: "erro_interno" }, 500);
   }
-});
+}));
