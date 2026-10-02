@@ -76,7 +76,7 @@ jobs:
 
       - name: Pack da execução que a tela 24 completa
         if: inputs.tela_24_completa_run != ''
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: pack-triliva-v2
           run-id: ${{ inputs.tela_24_completa_run }}
