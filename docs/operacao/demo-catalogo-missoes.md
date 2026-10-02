@@ -102,9 +102,12 @@ Duas saídas:
   missão do replay precisa entrar no arquivamento da virada, como o de
   registro já entra. Fica para um PR próprio.
 
-Recomendação: **(b) junto com este alinhamento**. Se for (a), alinhar só
-depois de testar a demonstração ao vivo (registrar → missão "Atual" → barra
-andando).
+Recomendação técnica: (b) junto com este alinhamento.
+
+**Decisão do dono (02/10/2026): nem (a) nem (b) agora.** O PR fica em
+rascunho, sem aplicar, e volta à fila antes da primeira demonstração B2B que
+precise mostrar missões. Até lá o demo segue como está (painel de missões
+escondido, nenhuma missão com meta).
 
 ## 4. Fora do escopo, anotado
 
