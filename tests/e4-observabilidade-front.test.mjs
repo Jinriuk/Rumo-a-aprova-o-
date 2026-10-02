@@ -135,20 +135,23 @@ test("E4/front: sem VITE_ERROR_REPORT_URL, só console; nada é enviado", () => 
   const f = fetchFalso();
   const id = silenciado(() => O.capturarErro(new Error("x"), {}, { endpoint: undefined, enviar: f }));
   assert.equal(f.chamadas.length, 0);
-  assert.match(id, UUID_RE, "o código do erro existe mesmo sem coletor");
+  assert.equal(id, null, "sem coletor não há código: a tela não mostra o que ninguém acha");
+  const doServidor = Object.assign(new Error("y"), { correlation_id: "abcd1234-0000-4000-8000-000000000002" });
+  assert.equal(silenciado(() => O.capturarErro(doServidor, {}, { endpoint: undefined, enviar: f })), doServidor.correlation_id,
+    "o id do 5xx da Edge Function já está no coletor");
 });
 
 test("E4/front: no máximo 10 relatos por página e o mesmo erro uma vez a cada 10 s", () => {
   O._reiniciarLimites();
   const f = fetchFalso();
-  silenciado(() => {
-    for (let i = 0; i < 5; i++) O.capturarErro(new Error("o mesmo"), { origem: "x" }, { endpoint: URL_COLETOR, enviar: f });
-  });
+  const ids = silenciado(() => Array.from({ length: 5 }, () =>
+    O.capturarErro(new Error("o mesmo"), { origem: "x" }, { endpoint: URL_COLETOR, enviar: f })));
   assert.equal(f.chamadas.length, 1, "erro repetido em laço virou enxurrada");
-  silenciado(() => {
-    for (let i = 0; i < 30; i++) O.capturarErro(new Error(`diferente ${i}`), { origem: "x" }, { endpoint: URL_COLETOR, enviar: f });
-  });
+  assert.deepEqual(new Set(ids), new Set([f.chamadas[0].corpo.correlation_id]), "o repetido mostra o código do relato que saiu");
+  const outros = silenciado(() => Array.from({ length: 30 }, (_, i) =>
+    O.capturarErro(new Error(`diferente ${i}`), { origem: "x" }, { endpoint: URL_COLETOR, enviar: f })));
   assert.equal(f.chamadas.length, O.LIMITES.porPagina);
+  assert.equal(outros.at(-1), null, "acima do limite da página nada sai, e não há código");
   O._reiniciarLimites();
 });
 
@@ -164,8 +167,8 @@ test("E4/front: a fronteira guarda o id do relato e mostra o código curto", () 
 
 test("E4/front: o App informa o papel à observabilidade a cada troca de sessão", () => {
   const src = semComentario(ler("app/src/App.jsx"));
-  assert.match(src, /definirPapel\(papelDaSessao\(\{ sessao, perfil, superAdmin \}\)\)/);
-  assert.match(src, /\[sessao, perfil, superAdmin\]/);
+  assert.match(src, /definirPapel\(papelDaSessao\(\{ sessao, perfil, superAdmin \}\)\);/);
+  assert.doesNotMatch(src, /useEffect\(\(\) => \{\s*definirPapel/, "num efeito, a quebra na 1ª renderização sairia como anonimo");
 });
 
 test("E4/front: o build grava o SHA em VITE_RELEASE", () => {

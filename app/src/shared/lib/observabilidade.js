@@ -68,33 +68,41 @@ export function montarRelato(erro, contexto = {}, correlationId = novoCorrelatio
 // Um laço de erro (efeito que relança a cada render) não pode virar
 // enxurrada: no máximo 10 relatos por carregamento de página, e o mesmo
 // erro só uma vez a cada 10 s. O coletor tem os próprios limites; estes
-// poupam a rede do usuário.
-function deixaEnviar(relato, agora) {
-  if (enviados >= LIMITES.porPagina) return false;
+// poupam a rede do usuário. O repetido devolve o id do relato que saiu,
+// para a tela mostrar um código que existe no coletor.
+function decidirEnvio(relato, agora) {
   const chave = `${relato.origem}|${relato.mensagem}`;
   const ultimo = recentes.get(chave);
-  if (ultimo !== undefined && agora - ultimo < LIMITES.repetidoMs) return false;
-  recentes.set(chave, agora);
+  if (ultimo !== undefined && agora - ultimo.em < LIMITES.repetidoMs) return { enviar: false, idAnterior: ultimo.id };
+  if (enviados >= LIMITES.porPagina) return { enviar: false, idAnterior: null };
+  recentes.set(chave, { em: agora, id: relato.correlation_id });
   enviados++;
-  return true;
+  return { enviar: true, idAnterior: null };
 }
 
 // `fetch` solto (sem o window como this) dá "Illegal invocation" no
 // navegador: a chamada passa pela função, nunca pela referência.
 const fetchGlobal = (...args) => globalThis.fetch(...args);
 
-/** Registra o erro e devolve o correlation_id do relato (ou null se nem
- *  isso deu). O id do erro de Edge Function (cabeçalho x-correlation-id,
- *  anexado em shared/data) tem precedência: liga as duas pontas. */
+/** Registra o erro e devolve um correlation_id que dá para procurar no
+ *  coletor, ou null quando nada foi registrado (sem coletor, limite da
+ *  página): a tela não mostra código que ninguém consegue achar. O id do
+ *  erro de Edge Function (cabeçalho x-correlation-id, anexado em
+ *  shared/data) já existe do lado do servidor e tem precedência: liga as
+ *  duas pontas. */
 export function capturarErro(erro, contexto = {}, { endpoint = ENDPOINT, enviar = fetchGlobal } = {}) {
+  let idServidor = null;
+  try {
+    if (typeof erro?.correlation_id === "string") idServidor = erro.correlation_id;
+  } catch { /* getter que lança não derruba a captura */ }
   try {
     console.error(`[observabilidade${contexto.origem ? ":" + contexto.origem : ""}]`, erro);
   } catch { /* console sequestrado não pode derrubar nada */ }
   try {
-    const correlationId = typeof erro?.correlation_id === "string" ? erro.correlation_id : novoCorrelationId();
-    if (!endpoint || (enviar === fetchGlobal && typeof globalThis.fetch !== "function")) return correlationId;
-    const relato = montarRelato(erro, contexto, correlationId);
-    if (!deixaEnviar(relato, Date.now())) return correlationId;
+    if (!endpoint || (enviar === fetchGlobal && typeof globalThis.fetch !== "function")) return idServidor;
+    const relato = montarRelato(erro, contexto, idServidor ?? novoCorrelationId());
+    const decisao = decidirEnvio(relato, Date.now());
+    if (!decisao.enviar) return idServidor ?? decisao.idAnterior;
     const pendente = enviar(endpoint, {
       method: "POST",
       headers: { "Content-Type": "text/plain;charset=UTF-8" },
@@ -103,10 +111,10 @@ export function capturarErro(erro, contexto = {}, { endpoint = ENDPOINT, enviar 
       credentials: "omit",
     });
     if (pendente && typeof pendente.catch === "function") pendente.catch(() => {});
-    return correlationId;
+    return relato.correlation_id;
   } catch {
     // observabilidade nunca pode ser a causa de uma falha
-    return null;
+    return idServidor;
   }
 }
 
