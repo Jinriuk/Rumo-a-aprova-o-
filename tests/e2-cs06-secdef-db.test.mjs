@@ -45,6 +45,8 @@ const CLASSE = {
   "app.progresso_de_simulado()": "c",
   "app.registrar_nivel_historico()": "c",
   "app.trg_ped1_registro()": "c",
+  "app.heartbeat_virada()": "c", // E4 (0060): ping do healthchecks ao fim da virada global
+  "app.registrar_recebimento()": "c", // 0061: horário do servidor em que o registro chegou
   // d — interna
   "app.backfill_progresso(uuid)": "d",
   "app.desbloquear_conquista_basica(uuid, uuid, text, text)": "d",
@@ -52,6 +54,12 @@ const CLASSE = {
   "app.motor_avaliar_aluno(uuid)": "d",
   "app.motor_conquista_xp(uuid, uuid, text, text)": "d",
   "app.motor_streak_dias(uuid)": "d",
+  // 0061: motor de missões em sequência (chamadas pelo gatilho da PED1 e pelo operador)
+  "app.missoes_aplicar(text, registros_estudo, registros_estudo)": "d",
+  "app.missoes_fila(uuid, text)": "d",
+  "app.missoes_reavaliar_aluno(uuid)": "d",
+  "app.missoes_reprocessar(uuid, text, uuid, uuid)": "d",
+  "app.relatar_falha_servidor(text, text)": "d",
   // s — servidor
   "app.abrir_proximo_ciclo(uuid, date)": "s",
   "app.estado_ciclo(uuid, date)": "s",
@@ -69,6 +77,9 @@ const CLASSE = {
   "app.virada_saude(integer)": "s",
   "app.virar_semana(date)": "s",
   "app.virar_semana(uuid, date)": "s",
+  "public.coletor_despachar_pendentes(integer)": "s", // 0061: só a Edge Function registrar-erro
+  "public.coletor_marcar_email(bigint, boolean)": "s", // E4 (0059): só a Edge Function registrar-erro
+  "public.coletor_registrar_erro(text, text, jsonb, boolean)": "s", // E4 (0059): idem
   "public.motor_gerar_meta_segura(uuid)": "s",
   "public.registrar_codigo_acesso(uuid, uuid, text)": "s",
   "public.resolver_codigo_acesso(text, text, integer, integer)": "s",
@@ -100,7 +111,7 @@ test("C-S06: toda SECURITY DEFINER de public/app tem classe registrada, e nenhum
   const sobrando = Object.keys(CLASSE).filter((n) => !nomes.includes(n));
   assert.deepEqual(semClasse, [], `SECURITY DEFINER sem decisão de quem chama: classifique em tests/e2-cs06-secdef-db.test.mjs`);
   assert.deepEqual(sobrando, [], "classe registrada para função que não existe mais");
-  assert.equal(nomes.length, 50);
+  assert.equal(nomes.length, 60); // 50 da 0057 + 3 da Etapa 4 (0059 e 0060) + 7 da 0061
 });
 
 test("C-S06: toda SECURITY DEFINER fixa o search_path", async () => {

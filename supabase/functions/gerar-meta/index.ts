@@ -18,8 +18,10 @@
 // ============================================================
 import { admin, chamador, alunoDaEscola, corsHeaders } from "../_shared/contexto.ts";
 import { escolaOperacional, RESPOSTA_ESCOLA_PARADA } from "../_shared/escola.ts";
+// Etapa 4: resposta 5xx vira relato no coletor de erros (sem dado pessoal).
+import { comRelato5xx } from "../_shared/coletor-servidor.ts";
 
-Deno.serve(async (req) => {
+Deno.serve(comRelato5xx("gerar-meta", async (req) => {
   const cors = corsHeaders(req);
   const json = (body: unknown, status = 200) =>
     new Response(JSON.stringify(body), {
@@ -91,4 +93,4 @@ Deno.serve(async (req) => {
     console.error("gerar-meta:", e);
     return json({ error: "falha ao gerar meta", estado: "erro_meta" }, 500);
   }
-});
+}));

@@ -38,6 +38,8 @@ const admin = createClient(
 // `supabase functions deploy` quanto o MCP com os arquivos _shared/ no
 // payload resolvem este import relativo.
 import { buildCorsHeaders as corsHeaders } from "../_shared/cors.ts";
+// Etapa 4: resposta 5xx vira relato no coletor de erros (sem dado pessoal).
+import { comRelato5xx } from "../_shared/coletor-servidor.ts";
 
 async function chamador(req: Request) {
   const auth = req.headers.get("authorization") ?? "";
@@ -100,7 +102,7 @@ async function registrarLogAcesso(
   if (error) console.error("falha ao registrar log de acesso:", error.message);
 }
 
-Deno.serve(async (req) => {
+Deno.serve(comRelato5xx("trocar-senha", async (req) => {
   const cors = corsHeaders(req);
   const json = (body: unknown, status = 200) =>
     new Response(JSON.stringify(body), {
@@ -143,4 +145,4 @@ Deno.serve(async (req) => {
     console.error("trocar-senha:", e);
     return json({ error: "falha ao trocar senha", estado: "erro_interno" }, 500);
   }
-});
+}));

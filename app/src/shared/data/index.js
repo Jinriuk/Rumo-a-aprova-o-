@@ -745,6 +745,11 @@ async function invocar(fn, body) {
   if (error) {
     let detalhe = error.message;
     let estado;
+    // Etapa 4: resposta 5xx de Edge Function traz x-correlation-id; o
+    // erro carrega o mesmo id, e o relato do front (observabilidade.js)
+    // o reaproveita. Função antiga, sem o cabeçalho: fica sem.
+    let correlationId = null;
+    try { correlationId = error.context?.headers?.get?.("x-correlation-id") ?? null; } catch { /* sem cabeçalhos */ }
     try {
       const ctx = await error.context?.json?.();
       if (ctx?.error) detalhe = ctx.error;
@@ -752,6 +757,7 @@ async function invocar(fn, body) {
     } catch { /* corpo não-JSON: fica a mensagem original */ }
     const e = falha(fn, new Error(detalhe), { esperada: ESTADOS_ESPERADOS.has(estado) });
     if (estado) e.estado = estado;
+    if (correlationId) e.correlation_id = correlationId;
     throw e;
   }
   if (data?.error) {

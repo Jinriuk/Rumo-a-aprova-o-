@@ -21,6 +21,8 @@
 // ============================================================
 import { admin, chamador, alunoDaEscola, corsHeaders, registrarLog } from "../_shared/contexto.ts";
 import { escolaOperacional, RESPOSTA_ESCOLA_PARADA } from "../_shared/escola.ts";
+// Etapa 4: resposta 5xx vira relato no coletor de erros (sem dado pessoal).
+import { comRelato5xx } from "../_shared/coletor-servidor.ts";
 
 // Apaga uma conta do Auth de forma IDEMPOTENTE: se a conta já não
 // existe, trata como sucesso (a exclusão é o estado desejado). Só conta
@@ -33,7 +35,7 @@ async function removerContaAuth(id: string): Promise<{ ok: boolean; msg?: string
   return { ok: true };
 }
 
-Deno.serve(async (req) => {
+Deno.serve(comRelato5xx("lgpd-titular", async (req) => {
   const cors = corsHeaders(req);
   const json = (body: unknown, status = 200) =>
     new Response(JSON.stringify(body), {
@@ -117,4 +119,4 @@ Deno.serve(async (req) => {
     console.error("lgpd-titular:", e);
     return json({ error: "falha no pedido do titular" }, 500);
   }
-});
+}));

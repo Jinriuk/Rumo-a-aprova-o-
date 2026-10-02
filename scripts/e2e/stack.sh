@@ -47,6 +47,12 @@ preparar_workdir() {
     echo "ALLOWED_ORIGINS = \"${E2E_FRONT_ORIGIN:-http://127.0.0.1:4173}\""
     echo "PASSWORD_RESET_REDIRECT_URL = \"${E2E_FRONT_ORIGIN:-http://127.0.0.1:4173}/redefinir-senha\""
     echo "VERCEL_PREVIEW_PREFIXES = \"e2e-local-sem-preview\""
+    # Etapa 4: segredos a mais, só para a prova dos alertas
+    # (scripts/alertas/provas.sh): destinatário fictício e o Resend
+    # simulado. O E2E não define isto, e segue sem e-mail nenhum.
+    if [ -n "${E2E_SECRETS_EXTRA:-}" ]; then
+      cat "$E2E_SECRETS_EXTRA"
+    fi
     if [ -n "${E2E_EXTRA_CA:-}" ]; then
       # só para máquinas atrás de proxy com TLS próprio (ex.: sandbox de
       # desenvolvimento): o Deno baixa os módulos das funções do jsr.io

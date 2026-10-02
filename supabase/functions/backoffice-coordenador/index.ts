@@ -44,6 +44,8 @@ const admin = createClient(
 // `supabase functions deploy` quanto o MCP com os arquivos _shared/ no
 // payload resolvem este import relativo.
 import { buildCorsHeaders as corsHeaders } from "../_shared/cors.ts";
+// Etapa 4: resposta 5xx vira relato no coletor de erros (sem dado pessoal).
+import { comRelato5xx } from "../_shared/coletor-servidor.ts";
 
 // PROD1: o destino do link de redefinição vem do ambiente — produção tem
 // domínio próprio; o default preserva o comportamento do demo/vitrine.
@@ -198,7 +200,7 @@ async function gerarEEnviarLink(
   return { enviado, erro: enviado ? null : "erro_smtp", geracaoFalhou: false };
 }
 
-Deno.serve(async (req) => {
+Deno.serve(comRelato5xx("backoffice-coordenador", async (req) => {
   const cors = corsHeaders(req);
   const json = (body: unknown, status = 200) =>
     new Response(JSON.stringify(body), {
@@ -327,4 +329,4 @@ Deno.serve(async (req) => {
     console.error("backoffice-coordenador:", (e as Error)?.message ?? "erro desconhecido");
     return json({ status: "erro_auth", error: "falha ao provisionar coordenação" }, 500);
   }
-});
+}));

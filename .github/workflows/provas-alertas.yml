@@ -1,0 +1,82 @@
+# Provas dos alertas ao dono (Etapa 4) na stack Supabase LOCAL da E3.
+#
+# Sobe a mesma stack descartável do job e2e-local (CLI fixada, Postgres 17
+# com pg_net e Vault, Edge Runtime), com um Resend e um healthchecks
+# SIMULADOS no próprio runner, e roda scripts/alertas/provas.sh:
+#   P1 origem não permitida recusada · P2 nenhum dado pessoal gravado ·
+#   P3 50 erros iguais = 1 e-mail · P4 erro do React e promessa rejeitada
+#   chegam à tabela e geram e-mail · P5 coletor fora do ar não derruba a
+#   tela · P6 5xx de outra função entra no coletor · P7 heartbeat da
+#   virada pelo pg_net + Vault · P8 falha do motor de missões (0061) vira
+#   e-mail pelo pg_net.
+#
+# Sem secret nenhum e sem projeto hospedado (a trava da E3 recusa
+# *.supabase.co). Fora do release-gate de propósito: é prova do caminho
+# de alerta, roda quando ele muda e sob demanda.
+name: Provas dos alertas (stack local)
+
+on:
+  push:
+    paths:
+      - "supabase/functions/**"
+      - "supabase/migrations/**"
+      - "app/src/shared/lib/observabilidade.js"
+      - "app/src/shared/ui/ErroFronteira.jsx"
+      - "scripts/alertas/**"
+      - "scripts/e2e/stack.sh"
+      - ".github/workflows/provas-alertas.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: provas-alertas-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  provas:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      SUPABASE_CLI_VERSION: "2.118.0"
+      E2E_MANTER_STACK: "1"
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: |
+            app/package-lock.json
+            tests/package-lock.json
+
+      - name: CLI do Supabase (versão fixada)
+        uses: supabase/setup-cli@v1
+        with:
+          version: ${{ env.SUPABASE_CLI_VERSION }}
+
+      - name: Dependências (app e tests) e Chromium do Playwright
+        run: |
+          (cd app && npm ci)
+          (cd tests && npm ci)
+          (cd app && npx playwright install --with-deps chromium)
+
+      - name: Stack local + simulador + provas P1 a P8
+        run: bash scripts/alertas/provas.sh
+
+      - name: Evidência (relatório, linhas gravadas, e-mails simulados)
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: provas-alertas-${{ github.run_attempt }}
+          path: e2e-artefatos/alertas/
+          if-no-files-found: ignore
+          retention-days: 30
+
+      - name: Derrubar a stack local (sempre)
+        if: always()
+        env:
+          E2E_WORKDIR: ${{ runner.temp }}/triliva-alertas-stack
+        run: bash scripts/e2e/stack.sh parar
