@@ -298,6 +298,43 @@ await prova("P7", "heartbeat da virada pelo pg_net e Vault de verdade", async ()
     + `linha com 2 alunos em erro → /fail; sem segredo: virada gravada e nenhum ping; pg_net registrou HTTP ${respostas.map((x) => x.status_code).join(", ") || "-"}`;
 });
 
+// ── P8 ───────────────────────────────────────────────────────────
+// Falha do motor de missões (0061): o registro do aluno é gravado, a falha
+// vira ocorrência no coletor sem dado de aluno, e o e-mail sai pelo
+// caminho real: reserva no banco → pg_net com a URL do Vault
+// (project_url) → registrar-erro?despachar=1 → Resend simulado.
+await prova("P8", "falha do motor de missões vira e-mail ao dono, sem dado de aluno", async () => {
+  const temMotor = (await q("select to_regprocedure('app.missoes_aplicar(text, registros_estudo, registros_estudo)') is not null as tem"))[0].tem;
+  if (!temMotor) return "não se aplica: este checkout não tem a 0061";
+  exigir(env.PROVAS_PROJECT_URL, "falta PROVAS_PROJECT_URL");
+  await q("select vault.create_secret($1, 'project_url', 'prova E4/0061')", [env.PROVAS_PROJECT_URL]);
+  const aluno = (await q(`select a.id, a.escola_id from alunos a join concursos c on c.id = a.concurso_id
+                           where c.codigo = 'espcex' order by a.id limit 1`))[0];
+  exigir(aluno, "a stack precisa de um aluno da EsPCEx");
+  await db.query("begin");
+  try {
+    await db.query("alter table app.missao_registros add constraint falha_injetada check (false) not valid");
+    await db.query(`insert into registros_estudo (escola_id, aluno_id, data, disciplina_codigo, topico, questoes, acertos)
+                    values ($1, $2, current_date, 'mat', 'prova P8', 70, 60)`, [aluno.escola_id, aluno.id]);
+    await db.query("alter table app.missao_registros drop constraint falha_injetada");
+    await db.query("commit");
+  } catch (e) {
+    await db.query("rollback");
+    throw e;
+  }
+  exigir(+(await q("select count(*) n from registros_estudo where topico = 'prova P8'"))[0].n === 1, "o registro caiu junto com o motor");
+  const oc = await q("select origem, mensagem, papel from app.erros_ocorrencias where origem = 'banco:motor_missoes'");
+  exigir(oc.length === 1, `ocorrências do motor: ${oc.length}`);
+  exigir(!/[0-9a-f]{8}-[0-9a-f]{4}-/.test(JSON.stringify(oc)), "id de aluno ou registro na ocorrência");
+  const email = await esperar(async () => emailsCom("banco:motor_missoes")[0], 20000);
+  exigir(email, "o e-mail da falha do motor não chegou ao Resend simulado");
+  exigir(!/[0-9a-f]{8}-[0-9a-f]{4}-/.test(JSON.stringify(email.corpo)), "id de aluno ou registro no e-mail");
+  const sit = await esperar(async () => (await q(`select e.situacao from app.erros_emails e join app.erros_grupos g on g.fingerprint = e.fingerprint
+                                                   where g.origem = 'banco:motor_missoes'`))[0]?.situacao === "enviado", 10000);
+  exigir(sit, "o e-mail não foi marcado como enviado");
+  return `registro gravado; ocorrência "${oc[0].mensagem}"; e-mail "${email.corpo.subject}" para ${email.corpo.to}`;
+});
+
 await db.end();
 
 // ── relatório ────────────────────────────────────────────────────

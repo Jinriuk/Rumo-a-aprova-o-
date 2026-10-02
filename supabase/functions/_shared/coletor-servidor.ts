@@ -106,6 +106,26 @@ export async function registrarEvento(e: EventoErro, chaveLimite: string): Promi
   return { resultado: r.resultado as ResultadoColeta["resultado"], enviar_email: true, email_enviado: ok };
 }
 
+// E-mails que o BANCO reservou (falha do motor de missões, 0061): ficam
+// com fila = true até alguém despachar. Quem despacha é esta função,
+// chamada pelo pg_net com ?despachar=1 logo depois da falha, e também a
+// cada relato do front (rede de segurança, se o pg_net ou o project_url
+// faltarem). Só envia o que o banco já decidiu e reservou (tetos da
+// 0059): uma chamada à toa no máximo adianta um envio.
+export async function despacharPendentes(): Promise<number> {
+  const cfg = configEmail();
+  const { data, error } = await admin().rpc("coletor_despachar_pendentes", { p_limite: 10 });
+  if (error) throw new Error(`coletor_despachar_pendentes: ${error.message}`);
+  let enviados = 0;
+  for (const item of (data ?? []) as Array<ResumoGrupo & { email_id: number; evento: EventoErro }>) {
+    const ok = cfg.faltando.length === 0 && await enviarAlerta(item.evento, item);
+    const { error: erroMarca } = await admin().rpc("coletor_marcar_email", { p_email_id: item.email_id, p_ok: ok });
+    if (erroMarca) console.error("coletor: falha ao marcar o envio", erroMarca.message);
+    if (ok) enviados++;
+  }
+  return enviados;
+}
+
 /** Envolve o handler de uma Edge Function: 5xx vira relato no coletor. */
 export function comRelato5xx(funcao: string, handler: (req: Request) => Response | Promise<Response>) {
   return envolverCom5xx(funcao, handler, registrarEvento, { cors: buildCorsHeaders });
