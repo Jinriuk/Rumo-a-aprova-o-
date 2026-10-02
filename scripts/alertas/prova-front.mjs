@@ -176,7 +176,7 @@ const md = [
   "",
   "| Prova | Resultado | Detalhe |",
   "| --- | --- | --- |",
-  ...resultados.map((r) => `| ${r.id} ${r.titulo} | ${r.ok ? "passou" : "**FALHOU**"} | ${String(r.detalhe).replace(/\|/g, "\\|")} |`),
+  ...resultados.map((r) => `| ${r.id} ${r.titulo} | ${r.ok ? "passou" : "**FALHOU**"} | ${String(r.detalhe).replace(/\\/g, "\\\\").replace(/\|/g, "\\|").replace(/\n/g, " ")} |`),
 ].join("\n");
 writeFileSync(resolve(SAIDA, "relatorio.md"), md + "\n");
 console.log("\n" + md);
