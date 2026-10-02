@@ -36,7 +36,9 @@ const REDACOES: Array<[RegExp, string]> = [
   [/\bsb_(?:secret|publishable)_[A-Za-z0-9_-]{8,}/g, "[chave]"],
   [/\b(bearer)\s+[A-Za-z0-9._~+/=-]{8,}/gi, "$1 [token]"],
   [/\b((?:access|refresh|id|provider)_token|token|apikey|api_key|authorization|senha|password|passwd|pwd|secret|segredo)(["']?\s*[:=]\s*["']?)[^\s"'&,;}]+/gi, "$1$2[redigido]"],
-  [/[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}/g, "[email]"],
+  // partes com teto (RFC 5321: 64 e 253): sem ele a regex é quadrática em
+  // sequência longa sem "@", e um relato de 16 KB queimava ~180 ms de CPU
+  [/[A-Za-z0-9._%+-]{1,64}@[A-Za-z0-9.-]{1,253}\.[A-Za-z]{2,24}/g, "[email]"],
   [/\b[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{4}\b/g, "[codigo]"],
   [/\b[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\b/gi, "[id]"],
   [/\b\d{3}\.\d{3}\.\d{3}-\d{2}\b/g, "[numero]"],

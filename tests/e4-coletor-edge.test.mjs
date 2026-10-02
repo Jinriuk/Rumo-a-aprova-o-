@@ -72,6 +72,19 @@ test("E4: o formato que o observabilidade.js já mandava continua aceito", () =>
   assert.equal(e.papel, "desconhecido");
 });
 
+test("E4: a redação é linear no tamanho do relato (sem regex quadrática)", () => {
+  // endpoint público: um relato montado para fazer a regex voltar atrás
+  // queimaria CPU da função a cada chamada. Antes do teto nas partes do
+  // e-mail, "aaaa…@b.b.b…" de 16 KB levava ~180 ms; linear, ~10 ms.
+  const ataques = ["a".repeat(3000) + "@" + "b.".repeat(2500), "1".repeat(8000), "A".repeat(8000), "eyJ" + "a".repeat(7990), "x.y-z_".repeat(1400)];
+  for (const s of ataques) {
+    const t0 = performance.now();
+    C.normalizarEvento({ mensagem: s, pilha: s, componente: s, rota: "/" + s });
+    const ms = performance.now() - t0;
+    assert.ok(ms < 100, `redação levou ${ms.toFixed(0)} ms para ${s.slice(0, 12)}…`);
+  }
+});
+
 test("E4: campos grandes são cortados nos limites", () => {
   const e = C.normalizarEvento({ mensagem: "m".repeat(5000), pilha: "p ".repeat(9000), componente: "c".repeat(9000), rota: "/" + "r/".repeat(500) });
   assert.ok(e.mensagem.length <= C.LIMITES.mensagem);
