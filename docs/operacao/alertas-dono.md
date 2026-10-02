@@ -12,7 +12,7 @@ dono. Lacunas que isto fecha: 8.1, 8.4, 8.5 e 8.6 de
 | Erro na tela (React quebrou, promessa rejeitada, erro de janela) | `observabilidade.js` manda para a Edge Function `registrar-erro` | e-mail pelo Resend para `ALERTA_EMAIL`, 1 por erro por hora | `ALERTA_EMAIL` (Supabase) e `VITE_ERROR_REPORT_URL` (Vercel) |
 | Resposta 5xx de qualquer Edge Function | `comRelato5xx` (`_shared/coletor-servidor.ts`) nas 7 funções | o mesmo e-mail, origem `edge:<função>` | nada além do acima |
 | Keepalive não rodou, atrasou demais ou uma batida falhou | healthchecks.io, check `keepalive` | e-mail do healthchecks | `HC_KEEPALIVE_URL` (GitHub) |
-| Virada de semana não rodou, ou rodou com aluno em erro | healthchecks.io, check `virada-semana` | e-mail do healthchecks | `hc_virada_url` (Vault do Supabase) |
+| Virada de semana da **produção** não rodou, ou rodou com aluno em erro | healthchecks.io, check `virada-semana` | e-mail do healthchecks | `hc_virada_url` (Vault da produção; o demo não tem) |
 
 O e-mail de erro diz o ambiente no assunto (`[Triliva produção]`,
 `[Triliva demo]`), porque os dois projetos mandam para o mesmo endereço.
@@ -50,9 +50,13 @@ Ajuste do check no healthchecks: **Period 1 dia**, **Grace 12 horas** (o
 agendador do GitHub já atrasou 6h26). O workflow pinga a URL quando as duas
 batidas passaram e `<url>/fail` quando uma delas falhou.
 
-### 2.3 `hc_virada_url` — no Vault do Supabase, **depois** de aplicar a 0060
+### 2.3 `hc_virada_url` — no Vault da **produção** só, **depois** de aplicar a 0060
 
-A URL não entra no repositório. No **SQL Editor** do projeto:
+Decisão do dono (02/10/2026): o check `virada-semana` é só da produção.
+No demo **não se cria** `hc_virada_url`, e a virada do demo não pinga nada
+(o gatilho da 0060 vê o segredo ausente, emite um WARNING e segue).
+
+A URL não entra no repositório. No **SQL Editor** do projeto de produção:
 
 ```sql
 select vault.create_secret(
@@ -74,12 +78,11 @@ select vault.update_secret(
 Ajuste do check: **Period 1 dia**, **Grace 1 hora** (o `pg_cron` roda às
 03:05 UTC e é pontual), ou o agendamento cron `5 3 * * *` em UTC.
 
-**Um check por ambiente.** Se demo e produção pingarem o mesmo check
-`virada-semana`, o ping de sucesso do demo esconde a falta de ping da
-produção. Ponha `hc_virada_url` só na produção, ou crie um segundo check
-(`virada-semana-demo`) para o demo. O plano gratuito tem 20 checks. O
-keepalive não tem esse problema: um job só cobre os dois bancos e só pinga
-quando os dois responderam.
+**Por que só na produção.** Se demo e produção pingassem o mesmo check, o
+ping de sucesso do demo esconderia a falta de ping da produção. Se um dia o
+demo precisar de vigia, ele ganha um check próprio (`virada-semana-demo`),
+nunca o mesmo. O keepalive não tem esse problema: um job só cobre os dois
+bancos e só pinga quando os dois responderam.
 
 ### 2.4 `VITE_ERROR_REPORT_URL` — na Vercel, **depois** de publicar a função
 
@@ -113,7 +116,7 @@ papel e correlation_id.
    publicada antes da migration chama uma RPC que não existe: o 5xx dela
    continua 5xx e o relato falha calado (o teste de prazo cobre isso), mas
    o certo é a 0059 antes.
-6. `ALERTA_EMAIL` (2.1) e `hc_virada_url` (2.3).
+6. `ALERTA_EMAIL` (2.1) nos dois projetos; `hc_virada_url` (2.3) só na produção.
 7. `VITE_ERROR_REPORT_URL` na Vercel e redeploy (2.4).
 8. Merge do **PR do front**.
 
