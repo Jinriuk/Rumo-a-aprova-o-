@@ -98,6 +98,20 @@ A CSP não muda: `connect-src` já libera `https://*.supabase.co`. O front de
 hoje já manda o relato nesse formato; o PR do front acrescenta release,
 papel e correlation_id.
 
+### 2.5 `project_url` — no Vault dos **dois** projetos, depois da 0061
+
+Usado pelo banco para pedir o despacho do e-mail quando o motor de missões
+falha (`docs/operacao/missoes-em-sequencia.md`, seção 3). Não é segredo
+(é a URL pública do projeto); o Vault é só o lugar de guardar. No SQL Editor
+de cada projeto:
+
+```sql
+select vault.create_secret('https://<ref do projeto>.supabase.co', 'project_url', 'URL do projeto para o pg_net');
+```
+
+Produção: `zckyhihxjjbnqjqilymn`; demo: `bdjkgrzfzoamchdpobbl`. Sem ele, a
+falha é gravada e o e-mail sai só no próximo relato de erro do front.
+
 ## 3. Ordem de aplicação
 
 1. Primeiro backup real dos dois ambientes (Etapa 6).

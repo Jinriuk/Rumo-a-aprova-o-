@@ -30,10 +30,11 @@ test("missão fecha ao bater volume+acurácia e credita XP no ledger do C0", asy
   await como(IDS.alunoA, async (c) => {
     const antes = await xpMissao(c, ALUNO_LUCAS);
 
-    // Lucas tem mat 30/22 no seed; +40/40 → 70 questões, ~89% (≥60 e ≥70)
+    // 0061: a missão só conta registros recebidos depois de começar (os 30/22
+    // da seed não entram). 60/58 sozinho bate a meta de 60 com ≥70%.
     await c.query(
       `insert into registros_estudo (escola_id, aluno_id, data, disciplina_codigo, topico, questoes, acertos, minutos)
-       values ($1,$2, current_date, 'mat', 'Geometria plana', 40, 40, 60)`, [ESCOLA_A, ALUNO_LUCAS]);
+       values ($1,$2, current_date, 'mat', 'Geometria plana', 60, 58, 60)`, [ESCOLA_A, ALUNO_LUCAS]);
 
     const mis = await c.query(
       `select am.estado, am.xp_concedido from aluno_missoes am join missoes m on m.id=am.missao_id
@@ -82,18 +83,19 @@ test("idempotência: reprocessar o aluno N vezes não duplica XP de missão", as
 // ------------------------------------------------------------
 test("missão: antes do critério fica em andamento; ao bater, fecha", async () => {
   await como(IDS.alunoB, async (c) => {
-    // Bruno tem 10 questões de mat no seed; +30 → 40 (<60): em andamento
+    // 0061: as 10 questões de mat da seed não contam (anteriores ao início
+    // da missão); +30 → 30 (<60): em andamento
     await c.query(
       `insert into registros_estudo (escola_id, aluno_id, data, disciplina_codigo, topico, questoes, acertos)
        values ($1,$2, current_date, 'mat', 'parcial', 30, 28)`, [ESCOLA_B, ALUNO_BRUNO]);
     let mis = await c.query(
       `select am.estado, am.questoes_acumuladas from aluno_missoes am join missoes m on m.id=am.missao_id
        where am.aluno_id=$1 and m.materia_codigo='mat'`, [ALUNO_BRUNO]);
-    assert.equal(mis.rows[0].estado, "em_andamento", "40<60 não fecha");
-    assert.equal(mis.rows[0].questoes_acumuladas, 40);
+    assert.equal(mis.rows[0].estado, "em_andamento", "30<60 não fecha");
+    assert.equal(mis.rows[0].questoes_acumuladas, 30, "só o registro feito depois de a missão começar");
     assert.equal((await xpMissao(c, ALUNO_BRUNO)).n, 0, "sem missão fechada, sem XP de missão");
 
-    // +40 com bom acerto → 80 questões, ≥70%: fecha
+    // +40 com bom acerto → 70 questões da missão, ≥70%: fecha
     await c.query(
       `insert into registros_estudo (escola_id, aluno_id, data, disciplina_codigo, topico, questoes, acertos)
        values ($1,$2, current_date, 'mat', 'fechou', 40, 38)`, [ESCOLA_B, ALUNO_BRUNO]);

@@ -19,10 +19,14 @@
 // O Origin é forjável fora do navegador; quem segura abuso de script são
 // 4 e 5. Esta função não passa por comRelato5xx: falha dela relatada a
 // ela mesma viraria laço.
+//
+// Despacho (0061): POST ?despachar=1, sem Origin e sem corpo, vem do
+// banco (pg_net) quando o motor de missões falha e reserva um e-mail. Só
+// envia o que o banco já reservou; não grava nada que venha do pedido.
 // ============================================================
 import { buildCorsHeaders as corsHeaders, origemPermitida } from "../_shared/cors.ts";
 import { chaveLimiteIp, ipDoCliente, LIMITES, lerCorpoLimitado, normalizarEvento } from "../_shared/coletor.ts";
-import { registrarEvento } from "../_shared/coletor-servidor.ts";
+import { despacharPendentes, registrarEvento } from "../_shared/coletor-servidor.ts";
 
 Deno.serve(async (req) => {
   const cors = corsHeaders(req);
@@ -34,6 +38,14 @@ Deno.serve(async (req) => {
 
   if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
   if (req.method !== "POST") return json({ error: "método não suportado" }, 405);
+  if (new URL(req.url).searchParams.get("despachar") === "1") {
+    try {
+      return json({ ok: true, enviados: await despacharPendentes() }, 202);
+    } catch (e) {
+      console.error("registrar-erro (despacho):", (e as Error)?.message ?? e);
+      return json({ error: "falha ao despachar" }, 503);
+    }
+  }
   if (!origemPermitida(req.headers.get("origin") ?? "")) return json({ error: "origem não permitida" }, 403);
 
   const corpo = await lerCorpoLimitado(req, LIMITES.corpoBytes);
@@ -52,6 +64,8 @@ Deno.serve(async (req) => {
   try {
     const r = await registrarEvento(evento, chave);
     if (r.resultado === "limitado") return json({ error: "relatos demais; tente mais tarde" }, 429);
+    // rede de segurança: e-mail do banco que ficou na fila sai agora
+    await despacharPendentes().catch((e) => console.error("registrar-erro (despacho):", (e as Error)?.message ?? e));
     return json({ ok: true }, 202);
   } catch (e) {
     console.error("registrar-erro:", (e as Error)?.message ?? e);

@@ -7,7 +7,8 @@
 #   P3 50 erros iguais = 1 e-mail · P4 erro do React e promessa rejeitada
 #   chegam à tabela e geram e-mail · P5 coletor fora do ar não derruba a
 #   tela · P6 5xx de outra função entra no coletor · P7 heartbeat da
-#   virada pelo pg_net + Vault.
+#   virada pelo pg_net + Vault · P8 falha do motor de missões (0061) vira
+#   e-mail pelo pg_net.
 #
 # Sem secret nenhum e sem projeto hospedado (a trava da E3 recusa
 # *.supabase.co). Fora do release-gate de propósito: é prova do caminho
@@ -62,7 +63,7 @@ jobs:
           (cd tests && npm ci)
           (cd app && npx playwright install --with-deps chromium)
 
-      - name: Stack local + simulador + provas P1 a P7
+      - name: Stack local + simulador + provas P1 a P8
         run: bash scripts/alertas/provas.sh
 
       - name: Evidência (relatório, linhas gravadas, e-mails simulados)
