@@ -32,6 +32,11 @@
 --   em tests/e2-cs06-secdef-db.test.mjs.
 --
 -- LIMITES (constantes no corpo da função; mudar é nova migration)
+--   600 relatos por minuto no total       → 429, checado ANTES de criar a
+--                                            linha da chave: quem gira a
+--                                            chave (muitos IPs, cabeçalho
+--                                            forjado) não faz app.erros_limite
+--                                            crescer além de ~36 mil linhas/h
 --   20 relatos por chave por minuto       → 429 na Edge Function
 --   500 ocorrências gravadas em 24 h       → acima disso só conta o grupo
 --                                            e alerta uma vez por hora
@@ -130,6 +135,7 @@ create or replace function public.coletor_registrar_erro(
 ) returns jsonb
 language plpgsql security definer set search_path = '' as $$
 declare
+  c_global_minuto    constant int      := 600;
   c_por_chave_minuto constant int      := 20;
   c_teto_24h         constant int      := 500;
   c_email_intervalo  constant interval := interval '1 hour';
@@ -148,7 +154,19 @@ begin
   -- faxina barata (índices por data); mantém as tabelas no tamanho
   delete from app.erros_limite where janela < v_agora - interval '1 hour';
 
-  -- 1) limite por chave (HMAC do IP do dia, ou edge:<função>)
+  -- 1a) balde global do minuto, ANTES da linha da chave: com a chave
+  --     girando, o limite por chave não segura nada, e cada pedido criaria
+  --     uma linha nova (achado da revisão do #170). A linha do minuto
+  --     também serializa os relatos do mesmo minuto.
+  insert into app.erros_limite as l (chave, janela, contagem)
+    values ('global', date_trunc('minute', v_agora), 1)
+  on conflict (chave, janela) do update set contagem = l.contagem + 1
+  returning l.contagem into v_contagem;
+  if v_contagem > c_global_minuto then
+    return jsonb_build_object('resultado', 'limitado', 'enviar_email', false);
+  end if;
+
+  -- 1b) limite por chave (HMAC do IP do dia, ou edge:<função>)
   insert into app.erros_limite as l (chave, janela, contagem)
     values (left(coalesce(p_chave_limite, 'sem-chave'), 128), date_trunc('minute', v_agora), 1)
   on conflict (chave, janela) do update set contagem = l.contagem + 1
@@ -163,7 +181,11 @@ begin
 
   -- 2) teto diário de ocorrências gravadas: acima dele o relato vira só
   --    contagem no grupo "teto-diario", que também alerta (uma inundação
-  --    é, ela mesma, coisa que o dono precisa saber)
+  --    é, ela mesma, coisa que o dono precisa saber). A trava serializa
+  --    contar e gravar: sem ela, relatos simultâneos de chaves e
+  --    fingerprints diferentes viam a mesma contagem abaixo de 500 e
+  --    passavam juntos do teto (achado da revisão do #170).
+  perform pg_advisory_xact_lock(hashtext('app.erros_ocorrencias'));
   select count(*) into v_gravadas
     from app.erros_ocorrencias where criado_em > v_agora - interval '24 hours';
   if v_gravadas >= c_teto_24h then
