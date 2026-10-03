@@ -16,6 +16,7 @@ export function SeloMaturidade({ codigo }) {
 
 // Aviso curto exibido quando o concurso NÃO está completo — para a
 // UI nunca vender trilha parcial como pronta. Some no caso 'completa'.
+// Em 'pre_edital' aparece em dourado: calendário liberado, fonte histórica.
 export function AvisoMaturidade({ codigo, style }) {
   const T = useTema();
   const info = infoMaturidade(codigo);
