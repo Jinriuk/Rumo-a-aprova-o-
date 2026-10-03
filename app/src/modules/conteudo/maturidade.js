@@ -15,6 +15,15 @@
    Níveis (do mais pronto ao menos), regra de produto:
      completa     → trilha SEMANAL real (calendário) + estrutura de
                     prova oficial. PODE ser exibida/vendida como pronta.
+     pre_edital   → trilha SEMANAL real + assuntos catalogados, sobre o
+                    programa do edital ANTERIOR (fonte histórica). O
+                    próximo edital ainda não saiu. Calendário liberado e
+                    atribuído ao aluno, SEMPRE com aviso; nunca anunciada
+                    como pronta, e a data da prova pode estar vazia
+                    (concursos.mes_prova/dia_prova nulos, migration 0062).
+                    Existe para não marcar o próximo edital como oficial
+                    só para vencer o gate de 'completa' (P0.2, docs/
+                    conteudo/pmerj-cfo/, seção 4.3).
      beta         → estrutura de prova oficial + assuntos/missões, mas
                     SEM calendário semanal fechado. Usável COM aviso;
                     nunca anunciada como pronta.
@@ -27,7 +36,7 @@
    isso para impedir que a matriz minta sobre o conteúdo real.
    ============================================================ */
 
-export const NIVEIS_MATURIDADE = ["completa", "beta", "esqueleto", "indisponivel"];
+export const NIVEIS_MATURIDADE = ["completa", "pre_edital", "beta", "esqueleto", "indisponivel"];
 
 // Apresentação por nível: rótulo, tom (reusa StatusBadge) e regra de UI.
 export const APRESENTACAO_MATURIDADE = {
@@ -38,6 +47,14 @@ export const APRESENTACAO_MATURIDADE = {
     aceitaAluno: true,
     temTrilhaSemanal: true,
     descricao: "Trilha semanal e estrutura de prova prontas e testadas.",
+  },
+  pre_edital: {
+    rotulo: "Pré-edital",
+    tom: "alerta",
+    podeExibirComoPronta: false,
+    aceitaAluno: true,
+    temTrilhaSemanal: true,
+    descricao: "Calendário de estudo pronto, montado sobre o programa do edital anterior (fonte histórica). O novo edital ainda não saiu: conteúdo, pesos e data podem mudar.",
   },
   beta: {
     rotulo: "Beta",
@@ -69,6 +86,7 @@ export const APRESENTACAO_MATURIDADE = {
 // seeds reais). Subir um concurso de nível exige cumprir o requisito.
 export const REQUISITOS_MATURIDADE = {
   completa:     { provaOficial: true, assuntos: true, trilhaSemanal: true },
+  pre_edital:   { provaOficial: false, assuntos: true, trilhaSemanal: true },
   beta:         { provaOficial: true, assuntos: true, trilhaSemanal: false },
   esqueleto:    { provaOficial: true, assuntos: false, trilhaSemanal: false },
   indisponivel: { provaOficial: false, assuntos: false, trilhaSemanal: false },
@@ -158,8 +176,9 @@ export function aceitaAluno(codigo) {
 }
 
 // A trilha semanal (calendário real, ex.: CN) só deve ser atribuída a
-// um aluno quando o concurso dele é COMPLETO. Caso contrário o aluno
-// herdaria, por engano, o calendário de OUTRO concurso (o do CN).
+// um aluno quando o concurso dele é COMPLETO ou PRÉ-EDITAL (calendário
+// próprio, com aviso). Caso contrário o aluno herdaria, por engano, o
+// calendário de OUTRO concurso (o do CN).
 export function podeAtribuirTrilhaSemanal(codigo) {
   return APRESENTACAO_MATURIDADE[maturidadeDe(codigo)].temTrilhaSemanal;
 }

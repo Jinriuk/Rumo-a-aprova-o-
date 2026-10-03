@@ -116,7 +116,7 @@ export default function AreaResponsavel({ perfil }) {
 
   return (
     <div>
-      <Cabecalho subtitulo={subtitulo} diasProva={prova?.dias ?? null} provaRealizada={prova?.realizada ?? false} diasProvaMedia={prova?.media}
+      <Cabecalho subtitulo={subtitulo} diasProva={prova?.dias ?? null} provaRealizada={prova?.realizada ?? false} provaAguardandoEdital={prova?.aguardandoEdital ?? false} diasProvaMedia={prova?.media}
         nomeUsuario={perfil.usuario.nome} rotuloPapel="Responsável" />
       {/* T21: faltava a mesma classe/largura de AreaAluno.jsx e
           AreaEscola.jsx — o conteúdo ficava travado em 760px mesmo em
