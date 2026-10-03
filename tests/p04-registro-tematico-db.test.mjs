@@ -76,8 +76,9 @@ const vinculado = async (c, registro) => (await c.query(
 
 // ── seção 12: registro livre ou de outro assunto ─────────────────────
 
-test("registro sem tipo é livre: soma volume e não começa nem avança missão", async () => {
+test("registro de cliente sem tipo é livre: soma volume e não começa nem avança missão", async () => {
   await emTransacao(async (c, al) => {
+    await comoCliente(c);   // o front sem contexto de missão não manda o tipo
     const r = await c.query(
       `insert into registros_estudo (escola_id, aluno_id, data, disciplina_codigo, topico, questoes, acertos)
        values ($1, $2, current_date, 'mat', 'sem tipo', 70, 65) returning tipo_pratica`, [al.escola, al.aluno]);
@@ -207,10 +208,31 @@ test("servidor: cliente não cria nem converte registro para 'legado'", async ()
   await emTransacao(async (c, al) => {
     const r = await registrar(c, al, { q: 10, a: 9 });
     await comoCliente(c);
-    await esperaErro(c, /"legado" é reservado/,
+    // sem tipo (o default 'legado') ou pedindo 'legado': grava 'livre'
+    const semTipo = await c.query(
+      `insert into registros_estudo (escola_id, aluno_id, data, disciplina_codigo, topico, questoes, acertos)
+       values ($1, $2, current_date, 'mat', 'x', 40, 36) returning tipo_pratica`, [al.escola, al.aluno]);
+    const pedido = await c.query(
       `insert into registros_estudo (escola_id, aluno_id, data, disciplina_codigo, topico, questoes, acertos, tipo_pratica)
-       values ($1, $2, current_date, 'mat', 'x', 10, 9, 'legado')`, [al.escola, al.aluno]);
+       values ($1, $2, current_date, 'mat', 'x', 40, 36, 'legado') returning tipo_pratica`, [al.escola, al.aluno]);
+    assert.deepEqual([semTipo.rows[0].tipo_pratica, pedido.rows[0].tipo_pratica], ["livre", "livre"]);
+    assert.deepEqual(await missoes(c, al.aluno), [], "80 questões livres não abrem nem fecham missão");
     await esperaErro(c, /"legado" é reservado/, "update registros_estudo set tipo_pratica = 'legado' where id = $1", [r.id]);
+    await esperaErro(c, /registro livre não leva missão/,
+      `insert into registros_estudo (escola_id, aluno_id, data, disciplina_codigo, topico, questoes, acertos, missao_id)
+       values ($1, $2, current_date, 'mat', 'x', 10, 9, $3)`, [al.escola, al.aluno, al.m[M1].id]);
+  });
+});
+
+test("servidor sem dizer o tipo grava 'legado': demo, restauro e seeds seguem a 0061", async () => {
+  await emTransacao(async (c, al) => {
+    // o formato de demo._aplicar_fila e do restauro do backup de 23/09:
+    // insert sem as colunas da 0064, sem claim de cliente
+    const r = await c.query(
+      `insert into registros_estudo (escola_id, aluno_id, data, disciplina_codigo, topico, questoes, acertos)
+       values ($1, $2, current_date, 'mat', 'demo', 40, 36) returning tipo_pratica`, [al.escola, al.aluno]);
+    assert.equal(r.rows[0].tipo_pratica, "legado");
+    assert.deepEqual(await missoes(c, al.aluno), [[M1, "em_andamento", 40]]);
   });
 });
 
@@ -275,7 +297,7 @@ test("servidor: registro livre não leva missão; o assunto dele é conferido", 
   });
 });
 
-test("pela RLS de verdade: o aluno pratica a missão dele e ela fecha; legado é recusado", async () => {
+test("pela RLS de verdade: o aluno pratica a missão dele e ela fecha; legado vira livre", async () => {
   await como(IDS.alunoA, async (c) => {
     const missao = (await c.query(
       "select id from missoes where exam_tag = 'cn' and materia_codigo = 'mat' and meta_questoes > 0 order by ordem, id limit 1")).rows[0].id;
@@ -284,8 +306,9 @@ test("pela RLS de verdade: o aluno pratica a missão dele e ela fecha; legado é
        values ($1, $2, current_date, 'mat', 'Geometria plana', 60, 58, 'missao', $3)`, [ESCOLA_A, ALUNO_LUCAS, missao]);
     const m = await c.query("select estado from aluno_missoes where aluno_id = $1 and missao_id = $2", [ALUNO_LUCAS, missao]);
     assert.equal(m.rows[0].estado, "concluida");
-    await esperaErro(c, /"legado" é reservado/,
+    const livre = await c.query(
       `insert into registros_estudo (escola_id, aluno_id, data, disciplina_codigo, topico, questoes, acertos, tipo_pratica)
-       values ($1, $2, current_date, 'mat', 'x', 10, 9, 'legado')`, [ESCOLA_A, ALUNO_LUCAS]);
+       values ($1, $2, current_date, 'mat', 'x', 10, 9, 'legado') returning tipo_pratica`, [ESCOLA_A, ALUNO_LUCAS]);
+    assert.equal(livre.rows[0].tipo_pratica, "livre", "pela API, 'legado' vira 'livre'");
   });
 });

@@ -15,11 +15,14 @@
 --
 -- A REGRA
 --   1. registros_estudo.tipo_pratica:
---        legado   registro anterior a esta migration. Segue a regra da
---                 0061 sem mudança (conta para a missão em andamento da
---                 matéria). Nenhum cliente cria nem converte para ele.
---        livre    o padrão de agora em diante. Soma volume, acurácia,
---                 nível e conquistas como sempre; NUNCA conclui missão.
+--        legado   regra da 0061 sem mudança (conta para a missão em
+--                 andamento da matéria). É o DEFAULT da coluna: as linhas
+--                 anteriores a esta migration e o que o SERVIDOR grava
+--                 sem dizer o tipo (seeds, repetição semanal da demo,
+--                 restauração de backup, provas). Cliente nunca grava.
+--        livre    o que o cliente grava sem dizer o tipo. Soma volume,
+--                 acurácia, nível e conquistas como sempre; NUNCA conclui
+--                 missão.
 --        missao   prática da missão `missao_id`. Só conta para ela, e
 --                 só quando ela é a da vez na fila da matéria.
 --        revisao  revisão de uma missão já iniciada. Fica ligada ao
@@ -36,10 +39,14 @@
 --
 -- TRANSIÇÃO
 --   As linhas existentes viram 'legado' pelo DEFAULT da coluna nova
---   (sem UPDATE: nenhum gatilho dispara, o motor não roda). Depois o
---   DEFAULT passa a 'livre'. Um front sem o PR irmão grava 'livre' e,
---   portanto, deixa de avançar missão: aplicar esta migration junto
---   com o PR de front.
+--   (sem UPDATE: nenhum gatilho dispara, o motor não roda). O DEFAULT
+--   fica 'legado' de propósito: os caminhos do servidor que inserem
+--   registro sem conhecer a coluna (demo._aplicar_fila, o restauro
+--   `insert ... select *` do backup de 23/09, seeds) seguem na regra
+--   da 0061 sem precisar ser reescritos nem reaplicados. Insert de
+--   CLIENTE com 'legado' (o default) vira 'livre' no gatilho.
+--   Um front sem o PR irmão grava 'livre' e, portanto, deixa de
+--   avançar missão: aplicar esta migration junto com o PR de front.
 --
 -- Aditiva. Idempotente. ROLLBACK no fim.
 -- ============================================================
@@ -51,8 +58,6 @@ alter table registros_estudo
   add column if not exists tipo_pratica text not null default 'legado',
   add column if not exists missao_id    uuid references missoes (id) on delete set null,
   add column if not exists assunto_id   uuid references assuntos (id) on delete set null;
-
-alter table registros_estudo alter column tipo_pratica set default 'livre';
 
 do $$
 begin
@@ -72,7 +77,7 @@ end $$;
 create index if not exists idx_registros_missao on registros_estudo (missao_id) where missao_id is not null;
 
 comment on column registros_estudo.tipo_pratica is
-  '0064: legado (anterior à 0064, regra da 0061) | livre (padrão; não conclui missão) | missao (conta só para missao_id, na vez dela) | revisao (de missão já iniciada; não conta).';
+  '0064: legado (default: anteriores à 0064 e escritas do servidor; regra da 0061) | livre (cliente sem tipo; não conclui missão) | missao (conta só para missao_id, na vez dela) | revisao (de missão já iniciada; não conta).';
 comment on column registros_estudo.missao_id is
   '0064: missão praticada ou revisada. Conferida no servidor (concurso, matéria, escola).';
 comment on column registros_estudo.assunto_id is
@@ -106,10 +111,11 @@ begin
   end if;
 
   if new.tipo_pratica = 'legado' and v_cliente then
-    -- OLD só existe no UPDATE; o PL/pgSQL não garante curto-circuito
+    -- OLD só existe no UPDATE; o PL/pgSQL não garante curto-circuito.
+    -- No INSERT, 'legado' é o default da coluna: o cliente não disse o
+    -- tipo (ou pediu legado), e registro de cliente sem tipo é livre.
     if tg_op = 'INSERT' then
-      raise exception 'registro de estudo: o tipo "legado" é reservado aos registros anteriores à 0064'
-        using errcode = '22023';
+      new.tipo_pratica := 'livre';
     elsif old.tipo_pratica <> 'legado' then
       raise exception 'registro de estudo: o tipo "legado" é reservado aos registros anteriores à 0064'
         using errcode = '22023';
