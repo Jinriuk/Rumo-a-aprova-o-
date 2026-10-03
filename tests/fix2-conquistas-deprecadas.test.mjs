@@ -27,8 +27,8 @@ test("FIX2: registro de estudo não gera conquista nem evento de conquista (moto
     // dispara os DOIS gatilhos de registros_estudo (C0 + PED1) com volume
     // que fecharia missão e conquista de volume na regra antiga
     await c.query(
-      `insert into registros_estudo (escola_id, aluno_id, data, disciplina_codigo, topico, questoes, acertos, minutos)
-       values ($1,$2, current_date, 'mat', 'FIX2 prova', 60, 55, 90)`,
+      `insert into registros_estudo (escola_id, aluno_id, data, disciplina_codigo, topico, questoes, acertos, minutos, tipo_pratica, missao_id)
+       values ($1,$2, current_date, 'mat', 'FIX2 prova', 60, 55, 90, 'missao', (select m.id from missoes m where m.exam_tag = 'cn' and m.materia_codigo = 'mat' and m.meta_questoes > 0 order by m.ordem, m.id limit 1))`,
       [ESCOLA_A, ALUNO_LUCAS]);
     // e reprocessa o motor PED1 explicitamente (caminho premiado). Quem
     // reprocessa é o servidor (gatilho SECURITY DEFINER ou operador): desde
@@ -49,8 +49,8 @@ test("FIX2: registro de estudo não gera conquista nem evento de conquista (moto
 test("FIX2: o que a UI consome segue vivo — evento de registro, missão fecha e nível persiste", async () => {
   await como(IDS.alunoA, async (c) => {
     await c.query(
-      `insert into registros_estudo (escola_id, aluno_id, data, disciplina_codigo, topico, questoes, acertos, minutos)
-       values ($1,$2, current_date, 'mat', 'FIX2 vivo', 70, 65, 90)`,
+      `insert into registros_estudo (escola_id, aluno_id, data, disciplina_codigo, topico, questoes, acertos, minutos, tipo_pratica, missao_id)
+       values ($1,$2, current_date, 'mat', 'FIX2 vivo', 70, 65, 90, 'missao', (select m.id from missoes m where m.exam_tag = 'cn' and m.materia_codigo = 'mat' and m.meta_questoes > 0 order by m.ordem, m.id limit 1))`,
       [ESCOLA_A, ALUNO_LUCAS]);
 
     const ev = await c.query(

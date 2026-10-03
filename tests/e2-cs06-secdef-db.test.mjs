@@ -47,6 +47,7 @@ const CLASSE = {
   "app.trg_ped1_registro()": "c",
   "app.heartbeat_virada()": "c", // E4 (0060): ping do healthchecks ao fim da virada global
   "app.registrar_recebimento()": "c", // 0061: horário do servidor em que o registro chegou
+  "app.registro_conferir_pratica()": "c", // 0064: confere missão e assunto do registro antes de gravar
   // d — interna
   "app.backfill_progresso(uuid)": "d",
   "app.desbloquear_conquista_basica(uuid, uuid, text, text)": "d",
@@ -111,7 +112,7 @@ test("C-S06: toda SECURITY DEFINER de public/app tem classe registrada, e nenhum
   const sobrando = Object.keys(CLASSE).filter((n) => !nomes.includes(n));
   assert.deepEqual(semClasse, [], `SECURITY DEFINER sem decisão de quem chama: classifique em tests/e2-cs06-secdef-db.test.mjs`);
   assert.deepEqual(sobrando, [], "classe registrada para função que não existe mais");
-  assert.equal(nomes.length, 60); // 50 da 0057 + 3 da Etapa 4 (0059 e 0060) + 7 da 0061
+  assert.equal(nomes.length, 61); // 50 da 0057 + 3 da Etapa 4 (0059 e 0060) + 7 da 0061 + 1 da 0064
 });
 
 test("C-S06: toda SECURITY DEFINER fixa o search_path", async () => {

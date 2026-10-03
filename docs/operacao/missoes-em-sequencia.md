@@ -127,3 +127,50 @@ select nome, nivel, ordem from missoes where exam_tag = 'espcex' and materia_cod
 - P8 em `scripts/alertas/provas.mjs` (stack local da E3): falha injetada no
   motor vira e-mail no Resend simulado pelo caminho real (coletor → `pg_net`
   → Vault → `registrar-erro?despachar=1`).
+
+## 6. Registro temático (migration 0064, P0.4 do CFO PMERJ)
+
+**Escrito em:** 03/10/2026. **Nada aplicado.** Origem: seção 4.1 de
+`docs/conteudo/pmerj-cfo/PMERJ_CFO_Desenho_da_Trilha_e_Auditoria_do_Banco.md`.
+
+O defeito que sobrou da 0061: a fila credita à missão em andamento qualquer
+registro da matéria. Vinte questões de licitação fecham a missão de atos
+administrativos.
+
+A regra, em `registros_estudo.tipo_pratica`:
+
+| Tipo | Quem grava | Conta para missão? |
+|---|---|---|
+| `legado` | default da coluna: linhas que já existiam e o que o servidor grava sem dizer o tipo (seeds, repetição da demo, restauro do backup, provas) | sim, pela regra da 0061, sem mudança |
+| `livre` | o cliente, sem contexto de missão (insert de cliente sem tipo, ou com `legado`, vira `livre` no gatilho) | não; soma volume, acurácia, nível |
+| `missao` | o aluno, a partir da missão (`missao_id`) | só para ela, e só quando ela é a da vez na fila |
+| `revisao` | o aluno, a partir de uma missão já iniciada | não; fica ligado ao assunto dela |
+
+O gatilho `app.registro_conferir_pratica` recusa:
+- missão de outro concurso, de outra matéria ou desativada na escola;
+- `missao` em missão sem meta automática;
+- `revisao` de missão não iniciada;
+- assunto diferente do da missão;
+- assunto de outro concurso ou matéria num registro livre;
+- cliente convertendo um registro para `legado` (no insert, o gatilho troca por `livre`).
+
+O assunto de `missao` e de `revisao` é preenchido pelo servidor.
+
+**Ordem de aplicação:** 0064 junto com o PR de front irmão. Um front sem ele
+grava `livre`, e as missões param de avançar.
+
+O default fica `legado` para que `demo._aplicar_fila`, o restauro
+`insert ... select *` de `supabase/demo/90_restaurar_backup_20260923.sql` e os
+seeds, que não conhecem as colunas novas, continuem na regra da 0061 sem
+reescrever nem reaplicar nada na demonstração.
+
+Conferência depois de aplicar:
+
+```sql
+select tipo_pratica, count(*) from registros_estudo group by 1;  -- só 'legado' logo após aplicar
+select count(*) from registros_estudo where tipo_pratica in ('missao','revisao') and missao_id is null;  -- 0
+```
+
+Provas: `tests/p04-registro-tematico-db.test.mjs`. Os testes da 0061 passaram
+a gravar `legado`, que é a regra que eles cobrem. Os da PED1 e do FIX2
+passaram a gravar `missao`, que é o caminho do aluno agora.

@@ -11,6 +11,11 @@
 // acerto, acurácia só sobre os registros dela, apagar refaz e estorna,
 // e o ledger tem uma linha por aluno e missão (revalidada no lugar).
 //
+// 0064: estes testes cobrem a regra da 0061, que segue valendo para os
+// registros 'legado' (anteriores à 0064). Por isso o helper grava
+// tipo_pratica = 'legado', o que só o servidor pode fazer. A regra dos
+// registros novos (livre, missao, revisao) está em p04-registro-tematico-db.
+//
 // Tudo como postgres numa transação desfeita no fim: o motor é
 // SECURITY DEFINER, então quem grava não muda o resultado. O horário de
 // recebimento (app.registros_recebidos) é o do servidor; "antes de a
@@ -44,8 +49,8 @@ async function emTransacao(fn) {
 
 async function registrar(c, { aluno, escola }, questoes, acertos, materia = "mat", topico = "teste") {
   const r = await c.query(
-    `insert into registros_estudo (escola_id, aluno_id, data, disciplina_codigo, topico, questoes, acertos)
-     values ($1, $2, current_date, $3, $4, $5, $6) returning id`, [escola, aluno, materia, topico, questoes, acertos]);
+    `insert into registros_estudo (escola_id, aluno_id, data, disciplina_codigo, topico, questoes, acertos, tipo_pratica)
+     values ($1, $2, current_date, $3, $4, $5, $6, 'legado') returning id`, [escola, aluno, materia, topico, questoes, acertos]);
   return r.rows[0].id;
 }
 
