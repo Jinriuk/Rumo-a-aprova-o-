@@ -314,8 +314,14 @@ await prova("P8", "falha do motor de missões vira e-mail ao dono, sem dado de a
   await db.query("begin");
   try {
     await db.query("alter table app.missao_registros add constraint falha_injetada check (false) not valid");
-    await db.query(`insert into registros_estudo (escola_id, aluno_id, data, disciplina_codigo, topico, questoes, acertos)
-                    values ($1, $2, current_date, 'mat', 'prova P8', 70, 60)`, [aluno.escola_id, aluno.id]);
+    // Desde a 0064 só registro 'legado' ou 'missao' alimenta o motor; o
+    // padrão 'livre' não o chama e a falha injetada nunca dispararia.
+    // 'legado' é o caminho da 0061, aceito porque esta conexão é servidor.
+    const temTipo = (await db.query(`select 1 from information_schema.columns
+                                      where table_schema = 'public' and table_name = 'registros_estudo'
+                                        and column_name = 'tipo_pratica'`)).rowCount > 0;
+    await db.query(`insert into registros_estudo (escola_id, aluno_id, data, disciplina_codigo, topico, questoes, acertos${temTipo ? ", tipo_pratica" : ""})
+                    values ($1, $2, current_date, 'mat', 'prova P8', 70, 60${temTipo ? ", 'legado'" : ""})`, [aluno.escola_id, aluno.id]);
     await db.query("alter table app.missao_registros drop constraint falha_injetada");
     await db.query("commit");
   } catch (e) {
