@@ -29,17 +29,33 @@
         ano seguinte. Rotulada `media: true` (a UI mostra "≈").
         NUNCA diz "realizada": para uma data anual, o que existe é
         sempre a PRÓXIMA ocorrência.
-     3. nada disso → null, e a UI omite a contagem.
+     3. concurso SEM data (mes_prova e dia_prova vazios, migration
+        0062: pré-edital, data não publicada) → `aguardandoEdital:
+        true`, sem `dataIso` nem `dias`. A UI escreve "Data da prova
+        aguardando edital" e não conta nada. Não há data média a usar:
+        inventar uma recriaria a contagem anual falsa (P0.2, docs/
+        conteudo/pmerj-cfo/, seção 4.2).
+     4. nada disso → null, e a UI omite a contagem.
 
    A trilha não entra mais nesta conta em lugar nenhum.
    ============================================================ */
-import { todayISO, daysBetween } from "../../shared/regras/regras.js";
+import { todayISO, daysBetween, fmtBR } from "../../shared/regras/regras.js";
 
 const p2 = (n) => String(n).padStart(2, "0");
 
-// próxima ocorrência (deste ano ou do que vem) da data média
+export const ROTULO_AGUARDANDO_EDITAL = "Data da prova aguardando edital";
+
+// O concurso tem data média? O banco só aceita o par inteiro ou vazio
+// (0062); aqui qualquer metade vazia conta como "sem data", para nunca
+// montar "2026-null-null" e devolver NaN dias.
+export function dataProvaConhecida(concurso) {
+  return Boolean(concurso) && concurso.mes_prova != null && concurso.dia_prova != null;
+}
+
+// próxima ocorrência (deste ano ou do que vem) da data média.
+// Concurso sem data → null: não existe "próxima" de uma data que não há.
 export function proximaProva(concurso, hoje = todayISO()) {
-  if (!concurso) return null;
+  if (!dataProvaConhecida(concurso)) return null;
   const ano = +hoje.slice(0, 4);
   let data = `${ano}-${p2(concurso.mes_prova)}-${p2(concurso.dia_prova)}`;
   if (data < hoje) data = `${ano + 1}-${p2(concurso.mes_prova)}-${p2(concurso.dia_prova)}`;
@@ -59,6 +75,12 @@ export function proximaProva(concurso, hoje = todayISO()) {
    já aconteceu", e foi exatamente inventar um zero ali que produziu
    o T27. Ausência é mais honesta que um zero falso.
 
+   Concurso sem data e aluno sem data_prova_alvo:
+     { dataIso: null, dias: null, media: false, realizada: false,
+       aguardandoEdital: true }
+   A data do aluno, quando existe, continua tendo precedência: é a
+   ocorrência específica que a escola cadastrou para ele.
+
    Sem nenhuma data (aluno sem concurso e sem data_prova_alvo),
    devolve null e a UI simplesmente não mostra contagem. */
 export function diasParaProva({ dataProvaAlvo = null, concurso = null } = {}, hoje = todayISO()) {
@@ -74,6 +96,17 @@ export function diasParaProva({ dataProvaAlvo = null, concurso = null } = {}, ho
       realizada: false,
     };
   }
+  if (concurso && !dataProvaConhecida(concurso)) {
+    return { dataIso: null, dias: null, media: false, realizada: false, aguardandoEdital: true };
+  }
   const prox = proximaProva(concurso, hoje);
   return prox ? { ...prox, media: true, realizada: false } : null;
+}
+
+/* Trecho "prova em 01/08" do subtítulo das áreas do aluno e do
+   responsável. Sem data (pré-edital), devolve null: o cabeçalho já diz
+   "Data da prova aguardando edital", e fmtBR(null) quebraria a tela. */
+export function trechoProvaSubtitulo(prova, { detalharMedia = false } = {}) {
+  if (!prova?.dataIso) return null;
+  return `prova ${prova.media ? "≈" : "em"} ${fmtBR(prova.dataIso)}${detalharMedia && prova.media ? " (data média)" : ""}`;
 }

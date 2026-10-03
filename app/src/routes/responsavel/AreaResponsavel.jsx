@@ -10,8 +10,9 @@ import { Empty, ErroComRetry, CarregandoBloco } from "../../shared/ui/componente
 import { ResumoResponsavel } from "../../modules/desempenho/ResumoResponsavel.jsx";
 import { useTrilha } from "../../modules/conteudo/useTrilha.js";
 import { calcularMetricas } from "../../modules/desempenho/metricas.js";
-import { diasParaProva } from "../../modules/conteudo/concursos.js";
-import { semanaAtual, estadoDoCiclo, fmtBR } from "../../shared/regras/regras.js";
+import { diasParaProva, trechoProvaSubtitulo } from "../../modules/conteudo/concursos.js";
+import { AvisoMaturidade } from "../../modules/conteudo/SeloMaturidade.jsx";
+import { semanaAtual, estadoDoCiclo } from "../../shared/regras/regras.js";
 import { mensagemAmigavel } from "../../shared/lib/erros.js";
 import { useTema } from "../../shared/branding/BrandingContext.jsx";
 import * as db from "../../shared/data/index.js";
@@ -111,12 +112,12 @@ export default function AreaResponsavel({ perfil }) {
   const subtitulo = [
     aluno ? aluno.nome : "Acompanhamento",
     concurso ? concurso.nome.split(" (")[0] : null,
-    prova ? `prova ${prova.media ? "≈" : "em"} ${fmtBR(prova.dataIso)}` : null,
+    trechoProvaSubtitulo(prova),
   ].filter(Boolean).join(" · ");
 
   return (
     <div>
-      <Cabecalho subtitulo={subtitulo} diasProva={prova?.dias ?? null} provaRealizada={prova?.realizada ?? false} diasProvaMedia={prova?.media}
+      <Cabecalho subtitulo={subtitulo} diasProva={prova?.dias ?? null} provaRealizada={prova?.realizada ?? false} provaAguardandoEdital={prova?.aguardandoEdital ?? false} diasProvaMedia={prova?.media}
         nomeUsuario={perfil.usuario.nome} rotuloPapel="Responsável" />
       {/* T21: faltava a mesma classe/largura de AreaAluno.jsx e
           AreaEscola.jsx — o conteúdo ficava travado em 760px mesmo em
@@ -148,6 +149,9 @@ export default function AreaResponsavel({ perfil }) {
           </div>
         )}
 
+        {/* P0.2: o responsável vê o mesmo aviso de maturidade que o
+            aluno (pré-edital: programa histórico, data a confirmar). */}
+        {aluno && concurso && <AvisoMaturidade codigo={concurso.codigo} style={{ marginBottom: 14 }} />}
         {aluno === undefined && !erro && <CarregandoBloco titulo="Carregando os dados do aluno…" cartoes={2} linhas={3} />}
         {aluno === null && <Empty txt="Nenhum aluno vinculado a este acesso. Fale com a escola." />}
         {aluno && m && trilha && (
