@@ -34,7 +34,8 @@ export function parseTempo(txt) {
    Entrada: o estado do formulário { data, disciplina_codigo, topico,
    questoes, acertos, tempo, obs } e, opcional, o contexto de missão
    (contextoRegistroDaMissao): { tipo: 'missao'|'revisao', missaoId,
-   disciplinaCodigo }. Sem ele o registro é 'livre'.
+   disciplinaCodigo }. Sem ele o registro é 'livre' e o payload não
+   leva tipo_pratica nem missao_id (o banco assume 'livre').
    Saída: { ok, erros, campos } — `campos` é o payload limpo quando ok.
    `erros` é um objeto por campo (tela mostra perto do input) e nunca
    é vazio quando ok === false. */
@@ -78,8 +79,12 @@ export function validarRegistroEstudo(form, contexto = null) {
     acertos: temAcerto ? Math.min(acertosNum, questoesNum) : null,
     minutos,
     obs: form.obs ? String(form.obs) : null,
-    tipo_pratica: tipo,
-    missao_id: tipo === "livre" ? null : contexto.missaoId,
   };
+  // Registro livre não manda tipo nem missão: o padrão do banco já é
+  // 'livre', e assim o payload continua aceito por um banco sem a 0064.
+  if (tipo !== "livre") {
+    campos.tipo_pratica = tipo;
+    campos.missao_id = contexto.missaoId;
+  }
   return { ok: true, erros: {}, campos };
 }

@@ -33,8 +33,8 @@ test("validarRegistroEstudo: payload válido devolve campos limpos", () => {
   assert.deepEqual(v.campos, {
     data: "2026-06-28", disciplina_codigo: "mat", topico: "MMC",
     questoes: 10, acertos: 8, minutos: 60, obs: null,
-    // P0.4 (0064): sem contexto de missão, o registro é livre
-    tipo_pratica: "livre", missao_id: null,
+    // P0.4 (0064): sem contexto de missão, o registro é livre e não leva
+    // tipo_pratica nem missao_id (o banco assume 'livre')
   });
 });
 

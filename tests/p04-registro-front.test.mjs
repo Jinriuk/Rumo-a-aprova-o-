@@ -27,16 +27,19 @@ const MISSAO = { id: "m-1", nome: "Funções integradas", materia_codigo: "mat",
 test("sem contexto, o registro é livre e não leva missão", () => {
   const v = validarRegistroEstudo(FORM);
   assert.equal(v.ok, true);
-  assert.equal(v.campos.tipo_pratica, "livre");
-  assert.equal(v.campos.missao_id, null);
+  // sem as chaves: o padrão do banco é 'livre', e o payload segue aceito
+  // por um banco ainda sem a 0064 (front e banco podem chegar em ordens
+  // diferentes)
+  assert.equal("tipo_pratica" in v.campos, false);
+  assert.equal("missao_id" in v.campos, false);
 });
 
 test("objetivo da semana (atividade) continua livre: não é missão", () => {
   const trilha = { atividadesPorId: { a1: { id: "a1", disciplina_codigo: "mat", texto: "Bloco", prioridade: "F" } } };
   const ctx = contextoRegistroDaAtividade({ id: "ma1", atividade_modelo_id: "a1" }, trilha);
   const v = validarRegistroEstudo(FORM, ctx);
-  assert.equal(v.campos.tipo_pratica, "livre");
-  assert.equal(v.campos.missao_id, null);
+  assert.equal("tipo_pratica" in v.campos, false);
+  assert.equal("missao_id" in v.campos, false);
 });
 
 test("praticar a missão: sai 'missao' com o id dela e sugere o que falta", () => {
@@ -69,7 +72,7 @@ test("contexto inválido não vira missão", () => {
   assert.equal(contextoRegistroDaMissao(null), null);
   assert.equal(contextoRegistroDaMissao({ ...MISSAO, materia_codigo: null }), null);
   assert.equal(contextoRegistroDaMissao(MISSAO, "legado"), null, "o cliente nunca pede 'legado'");
-  assert.equal(validarRegistroEstudo(FORM, { tipo: "missao" }).campos.tipo_pratica, "livre", "sem id, é livre");
+  assert.equal("tipo_pratica" in validarRegistroEstudo(FORM, { tipo: "missao" }).campos, false, "sem id, é livre");
 });
 
 test("a recusa do servidor chega ao aluno com o motivo, sem detalhe técnico", async () => {
