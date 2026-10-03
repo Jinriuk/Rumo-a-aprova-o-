@@ -36,6 +36,10 @@ import {
   gerarSql as gerarSqlTrilhaEspcex,
   DESTINO_REL as SEED_TRILHA_ESPCEX_REL,
 } from "./gerar-seed-trilha-espcex.mjs";
+import {
+  carregarFonte as carregarFontePmerjCfo,
+  validarFonte as validarFontePmerjCfo,
+} from "./gerar-seed-trilha-pmerj-cfo.mjs";
 
 export const RAIZ = join(dirname(fileURLToPath(import.meta.url)), "..");
 const lerRaw = (rel) => readFileSync(join(RAIZ, rel), "utf8");
@@ -190,6 +194,19 @@ export function integridadeEspcexPed2R3() {
   return erros;
 }
 
+// P0.3: o manifesto da trilha CFO PMERJ (pré-edital) continua íntegro:
+// 219 linhas do Anexo II com destino no Apêndice A, orçamento da turma
+// recalculado, metas das missões somando o orçamento. Não há seed
+// gerado para comparar: a data de início da turma é parâmetro, e o SQL
+// sai sob demanda (scripts/gerar-seed-trilha-pmerj-cfo.mjs).
+export function integridadeTrilhaPmerjCfo() {
+  try {
+    return validarFontePmerjCfo(carregarFontePmerjCfo()).map((e) => `trilha-pmerj-cfo: ${e}`);
+  } catch (e) {
+    return [`trilha-pmerj-cfo: falha ao validar fonte (${e.message})`];
+  }
+}
+
 // Paridade: o seed 18 commitado bate com a fonte única?
 export function seedMaturidadeEmDia() {
   const erros = [];
@@ -240,6 +257,7 @@ export function validar() {
   erros.push(...integridadeTrilhaSemanal());
   erros.push(...integridadeConteudo());
   erros.push(...integridadeEspcexPed2R3());
+  erros.push(...integridadeTrilhaPmerjCfo());
 
   // 5) Paridade do seed gerado.
   erros.push(...seedMaturidadeEmDia());
