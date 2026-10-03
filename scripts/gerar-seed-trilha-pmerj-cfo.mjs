@@ -394,8 +394,8 @@ export function gerarSql(m, { inicio, turma, publicada = false } = {}) {
   const calc = calcularOrcamento(m);
   const trilhaSql = `(select id from trilhas where nicho = ${sql(m.nicho)} and versao = ${turma})`;
   const c = m.concurso;
-  const obsAssunto = (l) => `${l.chave} · Anexo II do edital CFO PMERJ 2024, ${l.materia}, linha ${l.posicao} · FGV 2024: ${l.questoesFgv2024} · base histórica; aplicabilidade ao próximo ciclo provisória`;
   const destino = destinoDasLinhas(m).destino;
+  const obsAssunto = (l) => `${l.chave} · Anexo II do edital CFO PMERJ 2024, ${l.materia}, linha ${l.posicao} · primeira exposição: semana ${destino.get(l.chave)} · FGV 2024: ${l.questoesFgv2024} · base histórica; aplicabilidade ao próximo ciclo provisória`;
 
   const linhasAssuntos = m.anexoII.map((l) => [uid(`assunto:${tag}:${l.chave}`), l.materia, l.texto, l.prioridade, obsAssunto(l), l.posicao]);
   const linhasMaterias = m.materias.map((x) => [x.codigo, x.nome, x.abrev, 100 + x.ordem]);

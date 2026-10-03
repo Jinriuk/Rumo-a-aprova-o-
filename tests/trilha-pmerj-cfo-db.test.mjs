@@ -74,6 +74,17 @@ test("rodar duas vezes não duplica nada", async () => {
   });
 });
 
+test("cada linha do Anexo II leva para o banco a semana de primeira exposição do Apêndice A", async () => {
+  await emTransacao(async (c) => {
+    await c.query(turma("2026-10-05", 1));
+    const r = await c.query("select observacao from assuntos where exam_tag = 'pmerj_cfo' and observacao like any (array['CONST-07 %', 'ADM-24 %', 'DH-07 %']) order by 1");
+    assert.deepEqual(r.rows.map((x) => x.observacao.match(/^(\S+) .*primeira exposição: semana (\d+)/).slice(1)),
+      [["ADM-24", "8"], ["CONST-07", "3"], ["DH-07", "4"]]);
+    const sem = await c.query("select count(*)::int as n from assuntos where exam_tag = 'pmerj_cfo' and observacao not like '%primeira exposição: semana %'");
+    assert.equal(sem.rows[0].n, 0);
+  });
+});
+
 test("o concurso entra sem data de prova e sem maturidade carimbada", async () => {
   await emTransacao(async (c) => {
     await c.query(turma("2026-10-05", 1));
