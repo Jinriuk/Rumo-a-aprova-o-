@@ -77,11 +77,26 @@ vazio como "Data da prova aguardando edital".
 ## 3. Efeito colateral encontrado: âncora do próximo ciclo
 
 `gruposParaRenovar` (`app/src/modules/escola/proximoCiclo.js:63`) usa
-`proximaProva` para sugerir a âncora da próxima edição. Com data vazia,
-o concurso entra no grupo sem `proxima`, ordenado por último, e a
-âncora sugerida vem de outro concurso do mesmo grupo ou fica `null`.
-`validarAncora` (`proximoCiclo.js:97`) já recusa âncora vazia com
-"Escolha a data da próxima prova.". Não quebra; só deixa de sugerir.
+`proximaProva` para sugerir a âncora da próxima edição.
+
+**Na `main` (7124ccd), com data vazia, isto quebra.**
+- `proximaProva` devolve `dataIso: "2026-null-null"`. É uma string
+  preenchida, então vira a âncora sugerida do grupo.
+- `validarAncora` (`proximoCiclo.js:97`) aceita essa string: ela não é
+  vazia e, na comparação de texto, fica depois de qualquer fim de
+  trilha de 2026 (`"n"` vem depois dos dígitos).
+- A tela chama `abrir_proximo_ciclo` com uma data inválida, e o
+  Postgres recusa a conversão para `date`.
+
+**Com o PR de front deste item, deixa de quebrar.** `proximaProva`
+devolve `null` sem o par mês/dia. O concurso entra no grupo sem
+`proxima`, a âncora sugerida vem de outro concurso do grupo ou fica
+`null`, e `validarAncora` recusa âncora vazia com "Escolha a data da
+próxima prova.". Ou seja: não quebra, só deixa de sugerir. O caso está
+coberto em `tests/p02-pre-edital.test.mjs`.
+
+Por isso a 0062 (que abre o vazio no banco) só deve ser aplicada junto
+com esse PR de front, ou depois dele.
 
 ## 4. Antes desta mudança, o que quebraria com data vazia
 
