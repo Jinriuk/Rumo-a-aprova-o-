@@ -4,8 +4,9 @@
 import React from "react";
 import { useBranding, MarcaEscola } from "../branding/BrandingContext.jsx";
 import * as db from "../data/index.js";
+import { ROTULO_AGUARDANDO_EDITAL } from "../../modules/conteudo/concursos.js";
 
-export function Cabecalho({ titulo, subtitulo, diasProva, diasProvaMedia, provaRealizada, nomeUsuario, rotuloPapel, aoAbrirGuia }) {
+export function Cabecalho({ titulo, subtitulo, diasProva, diasProvaMedia, provaRealizada, provaAguardandoEdital, nomeUsuario, rotuloPapel, aoAbrirGuia }) {
   const { escola, tema: T } = useBranding();
   return (
     // I3: `top` lê a variável que FaixaDemo.jsx publica no :root — 0px
@@ -40,6 +41,13 @@ export function Cabecalho({ titulo, subtitulo, diasProva, diasProvaMedia, provaR
           <div style={{ textAlign: "center", flexShrink: 0, lineHeight: 1.15, paddingLeft: 2 }} title="A data da prova deste aluno já passou">
             <div className="disp" style={{ fontSize: 12, fontWeight: 700, color: T.sub, whiteSpace: "nowrap" }}>prova</div>
             <div style={{ fontSize: 9.5, color: T.sub, marginTop: 2 }}>realizada</div>
+          </div>
+        ) : provaAguardandoEdital ? (
+          // P0.2: concurso pré-edital, sem data publicada. Mesma lógica do
+          // T27: onde não há número verdadeiro, não há número.
+          <div style={{ textAlign: "center", flexShrink: 0, lineHeight: 1.2, paddingLeft: 2, maxWidth: 108, fontSize: 10, fontWeight: 600, color: T.sub }}
+            title="O edital ainda não saiu: não há data de prova para contar">
+            {ROTULO_AGUARDANDO_EDITAL}
           </div>
         ) : diasProva != null && (
           <div style={{ textAlign: "center", flexShrink: 0, lineHeight: 1, paddingLeft: 2 }} title={diasProvaMedia ? "Estimativa pela data média histórica da prova" : "Pela data da prova"}>

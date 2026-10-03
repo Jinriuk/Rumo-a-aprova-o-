@@ -10,8 +10,7 @@ import { VisaoEstudo } from "./VisaoEstudo.jsx";
 import { useTrilha } from "../../modules/conteudo/useTrilha.js";
 import { AvisoMaturidade } from "../../modules/conteudo/SeloMaturidade.jsx";
 import { Onboarding } from "../../modules/motor/Onboarding.jsx";
-import { diasParaProva } from "../../modules/conteudo/concursos.js";
-import { fmtBR } from "../../shared/regras/regras.js";
+import { diasParaProva, trechoProvaSubtitulo } from "../../modules/conteudo/concursos.js";
 import { mensagemAmigavel } from "../../shared/lib/erros.js";
 import * as db from "../../shared/data/index.js";
 
@@ -85,12 +84,12 @@ export default function AreaAluno({ perfil }) {
   const subtitulo = [
     "Área do aluno",
     concurso ? concurso.nome.split(" (")[0] : null,
-    prova ? `prova ${prova.media ? "≈" : "em"} ${fmtBR(prova.dataIso)}${prova.media ? " (data média)" : ""}` : null,
+    trechoProvaSubtitulo(prova, { detalharMedia: true }),
   ].filter(Boolean).join(" · ");
 
   return (
     <div>
-      <Cabecalho subtitulo={subtitulo} diasProva={prova?.dias ?? null} provaRealizada={prova?.realizada ?? false} nomeUsuario={perfil.usuario.nome}
+      <Cabecalho subtitulo={subtitulo} diasProva={prova?.dias ?? null} provaRealizada={prova?.realizada ?? false} provaAguardandoEdital={prova?.aguardandoEdital ?? false} nomeUsuario={perfil.usuario.nome}
         aoAbrirGuia={aluno ? () => setPedidoGuia((n) => n + 1) : undefined} />
       <main className="com-sidebar" style={{ maxWidth: 1080, margin: "0 auto", padding: "18px max(16px, env(safe-area-inset-right)) calc(88px + env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left))" }}>
         {erro && <Erro>{erro}</Erro>}
