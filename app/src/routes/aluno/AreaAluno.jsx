@@ -10,8 +10,7 @@ import { VisaoEstudo } from "./VisaoEstudo.jsx";
 import { useTrilha } from "../../modules/conteudo/useTrilha.js";
 import { AvisoMaturidade } from "../../modules/conteudo/SeloMaturidade.jsx";
 import { Onboarding } from "../../modules/motor/Onboarding.jsx";
-import { diasParaProva } from "../../modules/conteudo/concursos.js";
-import { fmtBR } from "../../shared/regras/regras.js";
+import { diasParaProva, trechoProvaSubtitulo } from "../../modules/conteudo/concursos.js";
 import { mensagemAmigavel } from "../../shared/lib/erros.js";
 import * as db from "../../shared/data/index.js";
 
@@ -85,7 +84,7 @@ export default function AreaAluno({ perfil }) {
   const subtitulo = [
     "Área do aluno",
     concurso ? concurso.nome.split(" (")[0] : null,
-    prova ? `prova ${prova.media ? "≈" : "em"} ${fmtBR(prova.dataIso)}${prova.media ? " (data média)" : ""}` : null,
+    trechoProvaSubtitulo(prova, { detalharMedia: true }),
   ].filter(Boolean).join(" · ");
 
   return (

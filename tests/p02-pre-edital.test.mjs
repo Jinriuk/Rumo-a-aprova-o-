@@ -15,7 +15,7 @@ import { readFileSync } from "node:fs";
 import { resolve, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import {
-  diasParaProva, proximaProva, dataProvaConhecida, ROTULO_AGUARDANDO_EDITAL,
+  diasParaProva, proximaProva, dataProvaConhecida, ROTULO_AGUARDANDO_EDITAL, trechoProvaSubtitulo,
 } from "../app/src/modules/conteudo/concursos.js";
 import {
   MATURIDADE_CONCURSOS, NIVEIS_MATURIDADE, APRESENTACAO_MATURIDADE, REQUISITOS_MATURIDADE,
@@ -71,6 +71,22 @@ test("concurso COM data: comportamento de antes, sem a flag nova", () => {
   const p = diasParaProva({ concurso: CN }, HOJE);
   assert.deepEqual(p, { dataIso: "2027-08-01", dias: 302, media: true, realizada: false });
   assert.equal(diasParaProva({}, HOJE), null, "sem concurso e sem data do aluno continua null");
+});
+
+test("subtítulo das telas: sem data não formata nada (fmtBR(null) quebraria a renderização)", () => {
+  const sem = diasParaProva({ concurso: SEM_DATA }, HOJE);
+  assert.equal(trechoProvaSubtitulo(sem), null);
+  assert.equal(trechoProvaSubtitulo(sem, { detalharMedia: true }), null);
+  assert.equal(trechoProvaSubtitulo(null), null);
+  const media = diasParaProva({ concurso: CN }, HOJE);
+  assert.equal(trechoProvaSubtitulo(media), "prova ≈ 01/08");
+  assert.equal(trechoProvaSubtitulo(media, { detalharMedia: true }), "prova ≈ 01/08 (data média)");
+  assert.equal(trechoProvaSubtitulo(diasParaProva({ dataProvaAlvo: "2027-03-14", concurso: SEM_DATA }, HOJE)), "prova em 14/03");
+  for (const tela of ["app/src/routes/aluno/AreaAluno.jsx", "app/src/routes/responsavel/AreaResponsavel.jsx"]) {
+    const src = semComentarios(ler(tela));
+    assert.match(src, /trechoProvaSubtitulo\(prova/, `${tela} deve usar o trecho protegido`);
+    assert.doesNotMatch(src, /fmtBR\(prova\.dataIso\)/, `${tela} formatava a data sem checar se ela existe`);
+  }
 });
 
 test("sem número de dias, nada deriva prazo: trilha anual e fora da reta final", () => {
@@ -151,7 +167,7 @@ test("os outros concursos não mudam de nível", () => {
   });
 });
 
-test("o aviso de maturidade aparece no cadastro e na área do aluno para pre_edital", () => {
+test("o aviso de maturidade aparece no cadastro, na área do aluno e na do responsável para pre_edital", () => {
   // AvisoMaturidade some só quando podeExibirComoPronta; pre_edital é false.
   const aviso = semComentarios(ler("app/src/modules/conteudo/SeloMaturidade.jsx"));
   assert.match(aviso, /if \(info\.podeExibirComoPronta\) return null;/);
@@ -159,4 +175,6 @@ test("o aviso de maturidade aparece no cadastro e na área do aluno para pre_edi
   assert.equal((cadastro.match(/maturidadeDe\(codigoSel\) !== "completa" && \(\s*<AvisoMaturidade/g) ?? []).length, 2,
     "os dois formulários (individual e em lote) mostram o aviso");
   assert.match(semComentarios(ler("app/src/routes/aluno/AreaAluno.jsx")), /<AvisoMaturidade codigo=\{concurso\.codigo\}/);
+  assert.match(semComentarios(ler("app/src/routes/responsavel/AreaResponsavel.jsx")), /<AvisoMaturidade codigo=\{concurso\.codigo\}/,
+    "o responsável vê as atividades da trilha pré-edital e precisa do mesmo aviso");
 });

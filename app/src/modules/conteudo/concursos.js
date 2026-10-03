@@ -39,7 +39,7 @@
 
    A trilha não entra mais nesta conta em lugar nenhum.
    ============================================================ */
-import { todayISO, daysBetween } from "../../shared/regras/regras.js";
+import { todayISO, daysBetween, fmtBR } from "../../shared/regras/regras.js";
 
 const p2 = (n) => String(n).padStart(2, "0");
 
@@ -101,4 +101,12 @@ export function diasParaProva({ dataProvaAlvo = null, concurso = null } = {}, ho
   }
   const prox = proximaProva(concurso, hoje);
   return prox ? { ...prox, media: true, realizada: false } : null;
+}
+
+/* Trecho "prova em 01/08" do subtítulo das áreas do aluno e do
+   responsável. Sem data (pré-edital), devolve null: o cabeçalho já diz
+   "Data da prova aguardando edital", e fmtBR(null) quebraria a tela. */
+export function trechoProvaSubtitulo(prova, { detalharMedia = false } = {}) {
+  if (!prova?.dataIso) return null;
+  return `prova ${prova.media ? "≈" : "em"} ${fmtBR(prova.dataIso)}${detalharMedia && prova.media ? " (data média)" : ""}`;
 }
