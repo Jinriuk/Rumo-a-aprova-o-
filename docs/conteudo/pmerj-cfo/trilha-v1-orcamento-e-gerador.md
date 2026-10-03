@@ -79,7 +79,8 @@ node scripts/gerar-seed-trilha-pmerj-cfo.mjs --inicio 2026-10-05 --turma 1 --sai
   padrão. As 12 semanas vão de segunda a domingo, sem lacuna.
 - `--turma N` vira `trilhas.versao`. Turma nova é número novo.
 - `--publicada` marca a trilha como publicada. Sem esse parâmetro, ela
-  nasce não publicada.
+  nasce não publicada, e rodar de novo sem ele não despublica uma turma
+  que já está publicada.
 - O SQL não é commitado no repositório nem entra na sequência de seeds
   (`NN_*.sql`), porque depende da data escolhida.
 
@@ -93,6 +94,12 @@ Garantias do SQL, testadas em `tests/trilha-pmerj-cfo-db.test.mjs`:
 - O concurso entra com data vazia, e o SQL não toca uma data que o
   operador tenha posto depois.
 - O SQL não carimba `concursos.maturidade`.
+- As missões têm id pela chave (`PMERJ-M01-ADM`), sem a versão do
+  conteúdo. Uma revisão do manifesto atualiza a missão no lugar, e o
+  progresso dos alunos continua apontando para ela.
+- Se o banco tiver uma linha do Anexo II ou uma missão que o manifesto
+  não tem mais, o SQL recusa. Tirar itens exige um mapa explícito entre
+  a versão antiga e a nova.
 
 ## Decisões editoriais que o dono pode querer rever
 

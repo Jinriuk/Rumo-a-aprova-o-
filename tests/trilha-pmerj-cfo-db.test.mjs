@@ -20,7 +20,7 @@ test.after(async () => { await pool.end(); });
 const M = carregarFonte();
 // o SQL abre e fecha a própria transação; aqui ele roda dentro da do teste
 const semTransacao = (sql) => sql.replace(/^begin;$/m, "").replace(/^commit;$/m, "");
-const turma = (inicio, n) => semTransacao(gerarSql(M, { inicio, turma: n }));
+const turma = (inicio, n, opcoes = {}, manifesto = M) => semTransacao(gerarSql(manifesto, { inicio, turma: n, ...opcoes }));
 
 async function emTransacao(fn) {
   const c = await pool.connect();
@@ -159,5 +159,39 @@ test("orçamento no banco: 160 por semana normal, 112 nas de simulado; metas som
       `select p.semana_sugerida s, sum(m.meta_questoes)::int soma from trilha_plano_missoes p join missoes m on m.id = p.missao_id
         where m.exam_tag = 'pmerj_cfo' group by 1 order by 1`)).rows;
     assert.deepEqual(soma, [{ s: 1, soma: 106 }, { s: 2, soma: 106 }, { s: 3, soma: 106 }, { s: 4, soma: null }]);
+  });
+});
+
+test("rodar de novo sem --publicada não despublica a turma", async () => {
+  await emTransacao(async (c) => {
+    await c.query(turma("2026-10-05", 1, { publicada: true }));
+    await c.query(turma("2026-10-05", 1));
+    const r = await c.query("select publicada from trilhas where nicho = 'pmerj-cfo' and versao = 1");
+    assert.equal(r.rows[0].publicada, true);
+  });
+});
+
+test("versão nova do conteúdo atualiza as missões no lugar, sem duplicar", async () => {
+  await emTransacao(async (c) => {
+    await c.query(turma("2026-10-05", 1));
+    const v2 = structuredClone(M);
+    v2.conteudoVersao = "v2-teste";
+    v2.missoes[0].objetivo = `${v2.missoes[0].objetivo} (revisado)`;
+    await c.query(turma("2026-10-05", 1, {}, v2));
+    assert.equal((await contagens(c)).missoes, 24);
+    const r = await c.query("select objetivo from missoes where exam_tag = 'pmerj_cfo' and objetivo like '%(revisado)'");
+    assert.equal(r.rows.length, 1);
+  });
+});
+
+test("missão no banco que o manifesto não tem mais faz o SQL recusar", async () => {
+  await emTransacao(async (c) => {
+    await c.query(turma("2026-10-05", 1));
+    // uma missão que uma versão anterior teria deixado e esta não tem
+    await c.query(`insert into missoes (exam_tag, materia_codigo, nivel, nome, objetivo, criterio_conclusao)
+                   values ('pmerj_cfo', 'dir_hum', 'base', 'Missão órfã', 'x', 'x')`);
+    await c.query("savepoint s");
+    await assert.rejects(c.query(turma("2026-10-05", 1)), /1 missão\(ões\) no banco fora do manifesto/);
+    await c.query("rollback to savepoint s");
   });
 });

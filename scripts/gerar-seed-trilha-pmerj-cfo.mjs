@@ -365,7 +365,10 @@ function dadosMissoes(m) {
       const dirigidas = auto ? x.metaQuestoes : calc.simulado[x.materia].N;
       return {
         ...x,
-        id: uid(`missao:${m.conteudoVersao}:${x.chave}`),
+        // id pela chave, sem a versão do conteúdo: uma revisão do
+        // manifesto atualiza a missão no lugar (o progresso dos alunos
+        // continua apontando para ela) em vez de criar uma segunda.
+        id: uid(`missao:${x.chave}`),
         ordem,
         prioridade: linhaPorChave.get(x.assunto).prioridade,
         tempo: leitura[x.materia] + dirigidas * min,
@@ -526,7 +529,9 @@ insert into trilhas (id, nicho, nome, versao, publicada)
 values (${sql(uid(`trilha:${m.nicho}:turma-${turma}`))}, ${sql(m.nicho)}, ${sql(m.nome)}, ${turma}, ${publicada})
 on conflict (nicho, versao) do update set
   nome = excluded.nome,
-  publicada = excluded.publicada;
+  -- rodar de novo sem --publicada não despublica uma turma em uso;
+  -- despublicar é decisão manual, fora do gerador.
+  publicada = trilhas.publicada or excluded.publicada;
 
 insert into disciplinas (id, trilha_id, codigo, nome, abrev, cor, ordem)
 select gen_random_uuid(), ${trilhaSql}, d.codigo, d.nome, d.abrev, d.cor, d.ordem::int
@@ -567,8 +572,14 @@ declare
   v_trilha uuid := ${trilhaSql};
   n int;
 begin
+  -- linhas e missões do banco que o manifesto não tem mais: uma versão
+  -- nova que tira itens precisa de um mapa explícito, não de sobra calada.
+  select count(*) into n from assuntos where exam_tag = ${sql(tag)} and id <> all (array[${linhasAssuntos.map((l) => `${sql(l[0])}::uuid`).join(", ")}]);
+  if n <> 0 then raise exception 'PMERJ: % assunto(s) no banco fora do manifesto; mapeie antes de reaplicar', n; end if;
   select count(*) into n from assuntos where exam_tag = ${sql(tag)};
   if n <> ${m.anexoII.length} then raise exception 'PMERJ: % assuntos, esperados ${m.anexoII.length}', n; end if;
+  select count(*) into n from missoes where exam_tag = ${sql(tag)} and id <> all (array[${missoes.map((x) => `${sql(x.id)}::uuid`).join(", ")}]);
+  if n <> 0 then raise exception 'PMERJ: % missão(ões) no banco fora do manifesto; mapeie antes de reaplicar', n; end if;
   select count(*) into n from missoes where exam_tag = ${sql(tag)};
   if n <> ${missoes.length} then raise exception 'PMERJ: % missões, esperadas ${missoes.length}', n; end if;
   select count(*) into n from trilha_semanas where trilha_id = v_trilha;
