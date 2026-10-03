@@ -18,6 +18,26 @@ export function contextoRegistroDaAtividade(metaAtividade, trilha) {
   };
 }
 
+/* P0.4 (0064): contexto de registro a partir de uma MISSÃO da fila
+   (filaDeMissoes). `tipo` é 'missao' (praticar a da vez: conta para
+   ela) ou 'revisao' (revisar uma já iniciada: fica no assunto dela e
+   não avança a fila). O servidor confere tudo de novo; isto só diz ao
+   formulário o que mandar. Sem metaAtividadeId: praticar missão não
+   fecha objetivo da semana. */
+export function contextoRegistroDaMissao(missao, tipo = "missao") {
+  if (!missao?.id || !missao?.materia_codigo) return null;
+  if (tipo !== "missao" && tipo !== "revisao") return null;
+  const falta = Math.max(0, (missao.meta_questoes ?? 0) - (missao.questoes ?? 0));
+  return {
+    chave: `${tipo}:${missao.id}`,
+    tipo,
+    missaoId: missao.id,
+    disciplinaCodigo: missao.materia_codigo,
+    titulo: missao.nome,
+    questoesSugeridas: tipo === "missao" && falta > 0 ? falta : null,
+  };
+}
+
 /* Objetivos pendentes na MESMA ordem que a lista da tela usa
    (`atividade.ordem`). O embed `meta_atividades(...)` do PostgREST não
    pede ordenação, então a ordem crua do banco não é contrato: sem isto,

@@ -32,12 +32,22 @@ export function parseTempo(txt) {
    conhece é o componente, que tem o `aluno`).
 
    Entrada: o estado do formulário { data, disciplina_codigo, topico,
-   questoes, acertos, tempo, obs }.
+   questoes, acertos, tempo, obs } e, opcional, o contexto de missão
+   (contextoRegistroDaMissao): { tipo: 'missao'|'revisao', missaoId,
+   disciplinaCodigo }. Sem ele o registro é 'livre'.
    Saída: { ok, erros, campos } — `campos` é o payload limpo quando ok.
    `erros` é um objeto por campo (tela mostra perto do input) e nunca
    é vazio quando ok === false. */
-export function validarRegistroEstudo(form) {
+export function validarRegistroEstudo(form, contexto = null) {
   const erros = {};
+  // P0.4 (0064): prática de missão ou revisão só quando o formulário veio
+  // de uma missão; qualquer outro registro é livre (soma volume, não
+  // conclui missão). O servidor confere de novo; isto evita mandar uma
+  // combinação que ele vai recusar.
+  const tipo = contexto?.missaoId && (contexto.tipo === "missao" || contexto.tipo === "revisao") ? contexto.tipo : "livre";
+  if (tipo !== "livre" && form?.disciplina_codigo !== contexto.disciplinaCodigo) {
+    erros.disciplina = "Esta prática é de uma missão: a matéria tem de ser a dela.";
+  }
   const topico = String(form?.topico ?? "").trim();
   const questoesNum = form?.questoes === "" || form?.questoes == null ? NaN : Number(form.questoes);
   const temAcerto = form?.acertos !== "" && form?.acertos != null;
@@ -68,6 +78,8 @@ export function validarRegistroEstudo(form) {
     acertos: temAcerto ? Math.min(acertosNum, questoesNum) : null,
     minutos,
     obs: form.obs ? String(form.obs) : null,
+    tipo_pratica: tipo,
+    missao_id: tipo === "livre" ? null : contexto.missaoId,
   };
   return { ok: true, erros: {}, campos };
 }

@@ -360,7 +360,10 @@ export function VisaoEstudo({ aluno, podeEditar, concurso = null, contexto = "Pl
               <MissaoAtual meta={meta} trilha={trilha} m={m} metas={dados.metas} ciclo={ciclo.estado}
                 aoAvancar={podeEditar ? irAba : undefined} />
             </div>
-            {!essencial && examTag && filaMissoes.length > 0 && <MissoesPersistidas fila={filaMissoes} disciplinas={trilha.disciplinas} />}
+            {!essencial && examTag && filaMissoes.length > 0 && (
+              <MissoesPersistidas fila={filaMissoes} disciplinas={trilha.disciplinas}
+                aoPraticar={podeEditar ? (contexto) => irAba("registrar", contexto) : undefined} />
+            )}
             <MetaSemana meta={meta} trilha={trilha} podeEditar={podeEditar} aoMudar={recarregar}
               compacta aoPraticar={(alvo) => irAba("registrar", alvo)}
               aoAbrirDesempenho={() => irAba("desempenho")} />
