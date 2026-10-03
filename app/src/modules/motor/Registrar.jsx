@@ -226,7 +226,7 @@ export function Registrar({
         {/* sem contexto nenhum; com objetivo da semana o cartão do topo já diz */}
         {!contextoInicial && (
           <div style={{ fontSize: 11.5, color: T.sub, marginTop: 8, lineHeight: 1.5 }}>
-            Registro livre: entra no seu histórico e no volume. Para avançar uma missão, use “Praticar” nela, em Hoje.
+            Registro livre: entra no seu histórico e no volume, mas não avança missão. Para avançar uma missão, use o botão “Praticar esta missão” na aba Hoje.
           </div>
         )}
         {!tempoInvalido && minutosParse > 0 && <div style={{ fontSize: 11.5, color: T.sub, marginTop: 8 }}>◷ {minutosParse} minutos {minutosSugeridos > 0 ? "— puxado do cronômetro, pode ajustar" : ""}</div>}

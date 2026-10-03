@@ -99,3 +99,17 @@ test("telas: o painel de missões tem 'Praticar' e 'Revisão', e a área do alun
   assert.doesNotMatch(reg, /validarRegistroEstudo\(f\)/, "nenhuma validação sem contexto sobrou");
   assert.match(reg, /disabled=\{deMissao\}/, "prática de missão fica presa à matéria");
 });
+
+test("modo essencial não esconde o botão da missão, e o registro solto avisa que não avança missão", () => {
+  // desde a 0064 o botão é o único caminho que avança missão: o modo
+  // essencial deixa o painel compacto, mas não pode tirá-lo da tela
+  const visao = semComentarios(ler("app/src/routes/aluno/VisaoEstudo.jsx"));
+  assert.match(visao, /<MissoesPersistidas[^>]*compacta=\{essencial\}/s);
+  assert.doesNotMatch(visao, /!essencial && examTag && filaMissoes/, "o painel não pode sumir no modo essencial");
+  const painel = semComentarios(ler("app/src/modules/motor/ProgressoVivido.jsx"));
+  assert.match(painel, /compacta = false/);
+  assert.match(painel, /mi\.estado === "atual" \|\| mi\.proxima\)\.slice\(0, 1\)/, "compacto: só a missão da vez de cada matéria");
+  const reg = semComentarios(ler("app/src/modules/motor/Registrar.jsx"));
+  assert.match(reg, /\{!contextoInicial && \(/);
+  assert.match(reg, /Registro livre: entra no seu histórico e no volume, mas não avança missão\. Para avançar uma missão, use o botão “Praticar esta missão” na aba Hoje\./);
+});

@@ -139,21 +139,31 @@ const ROTULO_MATERIA = { mat: "Matemática", por: "Português", ing: "Inglês", 
    aspiracional; e a matéria que o aluno não registra na própria trilha
    aparece marcada, em vez de travada em 0% para sempre.
    `fila` = filaDeMissoes() (modules/conteudo/missoes.js);
-   `disciplinas` = as registráveis da trilha (mesma lista do Registrar). */
-export function MissoesPersistidas({ fila = [], disciplinas = [], aoPraticar }) {
+   `disciplinas` = as registráveis da trilha (mesma lista do Registrar).
+   `compacta` (modo essencial): só a missão da vez de cada matéria, com o
+   botão. Desde a 0064 o botão é o único caminho que avança missão, então
+   o modo essencial não pode escondê-lo junto com o resto do painel. */
+export function MissoesPersistidas({ fila = [], disciplinas = [], aoPraticar, compacta = false }) {
   const T = useTema();
-  const todas = fila.flatMap((g) => g.missoes);
-  if (!todas.length) return null;
   const registraveis = new Set((disciplinas ?? []).map((d) => d.codigo));
   const podeRegistrar = (cod) => registraveis.size === 0 || !cod || registraveis.has(cod);
-  const fechadas = todas.filter((m) => m.estado === "concluida").length;
+  const todasDaFila = fila.flatMap((g) => g.missoes);
+  const grupos = !compacta ? fila : fila
+    .map((g) => ({ ...g, missoes: podeRegistrar(g.materia_codigo) ? g.missoes.filter((mi) => mi.estado === "atual" || mi.proxima).slice(0, 1) : [] }))
+    .filter((g) => g.missoes.length > 0);
+  const todas = grupos.flatMap((g) => g.missoes);
+  if (!todas.length) return null;
+  const fechadas = todasDaFila.filter((m) => m.estado === "concluida").length;
   const ROTULO_ESTADO = { concluida: "✓ Concluída", atual: "Atual", a_seguir: "A seguir" };
   const TOM_ESTADO = { concluida: "ok", atual: "alerta", a_seguir: "neutro" };
 
   return (
-    <SectionCard titulo="Missões" sub={`${fechadas} de ${todas.length} concluída${fechadas === 1 ? "" : "s"} — uma por vez em cada matéria; contam as práticas que você registra pelo botão da missão.`}>
+    <SectionCard titulo={compacta ? "Missão da vez" : "Missões"}
+      sub={compacta
+        ? "Conta para a missão só a prática registrada pelo botão dela."
+        : `${fechadas} de ${todasDaFila.length} concluída${fechadas === 1 ? "" : "s"} — uma por vez em cada matéria; contam as práticas que você registra pelo botão da missão.`}>
       <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-        {fila.map(({ materia_codigo: cod, missoes }) => {
+        {grupos.map(({ materia_codigo: cod, missoes }) => {
           const materia = ROTULO_MATERIA[cod] ?? cod ?? "";
           const inalcancavel = !podeRegistrar(cod);
           return (
