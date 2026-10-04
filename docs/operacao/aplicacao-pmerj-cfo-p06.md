@@ -7,7 +7,7 @@
 | Fase | Projeto | Situação |
 |---|---|---|
 | 1 | demo `bdjkgrzfzoamchdpobbl` | **aplicada em 04/10/2026**, conferida pelo TOTAL da conferência; teste com os olhos pelo dono pendente |
-| 2 | produção `zckyhihxjjbnqjqilymn` | **não aplicada: aguardando o número do backup novo.** SQL de 12/10 gerado e ensaiado no Postgres local |
+| 2 | produção `zckyhihxjjbnqjqilymn` | **aplicada em 04/10/2026**, depois do backup de produção da execução 37173036448; conferida pelo TOTAL da conferência |
 
 ## O que é aplicado
 
@@ -185,4 +185,60 @@ pedido.
 
 ## Fase 2: produção
 
-_Só depois do número do backup novo, enviado pelo dono._
+**Backup antes de aplicar.** Workflow "Backup (manual)", execução
+[37173036448](https://github.com/Jinriuk/Rumo-a-aprova-o-/actions/runs/37173036448), job
+`backup (prod)`, concluído com sucesso em 04/10/2026 (03:05 a 03:07 UTC) a partir da `main` em
+`aa7bc7c`. Artefato cifrado `backup-prod-37173036448-1`, 779.518 bytes, sha256
+`5c7d5d75efc4a39f75a6926b7db73a9d26a3651c8b3aeb9813e51f90f51383b3`, válido até 03/11/2026. O
+dono tinha mandado antes o número `12345678901`, que não existe no repositório (a API
+devolveu 404); ele confirmou a 37173036448 em seguida. Entre o backup e a aplicação nada foi
+escrito em produção.
+
+**Aplicação.** Em 04/10/2026, por `execute_sql`, nos dois comandos da seção "O que é
+aplicado", com `--inicio 2026-10-12`. Antes: produção sem nenhuma linha do PMERJ, ledger em 66,
+contagens iguais às da linha de base. O SQL rodou inteiro, sem erro, o que inclui a conferência
+do fim (219 assuntos, 24 missões, 12 semanas de segunda a domingo, 159 atividades, metas das
+semanas 1 a 3 somando 106). O carimbo atingiu 1 linha. O ledger continuou com 66 entradas.
+
+**Conferência.** `scripts/conferir-publicacao-pmerj-cfo.sql` rodado em produção deu, tabela por
+tabela, o md5 esperado do ensaio local de 12/10:
+
+| Tabela | Linhas | md5 |
+|---|---:|---|
+| concursos | 1 | `10b8760c9b05e670131ccf9589bf0448` |
+| materias | 6 | `815772a82e7bbd9d8c5865d64432e862` |
+| assuntos | 219 | `e182c841a08812c48638fdba40e9917b` |
+| missoes | 24 | `f34be9afea31df7b48ea04330fef503c` |
+| trilha_planos | 1 | `3490a7788450082f2a06e02dfc2a4624` |
+| trilha_plano_missoes | 24 | `7d2fa9c577624a0735edde8ae8999f85` |
+| trilhas | 1 | `541d5b32643208fc43e9d77352183379` |
+| disciplinas | 8 | `32828b641c5c0dac51de985248d68069` |
+| trilha_semanas | 12 | `01883cb0c00c0860d8aa3d4a36172c47` |
+| atividades_modelo | 159 | `e372761a7dd8ba94730c50b5d64bb575` |
+| **TOTAL** | **455** | `2a2f0b326d30fc7d7a51a3116c77ba87` |
+
+Fora `trilha_semanas`, todos coincidem com os do demo; a diferença é só a data de início.
+
+**Contagens depois, em produção:**
+
+| Contagem | Antes | Depois |
+|---|---:|---:|
+| Concursos | 6 | 7 |
+| Assuntos | 86 | 305 (219 do PMERJ) |
+| Missões | 30 | 54 (24 do PMERJ) |
+| Semanas de trilha | 18 | 30 (12 do PMERJ) |
+| Trilhas (publicadas) | 2 (2) | 3 (3) |
+| Planos de trilha | 14 | 15 |
+| Vínculos plano-missão | 99 | 123 |
+| Disciplinas | 17 | 25 |
+| Atividades-modelo | 159 | 318 |
+| Matérias | 9 | 15 |
+| Alunos | 2 | 2 |
+| Escolas | 2 | 2 |
+| Migrations no ledger | 66 | 66 |
+
+- Concurso `pmerj_cfo`: `pre_edital`, versão de conteúdo 1, `mes_prova` e `dia_prova` nulos.
+- `vw_concurso_qualidade` não flagra o concurso (219 assuntos, 24 missões, 1 plano).
+- Trilha `pmerj-cfo`, turma 1, publicada, de 2026-10-12 a 2027-01-03, 12 semanas.
+- Os outros seis concursos e as trilhas do Colégio Naval e do EsPCEx não mudaram (EsPCEx segue
+  `completa`, v3, 80 assuntos, 24 missões).
