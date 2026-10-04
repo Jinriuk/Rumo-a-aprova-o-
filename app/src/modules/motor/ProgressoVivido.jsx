@@ -7,7 +7,7 @@
 import React, { useEffect, useRef } from "react";
 import { SectionCard, StatusBadge, BarraXP, Erro } from "../../shared/ui/componentes.jsx";
 import { useTema } from "../../shared/branding/BrandingContext.jsx";
-import { resumoRegistroConfirmado } from "./jornada.js";
+import { resumoRegistroConfirmado, contextoRegistroDaMissao } from "./jornada.js";
 
 const tempoConfirmado = (minutos) => {
   if (minutos == null) return null;
@@ -130,27 +130,40 @@ const ROTULO_MATERIA = { mat: "Matemática", por: "Português", ing: "Inglês", 
    concluídas, a atual e as próximas ("a seguir"), na ordem do catálogo.
    Uma missão por vez em cada matéria; cada registro conta para uma só, e
    só registros com acertos informados contam (o Registrar avisa).
+   P0.4 (0064): só conta a prática registrada pelo botão da missão
+   ("Praticar esta missão"); registro livre soma volume e não fecha
+   missão; "Registrar revisão" liga ao assunto de uma missão já feita.
 
    EST1-A5 segue valendo: o alvo mostrado é o critério REAL que fecha a
    missão (meta da escola, senão a do catálogo, + acurácia), não o texto
    aspiracional; e a matéria que o aluno não registra na própria trilha
    aparece marcada, em vez de travada em 0% para sempre.
    `fila` = filaDeMissoes() (modules/conteudo/missoes.js);
-   `disciplinas` = as registráveis da trilha (mesma lista do Registrar). */
-export function MissoesPersistidas({ fila = [], disciplinas = [] }) {
+   `disciplinas` = as registráveis da trilha (mesma lista do Registrar).
+   `compacta` (modo essencial): só a missão da vez de cada matéria, com o
+   botão. Desde a 0064 o botão é o único caminho que avança missão, então
+   o modo essencial não pode escondê-lo junto com o resto do painel. */
+export function MissoesPersistidas({ fila = [], disciplinas = [], aoPraticar, compacta = false }) {
   const T = useTema();
-  const todas = fila.flatMap((g) => g.missoes);
-  if (!todas.length) return null;
   const registraveis = new Set((disciplinas ?? []).map((d) => d.codigo));
   const podeRegistrar = (cod) => registraveis.size === 0 || !cod || registraveis.has(cod);
-  const fechadas = todas.filter((m) => m.estado === "concluida").length;
+  const todasDaFila = fila.flatMap((g) => g.missoes);
+  const grupos = !compacta ? fila : fila
+    .map((g) => ({ ...g, missoes: podeRegistrar(g.materia_codigo) ? g.missoes.filter((mi) => mi.estado === "atual" || mi.proxima).slice(0, 1) : [] }))
+    .filter((g) => g.missoes.length > 0);
+  const todas = grupos.flatMap((g) => g.missoes);
+  if (!todas.length) return null;
+  const fechadas = todasDaFila.filter((m) => m.estado === "concluida").length;
   const ROTULO_ESTADO = { concluida: "✓ Concluída", atual: "Atual", a_seguir: "A seguir" };
   const TOM_ESTADO = { concluida: "ok", atual: "alerta", a_seguir: "neutro" };
 
   return (
-    <SectionCard titulo="Missões" sub={`${fechadas} de ${todas.length} concluída${fechadas === 1 ? "" : "s"} — uma por vez em cada matéria; fecham sozinhas quando você bate o critério.`}>
+    <SectionCard titulo={compacta ? "Missão da vez" : "Missões"}
+      sub={compacta
+        ? "Conta para a missão só a prática registrada pelo botão dela."
+        : `${fechadas} de ${todasDaFila.length} concluída${fechadas === 1 ? "" : "s"} — uma por vez em cada matéria; contam as práticas que você registra pelo botão da missão.`}>
       <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-        {fila.map(({ materia_codigo: cod, missoes }) => {
+        {grupos.map(({ materia_codigo: cod, missoes }) => {
           const materia = ROTULO_MATERIA[cod] ?? cod ?? "";
           const inalcancavel = !podeRegistrar(cod);
           return (
@@ -196,8 +209,23 @@ export function MissoesPersistidas({ fila = [], disciplinas = [] }) {
                         </div>
                       ) : (
                         <div style={{ fontSize: 11, color: T.sub, marginTop: 4 }}>
-                          {mi.proxima ? "começa no seu próximo registro desta matéria com acertos" : "começa depois da anterior"} · {alvo} · +{mi.xp} XP
+                          {mi.proxima ? "começa na sua próxima prática desta missão com acertos" : "começa depois da anterior"} · {alvo} · +{mi.xp} XP
                         </div>
+                      )}
+                      {/* P0.4 (0064): registrar a partir da missão é o que a liga
+                          ao assunto dela. Praticar: a atual ou a próxima a começar.
+                          Revisar: as que já começaram ou fecharam. */}
+                      {aoPraticar && !coordenacao && (mi.estado === "atual" || mi.proxima) && (
+                        <button type="button" className="journey-use-suggestion" style={{ marginTop: 8 }}
+                          onClick={() => aoPraticar(contextoRegistroDaMissao(mi, "missao"))}>
+                          Praticar esta missão
+                        </button>
+                      )}
+                      {aoPraticar && !inalcancavel && mi.estado === "concluida" && (
+                        <button type="button" className="journey-use-suggestion" style={{ marginTop: 8 }}
+                          onClick={() => aoPraticar(contextoRegistroDaMissao(mi, "revisao"))}>
+                          Registrar revisão
+                        </button>
                       )}
                     </li>
                   );

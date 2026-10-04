@@ -183,12 +183,15 @@ test("tela: a VisaoEstudo monta a fila com catálogo + ajustes + progresso e nã
   assert.match(painel, /a_seguir: "A seguir"/);
   assert.match(painel, /atual: "Atual"/);
   assert.match(painel, /começa depois da anterior/);
-  assert.match(painel, /mi\.proxima \? "começa no seu próximo registro desta matéria com acertos"/);
+  // P0.4 (0064): a próxima começa na prática DA MISSÃO, não em qualquer registro da matéria
+  assert.match(painel, /mi\.proxima \? "começa na sua próxima prática desta missão com acertos"/);
 });
 
 test("tela: o Registrar avisa que, sem acertos, o estudo não conta para a missão", () => {
   const src = ler("app/src/modules/motor/Registrar.jsx");
   assert.match(src, /const semAcertos = f\.questoes !== "" && \+f\.questoes > 0 && String\(f\.acertos\)\.trim\(\) === ""/);
   assert.match(src, /Sem acertos, este estudo fica no seu histórico mas não conta para a missão\./);
-  assert.match(src, /aria-describedby=\{semAcertos \? id\("dica-acertos"\) : undefined\}/);
+  // P0.4 (0064): o aviso só existe na prática de missão (livre não conta de todo modo)
+  assert.match(src, /aria-describedby=\{semAcertos && praticaMissao \? id\("dica-acertos"\) : undefined\}/);
+  assert.match(src, /\{semAcertos && praticaMissao && \(/);
 });

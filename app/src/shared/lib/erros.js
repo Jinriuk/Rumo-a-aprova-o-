@@ -17,6 +17,12 @@ const MENSAGENS = {
 
 const REDE = /failed to fetch|network|timeout|conex[aã]o|offline/i;
 
+// P0.4 (0064): o banco recusa um registro de estudo com uma frase escrita
+// para o aluno ("registro de estudo: <motivo>"). O motivo é texto fixo da
+// migration, sem dado técnico, e é a única forma de o aluno saber o que
+// corrigir (ex.: a matéria não é a da missão).
+const REGISTRO_RECUSADO = /registro de estudo: ([^\n]+)/i;
+
 // Mensagens funcionais seguras vindas das Edge Functions — podem ser exibidas
 // diretamente ao usuário (não contêm detalhes técnicos internos).
 const EDGE_SEGURAS = [
@@ -38,6 +44,8 @@ export function mensagemAmigavel(erro, contexto = "acao") {
   }
   const tecnica = erro?.message ?? String(erro ?? "");
   if (REDE.test(tecnica)) return "Sua conexão parece instável. Verifique e tente de novo.";
+  const recusa = tecnica.match(REGISTRO_RECUSADO);
+  if (recusa) return recusa[1].charAt(0).toUpperCase() + recusa[1].slice(1).replace(/\.?$/, ".");
   for (const { test, msg } of EDGE_SEGURAS) {
     if (test.test(tecnica)) return msg;
   }
