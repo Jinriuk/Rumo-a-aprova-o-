@@ -738,7 +738,13 @@ export async function listarSimuladosEscola({ signal } = {}) {
 // PREVISÍVEIS, não falha de sistema: saem do console.error como a
 // credencial inválida do login. `sem_trilha` é o 422 do gerar-meta para
 // aluno sem trilha atribuída, um estado válido do cadastro.
-const ESTADOS_ESPERADOS = new Set(["sem_trilha"]);
+// P1.1: os estados da questoes-integradas também são previsíveis (a tela
+// diz o que fazer); o 503 do fornecedor já é relatado pela própria função.
+const ESTADOS_ESPERADOS = new Set([
+  "sem_trilha",
+  "fornecedor_indisponivel", "sem_questoes", "limite", "indisponivel", "fora_da_vez", "missao_invalida",
+  "sem_aluno", "expirada", "anulada", "resposta_invalida", "nao_encontrada",
+]);
 
 async function invocar(fn, body) {
   const { data, error } = await supabase.functions.invoke(fn, { body });
@@ -767,6 +773,31 @@ async function invocar(fn, body) {
   }
   return data;
 }
+
+/* ---------- P1.1: questões integradas (Quest) ---------- */
+
+// Missões do próprio aluno com questões integradas ligadas (0065). Sem a
+// 0065 no ambiente, ou em qualquer falha, devolve vazio: o botão não
+// aparece e o registro manual segue igual.
+export async function missoesComQuestoesIntegradas() {
+  const { data, error } = await supabase.rpc("quest_missoes_disponiveis");
+  if (error) {
+    console.warn("questões integradas indisponíveis neste ambiente:", error.message);
+    return new Set();
+  }
+  return new Set((data ?? []).map((x) => (typeof x === "string" ? x : x?.quest_missoes_disponiveis)).filter(Boolean));
+}
+
+// Lote SEM gabarito. pedidoId repetido devolve o mesmo lote (retransmissão).
+export const entregarQuestoes = ({ missaoId, pedidoId, tamanho }) =>
+  invocar("questoes-integradas", { acao: "entregar", missao_id: missaoId, pedido_id: pedidoId, ...(tamanho ? { tamanho } : {}) });
+
+// Correção no servidor. Reenviar devolve a primeira correção (idempotente).
+export const responderQuestao = ({ entregaId, questaoId, resposta, duracaoMs }) =>
+  invocar("questoes-integradas", {
+    acao: "responder", entrega_id: entregaId, questao_id: questaoId, resposta,
+    ...(Number.isInteger(duracaoMs) ? { duracao_ms: duracaoMs } : {}),
+  });
 
 export const provisionarAluno = (alunoId) => invocar("provisionar-aluno", { tipo: "aluno", aluno_id: alunoId });
 export const provisionarResponsavel = (alunoId, nome) =>
