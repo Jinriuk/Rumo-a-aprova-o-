@@ -66,6 +66,69 @@ função publicada mesmo antes da 0065.
 4. Ajustar `materia`/`assunto`/`assunto_id` em `quest-filtros-pmerj-cfo-v1.json` onde vier zero,
    marcar `conferido: true` no que foi conferido, medir de novo.
 
+## Medição de 04/10/2026 (demo, função v5)
+
+Filtros conferidos em `/v2/filtros/*` (23 de 24, gravados em `supabase/seed/quest-filtros-pmerj-cfo-v1.json`
+com `conferido: true`). Medição com `per_page=1`, sem gabarito, filtros fixos `tem_gabarito`, `anulada=false`,
+`tem_anexos=false`. Resultado bruto: `docs/operacao/quest-cobertura-pmerj-2026-10-04.json`.
+
+| Missão | Matéria | Assunto (filtro) | Meta | Total | Cesgranrio | Fgv | Outras | Situação |
+|---|---|---|---|---|---|---|---|---|
+| PMERJ-M01-ADM | dir_adm | Organização Administrativa | 20 | 745 | 1 | 41 | 703 | ok |
+| PMERJ-M01-CONST | dir_const | Aplicabilidade das normas constitucionais, eficácia e aplicabilidade das normas constitucionais ou classificação das normas constitucionais ou vigência e eficácia das normas constitucionais ou normas constitucionais: classificação e eficácia | 20 | 115 | 1 | 14 | 100 | ok |
+| PMERJ-M01-PEN | dir_pen | Lei penal no tempo | 20 | 22 | 0 | 2 | 20 | ok |
+| PMERJ-M01-CPP | dir_proc_pen | Sistemas Processuais Penais | 20 | 6 | 0 | 0 | 6 | abaixo da meta (20) |
+| PMERJ-M01-CPM | dir_pen_mil | Aplicação da Lei Penal Militar | 13 | 21 | 0 | 2 | 19 | ok |
+| PMERJ-M01-DH | dir_hum | Direitos Humanos no Ordenamento Nacional | 13 | 84 | 0 | 10 | 74 | ok |
+| PMERJ-M02-ADM | dir_adm | Atos Administrativos | 20 | 816 | 2 | 32 | 782 | ok |
+| PMERJ-M02-CONST | dir_const | Direitos e deveres individuais e coletivos ou direitos e deveres individuais e coletivos; direito à vida, à liberdade, à igualdade,àsegurançaeàpropriedade (artigo 5º da CF) | 20 | 2812 | 1 | 142 | 2669 | ok |
+| PMERJ-M02-PEN | dir_pen | Fato Típico | 20 | 1 | 0 | 0 | 1 | abaixo da meta (20) |
+| PMERJ-M02-CPP | dir_proc_pen | Inquérito policial | 20 | 112 | 0 | 12 | 100 | ok |
+| PMERJ-M02-CPM | dir_pen_mil | Culpabilidade e Imputabilidade | 13 | 5 | 0 | 1 | 4 | abaixo da meta (13) |
+| PMERJ-M02-DH | dir_hum | Convenção Americana sobre Direitos Humanos (Pacto de San José) | 13 | 151 | 0 | 19 | 132 | ok |
+| PMERJ-M03-ADM | dir_adm | Processo Administrativo Disciplinar | 20 | 160 | 0 | 8 | 152 | ok |
+| PMERJ-M03-CONST | dir_const | Ações de controle concentrado de constitucionalidade | 20 | 36 | 0 | 6 | 30 | ok |
+| PMERJ-M03-PEN | dir_pen | Culpabilidade | 20 | 29 | 0 | 2 | 27 | ok |
+| PMERJ-M03-CPP | dir_proc_pen | Ação penal | 20 | 49 | 0 | 12 | 37 | ok |
+| PMERJ-M03-CPM | dir_pen_mil | Aplicação da Pena | 13 | 2 | 0 | 0 | 2 | abaixo da meta (13) |
+| PMERJ-M03-DH | dir_hum | Sistema Interamericano de Proteção aos Direitos Humanos: Instituições | 13 | 19 | 0 | 7 | 12 | ok |
+| PMERJ-M04-ADM | dir_adm | Lei nº 12.527/2011 - Lei de Acesso à Informação | — | 1179 | 0 | 34 | 1145 | sem meta (acompanhamento manual) |
+| PMERJ-M04-CONST | dir_const | Remédios constitucionais ou writs constitucionais ou ações constitucionais ou garantias constitucionais | — | 347 | 0 | 28 | 319 | sem meta (acompanhamento manual) |
+| PMERJ-M04-PEN | dir_pen | Prescrição | — | 33 | 0 | 3 | 30 | sem meta (acompanhamento manual) |
+| PMERJ-M04-CPP | dir_proc_pen | Incidente de insanidade | — | 6 | 0 | 2 | 4 | sem meta (acompanhamento manual) |
+| PMERJ-M04-CPM | dir_pen_mil | Suspensão Condicional da Pena | — | 6 | 0 | 1 | 5 | sem meta (acompanhamento manual) |
+| PMERJ-M04-DH | dir_hum | Uso da Força e Letalidade Policial | — | 0 | 0 | 0 | 0 | sem assunto na Quest |
+
+Por matéria (soma das missões; uma questão pode servir a duas missões):
+
+| Matéria | Total | CESGRANRIO | FGV | Outras | Missões sem medida |
+|---|---|---|---|---|---|
+| dir_adm | 2900 | 3 | 115 | 2782 | 0 |
+| dir_const | 3310 | 2 | 190 | 3118 | 0 |
+| dir_pen | 85 | 0 | 7 | 78 | 0 |
+| dir_proc_pen | 173 | 0 | 26 | 147 | 0 |
+| dir_pen_mil | 34 | 0 | 4 | 30 | 0 |
+| dir_hum | 254 | 0 | 36 | 218 | 0 |
+
+Missões com volume para a meta: 14 de 18 com meta automática (6 sem meta: semana de simulado). Créditos gastos na medição: 141. Medido em 2026-10-04T14:24:23.464Z.
+
+**Créditos:** 42 em `/filtros` (30 + 12, duas rodadas) e 141 na medição (47 chamadas que devolveram 1 item, a
+3 créditos). Total: **183**. As duas rodadas anteriores falharam com 422 (`desatualizada` não é filtro aceito)
+e não entregaram questão.
+
+**Leitura:**
+- Cesgranrio quase não aparece (3 questões em Administrativo, 2 em Constitucional, 0 nas outras quatro matérias).
+  FGV aparece em todas, com pouco volume em Penal Militar (4) e Penal (7). "Outras" é a maior parte em tudo.
+- Abaixo da meta: M01-CPP (6 de 20), M02-PEN (1 de 20), M02-CPM (5 de 13), M03-CPM (2 de 13). Penal Militar
+  tem 34 questões somando as quatro missões: é a matéria em que a Quest não sustenta a trilha.
+- M02-PEN: "Fato Típico" deu 1; "Elementos do Fato Típico" existe no catálogo e não foi medido. Conferir antes
+  de concluir que falta questão.
+- M04-ADM: a Quest tem duas grafias da LAI; a segunda não está somada.
+- M04-DH (letalidade policial, ADPF 635): sem assunto no catálogo da Quest. Fica no registro manual.
+- Semana 4 é de simulado: missões sem meta automática, fora da fila; o botão não se aplica a elas.
+- O total não exclui questões desatualizadas (a Quest não aceita esse filtro); a normalização descarta as que
+  vierem marcadas.
+
 ## Como ligar (depois da tabela e com aprovação)
 
 1. Backup novo. Aplicar a 0064 (se ainda não estiver) e a 0065.

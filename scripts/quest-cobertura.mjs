@@ -61,17 +61,20 @@ const num = (v) => (v === null || v === undefined ? "—" : String(v));
 // Situação de uma linha frente à meta da missão (questões que o aluno
 // precisa responder para fechá-la). "zero" pode ser nome de assunto
 // diferente na Quest: conferir o filtro antes de concluir que falta.
-export function situacao(linha, meta) {
+export function situacao(linha, meta, semAssunto = false) {
   if (linha.erro) return `erro: ${linha.erro}`;
   if (linha.total === null) return "sem total na resposta";
-  if (linha.total === 0) return "zero: conferir filtro";
+  if (linha.total === 0) return semAssunto ? "sem assunto na Quest" : "zero: conferir filtro";
+  // semana de simulado: missão sem meta, fora da fila automática
+  if (meta == null) return "sem meta (acompanhamento manual)";
   if (linha.total < meta) return `abaixo da meta (${meta})`;
   return "ok";
 }
 
-export function montarTabela(resultado, manifesto) {
+export function montarTabela(resultado, manifesto, mapa = null) {
   const bancas = resultado.bancas ?? [];
   const meta = Object.fromEntries(manifesto.missoes.map((m) => [m.chave, m.metaQuestoes]));
+  const semAssunto = new Set((mapa?.missoes ?? []).filter((f) => f.semAssuntoNaQuest).map((f) => f.chave));
   const cab = ["Missão", "Matéria", "Assunto (filtro)", "Meta", "Total", ...bancas.map((b) => b[0] + b.slice(1).toLowerCase()), "Outras", "Situação"];
   const linhas = [`| ${cab.join(" | ")} |`, `|${cab.map(() => "---").join("|")}|`];
   const somaMat = {};
@@ -79,7 +82,7 @@ export function montarTabela(resultado, manifesto) {
     const m = meta[l.chave];
     linhas.push(`| ${[
       l.chave, l.materia_codigo ?? "", l.filtro?.assunto_id ? `id ${l.filtro.assunto_id}` : (l.filtro?.assunto ?? ""), num(m),
-      num(l.total), ...bancas.map((b) => num(l.por_banca?.[b])), num(l.outras), situacao(l, m),
+      num(l.total), ...bancas.map((b) => num(l.por_banca?.[b])), num(l.outras), situacao(l, m, semAssunto.has(l.chave)),
     ].join(" | ")} |`);
     const s = (somaMat[l.materia_codigo ?? "?"] ??= { total: 0, outras: 0, ...Object.fromEntries(bancas.map((b) => [b, 0])), lacunas: 0 });
     if (l.total === null) s.lacunas++;
@@ -94,9 +97,10 @@ export function montarTabela(resultado, manifesto) {
     res.push(`| ${mat} | ${s.total} | ${bancas.map((b) => s[b]).join(" | ")} | ${s.outras} | ${s.lacunas} |`);
   }
   const ok = resultado.linhas.filter((l) => situacao(l, meta[l.chave]) === "ok").length;
+  const comMeta = resultado.linhas.filter((l) => meta[l.chave] != null).length;
   const creditos = resultado.linhas.reduce((t, l) => t + (l.creditos ?? 0), 0);
   return [...linhas, ...res, "",
-    `Missões com volume para a meta: ${ok} de ${resultado.linhas.length}. Créditos gastos na medição: ${creditos}. Medido em ${resultado.medido_em ?? "?"}.`].join("\n");
+    `Missões com volume para a meta: ${ok} de ${comMeta} com meta automática (${resultado.linhas.length - comMeta} sem meta: semana de simulado). Créditos gastos na medição: ${creditos}. Medido em ${resultado.medido_em ?? "?"}.`].join("\n");
 }
 
 const sqlTexto = (v) => (v == null ? "null" : `'${String(v).replaceAll("'", "''")}'`);
@@ -190,12 +194,14 @@ async function levantarFiltros({ saida, chamar: chamarDado } = {}) {
   const chamar = chamarDado ?? await sessaoOperador();
   let chamadas = 0;
   const filtro = async (corpo) => { chamadas++; return (await chamar({ acao: "filtros", ...corpo })).itens; };
+  // só o que ainda não foi conferido: cada chamada custa crédito
+  const pendentes = mapa.missoes.filter((f) => !f.conferido);
   const materias = {};
-  for (const nome of new Set(mapa.missoes.map((f) => f.materia))) {
+  for (const nome of new Set(pendentes.filter((f) => !f.materiaConferida).map((f) => f.materia))) {
     materias[nome] = await filtro({ tipo: "materias", q: nome });
   }
   const assuntos = {};
-  for (const f of mapa.missoes) {
+  for (const f of pendentes) {
     const termos = f.buscaAssunto?.length ? f.buscaAssunto : [f.assunto];
     assuntos[f.chave] = {};
     for (const q of termos) assuntos[f.chave][q] = await filtro({ tipo: "assuntos", q, materia: f.materia });
@@ -216,11 +222,11 @@ if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) {
     if (args.includes("--sql")) {
       process.stdout.write(gerarSqlFiltros(mapa, { ativar: (valor("--ativar") ?? "").split(",").filter(Boolean) }));
     } else if (args.includes("--tabela")) {
-      console.log(montarTabela(JSON.parse(readFileSync(valor("--tabela"), "utf8")), manifesto));
+      console.log(montarTabela(JSON.parse(readFileSync(valor("--tabela"), "utf8")), manifesto, mapa));
     } else if (args.includes("--filtros")) {
       console.log(JSON.stringify(await levantarFiltros({ saida: valor("--saida") }), null, 2));
     } else if (args.includes("--medir")) {
-      console.log(montarTabela(await medir({ saida: valor("--saida") }), manifesto));
+      console.log(montarTabela(await medir({ saida: valor("--saida") }), manifesto, mapa));
     } else {
       console.error("uso: --filtros [--saida arq.json] | --medir [--saida arq.json] | --tabela arq.json | --sql [--ativar CHAVE,...]");
       process.exit(2);
