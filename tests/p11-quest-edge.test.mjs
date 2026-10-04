@@ -83,13 +83,19 @@ test("descarta o que não dá para corrigir com segurança", () => {
 
 // ── cliente ──────────────────────────────────────────────────────────
 
-test("consulta leva os filtros fixos (gabarito, não anulada, não desatualizada, sem anexo) e prefere assunto_id", () => {
-  const p = Q.montarConsulta({ materia: "Direito Penal", assunto: "Prescrição", assunto_id: "77" }, { pagina: 3, porPagina: 500, banca: "FGV" });
+test("consulta leva os filtros fixos, prefere assunto_id, pagina por after_id e só embute gabarito quando pedido", () => {
+  const p = Q.montarConsulta({ materia: "Direito Penal", assunto: "Prescrição", assunto_id: "77" }, { afterId: "q-90", porPagina: 500, banca: "FGV" });
   assert.equal(p.get("assunto_id"), "77");
   assert.equal(p.get("assunto"), null);
-  for (const [k, v] of [["tem_gabarito", "true"], ["include_gabarito", "true"], ["anulada", "false"], ["desatualizada", "false"], ["tem_anexos", "false"], ["page", "3"], ["per_page", "100"], ["banca", "FGV"]]) {
+  for (const [k, v] of [["tem_gabarito", "true"], ["anulada", "false"], ["desatualizada", "false"], ["tem_anexos", "false"], ["after_id", "q-90"], ["per_page", "100"], ["banca", "FGV"]]) {
     assert.equal(p.get(k), v, k);
   }
+  assert.equal(p.get("include_gabarito"), null, "sem pedir, sem gabarito (3 créditos, não 6)");
+  assert.equal(p.get("page"), null);
+  assert.equal(Q.montarConsulta({ materia: "x" }).get("per_page"), "1", "padrão: 1 por chamada");
+  assert.equal(Q.montarConsulta({ materia: "x" }, { gabarito: true }).get("include_gabarito"), "true");
+  assert.equal(Q.baseV2("https://api.quest.api.br"), "https://api.quest.api.br/v2");
+  assert.equal(Q.baseV2("https://api.quest.api.br/v2/"), "https://api.quest.api.br/v2");
 });
 
 test("a chave vai só no cabeçalho, nunca na URL", async () => {
@@ -97,6 +103,7 @@ test("a chave vai só no cabeçalho, nunca na URL", async () => {
   const r = await Q.buscarQuest({ fetch: f, chave: CHAVE }, Q.montarConsulta({ materia: "x" }));
   assert.equal(r.total, 1);
   assert.equal(f.chamadas[0].url.origin + f.chamadas[0].url.pathname, "https://api.quest.api.br/v2/questoes");
+  assert.equal(r.proximo, "9001", "sem next_cursor, o cursor é o id do último item (after_id)");
   assert.equal(f.chamadas[0].init.headers["X-API-Key"], CHAVE);
   assert.ok(!f.chamadas[0].url.href.includes(CHAVE));
 });
@@ -130,15 +137,35 @@ test("timeout: fornecedor que não responde é abortado no prazo", async () => {
 
 // ── cobertura ────────────────────────────────────────────────────────
 
-test("cobertura: total, por banca, outras e utilizáveis na amostra", async () => {
+test("cobertura: per_page=1, sem gabarito, total por banca, outras e créditos", async () => {
   const f = fetchFalso((url) => {
     const banca = url.searchParams.get("banca");
     const total = { CESGRANRIO: 12, FGV: 30 }[banca] ?? 100;
-    return { corpo: { data: { items: banca ? [] : [itemQuest(), itemQuest({ gabarito: "" })], total } } };
+    return { corpo: { data: { items: [itemQuest({ gabarito: undefined })], total } } };
   });
   const [l] = await Q.medirCobertura({ fetch: f, chave: CHAVE }, [{ chave: "M1", materia: "Direito Penal", assunto: "Prescrição" }], ["CESGRANRIO", "FGV"]);
-  assert.deepEqual([l.total, l.por_banca.CESGRANRIO, l.por_banca.FGV, l.outras, l.utilizaveis_amostra, l.amostra, l.erro],
-    [100, 12, 30, 58, 1, 2, null]);
+  assert.deepEqual([l.total, l.por_banca.CESGRANRIO, l.por_banca.FGV, l.outras, l.creditos, l.erro], [100, 12, 30, 58, 9, null]);
+  assert.equal(f.chamadas.length, 3);
+  for (const ch of f.chamadas) {
+    assert.equal(ch.url.searchParams.get("per_page"), "1");
+    assert.equal(ch.url.searchParams.get("include_gabarito"), null);
+  }
+});
+
+test("cobertura: total zero não gasta chamada por banca", async () => {
+  const f = fetchFalso(() => ({ corpo: { data: { items: [], total: 0 } } }));
+  const [l] = await Q.medirCobertura({ fetch: f, chave: CHAVE }, [{ chave: "M1", materia: "x", assunto: "y" }], ["CESGRANRIO", "FGV"]);
+  assert.equal(f.chamadas.length, 1);
+  assert.deepEqual([l.total, l.por_banca.FGV, l.outras, l.creditos], [0, 0, 0, 0]);
+});
+
+test("filtros: consulta /v2/filtros com q e não pede questão", async () => {
+  const f = fetchFalso(() => ({ corpo: { data: { items: [{ id: 1, nome: "Direito Penal Militar" }] } } }));
+  const itens = await Q.buscarFiltros({ fetch: f, chave: CHAVE }, "assuntos", "Imputabilidade", { materia: "Direito Penal Militar" });
+  assert.equal(itens.length, 1);
+  assert.equal(f.chamadas[0].url.pathname, "/v2/filtros/assuntos");
+  assert.equal(f.chamadas[0].url.searchParams.get("q"), "Imputabilidade");
+  assert.equal(f.chamadas[0].url.searchParams.get("materia"), "Direito Penal Militar");
 });
 
 test("cobertura: chave errada para tudo na primeira chamada, sem gastar cota nas outras missões", async () => {
@@ -159,17 +186,16 @@ test("mapa de filtros cobre as 24 missões do manifesto, sem sobra", () => {
 });
 
 test("tabela: situação de cada linha frente à meta da missão", () => {
-  assert.equal(situacao({ total: 0, amostra: 0 }, 20), "zero: conferir filtro");
-  assert.equal(situacao({ total: 10, amostra: 10, utilizaveis_amostra: 4 }, 20), "abaixo da meta (20)");
-  assert.equal(situacao({ total: 50, amostra: 20, utilizaveis_amostra: 0 }, 20), "amostra sem questão utilizável");
-  assert.equal(situacao({ total: 50, amostra: 20, utilizaveis_amostra: 15 }, 20), "ok");
+  assert.equal(situacao({ total: 0 }, 20), "zero: conferir filtro");
+  assert.equal(situacao({ total: 10 }, 20), "abaixo da meta (20)");
+  assert.equal(situacao({ total: 50 }, 20), "ok");
   assert.equal(situacao({ erro: "timeout" }, 20), "erro: timeout");
   const M = carregarFonte();
   const t = montarTabela({ bancas: ["CESGRANRIO", "FGV"], medido_em: "x", linhas: [
-    { chave: "PMERJ-M01-ADM", materia_codigo: "dir_adm", filtro: { assunto: "Adm" }, total: 40, por_banca: { CESGRANRIO: 5, FGV: 10 }, outras: 25, amostra: 20, utilizaveis_amostra: 18, erro: null },
+    { chave: "PMERJ-M01-ADM", materia_codigo: "dir_adm", filtro: { assunto: "Adm" }, total: 40, por_banca: { CESGRANRIO: 5, FGV: 10 }, outras: 25, creditos: 9, erro: null },
   ] }, M);
-  assert.match(t, /\| PMERJ-M01-ADM \| dir_adm \| Adm \| 20 \| 40 \| 5 \| 10 \| 25 \| 18\/20 \| ok \|/);
-  assert.match(t, /Missões prontas para ligar: 1 de 1/);
+  assert.match(t, /\| PMERJ-M01-ADM \| dir_adm \| Adm \| 20 \| 40 \| 5 \| 10 \| 25 \| ok \|/);
+  assert.match(t, /Missões com volume para a meta: 1 de 1\. Créditos gastos na medição: 9/);
 });
 
 test("SQL dos filtros: aplica nas missões do CFO PMERJ, nasce desligado, liga só o pedido, reaplica sem duplicar", async () => {

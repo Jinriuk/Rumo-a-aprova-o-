@@ -7,7 +7,10 @@
 // função `questoes-integradas` a ação `cobertura`, que consulta a Quest
 // lá dentro e devolve só contagens.
 //
-// MEDIR (imprime a tabela em Markdown; --saida grava o JSON bruto):
+// NOMES EXATOS (banca, matéria e assunto precisam do valor exato da Quest):
+//   ... node scripts/quest-cobertura.mjs --filtros [--saida filtros.json]
+//
+// MEDIR (per_page=1, sem gabarito; imprime a tabela; --saida grava o JSON):
 //   SUPABASE_URL=https://<ref>.supabase.co SUPABASE_ANON_KEY=<publishable> \
 //   OPERADOR_EMAIL=... OPERADOR_SENHA=... \
 //     node scripts/quest-cobertura.mjs --medir [--saida cobertura.json]
@@ -61,7 +64,6 @@ export function situacao(linha, meta) {
   if (linha.erro) return `erro: ${linha.erro}`;
   if (linha.total === null) return "sem total na resposta";
   if (linha.total === 0) return "zero: conferir filtro";
-  if (linha.amostra > 0 && linha.utilizaveis_amostra === 0) return "amostra sem questão utilizável";
   if (linha.total < meta) return `abaixo da meta (${meta})`;
   return "ok";
 }
@@ -69,15 +71,14 @@ export function situacao(linha, meta) {
 export function montarTabela(resultado, manifesto) {
   const bancas = resultado.bancas ?? [];
   const meta = Object.fromEntries(manifesto.missoes.map((m) => [m.chave, m.metaQuestoes]));
-  const cab = ["Missão", "Matéria", "Assunto (filtro)", "Meta", "Total", ...bancas.map((b) => b[0] + b.slice(1).toLowerCase()), "Outras", "Utilizáveis na amostra", "Situação"];
+  const cab = ["Missão", "Matéria", "Assunto (filtro)", "Meta", "Total", ...bancas.map((b) => b[0] + b.slice(1).toLowerCase()), "Outras", "Situação"];
   const linhas = [`| ${cab.join(" | ")} |`, `|${cab.map(() => "---").join("|")}|`];
   const somaMat = {};
   for (const l of resultado.linhas) {
     const m = meta[l.chave];
     linhas.push(`| ${[
       l.chave, l.materia_codigo ?? "", l.filtro?.assunto_id ? `id ${l.filtro.assunto_id}` : (l.filtro?.assunto ?? ""), num(m),
-      num(l.total), ...bancas.map((b) => num(l.por_banca?.[b])), num(l.outras),
-      l.amostra ? `${l.utilizaveis_amostra}/${l.amostra}` : "—", situacao(l, m),
+      num(l.total), ...bancas.map((b) => num(l.por_banca?.[b])), num(l.outras), situacao(l, m),
     ].join(" | ")} |`);
     const s = (somaMat[l.materia_codigo ?? "?"] ??= { total: 0, outras: 0, ...Object.fromEntries(bancas.map((b) => [b, 0])), lacunas: 0 });
     if (l.total === null) s.lacunas++;
@@ -92,7 +93,9 @@ export function montarTabela(resultado, manifesto) {
     res.push(`| ${mat} | ${s.total} | ${bancas.map((b) => s[b]).join(" | ")} | ${s.outras} | ${s.lacunas} |`);
   }
   const ok = resultado.linhas.filter((l) => situacao(l, meta[l.chave]) === "ok").length;
-  return [...linhas, ...res, "", `Missões prontas para ligar: ${ok} de ${resultado.linhas.length}. Medido em ${resultado.medido_em ?? "?"}.`].join("\n");
+  const creditos = resultado.linhas.reduce((t, l) => t + (l.creditos ?? 0), 0);
+  return [...linhas, ...res, "",
+    `Missões com volume para a meta: ${ok} de ${resultado.linhas.length}. Créditos gastos na medição: ${creditos}. Medido em ${resultado.medido_em ?? "?"}.`].join("\n");
 }
 
 const sqlTexto = (v) => (v == null ? "null" : `'${String(v).replaceAll("'", "''")}'`);
@@ -121,10 +124,10 @@ on conflict (missao_id) do update set
   ativo = excluded.ativo,
   observacao = excluded.observacao,
   -- filtro mudou: a paginação recomeça
-  proxima_pagina = case when app.quest_filtros_missao.materia is distinct from excluded.materia
+  cursor = case when app.quest_filtros_missao.materia is distinct from excluded.materia
                           or app.quest_filtros_missao.assunto is distinct from excluded.assunto
                           or app.quest_filtros_missao.assunto_id_fornecedor is distinct from excluded.assunto_id_fornecedor
-                        then 1 else app.quest_filtros_missao.proxima_pagina end,
+                        then null else app.quest_filtros_missao.cursor end,
   esgotada_em = null,
   atualizado_em = now();
 do $$ begin
@@ -137,7 +140,7 @@ commit;
 `;
 }
 
-async function medir({ saida }) {
+async function sessaoOperador() {
   const url = process.env.SUPABASE_URL?.replace(/\/+$/, "");
   const anon = process.env.SUPABASE_ANON_KEY;
   const email = process.env.OPERADOR_EMAIL;
@@ -145,26 +148,57 @@ async function medir({ saida }) {
   if (!url || !anon || !email || !senha) {
     throw new Error("defina SUPABASE_URL, SUPABASE_ANON_KEY, OPERADOR_EMAIL e OPERADOR_SENHA no ambiente (nunca no repositório)");
   }
-  const mapa = carregarMapa();
   const login = await fetch(`${url}/auth/v1/token?grant_type=password`, {
     method: "POST", headers: { apikey: anon, "content-type": "application/json" },
     body: JSON.stringify({ email, password: senha }),
   });
   if (!login.ok) throw new Error(`login do operador falhou (HTTP ${login.status})`);
   const { access_token } = await login.json();
-  const resp = await fetch(`${url}/functions/v1/questoes-integradas`, {
-    method: "POST",
-    headers: { apikey: anon, authorization: `Bearer ${access_token}`, "content-type": "application/json" },
-    body: JSON.stringify({
-      acao: "cobertura", bancas: mapa.bancas,
-      missoes: mapa.missoes.map(({ chave, nome, materia_codigo, materia, assunto, assunto_id }) =>
-        ({ chave, nome, materia_codigo, materia, assunto, assunto_id })),
-    }),
+  return async (corpo) => {
+    const resp = await fetch(`${url}/functions/v1/questoes-integradas`, {
+      method: "POST",
+      headers: { apikey: anon, authorization: `Bearer ${access_token}`, "content-type": "application/json" },
+      body: JSON.stringify(corpo),
+    });
+    const r = await resp.json().catch(() => ({}));
+    if (!resp.ok) throw new Error(`função respondeu HTTP ${resp.status}: ${JSON.stringify(r)}`);
+    return r;
+  };
+}
+
+async function medir({ saida }) {
+  const mapa = carregarMapa();
+  const chamar = await sessaoOperador();
+  const corpo = await chamar({
+    acao: "cobertura", bancas: mapa.bancas,
+    missoes: mapa.missoes.map(({ chave, nome, materia_codigo, materia, assunto, assunto_id }) =>
+      ({ chave, nome, materia_codigo, materia, assunto, assunto_id })),
   });
-  const corpo = await resp.json().catch(() => ({}));
-  if (!resp.ok) throw new Error(`função respondeu HTTP ${resp.status}: ${JSON.stringify(corpo)}`);
   if (saida) writeFileSync(saida, JSON.stringify(corpo, null, 2) + "\n");
   return corpo;
+}
+
+// Candidatos de nome exato na Quest para cada missão: as matérias que
+// casam com a do mapa e os assuntos que casam com cada termo de
+// `buscaAssunto` (ou com o assunto do mapa). Não entrega questão.
+async function levantarFiltros({ saida }) {
+  const mapa = carregarMapa();
+  const chamar = await sessaoOperador();
+  const materias = {};
+  for (const nome of new Set(mapa.missoes.map((f) => f.materia))) {
+    materias[nome] = (await chamar({ acao: "filtros", tipo: "materias", q: nome })).itens;
+  }
+  const assuntos = {};
+  for (const f of mapa.missoes) {
+    const termos = f.buscaAssunto?.length ? f.buscaAssunto : [f.assunto];
+    assuntos[f.chave] = {};
+    for (const q of termos) {
+      assuntos[f.chave][q] = (await chamar({ acao: "filtros", tipo: "assuntos", q, materia: f.materia })).itens;
+    }
+  }
+  const r = { levantado_em: new Date().toISOString(), materias, assuntos };
+  if (saida) writeFileSync(saida, JSON.stringify(r, null, 2) + "\n");
+  return r;
 }
 
 if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) {
@@ -179,10 +213,12 @@ if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) {
       process.stdout.write(gerarSqlFiltros(mapa, { ativar: (valor("--ativar") ?? "").split(",").filter(Boolean) }));
     } else if (args.includes("--tabela")) {
       console.log(montarTabela(JSON.parse(readFileSync(valor("--tabela"), "utf8")), manifesto));
+    } else if (args.includes("--filtros")) {
+      console.log(JSON.stringify(await levantarFiltros({ saida: valor("--saida") }), null, 2));
     } else if (args.includes("--medir")) {
       console.log(montarTabela(await medir({ saida: valor("--saida") }), manifesto));
     } else {
-      console.error("uso: --medir [--saida arq.json] | --tabela arq.json | --sql [--ativar CHAVE,...]");
+      console.error("uso: --filtros [--saida arq.json] | --medir [--saida arq.json] | --tabela arq.json | --sql [--ativar CHAVE,...]");
       process.exit(2);
     }
   } catch (e) {

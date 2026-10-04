@@ -11,9 +11,17 @@
 //   responder  aluno. {entrega_id, questao_id, resposta, duracao_ms?} →
 //              correção feita no banco; uma tentativa por aluno e questão.
 //   cobertura  super_admin ativo. {missoes: [{chave, materia, assunto?,
-//              assunto_id?}], bancas?} → totais por missão e banca. Não
+//              assunto_id?}], bancas?} → totais por missão e banca, com
+//              per_page=1 e SEM gabarito (≤ 3 créditos por chamada). Não
 //              grava nada. Usada por scripts/quest-cobertura.mjs ANTES de
 //              ligar o botão.
+//   filtros    super_admin ativo. {tipo: 'materias'|'assuntos', q, materia?}
+//              → nomes exatos da Quest (GET /v2/filtros/*). Não entrega
+//              questão.
+//
+// CRÉDITOS: a Quest cobra por questão entregue (3 sem gabarito, 6 com).
+//   Questão guardada serve a todos os alunos sem nova chamada; a busca
+//   do lote pede só as que faltam ('faltam' da 0065), com gabarito.
 //
 // SEGREDO: QUEST_API_KEY só em Edge Functions › Secrets. Nunca em VITE_,
 //   nunca no repositório, nunca em log. QUEST_API_BASE_URL é opcional.
@@ -28,10 +36,10 @@ import { admin, chamador, corsHeaders } from "../_shared/contexto.ts";
 import { escolaOperacional, RESPOSTA_ESCOLA_PARADA } from "../_shared/escola.ts";
 import { comRelato5xx } from "../_shared/coletor-servidor.ts";
 import {
-  buscarQuest, type DepsQuest, medirCobertura, type MissaoCobertura, montarConsulta, normalizarQuestao, QuestErro,
+  buscarFiltros, buscarQuest, type DepsQuest, medirCobertura, type MissaoCobertura, montarConsulta, normalizarQuestao,
+  QuestErro,
 } from "../_shared/quest.ts";
 
-const POR_PAGINA = 50;
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const BANCAS_PADRAO = ["CESGRANRIO", "FGV"];
 
@@ -83,6 +91,21 @@ Deno.serve(comRelato5xx("questoes-integradas", async (req) => {
       return json({ estado: "ok", bancas, medido_em: new Date().toISOString(), linhas });
     }
 
+    if (corpo.acao === "filtros") {
+      if (!(await superAdmin(req))) return json({ error: "acesso restrito ao super_admin" }, 403);
+      const tipo = corpo.tipo === "materias" || corpo.tipo === "assuntos" ? corpo.tipo : null;
+      const q = typeof corpo.q === "string" ? corpo.q.trim().slice(0, 100) : "";
+      if (!tipo || !q) return json({ estado: "pedido_invalido" }, 400);
+      const extra = typeof corpo.materia === "string" && corpo.materia.trim()
+        ? { materia: corpo.materia.trim().slice(0, 200) } : {};
+      try {
+        return json({ estado: "ok", itens: await buscarFiltros(deps(), tipo, q, extra) });
+      } catch (e) {
+        if (!(e instanceof QuestErro)) throw e;
+        return json({ estado: "erro_fornecedor", erro: e.tipo, status: e.status }, 502);
+      }
+    }
+
     const quem = await chamador(req);
     if (!quem) return json({ error: "não autenticado" }, 401);
     if (quem.papel !== "aluno") return json({ error: "só o aluno resolve questões" }, 403);
@@ -100,22 +123,28 @@ Deno.serve(comRelato5xx("questoes-integradas", async (req) => {
           p_tamanho: tamanho, p_sem_busca: semBusca,
         });
         if (error) throw error;
-        return data as { estado: string; filtro?: { materia: string; assunto: string | null; assunto_id: string | null; pagina: number } };
+        return data as {
+          estado: string; faltam?: number;
+          filtro?: { materia: string; assunto: string | null; assunto_id: string | null; cursor: string | null };
+        };
       };
 
       let r = await preparar(false);
       let falhaFornecedor: string | null = null;
       if (r.estado === "buscar" && r.filtro) {
         try {
-          const pagina = r.filtro.pagina;
-          const res = await buscarQuest(deps(), montarConsulta(r.filtro, { pagina, porPagina: POR_PAGINA }));
+          // só o que falta para este lote, com gabarito (6 créditos cada)
+          const faltam = Math.min(100, Math.max(1, r.faltam ?? 1));
+          const res = await buscarQuest(deps(), montarConsulta(r.filtro, {
+            porPagina: faltam, gabarito: true, afterId: r.filtro.cursor,
+          }));
           const itens = res.itens.map(normalizarQuestao).filter((q) => q !== null);
           const { error } = await admin.rpc("quest_guardar_questoes", {
-            p_missao: missao_id, p_itens: itens, p_proxima_pagina: pagina + 1,
-            p_esgotada: res.itens.length < POR_PAGINA,
+            p_missao: missao_id, p_itens: itens, p_cursor: res.proximo,
+            p_esgotada: res.itens.length < faltam,
           });
           if (error) throw error;
-          console.log(`questoes-integradas: busca pagina=${pagina} recebidos=${res.itens.length} guardados=${itens.length}`);
+          console.log(`questoes-integradas: busca pedidas=${faltam} recebidas=${res.itens.length} guardadas=${itens.length}`);
         } catch (e) {
           if (!(e instanceof QuestErro)) throw e;
           falhaFornecedor = e.tipo;
