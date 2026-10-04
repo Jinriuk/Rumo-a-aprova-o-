@@ -69,12 +69,22 @@ export function temTag(bloco, codigo) {
   return new RegExp(`'${codigo}'`).test(bloco);
 }
 
-// Códigos de concurso declarados no seed 05_concursos.sql.
+// O CFO PMERJ não está em 05_concursos.sql: o concurso entra pelo SQL do
+// gerador (sem data de prova, 0062), porque a trilha tem data de início
+// por parâmetro e não é seed. A fonte dele é o manifesto, e é daí que o
+// validador o conhece (P0.6).
+export function concursosDoManifesto() {
+  const m = carregarFontePmerjCfo();
+  return [m.concurso.codigo];
+}
+
+// Códigos de concurso declarados no seed 05_concursos.sql, mais os que
+// têm o catálogo no manifesto de uma trilha gerada.
 export function concursosDoSeed() {
   const bloco = blocoInsert(ler("supabase/seed/05_concursos.sql"), "concursos");
   // cada linha de valor começa com (uuid, 'codigo', ...) → 2º token
   const cods = [...bloco.matchAll(/'[0-9a-f-]{36}',\s*'([a-z0-9_]+)'/gi)].map((m) => m[1]);
-  return [...new Set(cods)];
+  return [...new Set([...cods, ...concursosDoManifesto()])];
 }
 
 // Conteúdo real por concurso a partir dos seeds (presença booleana).
@@ -86,7 +96,20 @@ export function conteudoRealPorConcurso() {
   const blocoMissoes = blocoInsert(trilhas, "missoes");
   const blocoPlanos = blocoInsert(trilhas, "trilha_planos");
   const out = {};
+  const pmerj = carregarFontePmerjCfo();
   for (const cod of concursosDoSeed()) {
+    // concurso de manifesto: sem estrutura de prova oficial (é pré-edital),
+    // com assuntos, missões e plano no manifesto em vez dos seeds 07 e 09.
+    if (cod === pmerj.concurso.codigo) {
+      out[cod] = {
+        provaOficial: false,
+        assuntos: (pmerj.anexoII ?? []).length > 0,
+        missoes: (pmerj.missoes ?? []).length > 0,
+        planos: (pmerj.planos ?? []).length > 0,
+        trilhaSemanal: trilhaSemanalPresente(cod),
+      };
+      continue;
+    }
     out[cod] = {
       provaOficial: temTag(blocoProvaMaterias, cod),
       assuntos: temTag(blocoAssuntos, cod),
@@ -201,7 +224,17 @@ export function integridadeEspcexPed2R3() {
 // sai sob demanda (scripts/gerar-seed-trilha-pmerj-cfo.mjs).
 export function integridadeTrilhaPmerjCfo() {
   try {
-    return validarFontePmerjCfo(carregarFontePmerjCfo()).map((e) => `trilha-pmerj-cfo: ${e}`);
+    const m = carregarFontePmerjCfo();
+    const erros = validarFontePmerjCfo(m).map((e) => `trilha-pmerj-cfo: ${e}`);
+    // P0.6: a matriz e o manifesto precisam falar do mesmo concurso e da
+    // mesma trilha, e o desenho é inferência: nunca "completa".
+    const c = MATURIDADE_CONCURSOS[m.concurso.codigo];
+    if (!c) erros.push(`trilha-pmerj-cfo: '${m.concurso.codigo}' não está na matriz de maturidade`);
+    else {
+      if (c.maturidade !== "pre_edital") erros.push(`trilha-pmerj-cfo: '${c.codigo}' deve ser 'pre_edital' (o desenho é inferência), está '${c.maturidade}'`);
+      if (c.trilhaNicho !== m.nicho) erros.push(`trilha-pmerj-cfo: trilhaNicho da matriz é '${c.trilhaNicho}', o manifesto é '${m.nicho}'`);
+    }
+    return erros;
   } catch (e) {
     return [`trilha-pmerj-cfo: falha ao validar fonte (${e.message})`];
   }

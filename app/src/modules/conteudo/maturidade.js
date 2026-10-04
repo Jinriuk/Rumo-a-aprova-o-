@@ -116,6 +116,14 @@ export const MATURIDADE_CONCURSOS = {
     trilhaNicho: "espcex",
     nota: "Calendário próprio de 9 semanas, 24 missões, programa vigente de 2026 e 200 questões oficiais de 2024–2025 tagueadas.",
   },
+  pmerj_cfo: {
+    codigo: "pmerj_cfo",
+    maturidade: "pre_edital",
+    versao: 1,
+    trilhaSemanalRef: "supabase/seed/trilha-pmerj-cfo-v1.json",
+    trilhaNicho: "pmerj-cfo",
+    nota: "Pré-edital, sem data de prova. Calendário de 12 semanas e 219 linhas do Anexo II CFO PMERJ 2024 (base histórica); 24 missões escritas, das semanas 1 a 4. As 48 das semanas 5 a 12 ainda não foram escritas.",
+  },
   epcar: {
     codigo: "epcar",
     maturidade: "esqueleto",

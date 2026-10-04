@@ -120,13 +120,23 @@ Garantias do SQL, testadas em `tests/trilha-pmerj-cfo-db.test.mjs`:
   O motor continua creditando por matéria (P0.4 ainda não foi feito):
   o texto das missões não promete acompanhamento por assunto.
 
-## O que falta para publicar (P0.6, não autorizado)
+## Publicação (P0.6)
 
-1. Pôr `pmerj_cfo` em `app/src/modules/conteudo/maturidade.js` como
-   `pre_edital`, com `trilhaNicho: "pmerj-cfo"`. Depois, rodar o gerador
-   do seed 18. Sem isso, a interface trata o concurso como indisponível:
-   ele falha fechado.
-2. Decidir onde o concurso entra no seed de catálogo (`05_concursos.sql`)
-   e no validador de maturidade, que hoje lê só os seeds 05, 07 e 09.
-3. Escrever as 48 missões pendentes.
-4. Aplicar o SQL de uma turma, primeiro na demonstração, com autorização.
+Feito no repositório:
+
+1. `pmerj_cfo` está em `app/src/modules/conteudo/maturidade.js` como `pre_edital`, com
+   `trilhaNicho: "pmerj-cfo"`, e o seed 18 foi regenerado com o carimbo dele.
+2. O concurso **não** entra em `05_concursos.sql`. Ele vem do manifesto: o SQL do gerador o
+   cria sem data de prova, e o validador de conteúdo lê o catálogo do PMERJ do manifesto, não
+   dos seeds 05, 07 e 09. Por isso o PMERJ não aparece em banco de desenvolvimento nem em
+   reseed da demonstração antes de alguém aplicar o SQL.
+3. O SQL sai com `--publicada --inicio 2026-10-05 --turma 1` (segunda-feira seguinte à
+   publicação no demo). A ordem de aplicação é o SQL e depois a linha do PMERJ do seed 18.
+
+Registro, linha de base, conferência e reversão: `docs/operacao/aplicacao-pmerj-cfo-p06.md`.
+
+Continua pendente:
+
+- Escrever as 48 missões das semanas 5 a 12. A trilha publicada tem as 12 semanas de
+  atividades, mas missões só nas semanas 1 a 4.
+- Aplicar em produção, depois do número de um backup novo.
