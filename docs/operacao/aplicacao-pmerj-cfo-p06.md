@@ -6,7 +6,7 @@
 
 | Fase | Projeto | Situação |
 |---|---|---|
-| 1 | demo `bdjkgrzfzoamchdpobbl` | **pendente** |
+| 1 | demo `bdjkgrzfzoamchdpobbl` | **aplicada em 04/10/2026**, conferida pelo TOTAL da conferência; teste com os olhos pelo dono pendente |
 | 2 | produção `zckyhihxjjbnqjqilymn` | **aguardando o número de um backup novo, a ser enviado pelo dono** |
 
 ## O que é aplicado
@@ -115,7 +115,56 @@ real, o caminho é despublicar (`update trilhas set publicada = false where nich
 
 ## Fase 1: demo
 
-_A preencher depois da aplicação._
+Aplicada em 04/10/2026 por `execute_sql`, nos dois comandos da seção "O que é aplicado". O
+SQL do gerador rodou inteiro, sem erro, o que inclui a conferência do fim (219 assuntos, 24
+missões, 12 semanas de segunda a domingo, 159 atividades, metas das semanas 1 a 3 somando
+106). Depois, o carimbo atingiu 1 linha. O ledger continuou com 66 entradas.
+
+**Conferência.** `scripts/conferir-publicacao-pmerj-cfo.sql` rodado no demo deu, tabela por
+tabela, o mesmo md5 do ensaio local:
+
+| Tabela | Linhas | md5 |
+|---|---:|---|
+| concursos | 1 | `10b8760c…` |
+| materias | 6 | `815772a8…` |
+| assuntos | 219 | `e182c841…` |
+| missoes | 24 | `f34be9af…` |
+| trilha_planos | 1 | `3490a778…` |
+| trilha_plano_missoes | 24 | `7d2fa9c5…` |
+| trilhas | 1 | `541d5b32…` |
+| disciplinas | 8 | `32828b64…` |
+| trilha_semanas | 12 | `7bbacdb0…` |
+| atividades_modelo | 159 | `e372761a…` |
+| **TOTAL** | **455** | `352873c8f641a26a258c2132641e9fb0` |
+
+**Contagens depois, no demo** (linha de base mais o efeito esperado, sem diferença):
+
+| Contagem | Antes | Depois |
+|---|---:|---:|
+| Concursos | 6 | 7 |
+| Assuntos | 11 | 230 (219 do PMERJ) |
+| Missões | 8 | 32 (24 do PMERJ) |
+| Semanas de trilha | 18 | 30 (12 do PMERJ) |
+| Trilhas (publicadas) | 2 (2) | 3 (3) |
+| Planos de trilha | 12 | 13 |
+| Vínculos plano-missão | 3 | 27 |
+| Disciplinas | 16 | 24 |
+| Atividades-modelo | 100 | 259 |
+| Matérias | 9 | 15 |
+| Alunos | 77 | 77 |
+| Escolas | 5 | 5 |
+| Migrations no ledger | 66 | 66 |
+
+- Concurso `pmerj_cfo`: `pre_edital`, versão de conteúdo 1, `mes_prova` e `dia_prova` nulos.
+- `vw_concurso_qualidade` não flagra o concurso (219 assuntos, 24 missões, 1 plano).
+- Trilha `pmerj-cfo`, turma 1, publicada, de 2026-10-05 a 2026-12-27, 12 semanas.
+- A trilha 2 do Colégio Naval (2026-09-07 a 2026-11-08) e as demais não mudaram.
+
+**Achado do demo, anterior a esta publicação e não tocado.** No demo, `espcex` está
+`beta` na versão 1, e a matriz do repositório diz `completa` na versão 3. Em produção
+a matriz e o banco concordam (`completa`, v3, 80 assuntos, 24 missões). Por isso o carimbo
+foi só a linha do PMERJ: rodar o seed 18 inteiro mudaria o EsPCEx do demo sem ninguém ter
+pedido.
 
 ## Fase 2: produção
 
