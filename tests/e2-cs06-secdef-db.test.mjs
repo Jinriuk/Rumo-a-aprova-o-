@@ -86,7 +86,7 @@ const CLASSE = {
   "public.coletor_marcar_email(bigint, boolean)": "s", // E4 (0059): só a Edge Function registrar-erro
   "public.coletor_registrar_erro(text, text, jsonb, boolean)": "s", // E4 (0059): idem
   "public.motor_gerar_meta_segura(uuid)": "s",
-  "public.quest_guardar_questoes(uuid, jsonb, integer, boolean)": "s", // 0065: só a Edge Function questoes-integradas
+  "public.quest_guardar_questoes(uuid, jsonb, text, boolean)": "s", // 0065: só a Edge Function questoes-integradas
   "public.quest_preparar_entrega(uuid, uuid, uuid, uuid, integer, boolean)": "s", // 0065: idem
   "public.quest_responder(uuid, uuid, uuid, uuid, text, integer)": "s", // 0065: idem
   "public.registrar_codigo_acesso(uuid, uuid, text)": "s",

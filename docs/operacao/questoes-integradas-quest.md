@@ -13,19 +13,26 @@ A Quest autorizou guardar questão e gabarito na nossa base.
 | Cobertura | `scripts/quest-cobertura.mjs --medir` | **não medida** (ver "Por que a tabela ainda não existe") |
 | Botão no front | PR de front separado | escondido até `app.quest_filtros_missao.ativo = true` |
 
-## O contrato da Quest não foi conferido
+## Contrato e custo da Quest
 
-O código segue o formato que uma integração pública de terceiros usa: `GET /v2/questoes`,
-cabeçalho `X-API-Key`, resposta `{data: {items, total, next_cursor}}`, filtros
-`materia`, `assunto`, `assunto_id`, `banca`, `page`, `per_page`, `tem_gabarito`,
-`include_gabarito`, `anulada`, `desatualizada`, `tem_anexos`, e erros 401/402/403/429.
-Não é documentação oficial. O domínio `api.quest.api.br` não era alcançável do ambiente
-onde o código foi escrito.
+Conferido pelo dono na documentação oficial (04/10): base `https://api.quest.api.br/v2`,
+cabeçalho `X-API-Key`, resposta `data.items` e `data.total`, `per_page` até 100,
+`include_gabarito=true` embute o gabarito, paginação por cursor `after_id`. Banca, matéria e
+assunto exigem o valor exato (`GET /v2/filtros/materias` e `/v2/filtros/assuntos`, parâmetro `q`).
+Bancas: `CESGRANRIO` e `FGV`.
 
-Consequência prática: a primeira medição é também o teste do contrato. Se a resposta vier
-em outro formato, a função devolve erro `formato` por missão, e nenhuma questão é guardada.
-Se os nomes de matéria/assunto da Quest forem outros, a linha sai com total zero e
-situação "zero: conferir filtro". Zero não prova falta de questão.
+**Custo: 3 créditos por questão entregue sem gabarito, 6 com gabarito.** Consequências no código:
+
+- Questão guardada serve a todos os alunos da missão, de qualquer escola, sem nova chamada
+  (provado em `p11-quest-db`: "créditos: questão guardada serve outro aluno…").
+- A busca só acontece quando o estoque que o aluno ainda não respondeu não fecha o lote, e pede
+  só as que faltam (`faltam`), com gabarito, a partir do cursor da missão. Teto por busca: 20
+  questões, 120 créditos.
+- A medição pede `per_page=1` e **sem** gabarito: no máximo 3 créditos por chamada, 3 chamadas
+  por missão (total, CESGRANRIO, FGV), e total zero não gasta as chamadas por banca. Teto para as
+  24 missões: 216 créditos.
+- Questão descartada na normalização (imagem, anexo, gabarito fora das alternativas) já foi paga.
+  O filtro `tem_anexos=false` reduz isso, mas não zera.
 
 ## Por que a tabela ainda não existe
 

@@ -5,20 +5,22 @@
 // chave entram por parâmetro, e o teste roda este arquivo no Node com um
 // fetch falso (tests/p11-quest-edge.test.mjs).
 //
-// CONTRATO DA API: NÃO CONFERIDO CONTRA DOCUMENTAÇÃO OFICIAL.
-// Reconstruído de uma integração pública de terceiros (GET /v2/questoes,
-// cabeçalho X-API-Key, envelope {data: {items, total, next_cursor}},
-// filtros banca/materia/assunto/assunto_id/page/per_page, e os erros 401,
-// 402, 403 e 429). O domínio api.quest.api.br não é alcançável do
-// ambiente em que isto foi escrito. Antes de ligar o botão, a primeira
-// rodada de scripts/quest-cobertura.mjs confirma (ou derruba) o formato:
-// resposta fora do esperado vira erro 'formato', nunca questão inventada.
+// CONTRATO DA API: conferido pelo dono na documentação oficial em 04/10
+// (quest.api.br/docs/endpoints/questoes e /docs/paginacao): base
+// https://api.quest.api.br/v2, cabeçalho X-API-Key, resposta
+// {data: {items, total}}, per_page até 100, include_gabarito=true embute
+// o gabarito, paginação por cursor after_id. Banca, materia e assunto
+// exigem o valor EXATO da Quest (GET /v2/filtros/materias e
+// /v2/filtros/assuntos, parâmetro q).
+// CUSTO: 3 créditos por questão entregue sem gabarito, 6 com gabarito.
+// Por isso: gabarito só na busca para o aluno, nunca na medição, e a
+// medição pede per_page=1 (o total vem no envelope).
 //
 // O que não sai daqui: a chave (nem em log, nem em erro), enunciado em
 // log, dado de aluno. Os erros carregam só tipo e status HTTP.
 // ============================================================
 
-export const BASE_PADRAO = "https://api.quest.api.br";
+export const BASE_PADRAO = "https://api.quest.api.br/v2";
 export const TIMEOUT_PADRAO_MS = 8000;
 
 export type FiltroMissao = {
@@ -67,9 +69,11 @@ export type DepsQuest = {
 
 // Filtros fixos: só questão com gabarito, não anulada, não desatualizada
 // e sem anexo/imagem (a tela não reproduz figura com fidelidade).
+// `gabarito: true` embute o gabarito (6 créditos por questão, contra 3):
+// só na busca que abastece o lote do aluno.
 export function montarConsulta(
   filtro: FiltroMissao,
-  opcoes: { pagina?: number; porPagina?: number; banca?: string | null } = {},
+  opcoes: { porPagina?: number; banca?: string | null; gabarito?: boolean; afterId?: string | null } = {},
 ): URLSearchParams {
   const p = new URLSearchParams();
   p.set("materia", filtro.materia);
@@ -77,28 +81,31 @@ export function montarConsulta(
   else if (filtro.assunto) p.set("assunto", filtro.assunto);
   if (opcoes.banca) p.set("banca", opcoes.banca);
   p.set("tem_gabarito", "true");
-  p.set("include_gabarito", "true");
+  if (opcoes.gabarito) p.set("include_gabarito", "true");
   p.set("anulada", "false");
   p.set("desatualizada", "false");
   p.set("tem_anexos", "false");
-  p.set("page", String(Math.max(1, Math.trunc(opcoes.pagina ?? 1))));
-  p.set("per_page", String(Math.min(100, Math.max(1, Math.trunc(opcoes.porPagina ?? 50)))));
+  if (opcoes.afterId) p.set("after_id", opcoes.afterId);
+  p.set("per_page", String(Math.min(100, Math.max(1, Math.trunc(opcoes.porPagina ?? 1)))));
   return p;
+}
+
+// Aceita base com ou sem /v2 (o secret QUEST_API_BASE_URL pode vir de
+// qualquer jeito); devolve sempre ".../v2".
+export function baseV2(base?: string | null): string {
+  const b = (base || BASE_PADRAO).replace(/\/+$/, "");
+  return /\/v2$/.test(b) ? b : `${b}/v2`;
 }
 
 const ERRO_POR_STATUS: Record<number, TipoErroQuest> = { 401: "chave", 402: "cota", 403: "plano", 429: "limite" };
 
-export async function buscarQuest(
-  deps: DepsQuest,
-  params: URLSearchParams,
-): Promise<{ itens: unknown[]; total: number | null; proximo: string | null }> {
+async function getQuest(deps: DepsQuest, caminho: string, params: URLSearchParams): Promise<any> {
   if (!deps.chave) throw new QuestErro("sem_chave");
-  const base = (deps.base || BASE_PADRAO).replace(/\/+$/, "");
   const ctl = new AbortController();
   const timer = setTimeout(() => ctl.abort(), deps.timeoutMs ?? TIMEOUT_PADRAO_MS);
   let resp: Response;
   try {
-    resp = await deps.fetch(`${base}/v2/questoes?${params}`, {
+    resp = await deps.fetch(`${baseV2(deps.base)}${caminho}?${params}`, {
       method: "GET",
       headers: { "X-API-Key": deps.chave, Accept: "application/json" },
       signal: ctl.signal,
@@ -111,17 +118,42 @@ export async function buscarQuest(
   if (!resp.ok) {
     throw new QuestErro(ERRO_POR_STATUS[resp.status] ?? (resp.status >= 500 ? "indisponivel" : "formato"), resp.status);
   }
-  let corpo: any;
   try {
-    corpo = await resp.json();
+    return await resp.json();
   } catch {
     throw new QuestErro("formato", resp.status);
   }
+}
+
+export async function buscarQuest(
+  deps: DepsQuest,
+  params: URLSearchParams,
+): Promise<{ itens: unknown[]; total: number | null; proximo: string | null }> {
+  const corpo = await getQuest(deps, "/questoes", params);
   const dados = corpo?.data;
-  if (!dados || !Array.isArray(dados.items)) throw new QuestErro("formato", resp.status);
+  if (!dados || !Array.isArray(dados.items)) throw new QuestErro("formato");
   const total = Number.isFinite(Number(dados.total)) && dados.total !== null && dados.total !== undefined
     ? Number(dados.total) : null;
-  return { itens: dados.items, total, proximo: typeof dados.next_cursor === "string" ? dados.next_cursor : null };
+  // cursor da próxima página: o que a API devolver; senão o id do último item (after_id)
+  const ultimo = dados.items.length ? dados.items[dados.items.length - 1]?.id : null;
+  const proximo = typeof dados.next_cursor === "string" && dados.next_cursor
+    ? dados.next_cursor
+    : ultimo != null ? String(ultimo) : null;
+  return { itens: dados.items, total, proximo };
+}
+
+// Nomes exatos de matéria e assunto na Quest. Não entrega questão.
+export async function buscarFiltros(
+  deps: DepsQuest,
+  tipo: "materias" | "assuntos",
+  q: string,
+  extra: Record<string, string> = {},
+): Promise<unknown[]> {
+  const p = new URLSearchParams({ q, ...extra });
+  const corpo = await getQuest(deps, `/filtros/${tipo}`, p);
+  const itens = corpo?.data?.items ?? corpo?.data ?? corpo?.items;
+  if (!Array.isArray(itens)) throw new QuestErro("formato");
+  return itens.slice(0, 50);
 }
 
 const texto = (v: unknown): string | null => {
@@ -212,38 +244,37 @@ export type LinhaCobertura = {
   total: number | null;
   por_banca: Record<string, number | null>;
   outras: number | null;
-  utilizaveis_amostra: number | null;
-  amostra: number;
+  creditos: number;
   erro: TipoErroQuest | null;
 };
 
+const CREDITOS_SEM_GABARITO = 3;
+
 // Para cada missão: total com os filtros fixos, total por banca e o que
-// sobra ("outras"). "utilizaveis_amostra" conta, numa página de amostra,
-// quantas passam na normalização (gabarito utilizável, sem imagem): o
-// total da Quest não sabe disso. Chamadas em série, para não estourar o
-// limite do fornecedor.
+// sobra ("outras"). Cada chamada pede per_page=1 e SEM gabarito: o total
+// vem no envelope, e o custo é no máximo 3 créditos por chamada.
+// Chamadas em série, para não estourar o limite do fornecedor.
 export async function medirCobertura(
   deps: DepsQuest,
   missoes: MissaoCobertura[],
   bancas: string[],
-  amostra = 20,
 ): Promise<LinhaCobertura[]> {
   const linhas: LinhaCobertura[] = [];
-  for (const m of missoes) {
+  const contar = async (linha: LinhaCobertura, banca: string | null) => {
+    const r = await buscarQuest(deps, montarConsulta(linha.filtro, { banca, porPagina: 1 }));
+    linha.creditos += r.itens.length * CREDITOS_SEM_GABARITO;
+    return r.total;
+  };
+  for (const [i, m] of missoes.entries()) {
     const filtro: FiltroMissao = { materia: m.materia, assunto: m.assunto ?? null, assunto_id: m.assunto_id ?? null };
     const linha: LinhaCobertura = {
       chave: m.chave, nome: m.nome, materia_codigo: m.materia_codigo, filtro,
-      total: null, por_banca: {}, outras: null, utilizaveis_amostra: null, amostra: 0, erro: null,
+      total: null, por_banca: {}, outras: null, creditos: 0, erro: null,
     };
     try {
-      const geral = await buscarQuest(deps, montarConsulta(filtro, { porPagina: amostra }));
-      linha.total = geral.total;
-      linha.amostra = geral.itens.length;
-      linha.utilizaveis_amostra = geral.itens.filter((i) => normalizarQuestao(i) !== null).length;
-      for (const b of bancas) {
-        const r = await buscarQuest(deps, montarConsulta(filtro, { banca: b, porPagina: 1 }));
-        linha.por_banca[b] = r.total;
-      }
+      linha.total = await contar(linha, null);
+      // total zero: as bancas também dão zero; não gasta chamada
+      for (const b of bancas) linha.por_banca[b] = linha.total === 0 ? 0 : await contar(linha, b);
       const somas = Object.values(linha.por_banca);
       linha.outras = linha.total === null || somas.some((v) => v === null)
         ? null
@@ -253,11 +284,11 @@ export async function medirCobertura(
       // sem chave, chave errada, cota ou plano: nenhuma missão vai passar
       if (e instanceof QuestErro && ["sem_chave", "chave", "cota", "plano"].includes(e.tipo)) {
         linhas.push(linha);
-        for (const resto of missoes.slice(missoes.indexOf(m) + 1)) {
+        for (const resto of missoes.slice(i + 1)) {
           linhas.push({
             chave: resto.chave, nome: resto.nome, materia_codigo: resto.materia_codigo,
             filtro: { materia: resto.materia, assunto: resto.assunto ?? null, assunto_id: resto.assunto_id ?? null },
-            total: null, por_banca: {}, outras: null, utilizaveis_amostra: null, amostra: 0, erro: e.tipo,
+            total: null, por_banca: {}, outras: null, creditos: 0, erro: e.tipo,
           });
         }
         return linhas;

@@ -23,6 +23,11 @@
 --      decide se a prática é 'missao' (a da vez na fila da matéria) ou
 --      'revisao' (missão já iniciada); aplica o limite por aluno; monta
 --      o lote com questões guardadas que o aluno ainda não respondeu.
+--      CUSTO: a Quest cobra por questão entregue (6 créditos com gabarito).
+--      Questão guardada serve a TODOS os alunos da missão, de todas as
+--      escolas, sem nova chamada: a busca só acontece quando o estoque
+--      que este aluno ainda não respondeu não fecha o lote, e pede só as
+--      que faltam ('faltam'), a partir do cursor after_id da missão.
 --      Faltou questão: devolve estado 'buscar' com o filtro da missão, a
 --      função busca na Quest, guarda (quest_guardar_questoes) e pede de
 --      novo com p_sem_busca. O lote volta SEM gabarito.
@@ -70,7 +75,8 @@ create table if not exists app.quest_filtros_missao (
   assunto_id_fornecedor text check (assunto_id_fornecedor is null or length(assunto_id_fornecedor) between 1 and 100),
   ativo                 boolean not null default false,
   observacao            text,
-  proxima_pagina        int not null default 1 check (proxima_pagina >= 1),
+  -- paginação da Quest por cursor (after_id): null = do começo
+  cursor                text check (cursor is null or length(cursor) between 1 and 200),
   esgotada_em           timestamptz,
   ultima_busca_em       timestamptz,
   atualizado_em         timestamptz not null default now()
@@ -286,12 +292,14 @@ begin
   end if;
 
   -- limite por aluno: questões entregues hoje (data local) e lotes na última hora
-  select coalesce(sum(cardinality(en.questoes)), 0),
+  -- (a janela de uma hora não depende do dia: não zera à meia-noite)
+  select coalesce(sum(cardinality(en.questoes))
+                    filter (where (en.criada_em at time zone 'America/Sao_Paulo')::date = app.hoje_local()), 0),
          count(*) filter (where en.criada_em > now() - interval '1 hour')
     into v_dia, v_hora
     from app.quest_entregas en
    where en.aluno_id = a.id
-     and (en.criada_em at time zone 'America/Sao_Paulo')::date = app.hoje_local();
+     and en.criada_em > now() - interval '2 days';
   if v_hora >= (lim ->> 'lotes_hora')::int then
     return '{"estado": "limite", "motivo": "lotes_hora"}';
   end if;
@@ -316,9 +324,11 @@ begin
     update app.quest_filtros_missao set ultima_busca_em = now() where missao_id = m.id;
     return pg_catalog.jsonb_build_object(
       'estado', 'buscar', 'disponiveis', coalesce(cardinality(v_ids), 0),
+      -- só o que falta para este lote: a Quest cobra por questão entregue
+      'faltam', v_tam - coalesce(cardinality(v_ids), 0),
       'filtro', pg_catalog.jsonb_build_object(
         'materia', f.materia, 'assunto', f.assunto, 'assunto_id', f.assunto_id_fornecedor,
-        'pagina', f.proxima_pagina));
+        'cursor', f.cursor));
   end if;
 
   if coalesce(cardinality(v_ids), 0) = 0 then return '{"estado": "sem_questoes"}'; end if;
@@ -338,7 +348,7 @@ end $$;
 --     enunciado, alternativas: [{letra, texto}], gabarito, anulada, desatualizada}]
 -- Gabarito que muda na Quest sobe a versão; tentativa antiga mantém a dela.
 create or replace function public.quest_guardar_questoes(
-  p_missao uuid, p_itens jsonb, p_proxima_pagina int default null, p_esgotada boolean default false
+  p_missao uuid, p_itens jsonb, p_cursor text default null, p_esgotada boolean default false
 ) returns int
 language plpgsql security definer set search_path = '' as $$
 declare
@@ -370,7 +380,7 @@ begin
   end loop;
 
   update app.quest_filtros_missao
-     set proxima_pagina = coalesce(p_proxima_pagina, proxima_pagina),
+     set cursor = coalesce(p_cursor, cursor),
          esgotada_em = case when p_esgotada then now() else esgotada_em end,
          atualizado_em = now()
    where missao_id = p_missao;
@@ -589,11 +599,11 @@ revoke all on function app.quest_missao_da_vez(uuid, text) from public, anon, au
 revoke all on function app.quest_entrega_json(uuid) from public, anon, authenticated;
 revoke all on function app.quest_registro_guarda() from public, anon, authenticated;
 revoke all on function public.quest_preparar_entrega(uuid, uuid, uuid, uuid, int, boolean) from public, anon, authenticated;
-revoke all on function public.quest_guardar_questoes(uuid, jsonb, int, boolean) from public, anon, authenticated;
+revoke all on function public.quest_guardar_questoes(uuid, jsonb, text, boolean) from public, anon, authenticated;
 revoke all on function public.quest_responder(uuid, uuid, uuid, uuid, text, int) from public, anon, authenticated;
 revoke all on function public.quest_missoes_disponiveis() from public, anon;
 grant execute on function public.quest_preparar_entrega(uuid, uuid, uuid, uuid, int, boolean),
-                          public.quest_guardar_questoes(uuid, jsonb, int, boolean),
+                          public.quest_guardar_questoes(uuid, jsonb, text, boolean),
                           public.quest_responder(uuid, uuid, uuid, uuid, text, int) to service_role;
 grant execute on function public.quest_missoes_disponiveis() to authenticated, service_role;
 -- internas (classe d do C-S06): só outra SECURITY DEFINER ou o operador
@@ -603,7 +613,7 @@ grant execute on function app.quest_missao_da_vez(uuid, text), app.quest_entrega
 -- ROLLBACK (manual):
 --   drop trigger trg_quest_registro_guarda on registros_estudo;
 --   drop function public.quest_preparar_entrega(uuid, uuid, uuid, uuid, int, boolean),
---     public.quest_guardar_questoes(uuid, jsonb, int, boolean),
+--     public.quest_guardar_questoes(uuid, jsonb, text, boolean),
 --     public.quest_responder(uuid, uuid, uuid, uuid, text, int),
 --     public.quest_missoes_disponiveis(), app.quest_registro_guarda(),
 --     app.quest_entrega_json(uuid), app.quest_missao_da_vez(uuid, text), app.quest_limites();

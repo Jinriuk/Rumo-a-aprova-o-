@@ -58,9 +58,9 @@ const questao = (i, gabarito = "B", extra = {}) => ({
   alternativas: ["A", "B", "C", "D", "E"].map((l) => ({ letra: l, texto: `alt ${l}` })), gabarito, ...extra,
 });
 
-const guardar = (c, missao, itens, pagina = 2, esgotada = false) =>
+const guardar = (c, missao, itens, cursor = "cursor-2", esgotada = false) =>
   c.query("select public.quest_guardar_questoes($1, $2::jsonb, $3, $4) as n",
-    [missao, JSON.stringify(itens), pagina, esgotada]).then((r) => r.rows[0].n);
+    [missao, JSON.stringify(itens), cursor, esgotada]).then((r) => r.rows[0].n);
 
 const uuid = async (c) => (await c.query("select gen_random_uuid() as u")).rows[0].u;
 
@@ -97,7 +97,8 @@ test("sem questão guardada, a entrega pede busca com o filtro da missão; depoi
   await emTransacao(async (c, al) => {
     const r1 = await preparar(c, al, al.m[M1].id, { tamanho: 3 });
     assert.equal(r1.estado, "buscar");
-    assert.deepEqual(r1.filtro, { materia: "Matemática", assunto: M1, assunto_id: null, pagina: 1 });
+    assert.deepEqual(r1.filtro, { materia: "Matemática", assunto: M1, assunto_id: null, cursor: null });
+    assert.equal(r1.faltam, 3, "pede à Quest só o que falta para o lote");
     assert.equal(await guardar(c, al.m[M1].id, [1, 2, 3, 4].map((i) => questao(i))), 4);
 
     const r2 = await preparar(c, al, al.m[M1].id, { tamanho: 3, semBusca: true });
@@ -107,6 +108,34 @@ test("sem questão guardada, a entrega pede busca com o filtro da missão; depoi
     const texto = JSON.stringify(r2.entrega);
     assert.ok(!/gabarito/.test(texto), "o lote não leva gabarito antes da resposta");
     assert.ok(r2.entrega.questoes.every((q) => q.respondida === false && q.alternativas.length === 5));
+  });
+});
+
+test("créditos: questão guardada serve outro aluno, de outra escola, sem pedir busca à Quest", async () => {
+  await emTransacao(async (c, al) => {
+    await guardar(c, al.m[M1].id, [1, 2, 3, 4, 5].map((i) => questao(i)));
+    const a = await preparar(c, al, al.m[M1].id, { tamanho: 3 });
+    assert.equal(a.estado, "ok", "com estoque, nem o primeiro aluno pede busca");
+    // segundo aluno da EsPCEx, de outra escola
+    const b = (await c.query(`
+      select a.usuario_id as usuario, a.escola_id as escola from alunos a join concursos c on c.id = a.concurso_id
+       where c.codigo = 'espcex' and a.usuario_id is not null and a.escola_id <> $1
+         and not exists (select 1 from registros_estudo r where r.aluno_id = a.id and r.disciplina_codigo = 'mat')
+       order by a.id limit 1`, [al.escola])).rows[0]
+      ?? (await c.query(`
+      select a.usuario_id as usuario, a.escola_id as escola from alunos a join concursos c on c.id = a.concurso_id
+       where c.codigo = 'espcex' and a.usuario_id is not null and a.usuario_id <> $1
+         and not exists (select 1 from registros_estudo r where r.aluno_id = a.id and r.disciplina_codigo = 'mat')
+       order by a.id limit 1`, [al.usuario])).rows[0];
+    assert.ok(b, "a seed precisa de outro aluno da EsPCEx");
+    const rb = await preparar(c, b, al.m[M1].id, { tamanho: 5, semBusca: false });
+    assert.equal(rb.estado, "ok", "o estoque guardado fecha o lote do segundo aluno: nenhuma chamada nova");
+    assert.equal(rb.entrega.questoes.length, 5);
+    const n = (await c.query("select count(*)::int as n from app.quest_questoes")).rows[0].n;
+    assert.equal(n, 5, "as mesmas 5 linhas servem aos dois");
+    // com o estoque esgotado para ele, pede só o que falta
+    const rc = await preparar(c, b, al.m[M1].id, { tamanho: 5 });
+    assert.equal(rc.retomado, true, "lote aberto é retomado, não gera busca");
   });
 });
 
@@ -167,7 +196,7 @@ test("busca recente não se repete; filtro esgotado entrega o que tem", async ()
     assert.equal((await preparar(c, al, al.m[M1].id, { tamanho: 3 })).estado, "buscar");
     // a segunda chamada logo em seguida não manda buscar de novo
     assert.equal((await preparar(c, al, al.m[M1].id, { tamanho: 3 })).estado, "sem_questoes");
-    await guardar(c, al.m[M1].id, [questao(1)], 2, true);
+    await guardar(c, al.m[M1].id, [questao(1)], "cursor-2", true);
     await c.query("update app.quest_filtros_missao set ultima_busca_em = null where missao_id = $1", [al.m[M1].id]);
     const r = await preparar(c, al, al.m[M1].id, { tamanho: 3 });
     assert.equal(r.estado, "ok", "esgotado: não pede busca, entrega a única que há");
@@ -179,11 +208,15 @@ test("limite por aluno: questões por dia e lotes por hora", async () => {
   await emTransacao(async (c, al) => {
     const lim = (await c.query("select app.quest_limites() as l")).rows[0].l;
     await guardar(c, al.m[M1].id, Array.from({ length: 30 }, (_, i) => questao(i)));
-    // simula o dia já consumido
+    // simula o dia já consumido: lotes no começo do dia local (não depende
+    // da hora em que o teste roda), poucos para não bater o limite por hora
     await c.query(
       `insert into app.quest_entregas (pedido_id, escola_id, aluno_id, missao_id, tipo_pratica, questoes, criada_em, expira_em)
-       select gen_random_uuid(), $1, $2, $3, 'missao', array[gen_random_uuid()], now() - interval '2 hours', now() - interval '1 hour'
-         from generate_series(1, $4)`, [al.escola, al.aluno, al.m[M1].id, lim.questoes_dia]);
+       select gen_random_uuid(), $1, $2, $3, 'missao',
+              array(select gen_random_uuid() from generate_series(1, 40)),
+              (app.hoje_local()::timestamp at time zone 'America/Sao_Paulo') + interval '1 second',
+              now() - interval '1 second'
+         from generate_series(1, ceil($4 / 40.0)::int)`, [al.escola, al.aluno, al.m[M1].id, lim.questoes_dia]);
     assert.deepEqual(await preparar(c, al, al.m[M1].id, { semBusca: true }), { estado: "limite", motivo: "questoes_dia" });
     await c.query("delete from app.quest_entregas where aluno_id = $1", [al.aluno]);
     await c.query(
@@ -383,7 +416,7 @@ test("pela RLS: aluno e coordenação não leem gabarito, tentativa nem lote, ne
         "select public.quest_responder(gen_random_uuid(), gen_random_uuid(), gen_random_uuid(), gen_random_uuid(), 'A', 1)");
       await esperaErro(c, /permission denied/,
         "select public.quest_preparar_entrega(gen_random_uuid(), gen_random_uuid(), gen_random_uuid(), gen_random_uuid(), 1, true)");
-      await esperaErro(c, /permission denied/, "select public.quest_guardar_questoes(gen_random_uuid(), '[]', 1, false)");
+      await esperaErro(c, /permission denied/, "select public.quest_guardar_questoes(gen_random_uuid(), '[]', 'c1', false)");
     });
   }
 });
