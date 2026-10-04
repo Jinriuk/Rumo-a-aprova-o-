@@ -124,3 +124,17 @@ test("o SQL da publicação é reprodutível: duas gerações dão o mesmo sha25
   const h = (s) => createHash("sha256").update(s).digest("hex");
   assert.equal(h(gerarSql(M, PUBLICACAO)), h(gerarSql(carregarFonte(), PUBLICACAO)));
 });
+
+test("produção começa em 12/10/2026: segunda-feira, 12 semanas até 03/01/2027, só as datas diferem do demo", () => {
+  const prod = { ...PUBLICACAO, inicio: "2026-10-12" };
+  assert.deepEqual(validarParametros(prod), []);
+  assert.equal(new Date(`${prod.inicio}T00:00:00Z`).getUTCDay(), 1);
+  const sql = gerarSql(M, prod);
+  assert.match(sql, /\(1, '2026-10-12', '2026-10-18'/);
+  assert.match(sql, /\(12, '2026-12-28', '2027-01-03'/);
+  // fora as datas, o SQL da produção é o do demo: mesmo conteúdo, mesmo tamanho
+  const demo = gerarSql(M, PUBLICACAO);
+  assert.equal(Buffer.byteLength(sql), Buffer.byteLength(demo));
+  const semDatas = (t) => t.replace(/20\d\d-\d\d-\d\d/g, "AAAA-MM-DD");
+  assert.equal(semDatas(sql), semDatas(demo));
+});

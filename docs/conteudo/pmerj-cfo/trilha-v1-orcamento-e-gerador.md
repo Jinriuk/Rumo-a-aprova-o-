@@ -130,8 +130,9 @@ Feito no repositório:
    cria sem data de prova, e o validador de conteúdo lê o catálogo do PMERJ do manifesto, não
    dos seeds 05, 07 e 09. Por isso o PMERJ não aparece em banco de desenvolvimento nem em
    reseed da demonstração antes de alguém aplicar o SQL.
-3. O SQL sai com `--publicada --inicio 2026-10-05 --turma 1` (segunda-feira seguinte à
-   publicação no demo). A ordem de aplicação é o SQL e depois a linha do PMERJ do seed 18.
+3. O SQL sai com `--publicada --turma 1` e `--inicio 2026-10-05` no demo (segunda-feira
+   seguinte à publicação) e `--inicio 2026-10-12` na produção (decisão do dono). A ordem de
+   aplicação é o SQL e depois a linha do PMERJ do seed 18.
 
 Registro, linha de base, conferência e reversão: `docs/operacao/aplicacao-pmerj-cfo-p06.md`.
 

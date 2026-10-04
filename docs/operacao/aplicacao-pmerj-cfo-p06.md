@@ -7,21 +7,25 @@
 | Fase | Projeto | Situação |
 |---|---|---|
 | 1 | demo `bdjkgrzfzoamchdpobbl` | **aplicada em 04/10/2026**, conferida pelo TOTAL da conferência; teste com os olhos pelo dono pendente |
-| 2 | produção `zckyhihxjjbnqjqilymn` | **aguardando o número de um backup novo, a ser enviado pelo dono** |
+| 2 | produção `zckyhihxjjbnqjqilymn` | **não aplicada: aguardando o número do backup novo.** SQL de 12/10 gerado e ensaiado no Postgres local |
 
 ## O que é aplicado
 
 Dois comandos, nesta ordem, em cada banco:
 
-1. O SQL do gerador, uma transação só (`begin` a `commit`, com conferência no fim):
+1. O SQL do gerador, uma transação só (`begin` a `commit`, com conferência no fim). A
+   data de início é a única diferença entre os dois bancos:
+
+   | Banco | Comando | sha256 | md5 |
+   |---|---|---|---|
+   | demo | `--inicio 2026-10-05` | `9b6fda99b2a3d2171fbe2102754fbc0e052718f52bb4825d9c8527a654202d45` | `8e0145cb2e7f8a669081c7f2d1bc28a4` |
+   | produção | `--inicio 2026-10-12` | `9304cfadf121e2d787bfd6c81865e3bb88b77d45a1f2b84c07e87c563aa5e23e` | `80a8a610c9abfd36314bfeb2200a4b15` |
 
    ```bash
-   node scripts/gerar-seed-trilha-pmerj-cfo.mjs --inicio 2026-10-05 --turma 1 --publicada --saida pmerj-turma1.sql
+   node scripts/gerar-seed-trilha-pmerj-cfo.mjs --inicio <data> --turma 1 --publicada --saida pmerj-turma1.sql
    ```
 
-   - 144.444 bytes.
-   - sha256 `9b6fda99b2a3d2171fbe2102754fbc0e052718f52bb4825d9c8527a654202d45`.
-   - md5 `8e0145cb2e7f8a669081c7f2d1bc28a4`.
+   - Os dois têm 144.444 bytes e diferem só nas datas das 12 semanas e no cabeçalho.
    - O arquivo não entra no repositório (depende da data). Duas gerações dão o mesmo
      arquivo, e `tests/p06-publicacao-pmerj.test.mjs` trava isso.
 
@@ -37,16 +41,16 @@ Dois comandos, nesta ordem, em cada banco:
 Se o comando 1 falha, nada entra (a transação volta). Se o 2 falha, o concurso fica
 `indisponivel`, que é o estado seguro: o front trata o concurso como fechado.
 
-### Por que `--inicio 2026-10-05`
+### Por que duas datas de início
 
-A publicação no demo é de domingo, 04/10/2026. A segunda-feira seguinte é 05/10. As 12
-semanas vão de 05/10 a 27/12/2026, de segunda a domingo, sem lacuna.
+- **Demo: 05/10/2026.** A publicação no demo foi no domingo, 04/10. A segunda-feira seguinte
+  é 05/10, e as 12 semanas vão de 05/10 a 27/12/2026, de segunda a domingo, sem lacuna.
+- **Produção: 12/10/2026**, por decisão do dono em 04/10. As 12 semanas vão de 12/10/2026 a
+  03/01/2027, também de segunda a domingo e sem lacuna. 12/10 é feriado nacional, então a
+  semana 1 começa num feriado.
 
-**Se a produção for aplicada depois de 05/10, o início da turma 1 de lá deixa de ser "a
-segunda-feira seguinte à publicação".** Gerar outro SQL com uma segunda-feira posterior é
-possível em produção (turma 1 ainda não existe lá), mas o demo ficaria com a turma 1 em
-05/10: o SQL recusa mudar a data de uma turma que já existe. Decidir isso antes de aplicar
-em produção.
+A turma 1 do demo continua em 05/10: o SQL recusa mudar a data de uma turma que já existe.
+As duas turmas 1 são bancos separados, sem relação entre si.
 
 ## O que a publicação faz
 
@@ -100,11 +104,14 @@ conteúdo do PMERJ por tabela, e um TOTAL. Rodado no Postgres local depois do SQ
 carimbo, em cima de um banco com o catálogo de produção (86 assuntos, 30 missões):
 
 - concursos 7, assuntos 305, missões 54, semanas 30 (as contagens totais de cada banco);
-- TOTAL do PMERJ: 455 linhas, md5 `352873c8f641a26a258c2132641e9fb0`;
+- TOTAL do PMERJ com início em 05/10 (demo): 455 linhas, md5 `352873c8f641a26a258c2132641e9fb0`;
+- TOTAL do PMERJ com início em 12/10 (produção): 455 linhas, md5 `2a2f0b326d30fc7d7a51a3116c77ba87`.
+  Dentro dele, só a linha de `trilha_semanas` muda (`7bbacdb0…` com 05/10, `01883cb0…` com
+  12/10); as outras nove tabelas têm o mesmo md5 nos dois;
 - antes de aplicar, o TOTAL é 0 linhas, md5 `fef8542fb7089d033fc33b25511c9f57`.
 
-Em cada banco, depois de aplicar, o TOTAL tem de ser exatamente esse. As contagens totais
-esperadas são a linha de base mais o efeito da tabela acima.
+Em cada banco, depois de aplicar, o TOTAL tem de ser exatamente o da sua data. As contagens
+totais esperadas são a linha de base mais o efeito da tabela acima.
 
 ## Reversão
 
