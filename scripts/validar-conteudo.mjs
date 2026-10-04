@@ -69,12 +69,29 @@ export function temTag(bloco, codigo) {
   return new RegExp(`'${codigo}'`).test(bloco);
 }
 
-// Códigos de concurso declarados no seed 05_concursos.sql.
+// Códigos de concurso declarados no seed 05_concursos.sql. SÓ o seed:
+// é o que `tests/reset-db.sh` e o CI carregam.
 export function concursosDoSeed() {
   const bloco = blocoInsert(ler("supabase/seed/05_concursos.sql"), "concursos");
   // cada linha de valor começa com (uuid, 'codigo', ...) → 2º token
   const cods = [...bloco.matchAll(/'[0-9a-f-]{36}',\s*'([a-z0-9_]+)'/gi)].map((m) => m[1]);
   return [...new Set(cods)];
+}
+
+// O CFO PMERJ não está em 05_concursos.sql: o concurso entra pelo SQL do
+// gerador (sem data de prova, 0062), porque a trilha tem data de início
+// por parâmetro e não é seed (P0.6). A fonte dele é o manifesto, que é um
+// artefato editorial e NÃO é carregado por um banco recém-criado: um
+// reset local ou de CI não tem o PMERJ até alguém aplicar o SQL gerado.
+export function concursosDoManifesto() {
+  const m = carregarFontePmerjCfo();
+  return [m.concurso.codigo];
+}
+
+// Tudo o que a matriz precisa cobrir: o seed mais os concursos de
+// manifesto. `conteudoRealPorConcurso` diz a origem de cada um.
+export function concursosDoCatalogo() {
+  return [...new Set([...concursosDoSeed(), ...concursosDoManifesto()])];
 }
 
 // Conteúdo real por concurso a partir dos seeds (presença booleana).
@@ -86,8 +103,23 @@ export function conteudoRealPorConcurso() {
   const blocoMissoes = blocoInsert(trilhas, "missoes");
   const blocoPlanos = blocoInsert(trilhas, "trilha_planos");
   const out = {};
-  for (const cod of concursosDoSeed()) {
+  const pmerj = carregarFontePmerjCfo();
+  for (const cod of concursosDoCatalogo()) {
+    // concurso de manifesto: sem estrutura de prova oficial (é pré-edital),
+    // com assuntos, missões e plano no manifesto em vez dos seeds 07 e 09.
+    if (cod === pmerj.concurso.codigo) {
+      out[cod] = {
+        origem: "manifesto",
+        provaOficial: false,
+        assuntos: (pmerj.anexoII ?? []).length > 0,
+        missoes: (pmerj.missoes ?? []).length > 0,
+        planos: (pmerj.planos ?? []).length > 0,
+        trilhaSemanal: trilhaSemanalPresente(cod),
+      };
+      continue;
+    }
     out[cod] = {
+      origem: "seed",
       provaOficial: temTag(blocoProvaMaterias, cod),
       assuntos: temTag(blocoAssuntos, cod),
       missoes: temTag(blocoMissoes, cod),
@@ -201,7 +233,17 @@ export function integridadeEspcexPed2R3() {
 // sai sob demanda (scripts/gerar-seed-trilha-pmerj-cfo.mjs).
 export function integridadeTrilhaPmerjCfo() {
   try {
-    return validarFontePmerjCfo(carregarFontePmerjCfo()).map((e) => `trilha-pmerj-cfo: ${e}`);
+    const m = carregarFontePmerjCfo();
+    const erros = validarFontePmerjCfo(m).map((e) => `trilha-pmerj-cfo: ${e}`);
+    // P0.6: a matriz e o manifesto precisam falar do mesmo concurso e da
+    // mesma trilha, e o desenho é inferência: nunca "completa".
+    const c = MATURIDADE_CONCURSOS[m.concurso.codigo];
+    if (!c) erros.push(`trilha-pmerj-cfo: '${m.concurso.codigo}' não está na matriz de maturidade`);
+    else {
+      if (c.maturidade !== "pre_edital") erros.push(`trilha-pmerj-cfo: '${c.codigo}' deve ser 'pre_edital' (o desenho é inferência), está '${c.maturidade}'`);
+      if (c.trilhaNicho !== m.nicho) erros.push(`trilha-pmerj-cfo: trilhaNicho da matriz é '${c.trilhaNicho}', o manifesto é '${m.nicho}'`);
+    }
+    return erros;
   } catch (e) {
     return [`trilha-pmerj-cfo: falha ao validar fonte (${e.message})`];
   }
@@ -225,7 +267,7 @@ export function validar() {
   const erros = [];
   const avisos = [];
 
-  const codigosSeed = new Set(concursosDoSeed());
+  const codigosSeed = new Set(concursosDoCatalogo());
   const codigosMatriz = new Set(Object.keys(MATURIDADE_CONCURSOS));
 
   // 1) Matriz × seed de concursos: cobertura mútua.
@@ -272,7 +314,7 @@ if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) {
   const { erros, avisos, real } = validar();
   console.log("CONTEÚDO POR CONCURSO (presença):");
   for (const [cod, r] of Object.entries(real)) {
-    console.log(`  ${cod.padEnd(7)} prova=${r.provaOficial?"✓":"·"} assuntos=${r.assuntos?"✓":"·"} missoes=${r.missoes?"✓":"·"} trilhaSemanal=${r.trilhaSemanal?"✓":"·"}  → ${MATURIDADE_CONCURSOS[cod]?.maturidade ?? "—"}`);
+    console.log(`  ${cod.padEnd(7)} prova=${r.provaOficial?"✓":"·"} assuntos=${r.assuntos?"✓":"·"} missoes=${r.missoes?"✓":"·"} trilhaSemanal=${r.trilhaSemanal?"✓":"·"}  → ${MATURIDADE_CONCURSOS[cod]?.maturidade ?? "—"}${r.origem === "manifesto" ? "  (manifesto: sem seed, entra pelo SQL gerado)" : ""}`);
   }
   if (avisos.length) { console.log("\nAVISOS:"); for (const a of avisos) console.log("  • " + a); }
   if (erros.length) {
