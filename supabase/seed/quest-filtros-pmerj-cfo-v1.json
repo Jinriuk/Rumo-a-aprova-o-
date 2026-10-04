@@ -1,0 +1,252 @@
+{
+  "comentario": "P1.1: filtro de cada missão do CFO PMERJ na Quest API. Os nomes de matéria e assunto são PROPOSTA, escritos a partir do Anexo II, sem acesso ao catálogo da Quest: 'conferido' fica false até a primeira medição (scripts/quest-cobertura.mjs) e a conferência do dono. Zero numa linha pode ser assunto com nome diferente na Quest, não falta de questão. Preferir assunto_id da Quest quando ele for conhecido.",
+  "versao": 1,
+  "examTag": "pmerj_cfo",
+  "fornecedor": "quest",
+  "bancas": [
+    "CESGRANRIO",
+    "FGV"
+  ],
+  "missoes": [
+    {
+      "chave": "PMERJ-M01-ADM",
+      "nome": "Organização administrativa: direta, indireta e delegação",
+      "materia_codigo": "dir_adm",
+      "assuntoAnexo": "ADM-03",
+      "materia": "Direito Administrativo",
+      "assunto": "Administração Direta e Indireta",
+      "assunto_id": null,
+      "conferido": false
+    },
+    {
+      "chave": "PMERJ-M01-CONST",
+      "nome": "Eficácia das normas e limites da reforma",
+      "materia_codigo": "dir_const",
+      "assuntoAnexo": "CONST-04",
+      "materia": "Direito Constitucional",
+      "assunto": "Aplicabilidade das Normas Constitucionais",
+      "assunto_id": null,
+      "conferido": false
+    },
+    {
+      "chave": "PMERJ-M01-PEN",
+      "nome": "Lei penal no tempo e no espaço",
+      "materia_codigo": "dir_pen",
+      "assuntoAnexo": "PEN-06",
+      "materia": "Direito Penal",
+      "assunto": "Lei Penal no Tempo",
+      "assunto_id": null,
+      "conferido": false
+    },
+    {
+      "chave": "PMERJ-M01-CPP",
+      "nome": "Sistema processual e aplicação da lei processual",
+      "materia_codigo": "dir_proc_pen",
+      "assuntoAnexo": "CPP-02",
+      "materia": "Direito Processual Penal",
+      "assunto": "Sistemas Processuais Penais",
+      "assunto_id": null,
+      "conferido": false
+    },
+    {
+      "chave": "PMERJ-M01-CPM",
+      "nome": "Quando o caso é militar",
+      "materia_codigo": "dir_pen_mil",
+      "assuntoAnexo": "CPM-01",
+      "materia": "Direito Penal Militar",
+      "assunto": "Aplicação da Lei Penal Militar",
+      "assunto_id": null,
+      "conferido": false
+    },
+    {
+      "chave": "PMERJ-M01-DH",
+      "nome": "Proteção constitucional e convencional",
+      "materia_codigo": "dir_hum",
+      "assuntoAnexo": "DH-12",
+      "materia": "Direitos Humanos",
+      "assunto": "Direitos Humanos na Constituição Federal",
+      "assunto_id": null,
+      "conferido": false
+    },
+    {
+      "chave": "PMERJ-M02-ADM",
+      "nome": "Poderes e elementos do ato administrativo",
+      "materia_codigo": "dir_adm",
+      "assuntoAnexo": "ADM-12",
+      "materia": "Direito Administrativo",
+      "assunto": "Atos Administrativos",
+      "assunto_id": null,
+      "conferido": false
+    },
+    {
+      "chave": "PMERJ-M02-CONST",
+      "nome": "Direitos fundamentais e direitos políticos",
+      "materia_codigo": "dir_const",
+      "assuntoAnexo": "CONST-10",
+      "materia": "Direito Constitucional",
+      "assunto": "Direitos e Deveres Individuais e Coletivos",
+      "assunto_id": null,
+      "conferido": false
+    },
+    {
+      "chave": "PMERJ-M02-PEN",
+      "nome": "Fato típico: conduta, nexo, dolo e culpa",
+      "materia_codigo": "dir_pen",
+      "assuntoAnexo": "PEN-14",
+      "materia": "Direito Penal",
+      "assunto": "Fato Típico",
+      "assunto_id": null,
+      "conferido": false
+    },
+    {
+      "chave": "PMERJ-M02-CPP",
+      "nome": "Inquérito, arquivamento e acordo de não persecução",
+      "materia_codigo": "dir_proc_pen",
+      "assuntoAnexo": "CPP-06",
+      "materia": "Direito Processual Penal",
+      "assunto": "Inquérito Policial",
+      "assunto_id": null,
+      "conferido": false
+    },
+    {
+      "chave": "PMERJ-M02-CPM",
+      "nome": "Crime militar, imputabilidade e concurso de agentes",
+      "materia_codigo": "dir_pen_mil",
+      "assuntoAnexo": "CPM-03",
+      "materia": "Direito Penal Militar",
+      "assunto": "Imputabilidade Penal",
+      "assunto_id": null,
+      "conferido": false
+    },
+    {
+      "chave": "PMERJ-M02-DH",
+      "nome": "Sistemas de proteção e seus órgãos",
+      "materia_codigo": "dir_hum",
+      "assuntoAnexo": "DH-02",
+      "materia": "Direitos Humanos",
+      "assunto": "Convenções e Tratados Internacionais de Direitos Humanos",
+      "assunto_id": null,
+      "conferido": false
+    },
+    {
+      "chave": "PMERJ-M03-ADM",
+      "nome": "Responsabilidades do agente e processo disciplinar",
+      "materia_codigo": "dir_adm",
+      "assuntoAnexo": "ADM-21",
+      "materia": "Direito Administrativo",
+      "assunto": "Processo Administrativo Disciplinar",
+      "assunto_id": null,
+      "conferido": false
+    },
+    {
+      "chave": "PMERJ-M03-CONST",
+      "nome": "Controle concentrado: ADI e ADC",
+      "materia_codigo": "dir_const",
+      "assuntoAnexo": "CONST-09",
+      "materia": "Direito Constitucional",
+      "assunto": "Controle Concentrado de Constitucionalidade",
+      "assunto_id": null,
+      "conferido": false
+    },
+    {
+      "chave": "PMERJ-M03-PEN",
+      "nome": "Tentativa, ilicitude e culpabilidade",
+      "materia_codigo": "dir_pen",
+      "assuntoAnexo": "PEN-29",
+      "materia": "Direito Penal",
+      "assunto": "Culpabilidade",
+      "assunto_id": null,
+      "conferido": false
+    },
+    {
+      "chave": "PMERJ-M03-CPP",
+      "nome": "Ação penal e competência",
+      "materia_codigo": "dir_proc_pen",
+      "assuntoAnexo": "CPP-10",
+      "materia": "Direito Processual Penal",
+      "assunto": "Ação Penal",
+      "assunto_id": null,
+      "conferido": false
+    },
+    {
+      "chave": "PMERJ-M03-CPM",
+      "nome": "Penas e aplicação da pena no Código Penal Militar",
+      "materia_codigo": "dir_pen_mil",
+      "assuntoAnexo": "CPM-06",
+      "materia": "Direito Penal Militar",
+      "assunto": "Aplicação da Pena",
+      "assunto_id": null,
+      "conferido": false
+    },
+    {
+      "chave": "PMERJ-M03-DH",
+      "nome": "Sistema interamericano aplicado",
+      "materia_codigo": "dir_hum",
+      "assuntoAnexo": "DH-02",
+      "materia": "Direitos Humanos",
+      "assunto": "Sistema Interamericano de Direitos Humanos",
+      "assunto_id": null,
+      "conferido": false
+    },
+    {
+      "chave": "PMERJ-M04-ADM",
+      "nome": "Acesso à informação, dados pessoais e correção do simulado",
+      "materia_codigo": "dir_adm",
+      "assuntoAnexo": "ADM-40",
+      "materia": "Direito Administrativo",
+      "assunto": "Lei de Acesso à Informação",
+      "assunto_id": null,
+      "conferido": false
+    },
+    {
+      "chave": "PMERJ-M04-CONST",
+      "nome": "Ações constitucionais e correção do simulado",
+      "materia_codigo": "dir_const",
+      "assuntoAnexo": "CONST-13",
+      "materia": "Direito Constitucional",
+      "assunto": "Ações Constitucionais",
+      "assunto_id": null,
+      "conferido": false
+    },
+    {
+      "chave": "PMERJ-M04-PEN",
+      "nome": "Prescrição, punibilidade e correção do simulado",
+      "materia_codigo": "dir_pen",
+      "assuntoAnexo": "PEN-40",
+      "materia": "Direito Penal",
+      "assunto": "Prescrição",
+      "assunto_id": null,
+      "conferido": false
+    },
+    {
+      "chave": "PMERJ-M04-CPP",
+      "nome": "Incidentes processuais e correção do simulado",
+      "materia_codigo": "dir_proc_pen",
+      "assuntoAnexo": "CPP-19",
+      "materia": "Direito Processual Penal",
+      "assunto": "Incidente de Insanidade Mental",
+      "assunto_id": null,
+      "conferido": false
+    },
+    {
+      "chave": "PMERJ-M04-CPM",
+      "nome": "Suspensão, livramento, efeitos e correção do simulado",
+      "materia_codigo": "dir_pen_mil",
+      "assuntoAnexo": "CPM-07",
+      "materia": "Direito Penal Militar",
+      "assunto": "Suspensão Condicional da Pena",
+      "assunto_id": null,
+      "conferido": false
+    },
+    {
+      "chave": "PMERJ-M04-DH",
+      "nome": "Letalidade policial e correção do simulado",
+      "materia_codigo": "dir_hum",
+      "assuntoAnexo": "DH-07",
+      "materia": "Direitos Humanos",
+      "assunto": "Uso da Força e Letalidade Policial",
+      "assunto_id": null,
+      "conferido": false
+    }
+  ]
+}
