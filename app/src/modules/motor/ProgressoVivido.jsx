@@ -8,6 +8,7 @@ import React, { useEffect, useRef } from "react";
 import { SectionCard, StatusBadge, BarraXP, Erro } from "../../shared/ui/componentes.jsx";
 import { useTema } from "../../shared/branding/BrandingContext.jsx";
 import { resumoRegistroConfirmado, contextoRegistroDaMissao } from "./jornada.js";
+import { podeResolverAqui } from "./questoesIntegradas.js";
 
 const tempoConfirmado = (minutos) => {
   if (minutos == null) return null;
@@ -142,8 +143,11 @@ const ROTULO_MATERIA = { mat: "Matemática", por: "Português", ing: "Inglês", 
    `disciplinas` = as registráveis da trilha (mesma lista do Registrar).
    `compacta` (modo essencial): só a missão da vez de cada matéria, com o
    botão. Desde a 0064 o botão é o único caminho que avança missão, então
-   o modo essencial não pode escondê-lo junto com o resto do painel. */
-export function MissoesPersistidas({ fila = [], disciplinas = [], aoPraticar, compacta = false }) {
+   o modo essencial não pode escondê-lo junto com o resto do painel.
+   P1.1: `questoesIntegradas` (Set de ids que o servidor ligou) e
+   `aoResolver(missao, tipo)` acrescentam "Resolver questões aqui"; sem
+   eles, o painel é o mesmo de antes. */
+export function MissoesPersistidas({ fila = [], disciplinas = [], aoPraticar, compacta = false, questoesIntegradas = null, aoResolver }) {
   const T = useTema();
   const registraveis = new Set((disciplinas ?? []).map((d) => d.codigo));
   const podeRegistrar = (cod) => registraveis.size === 0 || !cod || registraveis.has(cod);
@@ -225,6 +229,12 @@ export function MissoesPersistidas({ fila = [], disciplinas = [], aoPraticar, co
                         <button type="button" className="journey-use-suggestion" style={{ marginTop: 8 }}
                           onClick={() => aoPraticar(contextoRegistroDaMissao(mi, "revisao"))}>
                           Registrar revisão
+                        </button>
+                      )}
+                      {aoResolver && !coordenacao && !inalcancavel && podeResolverAqui(mi, questoesIntegradas) && (
+                        <button type="button" className="journey-use-suggestion" style={{ marginTop: 8, marginLeft: 8 }}
+                          onClick={() => aoResolver(mi, mi.estado === "concluida" ? "revisao" : "missao")}>
+                          {mi.estado === "concluida" ? "Revisar com questões" : "Resolver questões aqui"}
                         </button>
                       )}
                     </li>
