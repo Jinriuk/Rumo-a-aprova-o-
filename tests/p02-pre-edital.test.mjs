@@ -160,10 +160,11 @@ test("pre_edital recebe só a trilha do PRÓPRIO nicho, nunca a de outro concurs
   });
 });
 
-test("os outros concursos não mudam de nível", () => {
+test("os seis concursos anteriores não mudam de nível; só o PMERJ entra, como pre_edital (P0.6)", () => {
   const atual = Object.fromEntries(Object.values(MATURIDADE_CONCURSOS).map((c) => [c.codigo, c.maturidade]));
   assert.deepEqual(atual, {
-    cn: "completa", espcex: "completa", epcar: "esqueleto", esa: "esqueleto", eear: "esqueleto", cm: "indisponivel",
+    cn: "completa", espcex: "completa", pmerj_cfo: "pre_edital",
+    epcar: "esqueleto", esa: "esqueleto", eear: "esqueleto", cm: "indisponivel",
   });
 });
 
