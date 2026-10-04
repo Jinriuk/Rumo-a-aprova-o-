@@ -7,7 +7,8 @@
 // função `questoes-integradas` a ação `cobertura`, que consulta a Quest
 // lá dentro e devolve só contagens.
 //
-// NOMES EXATOS (banca, matéria e assunto precisam do valor exato da Quest):
+// NOMES EXATOS (banca, matéria e assunto precisam do valor exato da Quest;
+// GET /filtros custa 1 crédito por chamada: 6 matérias + 1 por termo de assunto):
 //   ... node scripts/quest-cobertura.mjs --filtros [--saida filtros.json]
 //
 // MEDIR (per_page=1, sem gabarito; imprime a tabela; --saida grava o JSON):
@@ -181,22 +182,25 @@ async function medir({ saida }) {
 // Candidatos de nome exato na Quest para cada missão: as matérias que
 // casam com a do mapa e os assuntos que casam com cada termo de
 // `buscaAssunto` (ou com o assunto do mapa). Não entrega questão.
-async function levantarFiltros({ saida }) {
+// GET /filtros custa 1 crédito por chamada (painel de Uso da Quest).
+export const CREDITOS_POR_FILTRO = 1;
+
+async function levantarFiltros({ saida, chamar: chamarDado } = {}) {
   const mapa = carregarMapa();
-  const chamar = await sessaoOperador();
+  const chamar = chamarDado ?? await sessaoOperador();
+  let chamadas = 0;
+  const filtro = async (corpo) => { chamadas++; return (await chamar({ acao: "filtros", ...corpo })).itens; };
   const materias = {};
   for (const nome of new Set(mapa.missoes.map((f) => f.materia))) {
-    materias[nome] = (await chamar({ acao: "filtros", tipo: "materias", q: nome })).itens;
+    materias[nome] = await filtro({ tipo: "materias", q: nome });
   }
   const assuntos = {};
   for (const f of mapa.missoes) {
     const termos = f.buscaAssunto?.length ? f.buscaAssunto : [f.assunto];
     assuntos[f.chave] = {};
-    for (const q of termos) {
-      assuntos[f.chave][q] = (await chamar({ acao: "filtros", tipo: "assuntos", q, materia: f.materia })).itens;
-    }
+    for (const q of termos) assuntos[f.chave][q] = await filtro({ tipo: "assuntos", q, materia: f.materia });
   }
-  const r = { levantado_em: new Date().toISOString(), materias, assuntos };
+  const r = { levantado_em: new Date().toISOString(), chamadas, creditos: chamadas * CREDITOS_POR_FILTRO, materias, assuntos };
   if (saida) writeFileSync(saida, JSON.stringify(r, null, 2) + "\n");
   return r;
 }

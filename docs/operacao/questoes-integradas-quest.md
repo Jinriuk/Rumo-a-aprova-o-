@@ -31,6 +31,9 @@ Bancas: `CESGRANRIO` e `FGV`.
 - A medição pede `per_page=1` e **sem** gabarito: no máximo 3 créditos por chamada, 3 chamadas
   por missão (total, CESGRANRIO, FGV), e total zero não gasta as chamadas por banca. Teto para as
   24 missões: 216 créditos.
+- `GET /filtros/*` custa **1 crédito por chamada** (painel de Uso da Quest). O levantamento de nomes
+  (`--filtros`) faz 6 chamadas de matéria + 1 por termo de assunto: ~30 créditos na primeira rodada.
+  Teto da medição completa (nomes + cobertura): ~246 créditos, mais uma rodada de filtros por ajuste.
 - Questão descartada na normalização (imagem, anexo, gabarito fora das alternativas) já foi paga.
   O filtro `tem_anexos=false` reduz isso, mas não zera.
 
