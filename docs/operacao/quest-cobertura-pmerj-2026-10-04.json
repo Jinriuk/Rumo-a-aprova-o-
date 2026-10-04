@@ -1,0 +1,442 @@
+{
+  "estado": "ok",
+  "bancas": [
+    "CESGRANRIO",
+    "FGV"
+  ],
+  "medido_em": "2026-10-04T14:24:23.464Z",
+  "linhas": [
+    {
+      "chave": "PMERJ-M01-ADM",
+      "nome": "Organização administrativa: direta, indireta e delegação",
+      "materia_codigo": "dir_adm",
+      "filtro": {
+        "materia": "Direito Administrativo",
+        "assunto": "Organização Administrativa",
+        "assunto_id": null
+      },
+      "total": 745,
+      "por_banca": {
+        "CESGRANRIO": 1,
+        "FGV": 41
+      },
+      "outras": 703,
+      "creditos": 9,
+      "erro": null
+    },
+    {
+      "chave": "PMERJ-M01-CONST",
+      "nome": "Eficácia das normas e limites da reforma",
+      "materia_codigo": "dir_const",
+      "filtro": {
+        "materia": "Direito Constitucional",
+        "assunto": "Aplicabilidade das normas constitucionais, eficácia e aplicabilidade das normas constitucionais ou classificação das normas constitucionais ou vigência e eficácia das normas constitucionais ou normas constitucionais: classificação e eficácia",
+        "assunto_id": null
+      },
+      "total": 115,
+      "por_banca": {
+        "CESGRANRIO": 1,
+        "FGV": 14
+      },
+      "outras": 100,
+      "creditos": 9,
+      "erro": null
+    },
+    {
+      "chave": "PMERJ-M01-PEN",
+      "nome": "Lei penal no tempo e no espaço",
+      "materia_codigo": "dir_pen",
+      "filtro": {
+        "materia": "Direito Penal",
+        "assunto": "Lei penal no tempo",
+        "assunto_id": null
+      },
+      "total": 22,
+      "por_banca": {
+        "CESGRANRIO": 0,
+        "FGV": 2
+      },
+      "outras": 20,
+      "creditos": 6,
+      "erro": null
+    },
+    {
+      "chave": "PMERJ-M01-CPP",
+      "nome": "Sistema processual e aplicação da lei processual",
+      "materia_codigo": "dir_proc_pen",
+      "filtro": {
+        "materia": "Direito Processual Penal",
+        "assunto": "Sistemas Processuais Penais",
+        "assunto_id": null
+      },
+      "total": 6,
+      "por_banca": {
+        "CESGRANRIO": 0,
+        "FGV": 0
+      },
+      "outras": 6,
+      "creditos": 3,
+      "erro": null
+    },
+    {
+      "chave": "PMERJ-M01-CPM",
+      "nome": "Quando o caso é militar",
+      "materia_codigo": "dir_pen_mil",
+      "filtro": {
+        "materia": "Direito Penal Militar",
+        "assunto": "Aplicação da Lei Penal Militar",
+        "assunto_id": null
+      },
+      "total": 21,
+      "por_banca": {
+        "CESGRANRIO": 0,
+        "FGV": 2
+      },
+      "outras": 19,
+      "creditos": 6,
+      "erro": null
+    },
+    {
+      "chave": "PMERJ-M01-DH",
+      "nome": "Proteção constitucional e convencional",
+      "materia_codigo": "dir_hum",
+      "filtro": {
+        "materia": "Direitos Humanos",
+        "assunto": "Direitos Humanos no Ordenamento Nacional",
+        "assunto_id": null
+      },
+      "total": 84,
+      "por_banca": {
+        "CESGRANRIO": 0,
+        "FGV": 10
+      },
+      "outras": 74,
+      "creditos": 6,
+      "erro": null
+    },
+    {
+      "chave": "PMERJ-M02-ADM",
+      "nome": "Poderes e elementos do ato administrativo",
+      "materia_codigo": "dir_adm",
+      "filtro": {
+        "materia": "Direito Administrativo",
+        "assunto": "Atos Administrativos",
+        "assunto_id": null
+      },
+      "total": 816,
+      "por_banca": {
+        "CESGRANRIO": 2,
+        "FGV": 32
+      },
+      "outras": 782,
+      "creditos": 9,
+      "erro": null
+    },
+    {
+      "chave": "PMERJ-M02-CONST",
+      "nome": "Direitos fundamentais e direitos políticos",
+      "materia_codigo": "dir_const",
+      "filtro": {
+        "materia": "Direito Constitucional",
+        "assunto": "Direitos e deveres individuais e coletivos ou direitos e deveres individuais e coletivos; direito à vida, à liberdade, à igualdade,àsegurançaeàpropriedade (artigo 5º da CF)",
+        "assunto_id": null
+      },
+      "total": 2812,
+      "por_banca": {
+        "CESGRANRIO": 1,
+        "FGV": 142
+      },
+      "outras": 2669,
+      "creditos": 9,
+      "erro": null
+    },
+    {
+      "chave": "PMERJ-M02-PEN",
+      "nome": "Fato típico: conduta, nexo, dolo e culpa",
+      "materia_codigo": "dir_pen",
+      "filtro": {
+        "materia": "Direito Penal",
+        "assunto": "Fato Típico",
+        "assunto_id": null
+      },
+      "total": 1,
+      "por_banca": {
+        "CESGRANRIO": 0,
+        "FGV": 0
+      },
+      "outras": 1,
+      "creditos": 3,
+      "erro": null
+    },
+    {
+      "chave": "PMERJ-M02-CPP",
+      "nome": "Inquérito, arquivamento e acordo de não persecução",
+      "materia_codigo": "dir_proc_pen",
+      "filtro": {
+        "materia": "Direito Processual Penal",
+        "assunto": "Inquérito policial",
+        "assunto_id": null
+      },
+      "total": 112,
+      "por_banca": {
+        "CESGRANRIO": 0,
+        "FGV": 12
+      },
+      "outras": 100,
+      "creditos": 6,
+      "erro": null
+    },
+    {
+      "chave": "PMERJ-M02-CPM",
+      "nome": "Crime militar, imputabilidade e concurso de agentes",
+      "materia_codigo": "dir_pen_mil",
+      "filtro": {
+        "materia": "Direito Penal Militar",
+        "assunto": "Culpabilidade e Imputabilidade",
+        "assunto_id": null
+      },
+      "total": 5,
+      "por_banca": {
+        "CESGRANRIO": 0,
+        "FGV": 1
+      },
+      "outras": 4,
+      "creditos": 6,
+      "erro": null
+    },
+    {
+      "chave": "PMERJ-M02-DH",
+      "nome": "Sistemas de proteção e seus órgãos",
+      "materia_codigo": "dir_hum",
+      "filtro": {
+        "materia": "Direitos Humanos",
+        "assunto": "Convenção Americana sobre Direitos Humanos (Pacto de San José)",
+        "assunto_id": null
+      },
+      "total": 151,
+      "por_banca": {
+        "CESGRANRIO": 0,
+        "FGV": 19
+      },
+      "outras": 132,
+      "creditos": 6,
+      "erro": null
+    },
+    {
+      "chave": "PMERJ-M03-ADM",
+      "nome": "Responsabilidades do agente e processo disciplinar",
+      "materia_codigo": "dir_adm",
+      "filtro": {
+        "materia": "Direito Administrativo",
+        "assunto": "Processo Administrativo Disciplinar",
+        "assunto_id": null
+      },
+      "total": 160,
+      "por_banca": {
+        "CESGRANRIO": 0,
+        "FGV": 8
+      },
+      "outras": 152,
+      "creditos": 6,
+      "erro": null
+    },
+    {
+      "chave": "PMERJ-M03-CONST",
+      "nome": "Controle concentrado: ADI e ADC",
+      "materia_codigo": "dir_const",
+      "filtro": {
+        "materia": "Direito Constitucional",
+        "assunto": "Ações de controle concentrado de constitucionalidade",
+        "assunto_id": null
+      },
+      "total": 36,
+      "por_banca": {
+        "CESGRANRIO": 0,
+        "FGV": 6
+      },
+      "outras": 30,
+      "creditos": 6,
+      "erro": null
+    },
+    {
+      "chave": "PMERJ-M03-PEN",
+      "nome": "Tentativa, ilicitude e culpabilidade",
+      "materia_codigo": "dir_pen",
+      "filtro": {
+        "materia": "Direito Penal",
+        "assunto": "Culpabilidade",
+        "assunto_id": null
+      },
+      "total": 29,
+      "por_banca": {
+        "CESGRANRIO": 0,
+        "FGV": 2
+      },
+      "outras": 27,
+      "creditos": 6,
+      "erro": null
+    },
+    {
+      "chave": "PMERJ-M03-CPP",
+      "nome": "Ação penal e competência",
+      "materia_codigo": "dir_proc_pen",
+      "filtro": {
+        "materia": "Direito Processual Penal",
+        "assunto": "Ação penal",
+        "assunto_id": null
+      },
+      "total": 49,
+      "por_banca": {
+        "CESGRANRIO": 0,
+        "FGV": 12
+      },
+      "outras": 37,
+      "creditos": 6,
+      "erro": null
+    },
+    {
+      "chave": "PMERJ-M03-CPM",
+      "nome": "Penas e aplicação da pena no Código Penal Militar",
+      "materia_codigo": "dir_pen_mil",
+      "filtro": {
+        "materia": "Direito Penal Militar",
+        "assunto": "Aplicação da Pena",
+        "assunto_id": null
+      },
+      "total": 2,
+      "por_banca": {
+        "CESGRANRIO": 0,
+        "FGV": 0
+      },
+      "outras": 2,
+      "creditos": 3,
+      "erro": null
+    },
+    {
+      "chave": "PMERJ-M03-DH",
+      "nome": "Sistema interamericano aplicado",
+      "materia_codigo": "dir_hum",
+      "filtro": {
+        "materia": "Direitos Humanos",
+        "assunto": "Sistema Interamericano de Proteção aos Direitos Humanos: Instituições",
+        "assunto_id": null
+      },
+      "total": 19,
+      "por_banca": {
+        "CESGRANRIO": 0,
+        "FGV": 7
+      },
+      "outras": 12,
+      "creditos": 6,
+      "erro": null
+    },
+    {
+      "chave": "PMERJ-M04-ADM",
+      "nome": "Acesso à informação, dados pessoais e correção do simulado",
+      "materia_codigo": "dir_adm",
+      "filtro": {
+        "materia": "Direito Administrativo",
+        "assunto": "Lei nº 12.527/2011 - Lei de Acesso à Informação",
+        "assunto_id": null
+      },
+      "total": 1179,
+      "por_banca": {
+        "CESGRANRIO": 0,
+        "FGV": 34
+      },
+      "outras": 1145,
+      "creditos": 6,
+      "erro": null
+    },
+    {
+      "chave": "PMERJ-M04-CONST",
+      "nome": "Ações constitucionais e correção do simulado",
+      "materia_codigo": "dir_const",
+      "filtro": {
+        "materia": "Direito Constitucional",
+        "assunto": "Remédios constitucionais ou writs constitucionais ou ações constitucionais ou garantias constitucionais",
+        "assunto_id": null
+      },
+      "total": 347,
+      "por_banca": {
+        "CESGRANRIO": 0,
+        "FGV": 28
+      },
+      "outras": 319,
+      "creditos": 6,
+      "erro": null
+    },
+    {
+      "chave": "PMERJ-M04-PEN",
+      "nome": "Prescrição, punibilidade e correção do simulado",
+      "materia_codigo": "dir_pen",
+      "filtro": {
+        "materia": "Direito Penal",
+        "assunto": "Prescrição",
+        "assunto_id": null
+      },
+      "total": 33,
+      "por_banca": {
+        "CESGRANRIO": 0,
+        "FGV": 3
+      },
+      "outras": 30,
+      "creditos": 6,
+      "erro": null
+    },
+    {
+      "chave": "PMERJ-M04-CPP",
+      "nome": "Incidentes processuais e correção do simulado",
+      "materia_codigo": "dir_proc_pen",
+      "filtro": {
+        "materia": "Direito Processual Penal",
+        "assunto": "Incidente de insanidade",
+        "assunto_id": null
+      },
+      "total": 6,
+      "por_banca": {
+        "CESGRANRIO": 0,
+        "FGV": 2
+      },
+      "outras": 4,
+      "creditos": 6,
+      "erro": null
+    },
+    {
+      "chave": "PMERJ-M04-CPM",
+      "nome": "Suspensão, livramento, efeitos e correção do simulado",
+      "materia_codigo": "dir_pen_mil",
+      "filtro": {
+        "materia": "Direito Penal Militar",
+        "assunto": "Suspensão Condicional da Pena",
+        "assunto_id": null
+      },
+      "total": 6,
+      "por_banca": {
+        "CESGRANRIO": 0,
+        "FGV": 1
+      },
+      "outras": 5,
+      "creditos": 6,
+      "erro": null
+    },
+    {
+      "chave": "PMERJ-M04-DH",
+      "nome": "Letalidade policial e correção do simulado",
+      "materia_codigo": "dir_hum",
+      "filtro": {
+        "materia": "Direitos Humanos",
+        "assunto": "Uso da Força e Letalidade Policial",
+        "assunto_id": null
+      },
+      "total": 0,
+      "por_banca": {
+        "CESGRANRIO": 0,
+        "FGV": 0
+      },
+      "outras": 0,
+      "creditos": 0,
+      "erro": null
+    }
+  ]
+}

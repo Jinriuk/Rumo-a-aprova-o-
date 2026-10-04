@@ -1,5 +1,5 @@
 {
-  "comentario": "P1.1: filtro de cada missão do CFO PMERJ na Quest API. Os nomes de matéria e assunto são PROPOSTA, escritos a partir do Anexo II, sem acesso ao catálogo da Quest: 'conferido' fica false até a primeira medição (scripts/quest-cobertura.mjs) e a conferência do dono. Zero numa linha pode ser assunto com nome diferente na Quest, não falta de questão. Preferir assunto_id da Quest quando ele for conhecido.",
+  "comentario": "P1.1: filtro de cada missão do CFO PMERJ na Quest API. Matéria e assunto precisam do valor EXATO da Quest (GET /v2/filtros/*). 'conferido: true' = nome encontrado no catálogo da Quest em 04/10/2026 (scripts/quest-cobertura.mjs --filtros); 'buscaAssunto' = termos da próxima busca para as que ainda não foram achadas. M04-ADM: a Quest tem duas grafias ('Lei nº 12.527/2011 - Lei de Acesso à Informação' e 'Lei nº 12.527 - Lei de Acesso à Informação'); o filtro usa a primeira e a contagem não soma a segunda.",
   "versao": 1,
   "examTag": "pmerj_cfo",
   "fornecedor": "quest",
@@ -14,9 +14,10 @@
       "materia_codigo": "dir_adm",
       "assuntoAnexo": "ADM-03",
       "materia": "Direito Administrativo",
-      "assunto": "Administração Direta e Indireta",
+      "assunto": "Organização Administrativa",
       "assunto_id": null,
-      "conferido": false
+      "conferido": true,
+      "materiaConferida": true
     },
     {
       "chave": "PMERJ-M01-CONST",
@@ -24,9 +25,10 @@
       "materia_codigo": "dir_const",
       "assuntoAnexo": "CONST-04",
       "materia": "Direito Constitucional",
-      "assunto": "Aplicabilidade das Normas Constitucionais",
+      "assunto": "Aplicabilidade das normas constitucionais, eficácia e aplicabilidade das normas constitucionais ou classificação das normas constitucionais ou vigência e eficácia das normas constitucionais ou normas constitucionais: classificação e eficácia",
       "assunto_id": null,
-      "conferido": false
+      "conferido": true,
+      "materiaConferida": true
     },
     {
       "chave": "PMERJ-M01-PEN",
@@ -34,9 +36,10 @@
       "materia_codigo": "dir_pen",
       "assuntoAnexo": "PEN-06",
       "materia": "Direito Penal",
-      "assunto": "Lei Penal no Tempo",
+      "assunto": "Lei penal no tempo",
       "assunto_id": null,
-      "conferido": false
+      "conferido": true,
+      "materiaConferida": true
     },
     {
       "chave": "PMERJ-M01-CPP",
@@ -46,7 +49,8 @@
       "materia": "Direito Processual Penal",
       "assunto": "Sistemas Processuais Penais",
       "assunto_id": null,
-      "conferido": false
+      "conferido": true,
+      "materiaConferida": true
     },
     {
       "chave": "PMERJ-M01-CPM",
@@ -56,7 +60,8 @@
       "materia": "Direito Penal Militar",
       "assunto": "Aplicação da Lei Penal Militar",
       "assunto_id": null,
-      "conferido": false
+      "conferido": true,
+      "materiaConferida": true
     },
     {
       "chave": "PMERJ-M01-DH",
@@ -64,9 +69,10 @@
       "materia_codigo": "dir_hum",
       "assuntoAnexo": "DH-12",
       "materia": "Direitos Humanos",
-      "assunto": "Direitos Humanos na Constituição Federal",
+      "assunto": "Direitos Humanos no Ordenamento Nacional",
       "assunto_id": null,
-      "conferido": false
+      "conferido": true,
+      "materiaConferida": true
     },
     {
       "chave": "PMERJ-M02-ADM",
@@ -76,7 +82,8 @@
       "materia": "Direito Administrativo",
       "assunto": "Atos Administrativos",
       "assunto_id": null,
-      "conferido": false
+      "conferido": true,
+      "materiaConferida": true
     },
     {
       "chave": "PMERJ-M02-CONST",
@@ -84,9 +91,10 @@
       "materia_codigo": "dir_const",
       "assuntoAnexo": "CONST-10",
       "materia": "Direito Constitucional",
-      "assunto": "Direitos e Deveres Individuais e Coletivos",
+      "assunto": "Direitos e deveres individuais e coletivos ou direitos e deveres individuais e coletivos; direito à vida, à liberdade, à igualdade,àsegurançaeàpropriedade (artigo 5º da CF)",
       "assunto_id": null,
-      "conferido": false
+      "conferido": true,
+      "materiaConferida": true
     },
     {
       "chave": "PMERJ-M02-PEN",
@@ -96,7 +104,8 @@
       "materia": "Direito Penal",
       "assunto": "Fato Típico",
       "assunto_id": null,
-      "conferido": false
+      "conferido": true,
+      "materiaConferida": true
     },
     {
       "chave": "PMERJ-M02-CPP",
@@ -104,9 +113,10 @@
       "materia_codigo": "dir_proc_pen",
       "assuntoAnexo": "CPP-06",
       "materia": "Direito Processual Penal",
-      "assunto": "Inquérito Policial",
+      "assunto": "Inquérito policial",
       "assunto_id": null,
-      "conferido": false
+      "conferido": true,
+      "materiaConferida": true
     },
     {
       "chave": "PMERJ-M02-CPM",
@@ -114,9 +124,10 @@
       "materia_codigo": "dir_pen_mil",
       "assuntoAnexo": "CPM-03",
       "materia": "Direito Penal Militar",
-      "assunto": "Imputabilidade Penal",
+      "assunto": "Culpabilidade e Imputabilidade",
       "assunto_id": null,
-      "conferido": false
+      "conferido": true,
+      "materiaConferida": true
     },
     {
       "chave": "PMERJ-M02-DH",
@@ -124,9 +135,10 @@
       "materia_codigo": "dir_hum",
       "assuntoAnexo": "DH-02",
       "materia": "Direitos Humanos",
-      "assunto": "Convenções e Tratados Internacionais de Direitos Humanos",
+      "assunto": "Convenção Americana sobre Direitos Humanos (Pacto de San José)",
       "assunto_id": null,
-      "conferido": false
+      "conferido": true,
+      "materiaConferida": true
     },
     {
       "chave": "PMERJ-M03-ADM",
@@ -136,7 +148,8 @@
       "materia": "Direito Administrativo",
       "assunto": "Processo Administrativo Disciplinar",
       "assunto_id": null,
-      "conferido": false
+      "conferido": true,
+      "materiaConferida": true
     },
     {
       "chave": "PMERJ-M03-CONST",
@@ -144,9 +157,10 @@
       "materia_codigo": "dir_const",
       "assuntoAnexo": "CONST-09",
       "materia": "Direito Constitucional",
-      "assunto": "Controle Concentrado de Constitucionalidade",
+      "assunto": "Ações de controle concentrado de constitucionalidade",
       "assunto_id": null,
-      "conferido": false
+      "conferido": true,
+      "materiaConferida": true
     },
     {
       "chave": "PMERJ-M03-PEN",
@@ -156,7 +170,8 @@
       "materia": "Direito Penal",
       "assunto": "Culpabilidade",
       "assunto_id": null,
-      "conferido": false
+      "conferido": true,
+      "materiaConferida": true
     },
     {
       "chave": "PMERJ-M03-CPP",
@@ -164,9 +179,10 @@
       "materia_codigo": "dir_proc_pen",
       "assuntoAnexo": "CPP-10",
       "materia": "Direito Processual Penal",
-      "assunto": "Ação Penal",
+      "assunto": "Ação penal",
       "assunto_id": null,
-      "conferido": false
+      "conferido": true,
+      "materiaConferida": true
     },
     {
       "chave": "PMERJ-M03-CPM",
@@ -176,7 +192,8 @@
       "materia": "Direito Penal Militar",
       "assunto": "Aplicação da Pena",
       "assunto_id": null,
-      "conferido": false
+      "conferido": true,
+      "materiaConferida": true
     },
     {
       "chave": "PMERJ-M03-DH",
@@ -184,9 +201,10 @@
       "materia_codigo": "dir_hum",
       "assuntoAnexo": "DH-02",
       "materia": "Direitos Humanos",
-      "assunto": "Sistema Interamericano de Direitos Humanos",
+      "assunto": "Sistema Interamericano de Proteção aos Direitos Humanos: Instituições",
       "assunto_id": null,
-      "conferido": false
+      "conferido": true,
+      "materiaConferida": true
     },
     {
       "chave": "PMERJ-M04-ADM",
@@ -194,9 +212,10 @@
       "materia_codigo": "dir_adm",
       "assuntoAnexo": "ADM-40",
       "materia": "Direito Administrativo",
-      "assunto": "Lei de Acesso à Informação",
+      "assunto": "Lei nº 12.527/2011 - Lei de Acesso à Informação",
       "assunto_id": null,
-      "conferido": false
+      "conferido": true,
+      "materiaConferida": true
     },
     {
       "chave": "PMERJ-M04-CONST",
@@ -204,9 +223,10 @@
       "materia_codigo": "dir_const",
       "assuntoAnexo": "CONST-13",
       "materia": "Direito Constitucional",
-      "assunto": "Ações Constitucionais",
+      "assunto": "Remédios constitucionais ou writs constitucionais ou ações constitucionais ou garantias constitucionais",
       "assunto_id": null,
-      "conferido": false
+      "conferido": true,
+      "materiaConferida": true
     },
     {
       "chave": "PMERJ-M04-PEN",
@@ -216,7 +236,8 @@
       "materia": "Direito Penal",
       "assunto": "Prescrição",
       "assunto_id": null,
-      "conferido": false
+      "conferido": true,
+      "materiaConferida": true
     },
     {
       "chave": "PMERJ-M04-CPP",
@@ -224,9 +245,10 @@
       "materia_codigo": "dir_proc_pen",
       "assuntoAnexo": "CPP-19",
       "materia": "Direito Processual Penal",
-      "assunto": "Incidente de Insanidade Mental",
+      "assunto": "Incidente de insanidade",
       "assunto_id": null,
-      "conferido": false
+      "conferido": true,
+      "materiaConferida": true
     },
     {
       "chave": "PMERJ-M04-CPM",
@@ -236,7 +258,8 @@
       "materia": "Direito Penal Militar",
       "assunto": "Suspensão Condicional da Pena",
       "assunto_id": null,
-      "conferido": false
+      "conferido": true,
+      "materiaConferida": true
     },
     {
       "chave": "PMERJ-M04-DH",
@@ -246,7 +269,13 @@
       "materia": "Direitos Humanos",
       "assunto": "Uso da Força e Letalidade Policial",
       "assunto_id": null,
-      "conferido": false
+      "conferido": false,
+      "materiaConferida": true,
+      "buscaAssunto": [
+        "Uso da força",
+        "Letalidade"
+      ],
+      "semAssuntoNaQuest": "Busca em 04/10/2026 por 'Letalidade', 'Uso da força' e 'Uso da Força e Letalidade Policial': nenhum assunto. Letalidade policial e ADPF 635 não estão no catálogo da Quest; missão fica no registro manual."
     }
   ]
 }

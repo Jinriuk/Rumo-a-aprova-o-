@@ -87,11 +87,12 @@ test("consulta leva os filtros fixos, prefere assunto_id, pagina por after_id e 
   const p = Q.montarConsulta({ materia: "Direito Penal", assunto: "Prescrição", assunto_id: "77" }, { afterId: "q-90", porPagina: 500, banca: "FGV" });
   assert.equal(p.get("assunto_id"), "77");
   assert.equal(p.get("assunto"), null);
-  for (const [k, v] of [["tem_gabarito", "true"], ["anulada", "false"], ["desatualizada", "false"], ["tem_anexos", "false"], ["after_id", "q-90"], ["per_page", "100"], ["banca", "FGV"]]) {
+  for (const [k, v] of [["tem_gabarito", "true"], ["anulada", "false"], ["tem_anexos", "false"], ["after_id", "q-90"], ["per_page", "100"], ["banca", "FGV"]]) {
     assert.equal(p.get(k), v, k);
   }
   assert.equal(p.get("include_gabarito"), null, "sem pedir, sem gabarito (3 créditos, não 6)");
   assert.equal(p.get("page"), null);
+  assert.equal(p.get("desatualizada"), null, "a Quest recusa o filtro desatualizada (422)");
   assert.equal(Q.montarConsulta({ materia: "x" }).get("per_page"), "1", "padrão: 1 por chamada");
   assert.equal(Q.montarConsulta({ materia: "x" }, { gabarito: true }).get("include_gabarito"), "true");
   assert.equal(Q.baseV2("https://api.quest.api.br"), "https://api.quest.api.br/v2");
@@ -180,7 +181,10 @@ test("mapa de filtros cobre as 24 missões do manifesto, sem sobra", () => {
   const M = carregarFonte();
   assert.equal(mapa.missoes.length, 24);
   assert.deepEqual(validarMapa(mapa, M), []);
-  assert.ok(mapa.missoes.every((f) => f.conferido === false), "nenhum filtro foi conferido contra o catálogo da Quest ainda");
+  // conferido = nome exato achado em /v2/filtros; a única sem assunto na Quest fica marcada
+  assert.equal(mapa.missoes.filter((f) => f.conferido).length, 23);
+  assert.deepEqual(mapa.missoes.filter((f) => !f.conferido).map((f) => f.chave), ["PMERJ-M04-DH"]);
+  assert.ok(mapa.missoes.find((f) => f.chave === "PMERJ-M04-DH").semAssuntoNaQuest);
   const quebrado = { ...mapa, missoes: mapa.missoes.slice(1) };
   assert.match(validarMapa(quebrado, M).join(), /missão sem filtro/);
 });
@@ -189,13 +193,15 @@ test("tabela: situação de cada linha frente à meta da missão", () => {
   assert.equal(situacao({ total: 0 }, 20), "zero: conferir filtro");
   assert.equal(situacao({ total: 10 }, 20), "abaixo da meta (20)");
   assert.equal(situacao({ total: 50 }, 20), "ok");
+  assert.equal(situacao({ total: 6 }, undefined), "sem meta (acompanhamento manual)", "sem meta não vira ok");
+  assert.equal(situacao({ total: 0 }, undefined, true), "sem assunto na Quest");
   assert.equal(situacao({ erro: "timeout" }, 20), "erro: timeout");
   const M = carregarFonte();
   const t = montarTabela({ bancas: ["CESGRANRIO", "FGV"], medido_em: "x", linhas: [
     { chave: "PMERJ-M01-ADM", materia_codigo: "dir_adm", filtro: { assunto: "Adm" }, total: 40, por_banca: { CESGRANRIO: 5, FGV: 10 }, outras: 25, creditos: 9, erro: null },
   ] }, M);
   assert.match(t, /\| PMERJ-M01-ADM \| dir_adm \| Adm \| 20 \| 40 \| 5 \| 10 \| 25 \| ok \|/);
-  assert.match(t, /Missões com volume para a meta: 1 de 1\. Créditos gastos na medição: 9/);
+  assert.match(t, /Missões com volume para a meta: 1 de 1 com meta automática \(0 sem meta: semana de simulado\)\. Créditos gastos na medição: 9/);
 });
 
 test("SQL dos filtros: aplica nas missões do CFO PMERJ, nasce desligado, liga só o pedido, reaplica sem duplicar", async () => {

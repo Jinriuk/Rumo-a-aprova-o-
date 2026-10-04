@@ -53,11 +53,25 @@ export type TipoErroQuest =
 export class QuestErro extends Error {
   tipo: TipoErroQuest;
   status: number | null;
-  constructor(tipo: TipoErroQuest, status: number | null = null) {
+  // diagnóstico curto: corpo de erro da Quest cortado, ou as CHAVES do
+  // envelope inesperado. Nunca enunciado, gabarito nem a chave da API.
+  detalhe: string | null;
+  constructor(tipo: TipoErroQuest, status: number | null = null, detalhe: string | null = null) {
     super(`quest: ${tipo}${status ? ` (HTTP ${status})` : ""}`);
     this.tipo = tipo;
     this.status = status;
+    this.detalhe = detalhe;
   }
+}
+
+// Forma do JSON sem o conteúdo: chaves e tipos dos dois primeiros níveis.
+export function formaDoJson(v: unknown): string {
+  const tipo = (x: unknown) => Array.isArray(x) ? `array(${x.length})` : x === null ? "null" : typeof x;
+  if (!v || typeof v !== "object" || Array.isArray(v)) return tipo(v);
+  return Object.entries(v as Record<string, unknown>).slice(0, 15).map(([k, x]) =>
+    x && typeof x === "object" && !Array.isArray(x)
+      ? `${k}:{${Object.entries(x as Record<string, unknown>).slice(0, 15).map(([k2, y]) => `${k2}:${tipo(y)}`).join(",")}}`
+      : `${k}:${tipo(x)}`).join(", ");
 }
 
 export type DepsQuest = {
@@ -67,7 +81,7 @@ export type DepsQuest = {
   timeoutMs?: number;
 };
 
-// Filtros fixos: só questão com gabarito, não anulada, não desatualizada
+// Filtros fixos: só questão com gabarito, não anulada
 // e sem anexo/imagem (a tela não reproduz figura com fidelidade).
 // `gabarito: true` embute o gabarito (6 créditos por questão, contra 3):
 // só na busca que abastece o lote do aluno.
@@ -83,7 +97,9 @@ export function montarConsulta(
   p.set("tem_gabarito", "true");
   if (opcoes.gabarito) p.set("include_gabarito", "true");
   p.set("anulada", "false");
-  p.set("desatualizada", "false");
+  // `desatualizada` NÃO é filtro aceito pela Quest (422 "property
+  // desatualizada should not exist", 04/10/2026): questão desatualizada
+  // que vier marcada no item é descartada em normalizarQuestao.
   p.set("tem_anexos", "false");
   if (opcoes.afterId) p.set("after_id", opcoes.afterId);
   p.set("per_page", String(Math.min(100, Math.max(1, Math.trunc(opcoes.porPagina ?? 1)))));
@@ -116,7 +132,10 @@ async function getQuest(deps: DepsQuest, caminho: string, params: URLSearchParam
     clearTimeout(timer);
   }
   if (!resp.ok) {
-    throw new QuestErro(ERRO_POR_STATUS[resp.status] ?? (resp.status >= 500 ? "indisponivel" : "formato"), resp.status);
+    const tipo = ERRO_POR_STATUS[resp.status] ?? (resp.status >= 500 ? "indisponivel" : "formato");
+    // 4xx não mapeado (parâmetro recusado, por exemplo): o corpo explica
+    const corpoErro = tipo === "formato" ? (await resp.text().catch(() => "")).slice(0, 300) : null;
+    throw new QuestErro(tipo, resp.status, corpoErro);
   }
   try {
     return await resp.json();
@@ -131,7 +150,7 @@ export async function buscarQuest(
 ): Promise<{ itens: unknown[]; total: number | null; proximo: string | null }> {
   const corpo = await getQuest(deps, "/questoes", params);
   const dados = corpo?.data;
-  if (!dados || !Array.isArray(dados.items)) throw new QuestErro("formato");
+  if (!dados || !Array.isArray(dados.items)) throw new QuestErro("formato", 200, `envelope: ${formaDoJson(corpo)}`);
   const total = Number.isFinite(Number(dados.total)) && dados.total !== null && dados.total !== undefined
     ? Number(dados.total) : null;
   // cursor da próxima página: o que a API devolver; senão o id do último item (after_id)
@@ -152,7 +171,7 @@ export async function buscarFiltros(
   const p = new URLSearchParams({ q, ...extra });
   const corpo = await getQuest(deps, `/filtros/${tipo}`, p);
   const itens = corpo?.data?.items ?? corpo?.data ?? corpo?.items;
-  if (!Array.isArray(itens)) throw new QuestErro("formato");
+  if (!Array.isArray(itens)) throw new QuestErro("formato", 200, `envelope: ${formaDoJson(corpo)}`);
   return itens.slice(0, 50);
 }
 
@@ -246,6 +265,8 @@ export type LinhaCobertura = {
   outras: number | null;
   creditos: number;
   erro: TipoErroQuest | null;
+  status?: number | null;
+  detalhe?: string | null;
 };
 
 const CREDITOS_SEM_GABARITO = 3;
@@ -281,8 +302,11 @@ export async function medirCobertura(
         : Math.max(0, linha.total - somas.reduce((s: number, v) => s + (v as number), 0));
     } catch (e) {
       linha.erro = e instanceof QuestErro ? e.tipo : "rede";
-      // sem chave, chave errada, cota ou plano: nenhuma missão vai passar
-      if (e instanceof QuestErro && ["sem_chave", "chave", "cota", "plano"].includes(e.tipo)) {
+      if (e instanceof QuestErro) { linha.status = e.status; linha.detalhe = e.detalhe; }
+      // sem chave, chave errada, cota, plano ou formato inesperado: as
+      // outras missões falhariam igual (e um 200 fora do formato pode
+      // ter sido cobrado); para na primeira
+      if (e instanceof QuestErro && ["sem_chave", "chave", "cota", "plano", "formato"].includes(e.tipo)) {
         linhas.push(linha);
         for (const resto of missoes.slice(i + 1)) {
           linhas.push({
