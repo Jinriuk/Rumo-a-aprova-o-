@@ -52,7 +52,7 @@ ganhou motor **e** porta na coordenação.
 | Seeds no repo | **21** (o 04 e o 21 só rodam em Supabase real — escrevem em `auth`) | medido — `ls supabase/seed/*.sql \| wc -l` |
 | Edge Functions no repo | **8** (Etapa 4: `registrar-erro`, **não publicada**; as 7 anteriores ganharam o relato de 5xx no repositório, também não publicado) | medido — `ls -d supabase/functions/*/ \| grep -v _shared` |
 | TypeScript em `app/src` | 0 arquivos (dívida conhecida; `supabase/functions` é TS) | medido — `find app/src -name '*.ts*' \| wc -l` |
-| Migrations no ledger remoto | — | **não verificado** nesta rodada |
+| Migrations no ledger remoto | **66** em cada projeto (demonstração e produção), até a `0064` | medido em 04/10 por `list_migrations` do MCP; o restante do estado remoto (tabelas, RLS, Edge Functions) segue **não verificado** |
 | Tabelas públicas remotas / RLS | — | **não verificado** nesta rodada |
 | Edge Functions ACTIVE no remoto | — | **não verificado** nesta rodada |
 
@@ -63,10 +63,12 @@ ganhou motor **e** porta na coordenação.
 
 ## Estado do Supabase remoto
 
-**Não verificado nesta rodada.** O executor desta rodada não alcança o
-projeto Supabase, então a tabela de versões de Edge Function, a paridade
-do ledger de migrations e a contagem de tabelas com RLS foram REMOVIDAS
-em vez de recopiadas de julho.
+**Não verificado nesta rodada, com uma exceção.** Em 04/10 o ledger de
+migrations dos dois projetos foi lido pelo MCP: 66 entradas em cada,
+até a `0064` (ver a linha de migrations acima). A tabela de versões de
+Edge Function e a contagem de tabelas com RLS continuam sem verificação
+e foram REMOVIDAS em vez de recopiadas de julho. Em 18/09 o executor
+não alcançava o projeto Supabase.
 
 O que se pode afirmar do repositório: as 7 funções em
 `supabase/functions/` usam a allowlist de CORS compartilhada

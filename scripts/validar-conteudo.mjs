@@ -69,22 +69,29 @@ export function temTag(bloco, codigo) {
   return new RegExp(`'${codigo}'`).test(bloco);
 }
 
+// Códigos de concurso declarados no seed 05_concursos.sql. SÓ o seed:
+// é o que `tests/reset-db.sh` e o CI carregam.
+export function concursosDoSeed() {
+  const bloco = blocoInsert(ler("supabase/seed/05_concursos.sql"), "concursos");
+  // cada linha de valor começa com (uuid, 'codigo', ...) → 2º token
+  const cods = [...bloco.matchAll(/'[0-9a-f-]{36}',\s*'([a-z0-9_]+)'/gi)].map((m) => m[1]);
+  return [...new Set(cods)];
+}
+
 // O CFO PMERJ não está em 05_concursos.sql: o concurso entra pelo SQL do
 // gerador (sem data de prova, 0062), porque a trilha tem data de início
-// por parâmetro e não é seed. A fonte dele é o manifesto, e é daí que o
-// validador o conhece (P0.6).
+// por parâmetro e não é seed (P0.6). A fonte dele é o manifesto, que é um
+// artefato editorial e NÃO é carregado por um banco recém-criado: um
+// reset local ou de CI não tem o PMERJ até alguém aplicar o SQL gerado.
 export function concursosDoManifesto() {
   const m = carregarFontePmerjCfo();
   return [m.concurso.codigo];
 }
 
-// Códigos de concurso declarados no seed 05_concursos.sql, mais os que
-// têm o catálogo no manifesto de uma trilha gerada.
-export function concursosDoSeed() {
-  const bloco = blocoInsert(ler("supabase/seed/05_concursos.sql"), "concursos");
-  // cada linha de valor começa com (uuid, 'codigo', ...) → 2º token
-  const cods = [...bloco.matchAll(/'[0-9a-f-]{36}',\s*'([a-z0-9_]+)'/gi)].map((m) => m[1]);
-  return [...new Set([...cods, ...concursosDoManifesto()])];
+// Tudo o que a matriz precisa cobrir: o seed mais os concursos de
+// manifesto. `conteudoRealPorConcurso` diz a origem de cada um.
+export function concursosDoCatalogo() {
+  return [...new Set([...concursosDoSeed(), ...concursosDoManifesto()])];
 }
 
 // Conteúdo real por concurso a partir dos seeds (presença booleana).
@@ -97,11 +104,12 @@ export function conteudoRealPorConcurso() {
   const blocoPlanos = blocoInsert(trilhas, "trilha_planos");
   const out = {};
   const pmerj = carregarFontePmerjCfo();
-  for (const cod of concursosDoSeed()) {
+  for (const cod of concursosDoCatalogo()) {
     // concurso de manifesto: sem estrutura de prova oficial (é pré-edital),
     // com assuntos, missões e plano no manifesto em vez dos seeds 07 e 09.
     if (cod === pmerj.concurso.codigo) {
       out[cod] = {
+        origem: "manifesto",
         provaOficial: false,
         assuntos: (pmerj.anexoII ?? []).length > 0,
         missoes: (pmerj.missoes ?? []).length > 0,
@@ -111,6 +119,7 @@ export function conteudoRealPorConcurso() {
       continue;
     }
     out[cod] = {
+      origem: "seed",
       provaOficial: temTag(blocoProvaMaterias, cod),
       assuntos: temTag(blocoAssuntos, cod),
       missoes: temTag(blocoMissoes, cod),
@@ -258,7 +267,7 @@ export function validar() {
   const erros = [];
   const avisos = [];
 
-  const codigosSeed = new Set(concursosDoSeed());
+  const codigosSeed = new Set(concursosDoCatalogo());
   const codigosMatriz = new Set(Object.keys(MATURIDADE_CONCURSOS));
 
   // 1) Matriz × seed de concursos: cobertura mútua.
@@ -305,7 +314,7 @@ if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) {
   const { erros, avisos, real } = validar();
   console.log("CONTEÚDO POR CONCURSO (presença):");
   for (const [cod, r] of Object.entries(real)) {
-    console.log(`  ${cod.padEnd(7)} prova=${r.provaOficial?"✓":"·"} assuntos=${r.assuntos?"✓":"·"} missoes=${r.missoes?"✓":"·"} trilhaSemanal=${r.trilhaSemanal?"✓":"·"}  → ${MATURIDADE_CONCURSOS[cod]?.maturidade ?? "—"}`);
+    console.log(`  ${cod.padEnd(7)} prova=${r.provaOficial?"✓":"·"} assuntos=${r.assuntos?"✓":"·"} missoes=${r.missoes?"✓":"·"} trilhaSemanal=${r.trilhaSemanal?"✓":"·"}  → ${MATURIDADE_CONCURSOS[cod]?.maturidade ?? "—"}${r.origem === "manifesto" ? "  (manifesto: sem seed, entra pelo SQL gerado)" : ""}`);
   }
   if (avisos.length) { console.log("\nAVISOS:"); for (const a of avisos) console.log("  • " + a); }
   if (erros.length) {

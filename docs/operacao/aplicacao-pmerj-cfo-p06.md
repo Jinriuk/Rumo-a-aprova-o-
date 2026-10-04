@@ -108,10 +108,20 @@ esperadas são a linha de base mais o efeito da tabela acima.
 
 ## Reversão
 
-`docs/operacao/reversao/p06-pmerj-cfo.sql`, testada em `tests/p06-publicacao-pmerj-db.test.mjs`:
-apaga só o que é do PMERJ e confere que nada sobrou. Recusa, e a transação volta, se algum
-aluno, progresso, registro de estudo ou missão de escola já apontar para o PMERJ. Com uso
-real, o caminho é despublicar (`update trilhas set publicada = false where nicho = 'pmerj-cfo'`).
+`docs/operacao/reversao/p06-pmerj-cfo.sql`, testada em `tests/p06-publicacao-pmerj-db.test.mjs`.
+Apaga só o que a P0.6 criou e confere que nada do PMERJ sobrou. Antes de apagar, confere que
+o PMERJ do banco é exatamente o da publicação, e recusa (a transação volta, nada é apagado)
+quando não é:
+
+- há turma além da 1;
+- as contagens não são 219 assuntos, 24 missões e 1 plano com 24 vínculos (missão escrita
+  depois, como as 48 das semanas 5 a 12, não é desta publicação);
+- qualquer outra tabela aponta para o concurso, os assuntos, as missões ou a trilha (aluno,
+  progresso, registro de estudo, missão de escola, prova ou recorrência cadastrada depois,
+  simulado, meta). A busca é pelas chaves estrangeiras do catálogo, não por uma lista de
+  tabelas, para que uma tabela nova também seja vista.
+
+Com uso real, o caminho é despublicar (`update trilhas set publicada = false where nicho = 'pmerj-cfo'`).
 
 ## Fase 1: demo
 

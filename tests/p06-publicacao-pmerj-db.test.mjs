@@ -9,7 +9,8 @@
 //   • o diff restrito ao escopo: nada fora do PMERJ muda de conteúdo;
 //   • que repetir a publicação e o carimbo não muda nada;
 //   • a reversão (docs/operacao/reversao/p06-pmerj-cfo.sql): devolve o
-//     estado anterior e recusa quando já há aluno na trilha.
+//     estado anterior, e recusa quando o PMERJ do banco já não é só o
+//     da P0.6 (aluno, turma posterior, prova, missão a mais).
 // Tudo numa transação desfeita no fim.
 // ============================================================
 import test from "node:test";
@@ -143,19 +144,52 @@ test("diff restrito ao escopo: nada fora do PMERJ muda; repetir não muda nada",
   });
 });
 
-test("reversão: recusa com aluno na trilha; sem aluno, devolve o estado anterior", async () => {
+test("reversão: recusa o que não é da P0.6 (aluno, turma posterior, prova, missão a mais); sem isso, devolve o estado anterior", async () => {
   await emTransacao(async (c) => {
     const antes = await foraDoEscopo(c);
     await publicar(c);
     const trilha = (await c.query("select id from trilhas where nicho = 'pmerj-cfo'")).rows[0].id;
-    await c.query("insert into alunos (id, escola_id, nome, trilha_id) values ($1, $2, 'Aluno P0.6 de teste', $3)", [ALUNO, ESCOLA_A, trilha]);
+    const intactoAposRecusa = async () => {
+      const n = Number((await c.query(
+        `select (select count(*) from trilhas where nicho = 'pmerj-cfo') + (select count(*) from concursos where codigo = 'pmerj_cfo')
+              + (select count(*) from assuntos where exam_tag = 'pmerj_cfo') + (select count(*) from missoes where exam_tag = 'pmerj_cfo') n`)).rows[0].n);
+      return n;
+    };
+    const base = await intactoAposRecusa();
+    const recusa = async (preparar, esperado) => {
+      await c.query("savepoint s");
+      await preparar();
+      await assert.rejects(c.query(REVERSAO), esperado);
+      await c.query("rollback to savepoint s");
+      assert.equal(await intactoAposRecusa(), base, "a recusa não apaga nada");
+    };
 
-    await c.query("savepoint s");
-    await assert.rejects(c.query(REVERSAO), /reversão recusada: 1 aluno\(s\) usam a trilha ou o concurso PMERJ/);
-    await c.query("rollback to savepoint s");
-    assert.equal(Number((await c.query("select count(*) n from trilhas where nicho = 'pmerj-cfo'")).rows[0].n), 1, "a recusa não apaga nada");
+    // aluno na trilha
+    await recusa(
+      () => c.query("insert into alunos (id, escola_id, nome, trilha_id) values ($1, $2, 'Aluno P0.6 de teste', $3)", [ALUNO, ESCOLA_A, trilha]),
+      /reversão recusada: 1 linha\(s\) de alunos apontam para trilhas\.trilha_id do PMERJ/);
+    // aluno só no concurso (a lista de tabelas não é fixa: a busca vem do catálogo)
+    await recusa(
+      async () => {
+        const conc = (await c.query("select id from concursos where codigo = 'pmerj_cfo'")).rows[0].id;
+        await c.query("insert into alunos (id, escola_id, nome, concurso_id) values ($1, $2, 'Aluno P0.6 de teste', $3)", [ALUNO, ESCOLA_A, conc]);
+      },
+      /reversão recusada: 1 linha\(s\) de alunos apontam para concursos\.concurso_id do PMERJ/);
+    // turma posterior
+    await recusa(
+      () => c.query(semTransacao(gerarSql(carregarFonte(), { inicio: "2027-01-04", turma: 2 }))),
+      /reversão recusada: 1 turma\(s\) do PMERJ além da turma 1/);
+    // prova cadastrada depois: nenhuma regra específica da reversão a conhece
+    await recusa(
+      () => c.query("insert into provas (exam_tag, nome) values ('pmerj_cfo', 'Prova cadastrada depois')"),
+      /reversão recusada: 1 linha\(s\) de provas apontam para concursos\.exam_tag do PMERJ/);
+    // missão escrita depois (por exemplo, das semanas 5 a 12)
+    await recusa(
+      () => c.query(`insert into missoes (exam_tag, materia_codigo, nivel, nome, objetivo, criterio_conclusao)
+                     values ('pmerj_cfo', 'dir_hum', 'base', 'Missão da semana 5', 'x', 'x')`),
+      /reversão recusada: 25 missões do PMERJ, a P0.6 criou 24/);
 
-    await c.query("delete from alunos where id = $1", [ALUNO]);
+    // estado exatamente o da publicação: reverte e devolve o anterior
     await c.query(REVERSAO);
     const resto = (await c.query(
       `select (select count(*) from concursos where codigo = 'pmerj_cfo') c, (select count(*) from assuntos where exam_tag = 'pmerj_cfo') a,

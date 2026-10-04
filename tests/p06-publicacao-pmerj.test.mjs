@@ -24,7 +24,7 @@ import {
   podeAtribuirTrilhaSemanal, trilhaSemanalDoConcurso, rotuloMaturidade,
 } from "../app/src/modules/conteudo/maturidade.js";
 import {
-  concursosDoSeed, concursosDoManifesto, conteudoRealPorConcurso, integridadeTrilhaPmerjCfo, validar,
+  concursosDoSeed, concursosDoManifesto, concursosDoCatalogo, conteudoRealPorConcurso, integridadeTrilhaPmerjCfo, validar,
 } from "../scripts/validar-conteudo.mjs";
 import { carregarFonte, gerarSql, validarParametros } from "../scripts/gerar-seed-trilha-pmerj-cfo.mjs";
 
@@ -70,11 +70,14 @@ test("só a trilha publicada do nicho pmerj-cfo serve ao concurso; versão maior
   assert.equal(trilhaSemanalDoConcurso("espcex", trilhas)?.id, "esp-v3");
 });
 
-test("validador: o concurso vem do manifesto, a matriz e o seed concordam, sem aviso nem erro", () => {
+test("validador: o PMERJ vem do manifesto, não do seed; a matriz cobre os dois, sem aviso nem erro", () => {
   assert.deepEqual(concursosDoManifesto(), ["pmerj_cfo"]);
-  assert.ok(concursosDoSeed().includes("pmerj_cfo"));
-  const real = conteudoRealPorConcurso().pmerj_cfo;
-  assert.deepEqual(real, { provaOficial: false, assuntos: true, missoes: true, planos: true, trilhaSemanal: true });
+  // o que um banco recém-criado carrega (reset-db e CI) não tem o PMERJ
+  assert.ok(!concursosDoSeed().includes("pmerj_cfo"));
+  assert.ok(concursosDoCatalogo().includes("pmerj_cfo"));
+  const real = conteudoRealPorConcurso();
+  assert.deepEqual(real.pmerj_cfo, { origem: "manifesto", provaOficial: false, assuntos: true, missoes: true, planos: true, trilhaSemanal: true });
+  for (const cod of concursosDoSeed()) assert.equal(real[cod].origem, "seed", cod);
   const { erros, avisos } = validar();
   assert.deepEqual(erros, []);
   assert.deepEqual(avisos, []);
