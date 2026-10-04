@@ -12,6 +12,8 @@ import { useTema } from "../../shared/branding/BrandingContext.jsx";
 import { useTrilha } from "../../modules/conteudo/useTrilha.js";
 import { FaixaAspirante, MissaoAtual } from "../../modules/motor/MetaHero.jsx";
 import { MetaSemana } from "../../modules/motor/MetaSemana.jsx";
+import { ResolverQuestoes } from "../../modules/motor/ResolverQuestoes.jsx";
+import { contextoRegistroDaMissao } from "../../modules/motor/jornada.js";
 import { Registrar } from "../../modules/motor/Registrar.jsx";
 import { Arquivo } from "../../modules/motor/Arquivo.jsx";
 import { Conquistas, ConquistasRecentes } from "../../modules/motor/Conquistas.jsx";
@@ -121,6 +123,20 @@ export function VisaoEstudo({ aluno, podeEditar, concurso = null, contexto = "Pl
       .catch(() => { /* complementar: sem catálogo, o painel some, a tela fica */ });
     return () => { vivo = false; };
   }, [examTag]);
+  // P1.1: em quais missões o servidor ligou as questões integradas. Só o
+  // aluno resolve (podeEditar). Sem a 0065, ou com erro, vem vazio e o
+  // botão não aparece.
+  const [questoesIntegradas, setQuestoesIntegradas] = useState(() => new Set());
+  const [resolvendo, setResolvendo] = useState(null);
+  useEffect(() => {
+    if (!podeEditar || !examTag) return;   // o painel nem recebe aoResolver
+    let vivo = true;
+    db.missoesComQuestoesIntegradas()
+      .then((ids) => { if (vivo) setQuestoesIntegradas(ids); })
+      .catch(() => { /* complementar: sem a lista, sem botão */ });
+    return () => { vivo = false; };
+  }, [podeEditar, examTag, versao]);
+
   const filaMissoes = useMemo(() => {
     const doAlvo = catalogoMissoes.examTag === examTag;
     return filaDeMissoes({
@@ -362,9 +378,22 @@ export function VisaoEstudo({ aluno, podeEditar, concurso = null, contexto = "Pl
             </div>
             {/* P0.4 (0064): no modo essencial o painel fica compacto, mas não
                 some: o botão da missão é o único caminho que a avança */}
+            {podeEditar && resolvendo && (
+              <ResolverQuestoes key={`${resolvendo.missao.id}:${resolvendo.tipo}`}
+                missao={resolvendo.missao} tipo={resolvendo.tipo}
+                aoFechar={() => setResolvendo(null)}
+                aoMudar={recarregar}
+                aoRegistrarManual={() => {
+                  const ctx = contextoRegistroDaMissao(resolvendo.missao, resolvendo.tipo);
+                  setResolvendo(null);
+                  irAba("registrar", ctx);
+                }} />
+            )}
             {examTag && filaMissoes.length > 0 && (
               <MissoesPersistidas fila={filaMissoes} disciplinas={trilha.disciplinas} compacta={essencial}
-                aoPraticar={podeEditar ? (contexto) => irAba("registrar", contexto) : undefined} />
+                aoPraticar={podeEditar ? (contexto) => irAba("registrar", contexto) : undefined}
+                questoesIntegradas={questoesIntegradas}
+                aoResolver={podeEditar ? (missao, tipo) => setResolvendo({ missao, tipo }) : undefined} />
             )}
             <MetaSemana meta={meta} trilha={trilha} podeEditar={podeEditar} aoMudar={recarregar}
               compacta aoPraticar={(alvo) => irAba("registrar", alvo)}
