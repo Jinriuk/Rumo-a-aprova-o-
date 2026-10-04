@@ -1,0 +1,214 @@
+{
+  "medido_em": "2026-10-04",
+  "creditos": {
+    "filtros": 4,
+    "totais": 18
+  },
+  "faseA_filtros": [
+    {
+      "pedido": {
+        "acao": "filtros",
+        "tipo": "assuntos",
+        "q": "Princípios",
+        "materia": "Direito Processual Penal"
+      },
+      "http": 200,
+      "resposta": {
+        "estado": "ok",
+        "itens": [
+          "Princípios do Direito Processual Penal",
+          "Princípios da Ação Penal",
+          "Comparativo de princípios, direitos e garantias individuais",
+          "Princípios",
+          "Princípios Aplicáveis às Medidas Cautelares",
+          "Princípios Relativos à Prova Penal",
+          "Princípios informadores ou orientadores"
+        ]
+      }
+    },
+    {
+      "pedido": {
+        "acao": "filtros",
+        "tipo": "assuntos",
+        "q": "Lei processual penal",
+        "materia": "Direito Processual Penal"
+      },
+      "http": 200,
+      "resposta": {
+        "estado": "ok",
+        "itens": [
+          "Lei processual penal no tempo",
+          "Interpretação da Lei Processual Penal",
+          "Integração da lei processual penal",
+          "Lei processual penal no espaço",
+          "Sistemas de aplicação da lei processual penal no tempo"
+        ]
+      }
+    },
+    {
+      "pedido": {
+        "acao": "filtros",
+        "tipo": "assuntos",
+        "q": "Crime militar",
+        "materia": "Direito Penal Militar"
+      },
+      "http": 200,
+      "resposta": {
+        "estado": "ok",
+        "itens": [
+          "Teoria Geral do Crime Militar"
+        ]
+      }
+    },
+    {
+      "pedido": {
+        "acao": "filtros",
+        "tipo": "assuntos",
+        "q": "Pena",
+        "materia": "Direito Penal Militar"
+      },
+      "http": 200,
+      "resposta": {
+        "estado": "ok",
+        "itens": [
+          "Direito Penal Militar",
+          "Das Penas",
+          "Aplicação da Lei Penal Militar",
+          "Penas Acessórias",
+          "Suspensão Condicional da Pena",
+          "Penas Principais",
+          "A Especialidade do Direito Penal Militar",
+          "Aplicação da Pena",
+          "Da Ação Penal no CPM",
+          "Lei Penal Militar no Tempo"
+        ]
+      }
+    }
+  ],
+  "faseB_totais": [
+    {
+      "pedido": {
+        "acao": "cobertura",
+        "bancas": [],
+        "missoes": [
+          {
+            "chave": "M01-CPP:principios",
+            "materia": "Direito Processual Penal",
+            "assunto": "Princípios do Direito Processual Penal"
+          },
+          {
+            "chave": "M01-CPP:lei-no-tempo",
+            "materia": "Direito Processual Penal",
+            "assunto": "Lei processual penal no tempo"
+          },
+          {
+            "chave": "M02-PEN:elementos",
+            "materia": "Direito Penal",
+            "assunto": "Elementos do Fato Típico"
+          },
+          {
+            "chave": "M02-CPM:teoria-geral",
+            "materia": "Direito Penal Militar",
+            "assunto": "Teoria Geral do Crime Militar"
+          },
+          {
+            "chave": "M03-CPM:das-penas",
+            "materia": "Direito Penal Militar",
+            "assunto": "Das Penas"
+          },
+          {
+            "chave": "M04-ADM:lai-grafia2",
+            "materia": "Direito Administrativo",
+            "assunto": "Lei nº 12.527 - Lei de Acesso à Informação"
+          }
+        ]
+      },
+      "http": 200,
+      "resposta": {
+        "estado": "ok",
+        "bancas": [],
+        "medido_em": "2026-10-04T14:32:40.131Z",
+        "linhas": [
+          {
+            "chave": "M01-CPP:principios",
+            "filtro": {
+              "materia": "Direito Processual Penal",
+              "assunto": "Princípios do Direito Processual Penal",
+              "assunto_id": null
+            },
+            "total": 35,
+            "por_banca": {},
+            "outras": 35,
+            "creditos": 3,
+            "erro": null
+          },
+          {
+            "chave": "M01-CPP:lei-no-tempo",
+            "filtro": {
+              "materia": "Direito Processual Penal",
+              "assunto": "Lei processual penal no tempo",
+              "assunto_id": null
+            },
+            "total": 19,
+            "por_banca": {},
+            "outras": 19,
+            "creditos": 3,
+            "erro": null
+          },
+          {
+            "chave": "M02-PEN:elementos",
+            "filtro": {
+              "materia": "Direito Penal",
+              "assunto": "Elementos do Fato Típico",
+              "assunto_id": null
+            },
+            "total": 2,
+            "por_banca": {},
+            "outras": 2,
+            "creditos": 3,
+            "erro": null
+          },
+          {
+            "chave": "M02-CPM:teoria-geral",
+            "filtro": {
+              "materia": "Direito Penal Militar",
+              "assunto": "Teoria Geral do Crime Militar",
+              "assunto_id": null
+            },
+            "total": 4,
+            "por_banca": {},
+            "outras": 4,
+            "creditos": 3,
+            "erro": null
+          },
+          {
+            "chave": "M03-CPM:das-penas",
+            "filtro": {
+              "materia": "Direito Penal Militar",
+              "assunto": "Das Penas",
+              "assunto_id": null
+            },
+            "total": 33,
+            "por_banca": {},
+            "outras": 33,
+            "creditos": 3,
+            "erro": null
+          },
+          {
+            "chave": "M04-ADM:lai-grafia2",
+            "filtro": {
+              "materia": "Direito Administrativo",
+              "assunto": "Lei nº 12.527 - Lei de Acesso à Informação",
+              "assunto_id": null
+            },
+            "total": 1,
+            "por_banca": {},
+            "outras": 1,
+            "creditos": 3,
+            "erro": null
+          }
+        ]
+      }
+    }
+  ]
+}

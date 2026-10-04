@@ -129,6 +129,30 @@ e não entregaram questão.
 - O total não exclui questões desatualizadas (a Quest não aceita esse filtro); a normalização descarta as que
   vierem marcadas.
 
+## Segunda tentativa e regra do botão (04/10/2026)
+
+**Regra (decisão do dono):** o botão só liga se o total da missão na Quest for maior ou igual à meta. A semana
+4 (simulado, sem meta automática) e a M04-DH ficam no registro manual.
+
+Segunda tentativa para as 4 abaixo da meta (teto de 30 créditos; gastos 22: 4 em `/filtros` e 18 em totais sem
+bancas). O código aceita **um** assunto por missão; somar assuntos ficou para depois.
+
+| Missão | Assunto antes (total) | Tentado | Total | Meta | Decisão |
+|---|---|---|---|---|---|
+| M01-CPP | Sistemas Processuais Penais (6) | Princípios do Direito Processual Penal / Lei processual penal no tempo | 35 / 19 | 20 | troca para Princípios; liga |
+| M02-PEN | Fato Típico (1) | Elementos do Fato Típico | 2 | 20 | fica manual |
+| M02-CPM | Culpabilidade e Imputabilidade (5) | Teoria Geral do Crime Militar | 4 | 13 | fica manual |
+| M03-CPM | Aplicação da Pena (2) | Das Penas | 33 | 13 | troca; liga |
+| M04-ADM | LAI 2011 (1179) | LAI, segunda grafia | 1 | — | semana de simulado; soma não suportada |
+
+M01-CPP com "Princípios": a missão é sistema processual e aplicação da lei processual; as questões entregues
+serão de princípios. Desligar se a coordenação preferir o recorte exato.
+
+Ligadas pela regra: 16 (as 14 da primeira medição + M01-CPP + M03-CPM). Bruto em
+`docs/operacao/quest-cobertura-pmerj-2026-10-04-tentativa2.json`.
+
+**Créditos do dia:** 183 (primeira medição) + 22 (segunda tentativa) = **205**, contados pelo script.
+
 ## Como ligar (depois da tabela e com aprovação)
 
 1. Backup novo. Aplicar a 0064 (se ainda não estiver) e a 0065.

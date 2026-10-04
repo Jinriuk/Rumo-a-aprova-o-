@@ -47,10 +47,25 @@
       "materia_codigo": "dir_proc_pen",
       "assuntoAnexo": "CPP-02",
       "materia": "Direito Processual Penal",
-      "assunto": "Sistemas Processuais Penais",
+      "assunto": "Princípios do Direito Processual Penal",
       "assunto_id": null,
       "conferido": true,
-      "materiaConferida": true
+      "materiaConferida": true,
+      "tentativas": [
+        {
+          "assunto": "Sistemas Processuais Penais",
+          "total": 6
+        },
+        {
+          "assunto": "Princípios do Direito Processual Penal",
+          "total": 35
+        },
+        {
+          "assunto": "Lei processual penal no tempo",
+          "total": 19
+        }
+      ],
+      "observacao": "Filtro trocado em 04/10/2026 para o assunto vizinho com volume (35). A missão é 'sistema processual e aplicação da lei processual': as questões entregues serão de princípios, não de sistemas. Um assunto por missão até o código aceitar mais de um."
     },
     {
       "chave": "PMERJ-M01-CPM",
@@ -105,7 +120,18 @@
       "assunto": "Fato Típico",
       "assunto_id": null,
       "conferido": true,
-      "materiaConferida": true
+      "materiaConferida": true,
+      "tentativas": [
+        {
+          "assunto": "Fato Típico",
+          "total": 1
+        },
+        {
+          "assunto": "Elementos do Fato Típico",
+          "total": 2
+        }
+      ],
+      "observacao": "Abaixo da meta (20) nos dois nomes; fica no registro manual."
     },
     {
       "chave": "PMERJ-M02-CPP",
@@ -127,7 +153,18 @@
       "assunto": "Culpabilidade e Imputabilidade",
       "assunto_id": null,
       "conferido": true,
-      "materiaConferida": true
+      "materiaConferida": true,
+      "tentativas": [
+        {
+          "assunto": "Culpabilidade e Imputabilidade",
+          "total": 5
+        },
+        {
+          "assunto": "Teoria Geral do Crime Militar",
+          "total": 4
+        }
+      ],
+      "observacao": "Abaixo da meta (13) nos dois nomes; fica no registro manual."
     },
     {
       "chave": "PMERJ-M02-DH",
@@ -190,10 +227,21 @@
       "materia_codigo": "dir_pen_mil",
       "assuntoAnexo": "CPM-06",
       "materia": "Direito Penal Militar",
-      "assunto": "Aplicação da Pena",
+      "assunto": "Das Penas",
       "assunto_id": null,
       "conferido": true,
-      "materiaConferida": true
+      "materiaConferida": true,
+      "tentativas": [
+        {
+          "assunto": "Aplicação da Pena",
+          "total": 2
+        },
+        {
+          "assunto": "Das Penas",
+          "total": 33
+        }
+      ],
+      "observacao": "Filtro trocado em 04/10/2026 para 'Das Penas' (parte geral do CPM, 33)."
     },
     {
       "chave": "PMERJ-M03-DH",
@@ -215,7 +263,18 @@
       "assunto": "Lei nº 12.527/2011 - Lei de Acesso à Informação",
       "assunto_id": null,
       "conferido": true,
-      "materiaConferida": true
+      "materiaConferida": true,
+      "tentativas": [
+        {
+          "assunto": "Lei nº 12.527/2011 - Lei de Acesso à Informação",
+          "total": 1179
+        },
+        {
+          "assunto": "Lei nº 12.527 - Lei de Acesso à Informação",
+          "total": 1
+        }
+      ],
+      "observacao": "Segunda grafia da LAI tem 1 questão; somar exige mais de um assunto por missão (não suportado ainda). Semana de simulado: registro manual."
     },
     {
       "chave": "PMERJ-M04-CONST",
