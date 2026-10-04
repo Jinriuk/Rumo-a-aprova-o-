@@ -102,7 +102,11 @@ Deno.serve(comRelato5xx("questoes-integradas", async (req) => {
         return json({ estado: "ok", itens: await buscarFiltros(deps(), tipo, q, extra) });
       } catch (e) {
         if (!(e instanceof QuestErro)) throw e;
-        return json({ estado: "erro_fornecedor", erro: e.tipo, status: e.status }, 502);
+        // diagnóstico só para o super_admin: NOMES (nunca valores) das
+        // variáveis com QUEST, para achar secret ausente ou mal nomeado
+        const nomes = e.tipo === "sem_chave"
+          ? Object.keys(Deno.env.toObject()).filter((k) => /quest/i.test(k)).sort() : undefined;
+        return json({ estado: "erro_fornecedor", erro: e.tipo, status: e.status, ...(nomes ? { variaveis_quest: nomes } : {}) }, 502);
       }
     }
 

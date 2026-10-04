@@ -257,6 +257,14 @@ function arquivos(dir) {
   return out;
 }
 
+test("diagnóstico de secret ausente devolve só NOMES de variável, nunca valores, e só ao super_admin", () => {
+  const fn = semComentario(ler("supabase/functions/questoes-integradas/index.ts"));
+  const bloco = fn.slice(fn.indexOf('corpo.acao === "filtros"'), fn.indexOf("const quem = await chamador"));
+  assert.match(bloco, /superAdmin\(req\)/);
+  assert.match(bloco, /Object\.keys\(Deno\.env\.toObject\(\)\)\.filter\(\(k\) => \/quest\/i\.test\(k\)\)/);
+  assert.doesNotMatch(fn, /Object\.values\(Deno\.env|Object\.entries\(Deno\.env|Deno\.env\.toObject\(\)\[/);
+});
+
 test("nada do front fala com a Quest nem menciona a chave (sem VITE_ da Quest)", () => {
   for (const f of arquivos(resolve(root, "app"))) {
     if (!/\.(jsx?|tsx?|html|json|env.*)$/.test(f)) continue;
