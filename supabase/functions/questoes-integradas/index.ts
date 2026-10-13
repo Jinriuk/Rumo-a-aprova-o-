@@ -18,6 +18,11 @@
 //   filtros    super_admin ativo. {tipo: 'materias'|'assuntos', q, materia?}
 //              → nomes exatos da Quest (GET /v2/filtros/*). Não entrega
 //              questão.
+//   origem     super_admin ativo. {filtro: {materia, assunto?, assunto_id?},
+//              quantidade (1–20)} → primeira página do filtro SEM gabarito
+//              (3 créditos por questão), devolvendo só id, banca, ano,
+//              órgão e cargo. Não grava nada; serve para completar a origem
+//              de questões guardadas antes da leitura de provas[].
 //
 // CRÉDITOS: a Quest cobra por questão entregue (3 sem gabarito, 6 com).
 //   Questão guardada serve a todos os alunos sem nova chamada; a busca
@@ -36,8 +41,8 @@ import { admin, chamador, corsHeaders } from "../_shared/contexto.ts";
 import { escolaOperacional, RESPOSTA_ESCOLA_PARADA } from "../_shared/escola.ts";
 import { comRelato5xx } from "../_shared/coletor-servidor.ts";
 import {
-  buscarFiltros, buscarQuest, type DepsQuest, medirCobertura, type MissaoCobertura, montarConsulta, normalizarQuestao,
-  QuestErro,
+  buscarFiltros, buscarQuest, CREDITOS_SEM_GABARITO, type DepsQuest, type FiltroMissao, medirCobertura,
+  type MissaoCobertura, montarConsulta, normalizarQuestao, origemDaQuestao, QuestErro,
 } from "../_shared/quest.ts";
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -107,6 +112,30 @@ Deno.serve(comRelato5xx("questoes-integradas", async (req) => {
         const nomes = e.tipo === "sem_chave"
           ? Object.keys(Deno.env.toObject()).filter((k) => /quest/i.test(k)).sort() : undefined;
         return json({ estado: "erro_fornecedor", erro: e.tipo, status: e.status, ...(nomes ? { variaveis_quest: nomes } : {}) }, 502);
+      }
+    }
+
+    if (corpo.acao === "origem") {
+      if (!(await superAdmin(req))) return json({ error: "acesso restrito ao super_admin" }, 403);
+      const f = (corpo.filtro ?? {}) as Record<string, unknown>;
+      const quantidade = Number.isInteger(corpo.quantidade) ? corpo.quantidade as number : 0;
+      if (typeof f.materia !== "string" || !f.materia.trim() || quantidade < 1 || quantidade > 20) {
+        return json({ estado: "pedido_invalido" }, 400);
+      }
+      const filtro: FiltroMissao = {
+        materia: f.materia.trim(),
+        assunto: typeof f.assunto === "string" && f.assunto.trim() ? f.assunto.trim() : null,
+        assunto_id: typeof f.assunto_id === "string" && f.assunto_id.trim() ? f.assunto_id.trim() : null,
+      };
+      try {
+        const r = await buscarQuest(deps(), montarConsulta(filtro, { porPagina: quantidade }));
+        const itens = r.itens
+          .filter((it) => it && typeof it === "object" && (it as { id?: unknown }).id !== undefined)
+          .map((it) => ({ id_externo: String((it as { id: unknown }).id).slice(0, 100), ...origemDaQuestao(it) }));
+        return json({ estado: "ok", creditos: r.itens.length * CREDITOS_SEM_GABARITO, itens });
+      } catch (e) {
+        if (!(e instanceof QuestErro)) throw e;
+        return json({ estado: "erro_fornecedor", erro: e.tipo, status: e.status }, 502);
       }
     }
 

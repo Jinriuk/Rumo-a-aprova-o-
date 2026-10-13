@@ -190,6 +190,31 @@ const temMidia = (v: unknown): boolean =>
 
 const IMG_NO_TEXTO = /<img\b|!\[[^\]]*\]\(/i;
 
+// No formato oficial a origem vem em provas[] (a mesma questão pode ter
+// sido aplicada em mais de uma prova). Vale a primeira prova com banca;
+// o ano, o órgão e o cargo vêm dessa mesma prova. `prova` (objeto único)
+// e os campos soltos no item ficam como reserva de formatos antigos.
+// deno-lint-ignore no-explicit-any
+function provaPrincipal(item: any): Record<string, unknown> {
+  const provas = Array.isArray(item?.provas) ? item.provas.filter((p: unknown) => p && typeof p === "object") : [];
+  return provas.find((p: Record<string, unknown>) => texto(p.banca)) ?? provas[0] ??
+    (item?.prova && typeof item.prova === "object" ? item.prova : {});
+}
+
+export type OrigemQuestao = { banca: string | null; orgao: string | null; cargo: string | null; ano: number | null };
+
+// deno-lint-ignore no-explicit-any
+export function origemDaQuestao(item: any): OrigemQuestao {
+  const prova = provaPrincipal(item);
+  const anoBruto = Number(prova.ano ?? item?.ano);
+  return {
+    banca: texto(prova.banca ?? item?.banca),
+    orgao: texto(prova.orgao ?? item?.orgao),
+    cargo: texto(prova.cargo ?? item?.cargo),
+    ano: Number.isInteger(anoBruto) && anoBruto >= 1950 && anoBruto <= 2100 ? anoBruto : null,
+  };
+}
+
 // Converte um item da Quest no formato que o banco guarda. Devolve null
 // (questão descartada) quando não dá para corrigir com segurança: sem
 // id, sem gabarito, gabarito fora das alternativas, com imagem/anexo,
@@ -202,7 +227,7 @@ export function normalizarQuestao(item: any): QuestaoNormalizada | null {
   if (item.anulada === true || item.desatualizada === true) return null;
   if (temMidia(item.anexos) || temMidia(item.imagens) || IMG_NO_TEXTO.test(enunciado)) return null;
 
-  const prova = item.prova ?? {};
+  const prova = provaPrincipal(item);
   const classe = item.classificacao ?? {};
   const bruto = String(item.gabarito ?? "").trim().toUpperCase();
   const tipoProva = String(prova.alternative_type ?? item.tipo ?? "").toLowerCase();
@@ -234,13 +259,9 @@ export function normalizarQuestao(item: any): QuestaoNormalizada | null {
   }
   if (!alternativas.some((a) => a.letra === gabarito)) return null;
 
-  const anoBruto = Number(prova.ano ?? item.ano);
   return {
     id_externo: id.slice(0, 100),
-    banca: texto(prova.banca ?? item.banca),
-    orgao: texto(prova.orgao ?? item.orgao),
-    cargo: texto(prova.cargo ?? item.cargo),
-    ano: Number.isInteger(anoBruto) && anoBruto >= 1950 && anoBruto <= 2100 ? anoBruto : null,
+    ...origemDaQuestao(item),
     materia: texto(classe.materia ?? item.materia),
     assunto: texto(classe.assunto ?? item.assunto),
     tipo,
@@ -269,7 +290,7 @@ export type LinhaCobertura = {
   detalhe?: string | null;
 };
 
-const CREDITOS_SEM_GABARITO = 3;
+export const CREDITOS_SEM_GABARITO = 3;
 
 // Para cada missão: total com os filtros fixos, total por banca e o que
 // sobra ("outras"). Cada chamada pede per_page=1 e SEM gabarito: o total

@@ -57,6 +57,41 @@ test("normaliza múltipla escolha com banca em objeto e mantém as 5 alternativa
   assert.equal(q.assunto, "Administração Indireta");
 });
 
+// 13/10: no formato oficial a origem vem em provas[].banca e provas[].ano.
+// Sem ler provas[], as 5 questões guardadas no demo ficaram sem banca e ano.
+test("origem no formato oficial: provas[] com banca e ano; a primeira prova com banca vale, ano da mesma prova", () => {
+  const base = { ...itemQuest(), prova: undefined };
+  const q = Q.normalizarQuestao({ ...base, provas: [{ banca: "CESGRANRIO", ano: 2023, orgao: "PETROBRAS", cargo: "Técnico" }] });
+  assert.deepEqual([q.banca, q.ano, q.orgao, q.cargo], ["CESGRANRIO", 2023, "PETROBRAS", "Técnico"]);
+  const varias = Q.origemDaQuestao({ provas: [{ ano: 2019 }, { banca: { nome: "FGV" }, ano: "2021" }, { banca: "CESPE", ano: 2024 }] });
+  assert.deepEqual(varias, { banca: "FGV", orgao: null, cargo: null, ano: 2021 });
+  assert.equal(Q.origemDaQuestao({ provas: [{ ano: 2018 }] }).ano, 2018, "sem banca em nenhuma, usa a primeira prova");
+  assert.deepEqual(Q.origemDaQuestao({ provas: [] }), { banca: null, orgao: null, cargo: null, ano: null });
+  assert.equal(Q.origemDaQuestao({ provas: [{ banca: "FGV", ano: 1800 }] }).ano, null, "ano fora do intervalo vira nulo");
+  // formato antigo (prova única) continua lido
+  assert.equal(Q.origemDaQuestao(itemQuest()).banca, "FGV");
+});
+
+test("certo/errado reconhecido pelo alternative_type da prova em provas[]", () => {
+  const q = Q.normalizarQuestao({
+    ...itemQuest(), prova: undefined, alternativas: [], gabarito: "E",
+    provas: [{ banca: "CESPE", ano: 2022, alternative_type: "true_false" }],
+  });
+  assert.equal(q.tipo, "certo_errado");
+  assert.equal(q.gabarito, "E");
+  assert.equal(q.banca, "CESPE");
+});
+
+test("ação origem: só super_admin, sem gabarito, no máximo 20, devolve só a origem e não grava nada", () => {
+  const src = ler("supabase/functions/questoes-integradas/index.ts");
+  const bloco = src.slice(src.indexOf('corpo.acao === "origem"'), src.indexOf("const quem = await chamador(req);"));
+  assert.match(bloco, /if \(!\(await superAdmin\(req\)\)\) return json\(\{ error: "acesso restrito ao super_admin" \}, 403\);/);
+  assert.match(bloco, /quantidade < 1 \|\| quantidade > 20/);
+  assert.match(bloco, /montarConsulta\(filtro, \{ porPagina: quantidade \}\)/, "sem gabarito: 3 créditos por questão");
+  assert.doesNotMatch(bloco, /gabarito: true|\.rpc\(|\.from\(|enunciado|alternativas/);
+  assert.match(bloco, /id_externo: .*\.\.\.origemDaQuestao\(it\)/);
+});
+
 test("certo/errado vira C/E com as duas alternativas fixas", () => {
   const q = Q.normalizarQuestao(itemQuest({ alternativas: [], gabarito: "ERRADO", prova: { alternative_type: "certo_errado", banca: "CEBRASPE" } }));
   assert.equal(q.tipo, "certo_errado");

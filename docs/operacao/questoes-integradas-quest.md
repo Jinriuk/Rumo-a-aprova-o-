@@ -19,7 +19,15 @@ Conferido pelo dono na documentação oficial (04/10): base `https://api.quest.a
 cabeçalho `X-API-Key`, resposta `data.items` e `data.total`, `per_page` até 100,
 `include_gabarito=true` embute o gabarito, paginação por cursor `after_id`. Banca, matéria e
 assunto exigem o valor exato (`GET /v2/filtros/materias` e `/v2/filtros/assuntos`, parâmetro `q`).
-Bancas: `CESGRANRIO` e `FGV`.
+Bancas: `CESGRANRIO` e `FGV`. A origem de cada questão vem em `provas[]` (`provas[].banca`,
+`provas[].ano`, conferido pelo dono em 13/10): a normalização usa a primeira prova com banca, e
+o ano, o órgão e o cargo dessa mesma prova (`origemDaQuestao` em `_shared/quest.ts`). Até 13/10
+o código lia só `prova` (objeto único), e as questões guardadas ficaram sem banca e ano.
+
+**Completar a origem de questões já guardadas:** ação `origem` (super_admin), com o filtro da
+missão e `quantidade` de 1 a 20. Busca a primeira página do filtro **sem** gabarito (3 créditos
+por questão) e devolve só id, banca, ano, órgão e cargo; não grava nada. A gravação é um UPDATE
+manual nas linhas com `banca is null`, casando por `id_externo`.
 
 **Custo: 3 créditos por questão entregue sem gabarito, 6 com gabarito.** Consequências no código:
 
