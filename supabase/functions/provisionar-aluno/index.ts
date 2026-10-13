@@ -57,11 +57,18 @@ function novoCodigo(): string {
 // se confundir visualmente com o código (31 símbolos, só maiúsculas,
 // formato XXXX-XXXX-XXXX). 16 posições ≈ 93 bits — bem acima do
 // necessário pra um segredo que só vive até a primeira troca.
+// P1.1: o Auth pode exigir minúscula, maiúscula e dígito (o demo exige).
+// Sorteada sem olhar isso, ~8% das senhas saíam sem dígito, o createUser
+// devolvia weak_password e a coordenação via só "Tente novamente". Sorteia
+// de novo até ter as três classes (em média 1,1 sorteio).
 const ALFABETO_SENHA = "ABCDEFGHJKMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789";
 
 function novaSenhaTemporaria(): string {
-  const bytes = crypto.getRandomValues(new Uint8Array(16));
-  return [...bytes].map((b) => ALFABETO_SENHA[b % ALFABETO_SENHA.length]).join("");
+  for (;;) {
+    const bytes = crypto.getRandomValues(new Uint8Array(16));
+    const s = [...bytes].map((b) => ALFABETO_SENHA[b % ALFABETO_SENHA.length]).join("");
+    if (/[a-z]/.test(s) && /[A-Z]/.test(s) && /[0-9]/.test(s)) return s;
+  }
 }
 
 // Espelha normalizarCodigo() do frontend (shared/data/index.js): mesma

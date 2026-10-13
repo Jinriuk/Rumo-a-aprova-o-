@@ -131,6 +131,22 @@ test("backend: novaSenhaTemporaria() não recebe nem usa o código como entrada"
   assert.match(m[1], /crypto\.getRandomValues/, "novaSenhaTemporaria() não usa CSPRNG");
 });
 
+// P1.1: o Auth do demo exige minúscula, maiúscula e dígito; ~8% das senhas
+// sorteadas sem essa garantia saíam sem dígito e o createUser recusava
+// (weak_password), visto como "Tente novamente" na coordenação. Roda o
+// gerador de verdade, extraído da fonte, muitas vezes.
+test("backend: novaSenhaTemporaria() sempre tem minúscula, maiúscula e dígito, 16 posições", () => {
+  const alfabeto = srcBackend.match(/const ALFABETO_SENHA = "([^"]+)";/)[1];
+  const corpo = srcBackend.match(/function novaSenhaTemporaria\(\)[\s\S]{0,10}?\{([\s\S]+?)\n\}/)[1];
+  const gerar = new Function("crypto", "ALFABETO_SENHA", corpo);
+  for (let i = 0; i < 3000; i++) {
+    const s = gerar(globalThis.crypto, alfabeto);
+    assert.equal(s.length, 16);
+    assert.ok(/[a-z]/.test(s) && /[A-Z]/.test(s) && /[0-9]/.test(s), `senha sem uma das três classes (posição ${i})`);
+    assert.ok([...s].every((c) => alfabeto.includes(c)));
+  }
+});
+
 test("frontend: entrarComCodigo envia a SENHA DIGITADA, não uma derivação do código", () => {
   const m = corpoEntrarComCodigo.match(/password:\s*([^,\n]+),/);
   assert.ok(m, "não encontrei o password: de signInWithPassword em entrarComCodigo");
