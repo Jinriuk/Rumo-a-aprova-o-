@@ -97,28 +97,36 @@ describe("migration 0047 — colunas de credencial em usuarios (Postgres real)",
   });
 });
 
-describe("shared/lib/senha.js — força de senha (lógica pura)", () => {
-  let forcaSenha, NIVEL_MINIMO_ACEITAVEL;
+describe("shared/lib/senha.js — regra de senha (lógica pura)", () => {
+  let forcaSenha, NIVEL_MINIMO_ACEITAVEL, conferirSenha, senhaAceita;
   before(async () => {
-    ({ forcaSenha, NIVEL_MINIMO_ACEITAVEL } = await import("../app/src/shared/lib/senha.js"));
+    ({ forcaSenha, NIVEL_MINIMO_ACEITAVEL, conferirSenha, senhaAceita } = await import("../app/src/shared/lib/senha.js"));
   });
 
-  it("curta demais (< 8) é sempre nível 0, mesmo com símbolos", () => {
+  it("curta demais (< 8) é sempre nível 0, mesmo com as três classes", () => {
     assert.equal(forcaSenha("Aa1!").nivel, 0);
+    assert.equal(senhaAceita("Aa1!"), false);
   });
 
-  it("só minúsculas, 8+ chars, é fraca (nível 1)", () => {
-    assert.equal(forcaSenha("abcdefgh").nivel, 1);
+  // P1.1 (13/10): a regra é a do Auth do demo e da produção. Antes "duas
+  // classes quaisquer" (AbcdefGh) liberava o botão e o Auth recusava.
+  it("8+ sem número, sem maiúscula ou sem minúscula não libera o botão", () => {
+    for (const s of ["AbcdefGh", "abcdefg1", "ABCDEFG1", "abcdefgh", "12345678"]) {
+      assert.equal(senhaAceita(s), false, s);
+      assert.ok(forcaSenha(s).nivel < NIVEL_MINIMO_ACEITAVEL, s);
+    }
   });
 
-  it("duas classes (maiúscula+minúscula), 8+ chars, é razoável (nível 2) — libera o botão", () => {
-    const f = forcaSenha("AbcdefGh");
-    assert.equal(f.nivel, 2);
-    assert.ok(f.nivel >= NIVEL_MINIMO_ACEITAVEL);
-  });
-
-  it("quatro classes é forte (nível 3)", () => {
+  it("8+ com minúscula, maiúscula e número é aceita; com símbolo ou 12+ é forte", () => {
+    assert.equal(forcaSenha("Abcdefg1").nivel, 2);
     assert.equal(forcaSenha("Abc123!@").nivel, 3);
+    assert.equal(forcaSenha("Abcdefghijk1").nivel, 3);
+  });
+
+  it("diz o que falta, item por item, na ordem da tela", () => {
+    assert.deepEqual(conferirSenha("abc").map((r) => [r.id, r.ok]),
+      [["tamanho", false], ["minuscula", true], ["maiuscula", false], ["numero", false]]);
+    assert.equal(forcaSenha("abcdefgh").texto, "Falta: uma letra maiúscula, um número");
   });
 });
 
@@ -154,8 +162,9 @@ describe("Edge Function trocar-senha — contrato (inspeção de fonte)", () => 
 
   it("valida força mínima no SERVIDOR, não só confia no cliente (SEGURANCA-04)", () => {
     assert.match(src, /function senhaFraca/);
-    assert.match(src, /length\s*<\s*8/);
-    assert.match(src, /classes\s*<\s*2/);
+    assert.match(src, /s\.length < 8 \|\| !\/\[a-z\]\/\.test\(s\) \|\| !\/\[A-Z\]\/\.test\(s\) \|\| !\/\[0-9\]\/\.test\(s\)/);
+    // e no caminho da requisição, antes de tocar o Auth
+    assert.ok(src.indexOf("senhaFraca(senha_nova)") < src.indexOf("updateUserById"));
   });
 
   it("recusa senha IGUAL ao código — sem isso o BLOCO B1 inteiro é decorativo", () => {
@@ -196,6 +205,47 @@ describe("Edge Function trocar-senha — contrato (inspeção de fonte)", () => 
 // Presença de código não prova comportamento: aqui EXTRAÍMOS as funções
 // reais do .ts e as EXECUTAMOS (mesma técnica de login-codigo-fronteira —
 // sem runner de Deno, é o mais perto de rodar a função de verdade).
+describe("trocar-senha — mesma regra da tela, e recusa do Auth vira 422 com texto", () => {
+  let senhaFraca, recusaDoAuth, senhaAceita;
+  before(async () => {
+    ({ senhaAceita } = await import("../app/src/shared/lib/senha.js"));
+    const src = ler("supabase/functions/trocar-senha/index.ts");
+    const pedaco = (re, nome) => {
+      const m = src.match(re);
+      assert.ok(m, `não encontrei ${nome} em trocar-senha/index.ts`);
+      return m[0];
+    };
+    const fonte = [
+      pedaco(/const REGRA_SENHA = [^\n]+\n/, "REGRA_SENHA"),
+      pedaco(/function senhaFraca\([\s\S]+?\n\}/, "senhaFraca"),
+      pedaco(/function recusaDoAuth\([\s\S]+?\n\}/, "recusaDoAuth"),
+    ].join("\n")
+      // tira só as anotações de tipo — o corpo é JS puro
+      .replace(/ as \{[^}]+\} \| null/g, "")
+      .replace(/\): string \| null \{/g, ") {")
+      .replace(/\((\w+): (string|unknown)\)/g, "($1)");
+    ({ senhaFraca, recusaDoAuth } = new Function(`${fonte}\nreturn { senhaFraca, recusaDoAuth };`)());
+  });
+
+  it("servidor e tela aceitam e recusam exatamente as mesmas senhas", () => {
+    const amostra = ["", "Aa1", "abcdefgh", "ABCDEFGH", "12345678", "AbcdefGh", "abcdefg1", "ABCDEFG1",
+      "Abcdefg1", "Nova-7xYz", "Senha!123", "çãoÁÉÍ12", "Estudo2026", "estudo2026", "ESTUDO2026"];
+    for (const s of amostra) assert.equal(senhaFraca(s) === null, senhaAceita(s), JSON.stringify(s));
+  });
+
+  it("weak_password do Auth vira texto: regra ou senha vazada; outro erro segue como 500", () => {
+    assert.match(recusaDoAuth({ code: "weak_password", reasons: ["characters"] }), /minúscula, letra maiúscula e número/);
+    assert.match(recusaDoAuth({ name: "AuthWeakPasswordError", reasons: ["pwned"] }), /vazamentos/);
+    assert.equal(recusaDoAuth({ code: "unexpected_failure" }), null);
+    assert.equal(recusaDoAuth(null), null);
+  });
+
+  it("a recusa do Auth responde 422 senha_fraca, não 500", () => {
+    const src = ler("supabase/functions/trocar-senha/index.ts");
+    assert.match(src, /const recusa = recusaDoAuth\(e1\);\n\s*if \(recusa\) return json\(\{ error: recusa, estado: "senha_fraca" \}, 422\);/);
+  });
+});
+
 describe("trocar-senha — a regra 'senha ≠ código' rodando de verdade", () => {
   let codigoDoEmail, senhaEhOCodigo;
 

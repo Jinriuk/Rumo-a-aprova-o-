@@ -72,11 +72,27 @@ test.describe("autenticação", { tag: ["@j:auth", "@critica"] }, () => {
     await expect(page.getByText("Escolha sua senha")).toBeVisible({ timeout: 20_000 });
     // nenhuma área aparece atrás da troca
     await expect(botaoVisivel(page, "Hoje")).toHaveCount(0);
-    // a senha não pode ser o próprio código
+    // P1.1: a regra aparece antes de digitar e é a mesma do servidor de
+    // autenticação; sem número (ou sem maiúscula) o botão não libera
+    const regras = page.getByRole("list", { name: "A senha precisa ter" });
+    await expect(regras).toContainText("8 caracteres ou mais");
+    await expect(regras).toContainText("uma letra maiúscula");
+    await expect(regras).toContainText("um número");
+    const definir = page.getByRole("button", { name: "Definir senha e continuar" });
+    await campo(page, "Nova senha").fill("SemNumeroAqui");
+    await campo(page, "Confirmar senha").fill("SemNumeroAqui");
+    await expect(definir).toBeDisabled();
+    // a senha não pode ser o próprio código: o código puro (só maiúsculas
+    // e números) já para na regra; com minúsculas chega ao servidor, que
+    // recusa por ser o código
     await campo(page, "Nova senha").fill(conta.codigo);
     await campo(page, "Confirmar senha").fill(conta.codigo);
-    await page.getByRole("button", { name: "Definir senha e continuar" }).click();
-    await expect(page.getByRole("alert")).toBeVisible({ timeout: 15_000 });
+    await expect(definir).toBeDisabled();
+    const codigoMisto = conta.codigo[0] + conta.codigo.slice(1).toLowerCase();
+    await campo(page, "Nova senha").fill(codigoMisto);
+    await campo(page, "Confirmar senha").fill(codigoMisto);
+    await definir.click();
+    await expect(page.getByRole("alert")).toContainText("código", { timeout: 15_000 });
     await campo(page, "Nova senha").fill(SENHA_NOVA_E2E);
     await campo(page, "Confirmar senha").fill(SENHA_NOVA_E2E);
     await page.getByRole("button", { name: "Definir senha e continuar" }).click();

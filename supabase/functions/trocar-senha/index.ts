@@ -73,11 +73,26 @@ const normalizarCodigo = (s: string) => s.replace(/[^a-zA-Z0-9]/g, "").toUpperCa
 // validação do cliente é só decoração — SEGURANCA-04 (validação de
 // força só no cliente, contornável pela API) é achado documentado
 // (docs/auditoria/seguranca/seg2), e este endpoint é onde fechamos.
+// P1.1 (13/10): a MESMA regra do Auth (demo e produção) e da tela
+// (app/src/shared/lib/senha.js): 8+ caracteres com minúscula, maiúscula e
+// número. Antes bastavam duas classes quaisquer e o Auth recusava o resto
+// com um 500 genérico.
+const REGRA_SENHA = "A senha precisa ter 8 caracteres ou mais, com letra minúscula, letra maiúscula e número.";
+
 function senhaFraca(s: string): string | null {
-  if (typeof s !== "string" || s.length < 8) return "Senha muito curta (mínimo 8 caracteres).";
-  const classes = [/[A-Z]/, /[a-z]/, /[0-9]/, /[^A-Za-z0-9]/].filter((r) => r.test(s)).length;
-  if (classes < 2) return "Senha fraca — combine maiúsculas, minúsculas, números ou símbolos.";
+  if (typeof s !== "string" || s.length < 8 || !/[a-z]/.test(s) || !/[A-Z]/.test(s) || !/[0-9]/.test(s)) {
+    return REGRA_SENHA;
+  }
   return null;
+}
+
+// O Auth ainda pode recusar (senha vazada, regra mais dura configurada no
+// painel). Vira 422 com texto para o usuário, não 500.
+function recusaDoAuth(e: unknown): string | null {
+  const err = e as { code?: string; name?: string; message?: string; reasons?: string[] } | null;
+  if (!err || (err.code !== "weak_password" && err.name !== "AuthWeakPasswordError")) return null;
+  const vazada = (err.reasons ?? []).includes("pwned") || /known to be weak|pwned|easy to guess/i.test(err.message ?? "");
+  return vazada ? "Esta senha aparece em vazamentos conhecidos e é fácil de adivinhar. Escolha outra." : REGRA_SENHA;
 }
 
 // Etapa 7 / BLOCO B1 — a regra que dá sentido a todo o resto: a senha
@@ -129,7 +144,11 @@ Deno.serve(comRelato5xx("trocar-senha", async (req) => {
     }
 
     const { error: e1 } = await admin.auth.admin.updateUserById(quem.id, { password: senha_nova });
-    if (e1) throw e1;
+    if (e1) {
+      const recusa = recusaDoAuth(e1);
+      if (recusa) return json({ error: recusa, estado: "senha_fraca" }, 422);
+      throw e1;
+    }
 
     // must_change_password vive em `usuarios` (não no Auth) — é o que
     // App.jsx lê via meuPerfil() pra decidir o gate (B2). Zera sempre,
