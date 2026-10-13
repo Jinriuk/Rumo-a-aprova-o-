@@ -23,6 +23,11 @@ const ESTADOS = {
 
 export const ESTADOS_ESPERADOS_QUEST = Object.keys(ESTADOS);
 
+// Lote pedido ao servidor. 5 e não os 10 do padrão da 0065: sessão curta
+// e metade do custo da primeira busca de cada missão (a Quest cobra 6
+// créditos por questão com gabarito; questão guardada não paga de novo).
+export const TAMANHO_LOTE = 5;
+
 export function mensagemDoEstado(estado) {
   return ESTADOS[estado] ?? ESTADOS.erro;
 }

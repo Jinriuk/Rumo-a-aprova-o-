@@ -14,3 +14,6 @@ e2e-artefatos/
 # backup e ensaio de restore (scripts/backup): saída local, nunca versionada
 backup-saida/
 ensaio-restauro/
+# P1.1: build e resultados do E2E contra o demo (app/playwright.demo.config.js)
+dist-demo/
+e2e-demo-resultados/

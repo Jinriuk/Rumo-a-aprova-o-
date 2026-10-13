@@ -16,7 +16,7 @@ import { SectionCard, Botao, StatusBadge } from "../../shared/ui/componentes.jsx
 import { useTema } from "../../shared/branding/BrandingContext.jsx";
 import { useEnvioUnico } from "../../shared/hooks/useEnvioUnico.js";
 import * as db from "../../shared/data/index.js";
-import { mensagemDoEstado, novoPedidoId, textoSimples, origemDaQuestao, resumoDoLote } from "./questoesIntegradas.js";
+import { mensagemDoEstado, novoPedidoId, textoSimples, origemDaQuestao, resumoDoLote, TAMANHO_LOTE } from "./questoesIntegradas.js";
 
 export function ResolverQuestoes({ missao, tipo = "missao", aoFechar, aoRegistrarManual, aoMudar }) {
   const T = useTema();
@@ -36,7 +36,7 @@ export function ResolverQuestoes({ missao, tipo = "missao", aoFechar, aoRegistra
     setFalha(null);
     setAviso(null);
     try {
-      const r = await db.entregarQuestoes({ missaoId: missao.id, pedidoId: pedidoRef.current });
+      const r = await db.entregarQuestoes({ missaoId: missao.id, pedidoId: pedidoRef.current, tamanho: TAMANHO_LOTE });
       if (r?.estado !== "ok" || !r.entrega?.questoes?.length) { setFalha(r?.estado ?? "erro"); return; }
       setLote(r.entrega);
       const { proxima } = resumoDoLote(r.entrega.questoes);

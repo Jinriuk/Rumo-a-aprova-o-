@@ -83,6 +83,10 @@ test.describe("autenticação", { tag: ["@j:auth", "@critica"] }, () => {
     await expect(botaoVisivel(page, "Hoje"), await retratoDaTela(page)).toBeVisible({ timeout: 20_000 });
     const [u] = await sql("select must_change_password from usuarios where id = $1", [conta.id]);
     expect(u.must_change_password).toBe(false);
+    // P1.1: a troca pela Admin API apaga as sessões da conta; sem entrar de
+    // novo, o JWT órfão passa no PostgREST e toda Edge Function dá 401.
+    const [s] = await sql("select count(*)::int as n from auth.sessions where user_id = $1", [conta.id]);
+    expect(s.n, "depois de trocar a senha o app entra de novo (sessão viva para as Edge Functions)").toBeGreaterThanOrEqual(1);
     await sair(page);
 
     await entrarCom(page, { codigo: conta.codigo }, SENHA_E2E);

@@ -816,11 +816,21 @@ export const reativarCredencial = (usuarioId) =>
   invocar("provisionar-aluno", { tipo: "reativar-credencial", usuario_id: usuarioId });
 
 // Etapa 7 / BLOCO B2 — o próprio usuário logado troca a senha temporária
-// (ou qualquer senha) pela pessoal. Sem sessão renovada: o JWT atual
-// continua válido (a troca de senha no GoTrue não invalida a sessão
-// corrente), só o perfil precisa ser relido pra `must_change_password`
-// cair — quem chama recarrega a sessão/perfil depois.
-export const trocarSenha = (senhaNova) => invocar("trocar-senha", { senha_nova: senhaNova });
+// (ou qualquer senha) pela pessoal. P1.1: a troca pela Admin API APAGA
+// as sessões da conta (auth.sessions fica vazia). O JWT em memória ainda
+// passa no PostgREST, que só confere a assinatura, mas toda Edge Function
+// (getUser) responde 401 e o refresh falha na próxima renovação. Por isso
+// entra de novo com a senha nova logo depois; o SIGNED_IN relê o perfil.
+export async function trocarSenha(senhaNova) {
+  const resultado = await invocar("trocar-senha", { senha_nova: senhaNova });
+  const { data } = await supabase.auth.getSession();
+  const email = data?.session?.user?.email;
+  if (email) {
+    const { error } = await supabase.auth.signInWithPassword({ email, password: senhaNova });
+    if (error) throw falha("entrar de novo após trocar a senha", error, { esperada: credencialInvalida(error) });
+  }
+  return resultado;
+}
 export const gerarMeta = (alunoId) => invocar("gerar-meta", { aluno_id: alunoId });
 // Tarefa 1: a Edge Function nunca devolve o link de acesso — só o status
 // (…_enviado | …_pendente). A UI do backoffice lê por aqui, não por `.link`

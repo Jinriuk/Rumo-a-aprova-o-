@@ -16,7 +16,7 @@ import { readFileSync } from "node:fs";
 import { resolve, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import {
-  mensagemDoEstado, ESTADOS_ESPERADOS_QUEST, textoSimples, podeResolverAqui, resumoDoLote, origemDaQuestao, novoPedidoId,
+  mensagemDoEstado, ESTADOS_ESPERADOS_QUEST, textoSimples, podeResolverAqui, resumoDoLote, origemDaQuestao, novoPedidoId, TAMANHO_LOTE,
 } from "../app/src/modules/motor/questoesIntegradas.js";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
@@ -110,4 +110,34 @@ test("Hoje: o botão só existe para quem registra; falha leva ao Registrar com 
   const painel = semComentarios(ler("app/src/modules/motor/ProgressoVivido.jsx"));
   assert.match(painel, /podeResolverAqui\(mi, questoesIntegradas\)/);
   assert.match(painel, /aoResolver\(mi, mi\.estado === "concluida" \? "revisao" : "missao"\)/);
+});
+
+// Tarefa do botão que não apareceu (13/10): o front não conhecia o
+// pmerj_cfo na tabela de maturidade. O cadastro mostrava "Este concurso
+// está indisponível" e o aluno via "ainda não recebe alunos".
+test("CFO PMERJ é pré-edital no front: aceita aluno e acha a trilha do nicho pmerj-cfo", async () => {
+  const { aceitaAluno, maturidadeDe, trilhaSemanalDoConcurso } = await import("../app/src/modules/conteudo/maturidade.js");
+  assert.equal(maturidadeDe("pmerj_cfo"), "pre_edital");
+  assert.equal(aceitaAluno("pmerj_cfo"), true);
+  const trilhas = [
+    { id: "cn", nicho: "colegio-naval", versao: 9 },
+    { id: "pm1", nicho: "pmerj-cfo", versao: 1 },
+  ];
+  assert.equal(trilhaSemanalDoConcurso("pmerj_cfo", trilhas)?.id, "pm1", "nunca o calendário de outro concurso");
+  const nicho = JSON.parse(ler("supabase/seed/trilha-pmerj-cfo-v1.json")).nicho;
+  assert.equal(nicho, "pmerj-cfo", "o nicho do front bate com o do seed da trilha");
+});
+
+test("lote de 5: a tela pede o tamanho e a camada de dados o repassa à função", () => {
+  assert.equal(TAMANHO_LOTE, 5);
+  const tela = semComentarios(ler("app/src/modules/motor/ResolverQuestoes.jsx"));
+  assert.match(tela, /entregarQuestoes\(\{ missaoId: missao\.id, pedidoId: pedidoRef\.current, tamanho: TAMANHO_LOTE \}\)/);
+  const dados = semComentarios(ler("app/src/shared/data/index.js"));
+  assert.match(dados, /\.\.\.\(tamanho \? \{ tamanho \} : \{\}\)/);
+});
+
+test("a ficha da coordenação diz onde ficam as questões (na tela do aluno) e pede a credencial quando falta", () => {
+  const ficha = ler("app/src/modules/desempenho/FichaAluno.jsx");
+  assert.match(ficha, /Resolver questões aqui/);
+  assert.match(ficha, /Sem credencial, o aluno ainda não entra no app\. Gere a credencial/);
 });

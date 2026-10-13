@@ -324,7 +324,14 @@ describe("shared/data/index.js — seam das novas ações de credencial", () => 
     assert.match(src, /export const resetarSenhaCredencial = \(usuarioId\) =>\s*\n\s*invocar\("provisionar-aluno", \{ tipo: "resetar-senha", usuario_id: usuarioId \}\);/);
     assert.match(src, /export const revogarCredencial = \(usuarioId\) =>\s*\n\s*invocar\("provisionar-aluno", \{ tipo: "revogar-credencial", usuario_id: usuarioId \}\);/);
     assert.match(src, /export const reativarCredencial = \(usuarioId\) =>\s*\n\s*invocar\("provisionar-aluno", \{ tipo: "reativar-credencial", usuario_id: usuarioId \}\);/);
-    assert.match(src, /export const trocarSenha = \(senhaNova\) => invocar\("trocar-senha", \{ senha_nova: senhaNova \}\);/);
+    assert.match(src, /export async function trocarSenha\(senhaNova\) \{\s*\n\s*const resultado = await invocar\("trocar-senha", \{ senha_nova: senhaNova \}\);/);
+  });
+
+  it("P1.1: depois de trocar a senha entra de novo, porque a Admin API apaga as sessões da conta", () => {
+    const corpo = src.slice(src.indexOf("export async function trocarSenha"), src.indexOf("export const gerarMeta"));
+    assert.match(corpo, /supabase\.auth\.getSession\(\)/);
+    assert.match(corpo, /supabase\.auth\.signInWithPassword\(\{ email, password: senhaNova \}\)/);
+    assert.ok(corpo.indexOf("invocar(\"trocar-senha\"") < corpo.indexOf("signInWithPassword"), "só entra de novo depois que o servidor confirma a troca");
   });
 
   it("meuPerfil seleciona must_change_password (é o que App.jsx lê pro gate B2)", () => {

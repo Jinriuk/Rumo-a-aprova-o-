@@ -217,6 +217,14 @@ export function FichaAluno({ aluno, concurso, turmas = [], concursos = [], trilh
           )}
           <BotaoMini onClick={() => setVinculosAbertos(true)}>Ver vínculos</BotaoMini>
         </div>
+        {/* P1.1: a ficha mostra o plano, mas a prática (registro e questões
+            integradas) só existe na tela do próprio aluno. Sem esta linha,
+            quem testa pela ficha procura o botão e não acha. */}
+        <div style={{ padding: "0 14px 12px", fontSize: 12, color: T.sub, lineHeight: 1.5 }}>
+          {aluno.usuario_id
+            ? "As questões e o registro de estudo ficam na tela do aluno: ele entra com o código dele e vê \"Resolver questões aqui\" nas missões da aba Hoje."
+            : "Sem credencial, o aluno ainda não entra no app. Gere a credencial: as questões e o registro de estudo ficam na tela dele, na aba Hoje."}
+        </div>
         {erroAcao && <div style={{ padding: "0 14px 12px" }}><Erro>{erroAcao}</Erro></div>}
       </SectionCard>
 
