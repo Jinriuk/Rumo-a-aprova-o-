@@ -65,7 +65,8 @@ test("coordenação cadastra aluno PMERJ, gera credencial e o aluno resolve 5 qu
   await page.getByLabel("Senha", { exact: true }).fill(senhaTemp);
   await page.getByRole("button", { name: /^Entrar na missão/ }).click();
   await expect(page.getByText("Escolha sua senha")).toBeVisible({ timeout: 45_000 });
-  const nova = `Nova-${randomBytes(9).toString("base64url")}`;
+  // minúscula, maiúscula e dígito garantidos: o Auth do demo exige os três
+  const nova = `Nova-7${randomBytes(9).toString("base64url")}`;
   await page.getByLabel("Nova senha", { exact: true }).fill(nova);
   await page.getByLabel("Confirmar senha", { exact: true }).fill(nova);
   await page.getByRole("button", { name: "Definir senha e continuar" }).click();
