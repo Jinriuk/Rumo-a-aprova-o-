@@ -63,10 +63,25 @@ function novoCodigo(): string {
 // de novo até ter as três classes (em média 1,1 sorteio).
 const ALFABETO_SENHA = "ABCDEFGHJKMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789";
 
+// Sorteio sem viés (CodeQL js/biased-cryptographic-random): `byte % 54`
+// favorecia as primeiras letras, porque 256 não é múltiplo de 54. Byte
+// acima do maior múltiplo do alfabeto é descartado, e a letra sai por
+// divisão inteira, não por resto.
+function sortear(alfabeto: string, n: number): string {
+  const porLetra = Math.floor(256 / alfabeto.length);
+  const teto = porLetra * alfabeto.length;
+  let s = "";
+  while (s.length < n) {
+    for (const b of crypto.getRandomValues(new Uint8Array(n))) {
+      if (b < teto && s.length < n) s += alfabeto[Math.floor(b / porLetra)];
+    }
+  }
+  return s;
+}
+
 function novaSenhaTemporaria(): string {
   for (;;) {
-    const bytes = crypto.getRandomValues(new Uint8Array(16));
-    const s = [...bytes].map((b) => ALFABETO_SENHA[b % ALFABETO_SENHA.length]).join("");
+    const s = sortear(ALFABETO_SENHA, 16);
     if (/[a-z]/.test(s) && /[A-Z]/.test(s) && /[0-9]/.test(s)) return s;
   }
 }
