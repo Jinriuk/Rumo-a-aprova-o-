@@ -20,6 +20,7 @@
 // coordenação nunca mais a vê depois de gerada/resetada.
 // ============================================================
 import { createClient } from "jsr:@supabase/supabase-js@2";
+import { randomInt } from "node:crypto";
 
 const admin = createClient(
   Deno.env.get("SUPABASE_URL")!,
@@ -64,18 +65,12 @@ function novoCodigo(): string {
 const ALFABETO_SENHA = "ABCDEFGHJKMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789";
 
 // Sorteio sem viés (CodeQL js/biased-cryptographic-random): `byte % 54`
-// favorecia as primeiras letras, porque 256 não é múltiplo de 54. Byte
-// acima do maior múltiplo do alfabeto é descartado, e a letra sai por
-// divisão inteira, não por resto.
+// favorecia as primeiras letras, porque 256 não é múltiplo de 54.
+// randomInt (node:crypto, CSPRNG) é uniforme em [0, n): faz a rejeição
+// por dentro, sem resto nem arredondamento sobre o byte.
 function sortear(alfabeto: string, n: number): string {
-  const porLetra = Math.floor(256 / alfabeto.length);
-  const teto = porLetra * alfabeto.length;
   let s = "";
-  while (s.length < n) {
-    for (const b of crypto.getRandomValues(new Uint8Array(n))) {
-      if (b < teto && s.length < n) s += alfabeto[Math.floor(b / porLetra)];
-    }
-  }
+  for (let i = 0; i < n; i++) s += alfabeto[randomInt(alfabeto.length)];
   return s;
 }
 

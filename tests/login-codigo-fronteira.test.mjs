@@ -24,6 +24,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { resolve, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
+import { randomInt } from "node:crypto";
 
 const __dir = dirname(fileURLToPath(import.meta.url));
 const root = resolve(__dir, "..");
@@ -130,9 +131,10 @@ test("backend: novaSenhaTemporaria() não recebe nem usa o código como entrada"
   assert.ok(!/codigo/i.test(m[1]), "novaSenhaTemporaria() referencia 'codigo' — deveria ser puramente aleatória");
   const sorteio = srcBackend.match(/function sortear\([\s\S]+?\n\}/);
   assert.ok(sorteio && /sortear\(ALFABETO_SENHA, 16\)/.test(m[1]), "a senha não sai de sortear()");
-  assert.match(sorteio[0], /crypto\.getRandomValues/, "sortear() não usa CSPRNG");
-  // sem resto (%) sobre o byte: o resto enviesava as primeiras letras
-  assert.doesNotMatch(sorteio[0], /%/, "sortear() voltou a usar módulo sobre byte aleatório");
+  assert.match(sorteio[0], /randomInt\(alfabeto\.length\)/, "sortear() não usa randomInt");
+  assert.match(srcBackend, /import \{ randomInt \} from "node:crypto";/, "randomInt não vem do node:crypto (CSPRNG)");
+  // sem resto (%) nem arredondamento sobre byte: enviesavam as primeiras letras
+  assert.doesNotMatch(sorteio[0], /%|Math\.floor|getRandomValues/, "sortear() voltou a derivar a letra de um byte");
 });
 
 // P1.1: o Auth do demo exige minúscula, maiúscula e dígito; ~8% das senhas
@@ -144,9 +146,9 @@ test("backend: novaSenhaTemporaria() sempre tem minúscula, maiúscula e dígito
   const corpo = srcBackend.match(/function novaSenhaTemporaria\(\)[\s\S]{0,10}?\{([\s\S]+?)\n\}/)[1];
   const sortearSrc = srcBackend.match(/function sortear\([\s\S]+?\n\}/)[0]
     .replace(/\(alfabeto: string, n: number\): string/, "(alfabeto, n)");
-  const gerar = new Function("crypto", "ALFABETO_SENHA", `${sortearSrc}\n${corpo}`);
+  const gerar = new Function("randomInt", "ALFABETO_SENHA", `${sortearSrc}\n${corpo}`);
   for (let i = 0; i < 3000; i++) {
-    const s = gerar(globalThis.crypto, alfabeto);
+    const s = gerar(randomInt, alfabeto);
     assert.equal(s.length, 16);
     assert.ok(/[a-z]/.test(s) && /[A-Z]/.test(s) && /[0-9]/.test(s), `senha sem uma das três classes (posição ${i})`);
     assert.ok([...s].every((c) => alfabeto.includes(c)));
@@ -157,9 +159,8 @@ test("backend: sortear() é uniforme no alfabeto (sem viés de módulo)", () => 
   const alfabeto = srcBackend.match(/const ALFABETO_SENHA = "([^"]+)";/)[1];
   const sortearSrc = srcBackend.match(/function sortear\([\s\S]+?\n\}/)[0]
     .replace(/\(alfabeto: string, n: number\): string/, "(alfabeto, n)");
-  const sortear = new Function("crypto", `${sortearSrc}\nreturn sortear;`)(globalThis.crypto);
+  const sortear = new Function("randomInt", `${sortearSrc}\nreturn sortear;`)(randomInt);
   const conta = new Map([...alfabeto].map((c) => [c, 0]));
-  // em blocos de 1000 (getRandomValues aceita até 64 KB por chamada)
   for (let i = 0; i < alfabeto.length * 4; i++) {
     for (const c of sortear(alfabeto, 1000)) conta.set(c, conta.get(c) + 1);
   }
