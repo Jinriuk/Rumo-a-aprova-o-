@@ -197,11 +197,11 @@ Ordem: o que trava ou confunde no primeiro minuto vem antes do que melhora o uso
 |---|---|---|---|
 | 1 | Depois de trocar a senha temporária, toda Edge Function respondia 401: a troca apaga as sessões da conta e o app continuava com o token antigo | Primeiro acesso de qualquer aluno e responsável (vale também para a produção) | **Corrigido no #184** (o app entra de novo com a senha nova), com teste |
 | 2 | Questões resolvidas no app contam para a missão, mas não para a tarefa da semana nem para o XP | Hoje, Histórico, responsável, ficha | Aberto (mudança 4) |
-| 3 | A senha que a tela marca como "Forte" pode ser recusada pelo servidor de autenticação (falta número ou maiúscula), com mensagem genérica | Primeiro acesso | Aberto (mudança 1) |
-| 4 | A senha temporária gerada pela escola saía sem número em cerca de 8% das vezes; o servidor recusava e a coordenação via "Não foi possível concluir a ação" | Gerar credencial | **Corrigido no #183** (falta publicar a função `provisionar-aluno` no demo e na produção) |
+| 3 | A senha que a tela marca como "Forte" pode ser recusada pelo servidor de autenticação (falta número ou maiúscula), com mensagem genérica | Primeiro acesso | **Corrigido no #184** (mudança 1: regra única na tela, no servidor e no Auth; recusa vira 422 com texto). Falta publicar `trocar-senha` |
+| 4 | A senha temporária gerada pela escola saía sem número em cerca de 8% das vezes; o servidor recusava e a coordenação via "Não foi possível concluir a ação" | Gerar credencial | **Corrigido no #183**; publicado no demo em 13/10, falta a produção |
 | 5 | Menu "Mais" abre para cima e fica cortado pelo cartão quando a lista tem poucos alunos; "Adicionar responsável" fica inalcançável | Coordenação → Alunos | Aberto (mudança 9) |
 | 6 | O convite do guia, que não bloqueia a tela, fica por cima do cartão principal no celular e da caixa de nome do responsável; reaparece em cada aparelho novo | Aluno e coordenação | Aberto (mudança 2) |
-| 7 | Banca e ano das questões guardadas ficam vazios (a normalização não reconhece onde a Quest manda esses campos), e a tela não mostra a origem | Questões integradas | Aberto (mudança 5) |
+| 7 | Banca e ano das questões guardadas ficam vazios (a normalização não reconhece onde a Quest manda esses campos), e a tela não mostra a origem | Questões integradas | Leitura de `provas[]` corrigida no #183 e as 5 do demo preenchidas; a tela mostrar a origem segue na mudança 5 |
 | 8 | Aluno criado hoje entra na semana 2 com a semana 1 "encerrada" | Aluno novo | Aberto (mudança 7) |
 
 ## Capturas
