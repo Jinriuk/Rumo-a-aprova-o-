@@ -161,6 +161,51 @@ export async function buscarQuest(
   return { itens: dados.items, total, proximo };
 }
 
+// ── abastecer o lote (0066: banca preferida, depois qualquer banca) ──
+
+export type FaseBusca = "preferida" | "geral";
+export type BuscaDaFase = { fase: FaseBusca; banca: string | null; cursor: string | null };
+export type ResultadoGuardar = { novas: number; proxima: BuscaDaFase | null };
+export type Guardar = (
+  fase: FaseBusca, itens: QuestaoNormalizada[], cursor: string | null, esgotada: boolean,
+) => Promise<ResultadoGuardar>;
+export type PassoBusca = { fase: FaseBusca; pedidas: number; recebidas: number; guardadas: number; novas: number };
+
+// Teto de chamadas à Quest por pedido do aluno: a primeira e, se o lote
+// ficou curto, mais uma. Curto quer dizer: a banca preferida acabou, ou a
+// busca devolveu questões que a missão já tinha (cobradas, mas não fecham
+// o lote de ninguém), ou a normalização descartou itens. Pior caso por
+// pedido: 2 × o que falta (lote_max 20 → 40 questões, 240 créditos).
+export const MAX_BUSCAS_POR_PEDIDO = 2;
+
+// A fase, a banca e o cursor de cada busca vêm do banco (pedido de busca
+// da quest_preparar_entrega; depois, `proxima` da quest_guardar_questoes):
+// nada aqui decide sozinho quando a banca preferida acabou.
+export async function abastecerLote(
+  deps: DepsQuest,
+  filtro: FiltroMissao,
+  primeira: BuscaDaFase,
+  faltam: number,
+  guardar: Guardar,
+): Promise<PassoBusca[]> {
+  const passos: PassoBusca[] = [];
+  let busca: BuscaDaFase | null = primeira;
+  let resta = faltam;
+  while (busca && resta > 0 && passos.length < MAX_BUSCAS_POR_PEDIDO) {
+    // só o que falta para este lote, com gabarito (6 créditos cada)
+    const pedidas = Math.min(100, Math.max(1, Math.trunc(resta)));
+    const res = await buscarQuest(deps, montarConsulta(filtro, {
+      porPagina: pedidas, gabarito: true, afterId: busca.cursor, banca: busca.fase === "preferida" ? busca.banca : null,
+    }));
+    const itens = res.itens.map(normalizarQuestao).filter((q): q is QuestaoNormalizada => q !== null);
+    const g = await guardar(busca.fase, itens, res.proximo, res.itens.length < pedidas);
+    passos.push({ fase: busca.fase, pedidas, recebidas: res.itens.length, guardadas: itens.length, novas: g.novas });
+    resta -= g.novas;
+    busca = g.proxima;
+  }
+  return passos;
+}
+
 // Nomes exatos de matéria e assunto na Quest. Não entrega questão.
 export async function buscarFiltros(
   deps: DepsQuest,

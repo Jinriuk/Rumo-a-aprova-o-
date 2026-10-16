@@ -7,6 +7,8 @@
     "CESGRANRIO",
     "FGV"
   ],
+  "bancaPreferida": "FGV",
+  "bancaPreferidaComentario": "0066 (decisão do dono, 16/10/2026): a busca do lote usa banca=FGV até esgotar e, depois, qualquer banca. 'bancas' segue servindo só para medir cobertura.",
   "missoes": [
     {
       "chave": "PMERJ-M01-ADM",

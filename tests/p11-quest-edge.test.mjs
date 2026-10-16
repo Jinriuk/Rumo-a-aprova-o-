@@ -255,6 +255,17 @@ test("SQL dos filtros: aplica nas missões do CFO PMERJ, nasce desligado, liga s
     assert.equal(await n(), 24);
     assert.equal(await n("ativo"), 1);
     assert.equal(await n(`ativo and missao_id = '${uid("missao:PMERJ-M01-ADM")}'`), 1);
+    // 0066: todas com FGV como banca preferida (decisão do dono, 16/10)
+    assert.equal(mapa.bancaPreferida, "FGV");
+    assert.equal(await n("banca_preferida = 'FGV'"), 24);
+    // reaplicar com outra banca zera só a paginação da busca com banca
+    await c.query(`update app.quest_filtros_missao set cursor = 'g-5', cursor_preferida = 'p-3',
+                     preferida_esgotada_em = now()`);
+    await c.query(semTransacao(gerarSqlFiltros(mapa, { ativar: ["PMERJ-M01-ADM"] })));
+    assert.equal(await n("cursor = 'g-5' and cursor_preferida = 'p-3' and preferida_esgotada_em is null"), 24,
+      "mesmo filtro e mesma banca: os cursores ficam, o esgotado volta a buscar");
+    await c.query(semTransacao(gerarSqlFiltros({ ...mapa, bancaPreferida: "CESGRANRIO" })));
+    assert.equal(await n("cursor = 'g-5' and cursor_preferida is null and banca_preferida = 'CESGRANRIO'"), 24);
   } finally {
     await c.query("rollback").catch(() => {});
     c.release();
@@ -272,6 +283,105 @@ test("SQL dos filtros recusa rodar antes da publicação das missões", async ()
     await c.query("rollback").catch(() => {});
     c.release();
   }
+});
+
+// ── abastecer o lote (0066) ──────────────────────────────────────────
+
+const FILTRO = { materia: "Direito Penal Militar", assunto: "Das Penas", assunto_id: null };
+const itensQuest = (de, ate, banca = "FGV") =>
+  Array.from({ length: ate - de + 1 }, (_, i) => itemQuest({ id: de + i, prova: { ...itemQuest().prova, banca: { nome: banca } } }));
+
+// guardar falso com o mesmo contrato da quest_guardar_questoes de 5
+// argumentos: conta as novas e diz a próxima busca
+function guardarFalso({ banca = "FGV", cursorGeral = "g-0" } = {}) {
+  const guardadas = new Set();
+  const estado = { preferidaEsgotada: false, geralEsgotada: false, cursorPreferida: null, cursorGeral };
+  const chamadas = [];
+  const fn = async (fase, itens, cursor, esgotada) => {
+    chamadas.push({ fase, n: itens.length, cursor, esgotada });
+    let novas = 0;
+    for (const q of itens) if (!guardadas.has(q.id_externo)) { guardadas.add(q.id_externo); novas++; }
+    if (fase === "preferida") {
+      estado.cursorPreferida = cursor ?? estado.cursorPreferida;
+      if (esgotada) estado.preferidaEsgotada = true;
+    } else {
+      estado.cursorGeral = cursor ?? estado.cursorGeral;
+      if (esgotada) estado.geralEsgotada = true;
+    }
+    const proxima = !estado.preferidaEsgotada ? { fase: "preferida", banca, cursor: estado.cursorPreferida }
+      : !estado.geralEsgotada ? { fase: "geral", banca: null, cursor: estado.cursorGeral } : null;
+    return { novas, proxima };
+  };
+  fn.chamadas = chamadas;
+  return fn;
+}
+
+test("abastecer: FGV que fecha o lote faz uma chamada só, com banca=FGV e o cursor da FGV", async () => {
+  const f = fetchFalso(() => ({ corpo: { data: { items: itensQuest(1, 5), total: 41 } } }));
+  const g = guardarFalso();
+  const passos = await Q.abastecerLote({ fetch: f, chave: CHAVE }, FILTRO, { fase: "preferida", banca: "FGV", cursor: "p-9" }, 5, g);
+  assert.equal(f.chamadas.length, 1);
+  const p = f.chamadas[0].url.searchParams;
+  assert.equal(p.get("banca"), "FGV");
+  assert.equal(p.get("after_id"), "p-9");
+  assert.equal(p.get("per_page"), "5");
+  assert.equal(p.get("include_gabarito"), "true");
+  assert.deepEqual(passos, [{ fase: "preferida", pedidas: 5, recebidas: 5, guardadas: 5, novas: 5 }]);
+  assert.deepEqual(g.chamadas, [{ fase: "preferida", n: 5, cursor: "5", esgotada: false }]);
+});
+
+test("abastecer: FGV acaba no meio do lote; a segunda chamada, no mesmo pedido, é a geral, sem banca e do cursor geral", async () => {
+  const f = fetchFalso((url) => url.searchParams.get("banca")
+    ? { corpo: { data: { items: itensQuest(1, 2), total: 2 } } }
+    : { corpo: { data: { items: itensQuest(10, 12, "CESGRANRIO"), total: 900 } } });
+  const g = guardarFalso({ cursorGeral: "g-7" });
+  const passos = await Q.abastecerLote({ fetch: f, chave: CHAVE }, FILTRO, { fase: "preferida", banca: "FGV", cursor: null }, 5, g);
+  assert.equal(f.chamadas.length, 2);
+  const [p1, p2] = f.chamadas.map((x) => x.url.searchParams);
+  assert.deepEqual([p1.get("banca"), p1.get("per_page"), p1.get("after_id")], ["FGV", "5", null]);
+  assert.deepEqual([p2.get("banca"), p2.get("per_page"), p2.get("after_id")], [null, "3", "g-7"],
+    "pede só o que ainda falta, a partir do cursor geral");
+  assert.deepEqual(passos.map((x) => [x.fase, x.novas]), [["preferida", 2], ["geral", 3]]);
+  assert.deepEqual(g.chamadas.map((x) => [x.fase, x.esgotada]), [["preferida", true], ["geral", false]]);
+});
+
+test("abastecer: busca geral que devolve questões já guardadas tenta mais uma página, e para em duas chamadas", async () => {
+  // a geral devolve sempre as mesmas FGV (cobradas, mas não fecham o lote)
+  const f = fetchFalso(() => ({ corpo: { data: { items: itensQuest(1, 4), total: 900 } } }));
+  const g = guardarFalso();
+  for (const id of ["1", "2", "3", "4"]) await g("preferida", [{ id_externo: id }], null, false);
+  await g("preferida", [], null, true); // FGV esgotada antes deste pedido
+  g.chamadas.length = 0;
+  const passos = await Q.abastecerLote({ fetch: f, chave: CHAVE }, FILTRO, { fase: "geral", banca: null, cursor: "g-0" }, 4, g);
+  assert.equal(f.chamadas.length, Q.MAX_BUSCAS_POR_PEDIDO, "o teto vale mesmo com o lote ainda curto");
+  assert.ok(f.chamadas.every((x) => !x.url.searchParams.has("banca")));
+  assert.deepEqual(passos.map((x) => x.novas), [0, 0]);
+});
+
+test("abastecer: nada mais a buscar (próxima null) ou lote fechado param sem nova chamada", async () => {
+  const f = fetchFalso(() => ({ corpo: { data: { items: itensQuest(1, 1), total: 1 } } }));
+  const fim = async () => ({ novas: 0, proxima: null });
+  await Q.abastecerLote({ fetch: f, chave: CHAVE }, FILTRO, { fase: "geral", banca: null, cursor: null }, 3, fim);
+  assert.equal(f.chamadas.length, 1);
+  const f2 = fetchFalso(() => ({ corpo: { data: { items: itensQuest(1, 3), total: 50 } } }));
+  await Q.abastecerLote({ fetch: f2, chave: CHAVE }, FILTRO, { fase: "geral", banca: null, cursor: null }, 3, guardarFalso());
+  assert.equal(f2.chamadas.length, 1, "lote fechado na primeira: não gasta a segunda");
+});
+
+test("abastecer: erro do fornecedor na segunda chamada sobe como QuestErro, e o que a primeira guardou fica", async () => {
+  let n = 0;
+  const f = fetchFalso(() => (++n === 1 ? { corpo: { data: { items: itensQuest(1, 1), total: 1 } } } : { status: 429, corpo: "" }));
+  const g = guardarFalso();
+  await assert.rejects(Q.abastecerLote({ fetch: f, chave: CHAVE }, FILTRO, { fase: "preferida", banca: "FGV", cursor: null }, 3, g),
+    (e) => e instanceof Q.QuestErro && e.tipo === "limite");
+  assert.deepEqual(g.chamadas.map((x) => [x.fase, x.n]), [["preferida", 1]]);
+});
+
+test("a função busca pelo abastecerLote e grava com a fase (quest_guardar_questoes de 5 argumentos)", () => {
+  const fn = semComentario(ler("supabase/functions/questoes-integradas/index.ts"));
+  assert.match(fn, /abastecerLote\(deps\(\), \{ materia, assunto, assunto_id \}/);
+  assert.match(fn, /p_esgotada: esgotada, p_fase: faseDaBusca/);
+  assert.doesNotMatch(fn, /buscarQuest\(deps\(\), montarConsulta\(r\.filtro/, "a busca antiga, sem fase, saiu");
 });
 
 // ── travas de fonte ──────────────────────────────────────────────────
