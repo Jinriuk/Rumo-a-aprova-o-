@@ -43,10 +43,16 @@ const ENTIDADES = { "&nbsp;": " ", "&amp;": "&", "&lt;": "<", "&gt;": ">", "&quo
 // dangerouslySetInnerHTML). Quebras de bloco viram quebra de linha.
 export function textoSimples(valor) {
   if (valor == null) return "";
-  return String(valor)
+  let s = String(valor)
     .replace(/<\s*br\s*\/?>/gi, "\n")
-    .replace(/<\/\s*(p|div|li|tr|h[1-6])\s*>/gi, "\n")
-    .replace(/<[^>]*>/g, "")
+    .replace(/<\/\s*(p|div|li|tr|h[1-6])\s*>/gi, "\n");
+  // Tira tag até não sobrar nenhuma: numa passada só, "<<b>script>" deixaria
+  // "<script>" (CodeQL js/incomplete-multi-character-sanitization).
+  for (let antes = null; antes !== s;) {
+    antes = s;
+    s = s.replace(/<[^>]*>/g, "");
+  }
+  return s
     .replace(/&(nbsp|amp|lt|gt|quot|apos|#39);/g, (m) => ENTIDADES[m])
     .replace(/&#(\d+);/g, (_, n) => String.fromCodePoint(Math.min(Number(n), 0x10ffff)))
     .replace(/[ \t]+\n/g, "\n")

@@ -48,6 +48,9 @@ test("enunciado vira texto: tag some, script não executa nem aparece como marca
   assert.match(t, /Texto forte/);
   assert.equal(textoSimples("a<br>b<br/>c"), "a\nb\nc");
   assert.equal(textoSimples("&lt;b&gt;"), "<b>", "texto literal com sinais continua texto (React escapa)");
+  // tag escondida dentro de outra: a remoção repete até não sobrar tag
+  assert.doesNotMatch(textoSimples("<<b>script>alert(3)<</b>/script>"), /<\s*\/?\s*script/i);
+  assert.doesNotMatch(textoSimples("<scr<i>ipt>x</scr</i>ipt>"), /</);
   assert.equal(textoSimples(null), "");
 });
 
