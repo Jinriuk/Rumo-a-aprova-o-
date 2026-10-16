@@ -70,11 +70,10 @@ export function useSessao() {
   }, [carregarPerfil]);
 
   // Etapa 7 / BLOCO B2: depois de trocar-senha, `usuarios.
-  // must_change_password` muda no banco SEM gerar SIGNED_IN nem
-  // TOKEN_REFRESHED (a Edge Function usa a Admin API, o JWT do cliente
-  // nem é tocado) — então `aoMudarSessao` nunca dispara pra isso.
-  // recarregarPerfil() é o jeito explícito de reler o perfil sem
-  // esperar um evento de auth que não vai vir.
+  // must_change_password` muda no banco. Desde a P1.1, db.trocarSenha
+  // entra de novo (a Admin API apaga as sessões), o que gera SIGNED_IN;
+  // recarregarPerfil() continua sendo o jeito explícito de reler o
+  // perfil sem depender da ordem desse evento.
   const recarregarPerfil = useCallback(() => {
     return db.sessaoAtual().then(carregarPerfil).catch((e) => {
       if (vivoRef.current) setEstado((atual) => ({ ...atual, erro: mensagemAmigavel(e, "carregar") }));

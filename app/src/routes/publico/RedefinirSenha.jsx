@@ -14,7 +14,8 @@
 import React, { useId, useState } from "react";
 import { BASE, FONTES_CSS } from "../../shared/ui/tema.js";
 import * as db from "../../shared/data/index.js";
-import { forcaSenha } from "../../shared/lib/senha.js";
+import { senhaAceita } from "../../shared/lib/senha.js";
+import { RegrasSenha } from "../../shared/ui/RegrasSenha.jsx";
 import {
   lerHashRecuperacao,
   mensagemLinkInvalido,
@@ -75,10 +76,9 @@ export default function RedefinirSenha() {
   const [estado, setEstado] = useState("idle"); // idle | salvando | sucesso | erro
   const [erro, setErro] = useState("");
   const uid = useId();
-  const idSenha = `${uid}-senha`, idConfirma = `${uid}-confirma`;
+  const idSenha = `${uid}-senha`, idConfirma = `${uid}-confirma`, idRegras = `${uid}-regras`;
 
-  const forca = forcaSenha(senha);
-  const senhaOk = forca.nivel >= 2;
+  const senhaOk = senhaAceita(senha);
   const igual = senha === confirmacao;
   const pronto = senhaOk && igual && confirmacao.length > 0 && estado !== "salvando";
 
@@ -101,7 +101,6 @@ export default function RedefinirSenha() {
     }
   }
 
-  const corForca = [T.red, T.red, T.gold, T.green][forca.nivel] ?? T.sub;
 
   // Link vencido, já usado ou ausente: mensagem explícita. Nunca tela em
   // branco e nunca redirecionamento silencioso para o login.
@@ -158,15 +157,12 @@ export default function RedefinirSenha() {
           value={senha}
           onChange={(e) => { setSenha(e.target.value); setErro(""); }}
           autoComplete="new-password"
-          placeholder="Mínimo 8 caracteres"
+          placeholder="Crie sua senha"
+          aria-describedby={idRegras}
           aria-invalid={senha && !senhaOk ? true : undefined}
           style={{ ...inputS, borderColor: senha && !senhaOk ? T.red : T.line }}
         />
-        {senha && (
-          <div style={{ fontSize: 11.5, color: corForca, marginTop: -8, marginBottom: 12 }}>
-            {forca.texto}
-          </div>
-        )}
+        <RegrasSenha id={idRegras} senha={senha} T={T} />
 
         <label htmlFor={idConfirma} style={lbl}>Confirmar senha</label>
         <input
