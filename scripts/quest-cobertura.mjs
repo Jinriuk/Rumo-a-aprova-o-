@@ -53,6 +53,10 @@ export function validarMapa(mapa, manifesto) {
     if (m && m.materia !== f.materia_codigo) erros.push(`${f.chave}: matéria ${f.materia_codigo} ≠ ${m.materia}`);
   }
   for (const c of chaves) if (!vistas.has(c)) erros.push(`${c}: missão sem filtro`);
+  // 0066: a banca preferida tem de ser uma das medidas (nome exato da Quest)
+  if (mapa.bancaPreferida != null && !(mapa.bancas ?? []).includes(mapa.bancaPreferida)) {
+    erros.push(`bancaPreferida ${mapa.bancaPreferida} não está em bancas`);
+  }
   return erros;
 }
 
@@ -112,12 +116,14 @@ export function gerarSqlFiltros(mapa, { ativar = [] } = {}) {
   }
   const linhas = mapa.missoes.map((f) =>
     `  (${sqlTexto(uid(`missao:${f.chave}`))}::uuid, ${sqlTexto(f.materia)}, ${sqlTexto(f.assunto)}, ${sqlTexto(f.assunto_id)}, ${ligar.has(f.chave)}, ${sqlTexto(`${f.chave}${f.conferido ? "" : " · filtro não conferido"}`)})`);
+  const banca = mapa.bancaPreferida ?? null;
   return `-- Gerado por scripts/quest-cobertura.mjs --sql a partir de ${MAPA_REL}.
--- Exige a 0065 e as missões do CFO PMERJ publicadas (P0.6).
+-- Exige a 0066 e as missões do CFO PMERJ publicadas (P0.6).
 -- Ligadas: ${ligar.size ? [...ligar].join(", ") : "nenhuma"}.
+-- Banca preferida: ${banca ?? "nenhuma"} (0066: busca nela até esgotar, depois em qualquer banca).
 begin;
-insert into app.quest_filtros_missao (missao_id, materia, assunto, assunto_id_fornecedor, ativo, observacao)
-select d.missao_id, d.materia, d.assunto, d.assunto_id, d.ativo, d.observacao
+insert into app.quest_filtros_missao (missao_id, materia, assunto, assunto_id_fornecedor, ativo, observacao, banca_preferida)
+select d.missao_id, d.materia, d.assunto, d.assunto_id, d.ativo, d.observacao, ${sqlTexto(banca)}
   from (values
 ${linhas.join(",\n")}
   ) as d(missao_id, materia, assunto, assunto_id, ativo, observacao)
@@ -128,12 +134,20 @@ on conflict (missao_id) do update set
   assunto_id_fornecedor = excluded.assunto_id_fornecedor,
   ativo = excluded.ativo,
   observacao = excluded.observacao,
+  banca_preferida = excluded.banca_preferida,
   -- filtro mudou: a paginação recomeça
   cursor = case when app.quest_filtros_missao.materia is distinct from excluded.materia
                           or app.quest_filtros_missao.assunto is distinct from excluded.assunto
                           or app.quest_filtros_missao.assunto_id_fornecedor is distinct from excluded.assunto_id_fornecedor
                         then null else app.quest_filtros_missao.cursor end,
+  -- a busca com banca recomeça também quando a banca muda
+  cursor_preferida = case when app.quest_filtros_missao.materia is distinct from excluded.materia
+                          or app.quest_filtros_missao.assunto is distinct from excluded.assunto
+                          or app.quest_filtros_missao.assunto_id_fornecedor is distinct from excluded.assunto_id_fornecedor
+                          or app.quest_filtros_missao.banca_preferida is distinct from excluded.banca_preferida
+                        then null else app.quest_filtros_missao.cursor_preferida end,
   esgotada_em = null,
+  preferida_esgotada_em = null,
   atualizado_em = now();
 do $$ begin
   if (select count(*) from app.quest_filtros_missao f join public.missoes m on m.id = f.missao_id

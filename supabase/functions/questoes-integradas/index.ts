@@ -27,6 +27,9 @@
 // CRÉDITOS: a Quest cobra por questão entregue (3 sem gabarito, 6 com).
 //   Questão guardada serve a todos os alunos sem nova chamada; a busca
 //   do lote pede só as que faltam ('faltam' da 0065), com gabarito.
+//   0066: busca primeiro na banca preferida da missão (FGV no CFO PMERJ)
+//   e, quando ela acaba, em qualquer banca; no máximo duas chamadas por
+//   pedido (abastecerLote em _shared/quest.ts).
 //
 // SEGREDO: QUEST_API_KEY só em Edge Functions › Secrets. Nunca em VITE_,
 //   nunca no repositório, nunca em log. QUEST_API_BASE_URL é opcional.
@@ -41,8 +44,9 @@ import { admin, chamador, corsHeaders } from "../_shared/contexto.ts";
 import { escolaOperacional, RESPOSTA_ESCOLA_PARADA } from "../_shared/escola.ts";
 import { comRelato5xx } from "../_shared/coletor-servidor.ts";
 import {
-  buscarFiltros, buscarQuest, CREDITOS_SEM_GABARITO, type DepsQuest, type FiltroMissao, medirCobertura,
-  type MissaoCobertura, montarConsulta, normalizarQuestao, origemDaQuestao, QuestErro,
+  abastecerLote, type BuscaDaFase, buscarFiltros, buscarQuest, CREDITOS_SEM_GABARITO, type DepsQuest,
+  type FiltroMissao, type Guardar, medirCobertura, type MissaoCobertura, montarConsulta, origemDaQuestao,
+  QuestErro, type ResultadoGuardar,
 } from "../_shared/quest.ts";
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -158,7 +162,7 @@ Deno.serve(comRelato5xx("questoes-integradas", async (req) => {
         if (error) throw error;
         return data as {
           estado: string; faltam?: number;
-          filtro?: { materia: string; assunto: string | null; assunto_id: string | null; cursor: string | null };
+          filtro?: FiltroMissao & BuscaDaFase;
         };
       };
 
@@ -166,18 +170,22 @@ Deno.serve(comRelato5xx("questoes-integradas", async (req) => {
       let falhaFornecedor: string | null = null;
       if (r.estado === "buscar" && r.filtro) {
         try {
-          // só o que falta para este lote, com gabarito (6 créditos cada)
-          const faltam = Math.min(100, Math.max(1, r.faltam ?? 1));
-          const res = await buscarQuest(deps(), montarConsulta(r.filtro, {
-            porPagina: faltam, gabarito: true, afterId: r.filtro.cursor,
-          }));
-          const itens = res.itens.map(normalizarQuestao).filter((q) => q !== null);
-          const { error } = await admin.rpc("quest_guardar_questoes", {
-            p_missao: missao_id, p_itens: itens, p_cursor: res.proximo,
-            p_esgotada: res.itens.length < faltam,
-          });
-          if (error) throw error;
-          console.log(`questoes-integradas: busca pedidas=${faltam} recebidas=${res.itens.length} guardadas=${itens.length}`);
+          // 0066: banca preferida até esgotar, depois qualquer banca; o
+          // banco diz a fase e o cursor de cada busca (no máximo duas)
+          const { materia, assunto, assunto_id, fase, banca, cursor } = r.filtro;
+          const guardar: Guardar = async (faseDaBusca, itens, proximo, esgotada) => {
+            const { data, error } = await admin.rpc("quest_guardar_questoes", {
+              p_missao: missao_id, p_itens: itens, p_cursor: proximo,
+              p_esgotada: esgotada, p_fase: faseDaBusca,
+            });
+            if (error) throw error;
+            return data as ResultadoGuardar;
+          };
+          const passos = await abastecerLote(deps(), { materia, assunto, assunto_id },
+            { fase: fase ?? "geral", banca: banca ?? null, cursor: cursor ?? null }, r.faltam ?? 1, guardar);
+          for (const p of passos) {
+            console.log(`questoes-integradas: busca fase=${p.fase} pedidas=${p.pedidas} recebidas=${p.recebidas} guardadas=${p.guardadas} novas=${p.novas}`);
+          }
         } catch (e) {
           if (!(e instanceof QuestErro)) throw e;
           falhaFornecedor = e.tipo;

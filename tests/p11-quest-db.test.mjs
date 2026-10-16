@@ -97,7 +97,8 @@ test("sem questão guardada, a entrega pede busca com o filtro da missão; depoi
   await emTransacao(async (c, al) => {
     const r1 = await preparar(c, al, al.m[M1].id, { tamanho: 3 });
     assert.equal(r1.estado, "buscar");
-    assert.deepEqual(r1.filtro, { materia: "Matemática", assunto: M1, assunto_id: null, cursor: null });
+    // sem banca preferida (0066), a busca é a geral da 0065
+    assert.deepEqual(r1.filtro, { materia: "Matemática", assunto: M1, assunto_id: null, cursor: null, fase: "geral", banca: null });
     assert.equal(r1.faltam, 3, "pede à Quest só o que falta para o lote");
     assert.equal(await guardar(c, al.m[M1].id, [1, 2, 3, 4].map((i) => questao(i))), 4);
 

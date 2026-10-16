@@ -87,6 +87,7 @@ const CLASSE = {
   "public.coletor_registrar_erro(text, text, jsonb, boolean)": "s", // E4 (0059): idem
   "public.motor_gerar_meta_segura(uuid)": "s",
   "public.quest_guardar_questoes(uuid, jsonb, text, boolean)": "s", // 0065: só a Edge Function questoes-integradas
+  "public.quest_guardar_questoes(uuid, jsonb, text, boolean, text)": "s", // 0066: idem, com a fase da busca
   "public.quest_preparar_entrega(uuid, uuid, uuid, uuid, integer, boolean)": "s", // 0065: idem
   "public.quest_responder(uuid, uuid, uuid, uuid, text, integer)": "s", // 0065: idem
   "public.registrar_codigo_acesso(uuid, uuid, text)": "s",
@@ -119,7 +120,7 @@ test("C-S06: toda SECURITY DEFINER de public/app tem classe registrada, e nenhum
   const sobrando = Object.keys(CLASSE).filter((n) => !nomes.includes(n));
   assert.deepEqual(semClasse, [], `SECURITY DEFINER sem decisão de quem chama: classifique em tests/e2-cs06-secdef-db.test.mjs`);
   assert.deepEqual(sobrando, [], "classe registrada para função que não existe mais");
-  assert.equal(nomes.length, 68); // 50 da 0057 + 3 da Etapa 4 (0059 e 0060) + 7 da 0061 + 1 da 0064 + 7 da 0065
+  assert.equal(nomes.length, 69); // 50 da 0057 + 3 da Etapa 4 (0059 e 0060) + 7 da 0061 + 1 da 0064 + 7 da 0065 + 1 da 0066
 });
 
 test("C-S06: toda SECURITY DEFINER fixa o search_path", async () => {

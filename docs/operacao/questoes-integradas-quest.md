@@ -172,6 +172,36 @@ Ligadas pela regra: 16 (as 14 da primeira medição + M01-CPP + M03-CPM). Bruto 
 Desligar uma missão: `update app.quest_filtros_missao set ativo = false where missao_id = '...';`
 O botão some na próxima carga da tela; lotes abertos continuam respondíveis até vencer (6 h).
 
+## Banca preferida (0066)
+
+Decisão do dono em 16/10/2026: **FGV = SIM**. A medição de 04/10 mostrou que FGV sozinha não
+fecha as missões (das 16 ligadas, só M01-ADM 41, M02-ADM 32 e M02-CONST 142 têm 20 ou mais;
+M01-CPP e M03-CPM têm 0). A regra é **FGV primeiro e, quando acabar, qualquer banca**.
+
+- `app.quest_filtros_missao` ganha `banca_preferida` (null = sem preferência, regra da 0065),
+  `cursor_preferida` e `preferida_esgotada_em`. `esgotada_em` continua sendo a busca geral.
+- O pedido de busca da `quest_preparar_entrega` diz a fase (`preferida` ou `geral`), a banca e
+  o cursor certo. O estoque guardado sai com a banca preferida primeiro (sem diferença de
+  maiúscula).
+- `quest_guardar_questoes(..., p_fase)` grava o cursor da fase e devolve quantas questões eram
+  **novas** para a missão e qual seria a próxima busca. A função faz **no máximo duas chamadas
+  por pedido**: a segunda só quando o lote ficou curto (FGV acabou, ou a geral devolveu questões
+  já guardadas). Pior caso por pedido: 2 × o que falta (lote de 20 → 40 questões, 240 créditos).
+- A versão de 4 argumentos continua (fase geral): a função publicada antes da 0066 não quebra.
+- O SQL dos filtros (`--sql`) passa a gravar `banca_preferida` a partir de `bancaPreferida` do
+  mapa (`FGV`) e só zera `cursor_preferida` quando matéria, assunto ou banca mudam.
+
+**Custo:** na fase geral as FGV já guardadas voltam da Quest e são cobradas de novo (6 créditos
+cada); o banco não duplica. Teto por missão = total FGV dela (M02-CONST: 142 × 6 = 852 créditos),
+por percurso: se o filtro mudar e os cursores zerarem, paga de novo.
+
+**Ordem de publicação:** 0066 → deploy da `questoes-integradas` → SQL dos filtros com
+`banca_preferida`. Com a banca preenchida e a função antiga no ar, a função antiga buscaria sem
+banca a partir do `cursor_preferida` e gravaria no cursor geral, recomeçando a paginação geral.
+
+Testes: `tests/p11-quest-fgv-db.test.mjs` (banco) e os casos `abastecer:` de
+`tests/p11-quest-edge.test.mjs` (fetch falso).
+
 ## Regras que o banco garante (testadas em `tests/p11-quest-db.test.mjs`)
 
 - Lote sai **sem gabarito**. O gabarito volta só na resposta.
