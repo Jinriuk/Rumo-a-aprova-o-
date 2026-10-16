@@ -20,6 +20,7 @@
 // coordenação nunca mais a vê depois de gerada/resetada.
 // ============================================================
 import { createClient } from "jsr:@supabase/supabase-js@2";
+import { randomInt } from "node:crypto";
 
 const admin = createClient(
   Deno.env.get("SUPABASE_URL")!,
@@ -57,11 +58,27 @@ function novoCodigo(): string {
 // se confundir visualmente com o código (31 símbolos, só maiúsculas,
 // formato XXXX-XXXX-XXXX). 16 posições ≈ 93 bits — bem acima do
 // necessário pra um segredo que só vive até a primeira troca.
+// P1.1: o Auth pode exigir minúscula, maiúscula e dígito (o demo exige).
+// Sorteada sem olhar isso, ~8% das senhas saíam sem dígito, o createUser
+// devolvia weak_password e a coordenação via só "Tente novamente". Sorteia
+// de novo até ter as três classes (em média 1,1 sorteio).
 const ALFABETO_SENHA = "ABCDEFGHJKMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789";
 
+// Sorteio sem viés (CodeQL js/biased-cryptographic-random): `byte % 54`
+// favorecia as primeiras letras, porque 256 não é múltiplo de 54.
+// randomInt (node:crypto, CSPRNG) é uniforme em [0, n): faz a rejeição
+// por dentro, sem resto nem arredondamento sobre o byte.
+function sortear(alfabeto: string, n: number): string {
+  let s = "";
+  for (let i = 0; i < n; i++) s += alfabeto[randomInt(alfabeto.length)];
+  return s;
+}
+
 function novaSenhaTemporaria(): string {
-  const bytes = crypto.getRandomValues(new Uint8Array(16));
-  return [...bytes].map((b) => ALFABETO_SENHA[b % ALFABETO_SENHA.length]).join("");
+  for (;;) {
+    const s = sortear(ALFABETO_SENHA, 16);
+    if (/[a-z]/.test(s) && /[A-Z]/.test(s) && /[0-9]/.test(s)) return s;
+  }
 }
 
 // Espelha normalizarCodigo() do frontend (shared/data/index.js): mesma
