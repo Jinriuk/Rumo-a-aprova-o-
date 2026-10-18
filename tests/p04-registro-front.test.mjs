@@ -95,7 +95,9 @@ test("telas: o painel de missões tem 'Iniciar missão' e 'Revisão', e a área 
   assert.doesNotMatch(painel, /Praticar esta missão/, "18/10: um botão só, \"Iniciar missão\"");
   assert.match(painel, />\s*Registrar revisão\s*</);
   const visao = semComentarios(ler("app/src/routes/aluno/VisaoEstudo.jsx"));
-  assert.match(visao, /<MissoesPersistidas[^>]*aoPraticar=\{podeEditar \? \(contexto\) => irAba\("registrar", contexto\)/s);
+  // desenho de 18/10: "Registrar" da missão sem questões abre o registro já com ela
+  assert.match(visao, /const ctx = contextoRegistroDaMissao\(missao, "missao"\);\s*if \(tab === "hoje"\) abrirRegistroNoHoje\(ctx\); else irAba\("registrar", ctx\);/);
+  assert.match(visao, /irAba\("registrar", contextoRegistroDaMissao\(missao, "revisao"\)\)/);
   const reg = semComentarios(ler("app/src/modules/motor/Registrar.jsx"));
   assert.match(reg, /validarRegistroEstudo\(f, contextoInicial\)/, "o formulário passa o contexto ao contrato");
   assert.doesNotMatch(reg, /validarRegistroEstudo\(f\)/, "nenhuma validação sem contexto sobrou");
@@ -107,14 +109,13 @@ test("painel compacto (o antigo modo essencial) não esconde o botão da missão
   // mudança 8: o modo essencial virou o único, então o painel é sempre
   // compacto, e continua na tela
   const visao = semComentarios(ler("app/src/routes/aluno/VisaoEstudo.jsx"));
-  assert.match(visao, /<MissoesPersistidas[^>]*\bcompacta\s/s);
   assert.doesNotMatch(visao, /essencial/, "não há mais modo para alternar");
   const painel = semComentarios(ler("app/src/modules/motor/ProgressoVivido.jsx"));
   assert.match(painel, /compacta = false/);
   assert.match(painel, /mi\.estado === "atual" \|\| mi\.proxima\)\.slice\(0, 1\)/, "compacto: só a missão da vez de cada matéria");
   const reg = semComentarios(ler("app/src/modules/motor/Registrar.jsx"));
   assert.match(reg, /\{!contextoInicial && \(/);
-  assert.match(reg, /Registro livre: entra no seu histórico e no volume, mas não avança missão\. Para avançar uma missão, use o botão “Iniciar missão” na aba Hoje\./);
+  assert.match(reg, /Registro livre: entra no seu histórico e no volume, mas não avança missão\. Para avançar uma missão, use o botão dela no Hoje ou no Plano\./);
 });
 
 // Raio-x, mudança 8: o painel de missões do PMERJ mostrava "DIR_ADM".
@@ -128,7 +129,8 @@ test("matéria sempre pelo nome: trilha/catálogo, depois o mapa fixo, nunca o c
   assert.doesNotMatch(painel, /\?\? cod \?\?/);
   const visao = semComentarios(ler("app/src/routes/aluno/VisaoEstudo.jsx"));
   assert.match(visao, /db\.carregarNomesMateria\(\)\.catch\(\(\) => \(\{\}\)\)/, "nomes do catálogo, sem derrubar a tela");
-  assert.match(visao, /<MissoesPersistidas[^>]*nomesMateria=\{nomesMateria\}/s);
+  assert.match(visao, /<MissoesDoHoje [^>]*nomesMateria=\{nomesMateria\}/s);
+  assert.match(semComentarios(ler("app/src/modules/motor/MissoesDaSemana.jsx")), /nomeDaMateria\(linha\.materia_codigo, nomesMateria\)/);
 });
 
 // achado do Codex no #193: o "Registrar revisão" só existe no cartão da

@@ -124,19 +124,15 @@ test("proximaProva preservada: rola para o ano seguinte quando a data passa", ()
 
 // ── telas (inspeção de fonte — o CI não sobe navegador) ──────────────
 
-test("A1: MissaoAtual decide pelo ciclo ANTES de ler a meta vencida", () => {
-  const src = semComentarios(ler("app/src/modules/motor/MetaHero.jsx"));
-  assert.match(src, /ciclo === "encerrado"/, "o ramo de ciclo encerrado precisa existir");
-  const posCiclo = src.indexOf('ciclo === "encerrado"');
-  const posAtrasada = src.indexOf("const atrasada");
-  assert.ok(posCiclo > -1 && posAtrasada > -1 && posCiclo < posAtrasada,
-    "se `atrasada` for calculada antes do ramo do ciclo, o vermelho permanente volta");
-});
-
-test("A1: VisaoEstudo passa o estado do ciclo para a missão", () => {
+// Raio-x fase 2: o cartão da semana (MissaoAtual) saiu do Hoje. A regra de
+// A1 continua: com o ciclo encerrado o topo é o CicloEncerrado, decidido
+// antes de qualquer leitura da meta vencida.
+test("A1: o Hoje decide pelo ciclo antes de mostrar a missão da vez", () => {
   const src = semComentarios(ler("app/src/routes/aluno/VisaoEstudo.jsx"));
   assert.match(src, /estadoDoCiclo\(/, "a tela precisa derivar o estado");
-  assert.match(src, /ciclo=\{ciclo\.estado\}/, "e entregá-lo à missão");
+  assert.match(src, /\{ciclo\.estado === "encerrado" \? \(\s*<CicloEncerrado /, "ciclo encerrado tem cartão próprio no topo");
+  assert.ok(src.indexOf("<CicloEncerrado ") < src.indexOf("<MissaoDeAgora "), "o ramo do ciclo vem antes");
+  assert.match(semComentarios(ler("app/src/modules/motor/MetaHero.jsx")), /export function CicloEncerrado\(/);
 });
 
 test("T28: o resumo do responsável reconhece o ciclo encerrado", () => {

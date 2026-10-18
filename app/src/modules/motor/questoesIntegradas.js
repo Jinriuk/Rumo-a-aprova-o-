@@ -23,12 +23,29 @@ const ESTADOS = {
 
 export const ESTADOS_ESPERADOS_QUEST = Object.keys(ESTADOS);
 
-// Tamanho do lote: o aluno escolhe antes do primeiro (5, 10 ou 20; padrão
-// 5, sessão curta). O servidor corta para caber no limite da hora e do dia
-// e, desde a 0067, busca à frente o que falta para a meta: o lote seguinte
-// costuma sair do estoque, sem esperar a Quest.
+// Tamanho do lote: 5, 10 ou 20. O servidor corta para caber no limite da
+// hora e do dia e, desde a 0067, busca à frente o que falta para a meta: o
+// lote seguinte costuma sair do estoque, sem esperar a Quest.
+// Raio-x fase 2 (18/10): "Iniciar missão" abre a sessão direto, com o
+// último tamanho que o aluno escolheu (padrão 10); trocar fica na sessão.
 export const TAMANHOS_LOTE = [5, 10, 20];
-export const TAMANHO_LOTE = 5;
+export const TAMANHO_LOTE = 10;
+const CHAVE_TAMANHO = "triliva-tamanho-lote";
+
+// O acesso a globalThis.localStorage fica dentro do try: com o
+// armazenamento bloqueado, ler a propriedade já lança (SecurityError), e
+// num parâmetro padrão isso escaparia do try e derrubaria a sessão.
+export function tamanhoLembrado(armazenamento) {
+  try {
+    const n = Number((armazenamento ?? globalThis.localStorage)?.getItem(CHAVE_TAMANHO));
+    return TAMANHOS_LOTE.includes(n) ? n : TAMANHO_LOTE;
+  } catch { return TAMANHO_LOTE; }
+}
+
+export function lembrarTamanho(n, armazenamento) {
+  if (!TAMANHOS_LOTE.includes(n)) return;
+  try { (armazenamento ?? globalThis.localStorage)?.setItem(CHAVE_TAMANHO, String(n)); } catch { /* sem armazenamento: vale só nesta sessão */ }
+}
 
 // "X de N questões desta missão". X = o que já contava para a missão ao
 // abrir (questoes_acumuladas) + o que o aluno respondeu nesta sessão

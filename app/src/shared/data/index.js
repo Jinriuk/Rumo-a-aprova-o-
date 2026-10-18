@@ -403,6 +403,23 @@ export async function carregarMissoes(examTag, { nivel } = {}) {
   return data;
 }
 
+/* Raio-x fase 2 (desenho de 18/10): em que semana cada missão cai, pelo
+   plano do concurso (trilha_plano_missoes.semana_sugerida). Global e só
+   leitura (RLS: select para todo autenticado). Um concurso pode ter mais
+   de um plano (anual, intensiva…): quem escolhe é escolherPlano
+   (conteudo/missoesPorSemana.js), aqui só se busca. */
+export async function carregarSemanasDasMissoes(examTag) {
+  const { data, error } = await supabase
+    .from("trilha_plano_missoes")
+    .select("missao_id, semana_sugerida, ordem, trilha_planos!inner(id, exam_tag, tipo, ordem)")
+    .eq("trilha_planos.exam_tag", examTag);
+  if (error) throw falha("semanas das missões", error);
+  return (data ?? []).map((x) => ({
+    missao_id: x.missao_id, semana: x.semana_sugerida, ordem: x.ordem,
+    plano_id: x.trilha_planos?.id, plano_ordem: x.trilha_planos?.ordem ?? 0,
+  }));
+}
+
 /* T38: nome real da matéria por código, para anexar às missões — evita
    mostrar o código cru (qui, mat…) na trilha do concurso.
 

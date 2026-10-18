@@ -38,7 +38,7 @@ test("todo passo do roteiro da coordenação aponta para uma aba que existe", ()
 
 test("todo passo do roteiro do aluno aponta para uma aba que existe, e cobre todas", () => {
   const abas = abasDe("app/src/routes/aluno/VisaoEstudo.jsx");
-  assert.ok(abas.length >= 8, `abas lidas: ${abas}`);
+  assert.ok(abas.length >= 6, `abas lidas: ${abas}`);
   assert.deepEqual([...new Set(ROTEIRO_ALUNO.map((p) => p.aba))].sort(), [...abas].sort());
 });
 
