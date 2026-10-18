@@ -7,7 +7,10 @@
 //   • mostra enunciado como texto, nunca como HTML;
 //   • cai no registro manual em toda falha do fornecedor;
 //   • não conhece a chave da Quest nem fala com ela direto;
-//   • reusa o pedido_id ao reabrir (retransmissão não gasta lote).
+//   • reusa o pedido_id ao reabrir (retransmissão não gasta lote);
+//   • (18/10) "Iniciar missão" abre a sessão nas missões ligadas; a sessão
+//     pede o tamanho (5, 10, 20), mostra "X de N questões desta missão" e
+//     termina o lote com "Continuar: mais N" ou "Missão concluída".
 // Banco e função: p11-quest-db e p11-quest-edge (PR de banco).
 // ============================================================
 import test from "node:test";
@@ -17,6 +20,7 @@ import { resolve, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import {
   mensagemDoEstado, ESTADOS_ESPERADOS_QUEST, textoSimples, podeResolverAqui, resumoDoLote, origemDaQuestao, novoPedidoId, TAMANHO_LOTE,
+  TAMANHOS_LOTE, progressoDaMissao, fimDoLote,
 } from "../app/src/modules/motor/questoesIntegradas.js";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
@@ -112,7 +116,17 @@ test("Hoje: o botão só existe para quem registra; falha leva ao Registrar com 
   assert.match(tela, /contextoRegistroDaMissao\(resolvendo\.missao, resolvendo\.tipo\)[\s\S]*irAba\("registrar", ctx\)/);
   const painel = semComentarios(ler("app/src/modules/motor/ProgressoVivido.jsx"));
   assert.match(painel, /podeResolverAqui\(mi, questoesIntegradas\)/);
-  assert.match(painel, /aoResolver\(mi, mi\.estado === "concluida" \? "revisao" : "missao"\)/);
+  assert.match(painel, /aoResolver\(mi, "revisao"\)/);
+});
+
+test("Iniciar missão: com questões ligadas abre a sessão; sem, vai ao registro; o registro à mão fica como link", () => {
+  const painel = semComentarios(ler("app/src/modules/motor/ProgressoVivido.jsx"));
+  assert.match(painel, /const comQuestoes = aoResolver && !inalcancavel && podeResolverAqui\(mi, questoesIntegradas\);/);
+  assert.match(painel, /onClick=\{\(\) => \(comQuestoes \? aoResolver\(mi, "missao"\) : aoPraticar\(contextoRegistroDaMissao\(mi, "missao"\)\)\)\}>\s*Iniciar missão\s*</);
+  assert.match(painel, /\{comQuestoes && aoPraticar && \([\s\S]*?>\s*Registrar à mão\s*</);
+  assert.doesNotMatch(painel, /Resolver questões aqui|Praticar esta missão/, "um botão só por missão da vez");
+  // revisão com questões continua só nas concluídas
+  assert.match(painel, /mi\.estado === "concluida" && podeResolverAqui\(mi, questoesIntegradas\)/);
 });
 
 // Tarefa do botão que não apareceu (13/10): o front não conhecia o
@@ -131,16 +145,47 @@ test("CFO PMERJ é pré-edital no front: aceita aluno e acha a trilha do nicho p
   assert.equal(nicho, "pmerj-cfo", "o nicho do front bate com o do seed da trilha");
 });
 
-test("lote de 5: a tela pede o tamanho e a camada de dados o repassa à função", () => {
+test("tamanho do lote: o aluno escolhe 5, 10 ou 20 antes do primeiro (padrão 5) e a camada de dados o repassa", () => {
   assert.equal(TAMANHO_LOTE, 5);
+  assert.deepEqual(TAMANHOS_LOTE, [5, 10, 20]);
   const tela = semComentarios(ler("app/src/modules/motor/ResolverQuestoes.jsx"));
-  assert.match(tela, /entregarQuestoes\(\{ missaoId: missao\.id, pedidoId: pedidoRef\.current, tamanho: TAMANHO_LOTE \}\)/);
+  assert.match(tela, /useState\(TAMANHO_LOTE\)/, "padrão 5");
+  assert.match(tela, /if \(tamanho === null\) \{[\s\S]*?Quantas questões por vez\?[\s\S]*?role="radiogroup"[\s\S]*?TAMANHOS_LOTE\.map/);
+  assert.match(tela, /role="radio" aria-checked=\{opcao === n\}/);
+  assert.doesNotMatch(tela, /useEffect/, "o lote não abre sozinho: só depois da escolha");
+  assert.match(tela, /const comecar = \(\) => \{ setTamanho\(opcao\); abrir\(opcao\); \};/);
+  assert.match(tela, /entregarQuestoes\(\{ missaoId: missao\.id, pedidoId: pedidoRef\.current, tamanho: tam \}\)/);
+  assert.match(tela, /const novoLote = \(\) => \{ pedidoRef\.current = novoPedidoId\(\); setLote\(null\); abrir\(tamanho\); \};/, "o lote seguinte mantém o tamanho");
   const dados = semComentarios(ler("app/src/shared/data/index.js"));
   assert.match(dados, /\.\.\.\(tamanho \? \{ tamanho \} : \{\}\)/);
 });
 
 test("a ficha da coordenação diz onde ficam as questões (na tela do aluno) e pede a credencial quando falta", () => {
   const ficha = ler("app/src/modules/desempenho/FichaAluno.jsx");
-  assert.match(ficha, /Resolver questões aqui/);
+  assert.match(ficha, /toca em \\"Iniciar missão\\" na aba Hoje/);
   assert.match(ficha, /Sem credencial, o aluno ainda não entra no app\. Gere a credencial/);
+});
+
+test("progresso da missão: X de N (N = meta_questoes), somando só o que vale para a missão", () => {
+  assert.deepEqual(progressoDaMissao({ questoes: 5, meta_questoes: 20 }, 3),
+    { feitas: 8, meta: 20, texto: "8 de 20 questões desta missão" });
+  assert.equal(progressoDaMissao({ meta_questoes: 20 }).texto, "0 de 20 questões desta missão");
+  assert.equal(progressoDaMissao({ questoes: 2, meta_questoes: null }).texto, "2 questões desta missão", "sem meta, sem \"de N\"");
+  const tela = semComentarios(ler("app/src/modules/motor/ResolverQuestoes.jsx"));
+  assert.match(tela, /const progresso = progressoDaMissao\(missao, respondidasValendo\);/);
+  // revisão e lote depois de fechar não somam (o servidor também não conta)
+  assert.match(tela, /if \(tipo === "missao" && lote\.tipo_pratica === "missao" && !fechouMissao\) setRespondidasValendo\(\(n\) => n \+ 1\);/);
+  // aparece na escolha, no meio do lote e no fim
+  assert.equal((tela.match(/\{progresso\.texto\}/g) ?? []).length, 3);
+});
+
+test("fim do lote: 'Continuar: mais N' até a meta; depois 'Missão concluída' e 'Continuar praticando'", () => {
+  assert.deepEqual(fimDoLote({ missaoConcluida: false, tamanho: 5 }), { titulo: null, principal: "Continuar: mais 5" });
+  assert.deepEqual(fimDoLote({ missaoConcluida: false, tamanho: 20 }), { titulo: null, principal: "Continuar: mais 20" });
+  assert.deepEqual(fimDoLote({ missaoConcluida: true, tamanho: 5 }), { titulo: "Missão concluída", principal: "Continuar praticando" });
+  const tela = semComentarios(ler("app/src/modules/motor/ResolverQuestoes.jsx"));
+  // fechou agora (resposta do servidor) ou já estava fechada ao abrir
+  assert.match(tela, /fimDoLote\(\{ missaoConcluida: fechouMissao \|\| missao\.estado === "concluida", tamanho \}\)/);
+  assert.match(tela, /<Botao onClick=\{novoLote\} disabled=\{ocupado\}>\{fim\.principal\}<\/Botao>/);
+  assert.doesNotMatch(tela, /Mais questões/);
 });

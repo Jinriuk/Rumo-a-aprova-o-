@@ -2,7 +2,7 @@
    coordenação cadastra um aluno no CFO PMERJ (antes da correção o
    cadastro bloqueava o concurso: o front o tratava como "Indisponível"),
    gera a credencial, o aluno entra com a senha temporária, troca a senha,
-   vê "Resolver questões aqui" na M01-ADM e resolve um lote de 5.
+   toca em "Iniciar missão" na M01-ADM, fica com o lote de 5 e o resolve.
    Precisa de uma coordenação de teste numa escola de teste:
      DEMO_COORD_EMAIL=... DEMO_COORD_SENHA=... (ver playwright.demo.config.js)
    O aluno criado fica com o nome "Aluno jornada P1.1 <sufixo>" para a
@@ -73,10 +73,12 @@ test("coordenação cadastra aluno PMERJ, gera credencial e o aluno resolve 5 qu
 
   // 4) o botão e o lote
   await expect(page.getByText("Este concurso ainda não recebe alunos")).toHaveCount(0, { timeout: 45_000 });
-  const botao = page.locator("li").filter({ hasText: MISSAO }).first().getByRole("button", { name: "Resolver questões aqui" });
+  const botao = page.locator("li").filter({ hasText: MISSAO }).first().getByRole("button", { name: "Iniciar missão" });
   await expect(botao).toBeVisible({ timeout: 45_000 });
   await page.screenshot({ path: `${SAIDA}/j2-hoje-aluno.png`, fullPage: true });
   await botao.click();
+  await expect(page.getByText("Quantas questões por vez?")).toBeVisible();
+  await page.getByRole("button", { name: "Começar" }).click();
   const contador = page.getByText(/^Questão 1 de \d+$/);
   await expect(contador).toBeVisible({ timeout: 45_000 });
   const total = Number((await contador.textContent()).match(/de (\d+)/)[1]);
@@ -89,6 +91,7 @@ test("coordenação cadastra aluno PMERJ, gera credencial e o aluno resolve 5 qu
     await page.getByRole("button", { name: i < total ? "Próxima questão" : "Ver resultado" }).click();
   }
   await expect(page.getByText(/^\d de 5 certas?$/)).toBeVisible();
+  await expect(page.getByRole("button", { name: "Continuar: mais 5" })).toBeVisible();
   await page.screenshot({ path: `${SAIDA}/j3-resultado.png`, fullPage: true });
   await ctxAluno.close();
 });
