@@ -130,3 +130,13 @@ test("matéria sempre pelo nome: trilha/catálogo, depois o mapa fixo, nunca o c
   assert.match(visao, /db\.carregarNomesMateria\(\)\.catch\(\(\) => \(\{\}\)\)/, "nomes do catálogo, sem derrubar a tela");
   assert.match(visao, /<MissoesPersistidas[^>]*nomesMateria=\{nomesMateria\}/s);
 });
+
+// achado do Codex no #193: o "Registrar revisão" só existe no cartão da
+// missão concluída; com o painel sempre compacto ela fica recolhida, não some
+test("painel compacto: concluídas recolhidas em 'N concluídas · revisar', com a revisão a um toque", () => {
+  const painel = semComentarios(ler("app/src/modules/motor/ProgressoVivido.jsx"));
+  assert.match(painel, /const \[verConcluidas, setVerConcluidas\] = useState\(false\);/);
+  assert.match(painel, /\.\.\.\(verConcluidas \? g\.missoes\.filter\(\(mi\) => mi\.estado === "concluida"\) : \[\]\)/);
+  assert.match(painel, /if \(!todas\.length && !concluidasRecolhidas\.length\) return null;/, "tudo concluído ainda mostra o acesso à revisão");
+  assert.match(painel, /`▸ \$\{concluidasRecolhidas\.length\} \$\{concluidasRecolhidas\.length === 1 \? "concluída" : "concluídas"\} · revisar`/);
+});

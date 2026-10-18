@@ -184,6 +184,11 @@ test("o aviso de maturidade aparece no cadastro, e uma vez (até o Entendi) para
   assert.match(aviso, />\s*Entendi\s*</);
   assert.match(aviso, /localStorage\.setItem\(chave, "1"\)/, "o Entendi fica guardado");
   assert.match(semComentarios(ler("app/src/routes/aluno/VisaoEstudo.jsx")), /<LinhaMaturidade codigo=\{codigoConcurso\}/, "a linha fixa do Plano");
+  // achado do Codex no #193: beta/esqueleto recebem aluno sem trilha semanal,
+  // e sem trilha não há Plano; a linha fica na tela de "trilha não configurada"
+  const visao = semComentarios(ler("app/src/routes/aluno/VisaoEstudo.jsx"));
+  const semTrilha = visao.slice(visao.indexOf("if (!trilha) return ("), visao.indexOf("const itensMeta"));
+  assert.match(semTrilha, /<LinhaMaturidade codigo=\{examTag\}/);
 });
 
 test("a linha do Plano usa um resumo curto de cada nível", () => {
