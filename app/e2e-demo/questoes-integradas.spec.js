@@ -55,7 +55,7 @@ test("celular: Iniciar missão abre as questões, escolhe 5 e segue lote a lote 
     const corpo = r.request().postDataJSON?.() ?? null;
     if (corpo?.acao === "entregar") {
       const j = await r.json().catch(() => ({}));
-      entregas.push({ em: Date.now(), status: r.status(), estado: j?.estado, n: j?.entrega?.questoes?.length ?? 0 });
+      entregas.push({ em: Date.now(), status: r.status(), estado: j?.estado, n: j?.entrega?.questoes?.length ?? 0, tipo: j?.entrega?.tipo_pratica });
     }
   });
   await transporteDemo(page);
@@ -124,11 +124,17 @@ test("celular: Iniciar missão abre as questões, escolhe 5 e segue lote a lote 
     const concluida = page.getByText("Missão concluída", { exact: true });
     if (await concluida.isVisible()) {
       await expect(page.getByRole("button", { name: "Continuar praticando" })).toBeVisible();
+      await expect(page.getByText(/“Continuar praticando” abre questões de revisão/)).toBeVisible();
       await sessao.screenshot({ path: `${SAIDA}/m5-missao-concluida.png` });
       // seguir praticando (revisão): com o estoque da missão já respondido,
       // é uma busca logo depois de outra cheia, o caso das 22:35
       await page.getByRole("button", { name: "Continuar praticando" }).tap();
       await expect(page.getByText(/^Questão 1 de \d+$/), "Continuar praticando abre lote").toBeVisible({ timeout: 60_000 });
+      // é revisão: o título e a linha dizem isso, e "X de N desta missão" some
+      await expect(page.getByText(/^Revisão · /)).toBeVisible();
+      await expect(page.getByText(/^Revisão: estas questões ficam no assunto e não contam para a missão/)).toBeVisible();
+      await expect(page.getByText(/questões desta missão$/)).toHaveCount(0);
+      expect(entregas.at(-1)?.tipo, "o servidor entregou o lote como revisão").toBe("revisao");
       await sessao.screenshot({ path: `${SAIDA}/m6-continuar-praticando.png` });
       break;
     }
