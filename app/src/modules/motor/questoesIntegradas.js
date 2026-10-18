@@ -23,10 +23,29 @@ const ESTADOS = {
 
 export const ESTADOS_ESPERADOS_QUEST = Object.keys(ESTADOS);
 
-// Lote pedido ao servidor. 5 e não os 10 do padrão da 0065: sessão curta
-// e metade do custo da primeira busca de cada missão (a Quest cobra 6
-// créditos por questão com gabarito; questão guardada não paga de novo).
+// Tamanho do lote: o aluno escolhe antes do primeiro (5, 10 ou 20; padrão
+// 5, sessão curta). O servidor corta para caber no limite da hora e do dia
+// e, desde a 0067, busca à frente o que falta para a meta: o lote seguinte
+// costuma sair do estoque, sem esperar a Quest.
+export const TAMANHOS_LOTE = [5, 10, 20];
 export const TAMANHO_LOTE = 5;
+
+// "X de N questões desta missão". X = o que já contava para a missão ao
+// abrir (questoes_acumuladas) + o que o aluno respondeu nesta sessão
+// valendo para ela. Em revisão nada soma (fica no assunto, não na missão).
+export function progressoDaMissao(missao, respondidasValendo = 0) {
+  const meta = missao?.meta_questoes ?? null;
+  const feitas = (missao?.questoes ?? 0) + respondidasValendo;
+  return { feitas, meta, texto: meta ? `${feitas} de ${meta} questões desta missão` : `${feitas} questões desta missão` };
+}
+
+// Botões do fim do lote. Até a missão fechar no servidor: "Continuar: mais
+// N". Fechada (agora ou antes): "Missão concluída" e "Continuar praticando".
+export function fimDoLote({ missaoConcluida, tamanho }) {
+  return missaoConcluida
+    ? { titulo: "Missão concluída", principal: "Continuar praticando" }
+    : { titulo: null, principal: `Continuar: mais ${tamanho}` };
+}
 
 export function mensagemDoEstado(estado) {
   return ESTADOS[estado] ?? ESTADOS.erro;

@@ -10,13 +10,21 @@
      correção.
    - Qualquer falha (Quest fora, limite, sem questão) oferece o registro
      manual da mesma missão, que não depende da Quest.
-   - Enunciado e alternativas são TEXTO (textoSimples), nunca HTML. */
-import { useEffect, useRef, useState } from "react";
-import { SectionCard, Botao, StatusBadge } from "../../shared/ui/componentes.jsx";
+   - Enunciado e alternativas são TEXTO (textoSimples), nunca HTML.
+   - Sessão (18/10): o aluno escolhe 5, 10 ou 20 antes do primeiro lote; o
+     topo mostra "X de N questões desta missão"; no fim do lote, "Continuar:
+     mais N" até a missão fechar e, depois, "Missão concluída" com
+     "Continuar praticando". Desde a 0067 o lote seguinte não espera a
+     Quest (busca cheia não segura) e costuma vir do estoque. */
+import { useRef, useState } from "react";
+import { SectionCard, Botao } from "../../shared/ui/componentes.jsx";
 import { useTema } from "../../shared/branding/BrandingContext.jsx";
 import { useEnvioUnico } from "../../shared/hooks/useEnvioUnico.js";
 import * as db from "../../shared/data/index.js";
-import { mensagemDoEstado, novoPedidoId, textoSimples, origemDaQuestao, resumoDoLote, TAMANHO_LOTE } from "./questoesIntegradas.js";
+import {
+  mensagemDoEstado, novoPedidoId, textoSimples, origemDaQuestao, resumoDoLote, TAMANHO_LOTE, TAMANHOS_LOTE,
+  progressoDaMissao, fimDoLote,
+} from "./questoesIntegradas.js";
 
 export function ResolverQuestoes({ missao, tipo = "missao", aoFechar, aoRegistrarManual, aoMudar }) {
   const T = useTema();
@@ -30,13 +38,17 @@ export function ResolverQuestoes({ missao, tipo = "missao", aoFechar, aoRegistra
   const [indice, setIndice] = useState(0);
   const [escolha, setEscolha] = useState(null);
   const [fechouMissao, setFechouMissao] = useState(false);
+  // tamanho escolhido antes do primeiro lote (null = ainda escolhendo)
+  const [tamanho, setTamanho] = useState(null);
+  const [opcao, setOpcao] = useState(TAMANHO_LOTE);
+  const [respondidasValendo, setRespondidasValendo] = useState(0);
   const { ocupado, enviar } = useEnvioUnico("questões integradas");
 
-  const abrir = () => enviar(async () => {
+  const abrir = (tam) => enviar(async () => {
     setFalha(null);
     setAviso(null);
     try {
-      const r = await db.entregarQuestoes({ missaoId: missao.id, pedidoId: pedidoRef.current, tamanho: TAMANHO_LOTE });
+      const r = await db.entregarQuestoes({ missaoId: missao.id, pedidoId: pedidoRef.current, tamanho: tam });
       if (r?.estado !== "ok" || !r.entrega?.questoes?.length) { setFalha(r?.estado ?? "erro"); return; }
       setLote(r.entrega);
       const { proxima } = resumoDoLote(r.entrega.questoes);
@@ -47,7 +59,7 @@ export function ResolverQuestoes({ missao, tipo = "missao", aoFechar, aoRegistra
     }
   });
 
-  useEffect(() => { abrir(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  const comecar = () => { setTamanho(opcao); abrir(opcao); };
 
   const fechar = () => { if (mudouRef.current) aoMudar?.(); aoFechar?.(); };
   const manual = () => { if (mudouRef.current) aoMudar?.(); aoRegistrarManual?.(); };
@@ -68,6 +80,8 @@ export function ResolverQuestoes({ missao, tipo = "missao", aoFechar, aoRegistra
       });
       if (r?.estado !== "ok") { setAviso(mensagemDoEstado(r?.estado).texto); return; }
       mudouRef.current = true;
+      // conta para a missão enquanto ela não fechou e o lote é de missão
+      if (tipo === "missao" && lote.tipo_pratica === "missao" && !fechouMissao) setRespondidasValendo((n) => n + 1);
       atualizarQuestao(atual.id, { respondida: true, resposta: r.resposta, acerto: r.acerto, gabarito: r.gabarito });
       if (r.missao_concluida) setFechouMissao(true);
     } catch (e) {
@@ -86,7 +100,9 @@ export function ResolverQuestoes({ missao, tipo = "missao", aoFechar, aoRegistra
     inicioRef.current = Date.now();
   };
 
-  const novoLote = () => { pedidoRef.current = novoPedidoId(); setLote(null); abrir(); };
+  const novoLote = () => { pedidoRef.current = novoPedidoId(); setLote(null); abrir(tamanho); };
+  const progresso = progressoDaMissao(missao, respondidasValendo);
+  const fim = fimDoLote({ missaoConcluida: fechouMissao || missao.estado === "concluida", tamanho });
 
   const titulo = `Questões · ${missao.nome}`;
   const sub = tipo === "revisao"
@@ -109,6 +125,33 @@ export function ResolverQuestoes({ missao, tipo = "missao", aoFechar, aoRegistra
     );
   }
 
+  if (tamanho === null) {
+    return (
+      <SectionCard titulo={titulo} sub={sub}>
+        <div style={{ padding: 16, display: "flex", flexDirection: "column", gap: 14 }}>
+          <div style={{ fontSize: 13, color: T.sub }}>{progresso.texto}</div>
+          <div id="tamanho-lote-rotulo" style={{ fontSize: 14.5, fontWeight: 700 }}>Quantas questões por vez?</div>
+          <div role="radiogroup" aria-labelledby="tamanho-lote-rotulo" style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+            {TAMANHOS_LOTE.map((n) => (
+              <button key={n} type="button" role="radio" aria-checked={opcao === n} onClick={() => setOpcao(n)}
+                style={{ minWidth: 72, minHeight: 44, borderRadius: 10, fontWeight: 700, fontSize: 15, cursor: "pointer",
+                         border: `1.5px solid ${opcao === n ? T.gold : T.line}`, background: opcao === n ? `${T.gold}22` : T.card, color: T.ink }}>
+                {n}
+              </button>
+            ))}
+          </div>
+          <div style={{ fontSize: 12, color: T.sub, lineHeight: 1.5 }}>
+            A cada {opcao} questões você vê o resultado e escolhe se continua.
+          </div>
+          <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+            <Botao onClick={comecar} disabled={ocupado}>Começar</Botao>
+            <Botao secundario onClick={fechar}>Fechar</Botao>
+          </div>
+        </div>
+      </SectionCard>
+    );
+  }
+
   if (!lote) {
     return (
       <SectionCard titulo={titulo} sub={sub}>
@@ -121,15 +164,16 @@ export function ResolverQuestoes({ missao, tipo = "missao", aoFechar, aoRegistra
     return (
       <SectionCard titulo={titulo} sub={sub}>
         <div role="status" style={{ padding: 16, display: "flex", flexDirection: "column", gap: 12 }}>
+          {fim.titulo && <div style={{ fontSize: 17, fontWeight: 800, color: T.green }}>{fim.titulo}</div>}
           <div style={{ fontSize: 15, fontWeight: 700 }}>
             {resumo.acertos} de {resumo.respondidas} certa{resumo.respondidas === 1 ? "" : "s"}
           </div>
-          {fechouMissao && <StatusBadge tom="ok">Missão concluída com estas questões</StatusBadge>}
+          <div style={{ fontSize: 13, color: T.sub }}>{progresso.texto}</div>
           <div style={{ fontSize: 12.5, color: T.sub, lineHeight: 1.5 }}>
             Estas questões já entraram no seu histórico. Registrar de novo à mão contaria duas vezes.
           </div>
           <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
-            <Botao onClick={novoLote} disabled={ocupado}>Mais questões</Botao>
+            <Botao onClick={novoLote} disabled={ocupado}>{fim.principal}</Botao>
             <Botao secundario onClick={fechar}>Fechar</Botao>
           </div>
         </div>
@@ -145,6 +189,9 @@ export function ResolverQuestoes({ missao, tipo = "missao", aoFechar, aoRegistra
         <div style={{ display: "flex", justifyContent: "space-between", gap: 8, fontSize: 12, color: T.sub, flexWrap: "wrap" }}>
           <span>Questão {indice + 1} de {questoes.length}</span>
           {origem && <span>{origem}</span>}
+        </div>
+        <div style={{ fontSize: 12, color: T.sub, marginTop: -6 }}>
+          {progresso.texto}
         </div>
         <fieldset style={{ border: "none", margin: 0, padding: 0, display: "flex", flexDirection: "column", gap: 8 }}
           disabled={respondida || ocupado}>
