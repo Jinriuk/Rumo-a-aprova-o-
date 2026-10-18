@@ -333,6 +333,9 @@ export function VisaoEstudo({ aluno, podeEditar, concurso = null, contexto = "Pl
       <div style={{ fontSize: 13, color: "#7E93A6", marginTop: 6, lineHeight: 1.5, maxWidth: 300, marginInline: "auto" }}>
         Sua trilha de estudo ainda não foi configurada pela coordenação. Em breve você terá acesso ao seu plano.
       </div>
+      {/* sem trilha não há Plano: a linha do aviso de maturidade fica aqui
+          (concurso beta/esqueleto recebe aluno sem calendário semanal) */}
+      <LinhaMaturidade codigo={examTag} style={{ justifyContent: "center", marginTop: 14 }} />
     </div>
   );
 

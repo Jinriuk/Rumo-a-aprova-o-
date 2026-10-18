@@ -284,6 +284,28 @@ test.describe("aluno: menos ruído fixo", { tag: ["@j:aluno", "@critica"] }, () 
     expect(erros).toEqual([]);
   });
 
+  // achado do Codex no #193: com o painel sempre compacto, a missão
+  // concluída sumia e com ela o único "Registrar revisão". O banco local
+  // não tem missão concluída: a leitura de aluno_missoes marca uma.
+  test("missão concluída fica recolhida, mas a revisão continua a um toque", async ({ page }) => {
+    await page.route("**/rest/v1/aluno_missoes*", async (route) => {
+      const resposta = await route.fetch();
+      const linhas = await resposta.json();
+      if (Array.isArray(linhas) && linhas.length) {
+        linhas[0] = { ...linhas[0], estado: "concluida", questoes_acumuladas: linhas[0].meta_questoes ?? 20, acuracia: 80, xp_concedido: 100 };
+      }
+      await route.fulfill({ response: resposta, json: linhas });
+    });
+    await loginAluno(page, CONTAS.alunoJornada);
+    const recolhidas = page.getByRole("button", { name: /^▸ 1 concluída · revisar$/ });
+    await expect(recolhidas).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByRole("button", { name: "Registrar revisão" })).toHaveCount(0);
+    await recolhidas.click();
+    await page.getByRole("button", { name: "Registrar revisão" }).first().click();
+    await expect(page.getByText("Registro rápido")).toBeVisible();
+    await expect(page.getByText("Fica no assunto desta missão; não avança a fila.")).toBeVisible();
+  });
+
   test("exemplos coerentes: tópico serve a qualquer concurso; código no formato real", async ({ page }) => {
     await loginAluno(page, CONTAS.alunoJornada);
     await irParaAba(page, "Registrar");
