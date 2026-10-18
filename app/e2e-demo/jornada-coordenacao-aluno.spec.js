@@ -78,7 +78,7 @@ test("coordenação cadastra aluno PMERJ, gera credencial e o aluno resolve 5 qu
   await page.screenshot({ path: `${SAIDA}/j2-hoje-aluno.png`, fullPage: true });
   await botao.click();
   await expect(page.getByText("Quantas questões por vez?")).toBeVisible();
-  await page.getByRole("button", { name: "Começar" }).click();
+  await page.getByRole("button", { name: "Começar", exact: true }).click();
   const contador = page.getByText(/^Questão 1 de \d+$/);
   await expect(contador).toBeVisible({ timeout: 45_000 });
   const total = Number((await contador.textContent()).match(/de (\d+)/)[1]);

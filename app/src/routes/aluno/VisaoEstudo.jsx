@@ -128,6 +128,7 @@ export function VisaoEstudo({ aluno, podeEditar, concurso = null, contexto = "Pl
   // botão não aparece.
   const [questoesIntegradas, setQuestoesIntegradas] = useState(() => new Set());
   const [resolvendo, setResolvendo] = useState(null);
+  const resolvendoRef = useRef(null);
   useEffect(() => {
     if (!podeEditar || !examTag) return;   // o painel nem recebe aoResolver
     let vivo = true;
@@ -248,6 +249,19 @@ export function VisaoEstudo({ aluno, podeEditar, concurso = null, contexto = "Pl
     const timer = setTimeout(() => setRealceMissao(0), 1800);
     return () => { cancelAnimationFrame(quadro); clearTimeout(timer); };
   }, [realceMissao, tab]);
+
+  // A sessão de questões abre acima da lista de missões: no celular, quem
+  // toca "Iniciar missão" lá embaixo não a veria. Rola até ela e leva o foco.
+  const chaveResolvendo = resolvendo ? `${resolvendo.missao.id}:${resolvendo.tipo}` : null;
+  useEffect(() => {
+    if (!chaveResolvendo) return undefined;
+    const quadro = requestAnimationFrame(() => {
+      const reduzido = window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches;
+      resolvendoRef.current?.scrollIntoView({ behavior: reduzido ? "auto" : "smooth", block: "start" });
+      resolvendoRef.current?.focus?.({ preventScroll: true });
+    });
+    return () => cancelAnimationFrame(quadro);
+  }, [chaveResolvendo]);
 
   // índice de navegação da aba Desempenho (rola até a seção) — reduz a
   // sensação de "parede de blocos" sem esconder conteúdo (UX1.2).
@@ -379,15 +393,17 @@ export function VisaoEstudo({ aluno, podeEditar, concurso = null, contexto = "Pl
             {/* P0.4 (0064): no modo essencial o painel fica compacto, mas não
                 some: o botão da missão é o único caminho que a avança */}
             {podeEditar && resolvendo && (
-              <ResolverQuestoes key={`${resolvendo.missao.id}:${resolvendo.tipo}`}
-                missao={resolvendo.missao} tipo={resolvendo.tipo}
-                aoFechar={() => setResolvendo(null)}
-                aoMudar={recarregar}
-                aoRegistrarManual={() => {
-                  const ctx = contextoRegistroDaMissao(resolvendo.missao, resolvendo.tipo);
-                  setResolvendo(null);
-                  irAba("registrar", ctx);
-                }} />
+              <div ref={resolvendoRef} tabIndex={-1} aria-label="Questões da missão" style={{ scrollMarginTop: 18 }}>
+                <ResolverQuestoes key={`${resolvendo.missao.id}:${resolvendo.tipo}`}
+                  missao={resolvendo.missao} tipo={resolvendo.tipo}
+                  aoFechar={() => setResolvendo(null)}
+                  aoMudar={recarregar}
+                  aoRegistrarManual={() => {
+                    const ctx = contextoRegistroDaMissao(resolvendo.missao, resolvendo.tipo);
+                    setResolvendo(null);
+                    irAba("registrar", ctx);
+                  }} />
+              </div>
             )}
             {examTag && filaMissoes.length > 0 && (
               <MissoesPersistidas fila={filaMissoes} disciplinas={trilha.disciplinas} compacta={essencial}

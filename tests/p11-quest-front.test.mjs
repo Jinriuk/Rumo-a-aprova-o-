@@ -113,6 +113,11 @@ test("Hoje: o botão só existe para quem registra; falha leva ao Registrar com 
   const tela = semComentarios(ler("app/src/routes/aluno/VisaoEstudo.jsx"));
   assert.match(tela, /aoResolver=\{podeEditar \? \(missao, tipo\) => setResolvendo\(\{ missao, tipo \}\) : undefined\}/);
   assert.match(tela, /\{podeEditar && resolvendo && \(/);
+  // a sessão abre acima da lista de missões: rola até ela e leva o foco
+  // (no celular, "Iniciar missão" fica abaixo da dobra)
+  assert.match(tela, /<div ref=\{resolvendoRef\} tabIndex=\{-1\} aria-label="Questões da missão"/);
+  assert.match(tela, /resolvendoRef\.current\?\.scrollIntoView\(\{ behavior: reduzido \? "auto" : "smooth", block: "start" \}\)/);
+  assert.match(tela, /resolvendoRef\.current\?\.focus\?\.\(\{ preventScroll: true \}\)/);
   assert.match(tela, /contextoRegistroDaMissao\(resolvendo\.missao, resolvendo\.tipo\)[\s\S]*irAba\("registrar", ctx\)/);
   const painel = semComentarios(ler("app/src/modules/motor/ProgressoVivido.jsx"));
   assert.match(painel, /podeResolverAqui\(mi, questoesIntegradas\)/);

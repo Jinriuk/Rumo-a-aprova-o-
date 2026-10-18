@@ -79,8 +79,12 @@ test("celular: Iniciar missão abre as questões, escolhe 5 e segue lote a lote 
   await page.screenshot({ path: `${SAIDA}/m1-iniciar-missao.png` });
   await iniciar.tap();
 
-  // 2) escolha do tamanho, antes do primeiro lote (padrão 5)
-  await expect(page.getByText("Quantas questões por vez?")).toBeVisible();
+  // 2) escolha do tamanho, antes do primeiro lote (padrão 5). A sessão abre
+  // acima da lista: a tela rola até ela (no celular, ficaria fora de vista)
+  const sessao = page.getByLabel("Questões da missão", { exact: true });
+  await expect(page.getByText("Quantas questões por vez?")).toBeInViewport();
+  await page.waitForTimeout(600);   // fim da rolagem suave
+  await page.screenshot({ path: `${SAIDA}/m2a-iniciar-abre-a-sessao.png` });
   await expect(page.getByRole("radio", { name: "5" })).toHaveAttribute("aria-checked", "true");
   await expect(page.getByRole("radio", { name: "10" })).toHaveAttribute("aria-checked", "false");
   await expect(page.getByRole("radio", { name: "20" })).toBeVisible();
@@ -89,8 +93,8 @@ test("celular: Iniciar missão abre as questões, escolhe 5 e segue lote a lote 
   const [inicio, meta] = await lerProgresso();
   expect(meta, "N = meta_questoes da missão").toBe(20);
   expect(entregas, "nenhum lote antes da escolha").toEqual([]);
-  await page.screenshot({ path: `${SAIDA}/m2-escolha-tamanho.png`, fullPage: true });
-  await page.getByRole("button", { name: "Começar" }).tap();
+  await sessao.screenshot({ path: `${SAIDA}/m2-escolha-tamanho.png` });
+  await page.getByRole("button", { name: "Começar", exact: true }).tap();
 
   // 3) lotes de 5 até a meta; o seguinte sai na hora
   let feitas = inicio;
@@ -103,7 +107,7 @@ test("celular: Iniciar missão abre as questões, escolhe 5 e segue lote a lote 
     expect(total, "lote do tamanho escolhido").toBe(5);
     await responderLote(page, {
       total,
-      aoMeio: lote === 1 ? () => page.screenshot({ path: `${SAIDA}/m3-meio-do-lote.png`, fullPage: true }) : null,
+      aoMeio: lote === 1 ? () => sessao.screenshot({ path: `${SAIDA}/m3-meio-do-lote.png` }) : null,
     });
     await expect(page.getByText(/^\d+ de \d+ certas?$/)).toBeVisible();
     const [agora] = await lerProgresso();
@@ -112,12 +116,17 @@ test("celular: Iniciar missão abre as questões, escolhe 5 e segue lote a lote 
     const concluida = page.getByText("Missão concluída", { exact: true });
     if (await concluida.isVisible()) {
       await expect(page.getByRole("button", { name: "Continuar praticando" })).toBeVisible();
-      await page.screenshot({ path: `${SAIDA}/m5-missao-concluida.png`, fullPage: true });
+      await sessao.screenshot({ path: `${SAIDA}/m5-missao-concluida.png` });
+      // seguir praticando (revisão): com o estoque da missão já respondido,
+      // é uma busca logo depois de outra cheia, o caso das 22:35
+      await page.getByRole("button", { name: "Continuar praticando" }).tap();
+      await expect(page.getByText(/^Questão 1 de \d+$/), "Continuar praticando abre lote").toBeVisible({ timeout: 60_000 });
+      await sessao.screenshot({ path: `${SAIDA}/m6-continuar-praticando.png` });
       break;
     }
     const continuar = page.getByRole("button", { name: "Continuar: mais 5" });
     await expect(continuar).toBeVisible();
-    if (lote === 1) await page.screenshot({ path: `${SAIDA}/m4-fim-do-lote.png`, fullPage: true });
+    if (lote === 1) await sessao.screenshot({ path: `${SAIDA}/m4-fim-do-lote.png` });
     expect(lote, "a meta fecha em até 6 lotes de 5 (ou falta acurácia: ver o relatório)").toBeLessThan(6);
     await continuar.tap();
   }
