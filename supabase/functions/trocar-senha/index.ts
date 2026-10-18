@@ -107,14 +107,60 @@ function senhaEhOCodigo(senha: string, codigo: string): boolean {
   return normalizarCodigo(senha) === normalizarCodigo(codigo);
 }
 
-async function registrarLogAcesso(
-  escolaId: string | null, usuarioId: string, papel: string | null, acao: string,
-) {
-  if (!escolaId) return; // JWT sem app_metadata completo — nada a registrar por tenant
-  const { error } = await admin.from("logs_acesso").insert({
-    escola_id: escolaId, aluno_id: null, usuario_id: usuarioId, papel: papel ?? "desconhecido", acao,
-  });
-  if (error) console.error("falha ao registrar log de acesso:", error.message);
+// Onde a troca de senha fica registrada. logs_acesso é a trilha LGPD POR
+// ALUNO (aluno_id NOT NULL, 0001): até 17/10 este insert ia com aluno_id
+// null e o Postgres recusava, então nenhuma troca ficava registrada (o
+// erro só aparecia no log da função). Agora:
+//   aluno        → uma linha com o próprio aluno_id;
+//   responsavel  → uma linha por aluno vinculado (a credencial dele abre
+//                  os dados desses alunos);
+//   coordenacao  → logs_coordenacao (0022), a trilha dela, sem aluno;
+//   sem escola ou outro papel → nada (não há trilha por escola).
+// Pura de propósito: o teste a executa sem rede.
+type Quem = { id: string; escola_id: string | null; papel: string | null };
+type LinhaLog = { tabela: "logs_acesso" | "logs_coordenacao"; linha: Record<string, unknown> };
+function linhasDoLogDeSenha(quem: Quem, alunoIds: string[], acao = "trocou-senha"): LinhaLog[] {
+  if (!quem.escola_id) return [];
+  if (quem.papel === "coordenacao") {
+    return [{ tabela: "logs_coordenacao", linha: {
+      escola_id: quem.escola_id, usuario_id: quem.id, papel: "coordenacao", acao,
+      entidade: "usuario", entidade_id: quem.id,
+    } }];
+  }
+  if (quem.papel !== "aluno" && quem.papel !== "responsavel") return [];
+  return [...new Set(alunoIds)].map((alunoId) => ({ tabela: "logs_acesso", linha: {
+    escola_id: quem.escola_id, aluno_id: alunoId, usuario_id: quem.id, papel: quem.papel, acao,
+  } }));
+}
+
+async function alunosDoChamador(quem: Quem): Promise<string[]> {
+  if (!quem.escola_id) return [];
+  if (quem.papel === "aluno") {
+    const { data, error } = await admin.from("alunos").select("id")
+      .eq("usuario_id", quem.id).eq("escola_id", quem.escola_id);
+    if (error) throw error;
+    return (data ?? []).map((a: { id: string }) => a.id);
+  }
+  if (quem.papel === "responsavel") {
+    const { data, error } = await admin.from("vinculos_responsaveis").select("aluno_id")
+      .eq("responsavel_id", quem.id).eq("escola_id", quem.escola_id);
+    if (error) throw error;
+    return (data ?? []).map((v: { aluno_id: string }) => v.aluno_id);
+  }
+  return [];
+}
+
+// A senha já foi trocada quando isto roda: falha no registro vai ao log da
+// função e não desfaz nem esconde a troca.
+async function registrarTrocaDeSenha(quem: Quem) {
+  try {
+    for (const { tabela, linha } of linhasDoLogDeSenha(quem, await alunosDoChamador(quem))) {
+      const { error } = await admin.from(tabela).insert(linha);
+      if (error) console.error(`falha ao registrar a troca de senha em ${tabela}:`, error.message);
+    }
+  } catch (e) {
+    console.error("falha ao registrar a troca de senha:", (e as Error)?.message ?? e);
+  }
 }
 
 Deno.serve(comRelato5xx("trocar-senha", async (req) => {
@@ -157,7 +203,7 @@ Deno.serve(comRelato5xx("trocar-senha", async (req) => {
       .update({ must_change_password: false }).eq("id", quem.id);
     if (e2) throw e2;
 
-    await registrarLogAcesso(quem.escola_id, quem.id, quem.papel, "trocou-senha");
+    await registrarTrocaDeSenha(quem);
 
     return json({ estado: "senha_trocada" });
   } catch (e) {

@@ -721,3 +721,46 @@ describe("E2/C-S05 — troca de senha e credencial no banco (Postgres real)", ()
     });
   });
 });
+
+// 17/10/2026, produção 22:33: o log da trocar-senha mostrava "null value in
+// column aluno_id of relation logs_acesso" a cada troca. logs_acesso é a
+// trilha LGPD por aluno (aluno_id NOT NULL): a troca não ficava registrada.
+describe("trocar-senha — a troca fica registrada na trilha certa, sempre com aluno quando é logs_acesso", () => {
+  let linhasDoLogDeSenha;
+  before(async () => {
+    const { stripTypeScriptTypes } = await import("node:module");
+    const src = ler("supabase/functions/trocar-senha/index.ts");
+    const m = src.match(/function linhasDoLogDeSenha\([\s\S]+?\n\}/);
+    assert.ok(m, "não encontrei linhasDoLogDeSenha em trocar-senha/index.ts");
+    const js = stripTypeScriptTypes(m[0]);
+    ({ linhasDoLogDeSenha } = new Function(`${js}\nreturn { linhasDoLogDeSenha };`)());
+  });
+
+  it("aluno: uma linha em logs_acesso com o próprio aluno_id", () => {
+    const r = linhasDoLogDeSenha({ id: "u1", escola_id: "e1", papel: "aluno" }, ["a1"]);
+    assert.deepEqual(r, [{ tabela: "logs_acesso", linha: { escola_id: "e1", aluno_id: "a1", usuario_id: "u1", papel: "aluno", acao: "trocou-senha" } }]);
+  });
+
+  it("responsável: uma linha por aluno vinculado, sem repetir", () => {
+    const r = linhasDoLogDeSenha({ id: "r1", escola_id: "e1", papel: "responsavel" }, ["a1", "a2", "a1"]);
+    assert.deepEqual(r.map((x) => [x.tabela, x.linha.aluno_id]), [["logs_acesso", "a1"], ["logs_acesso", "a2"]]);
+  });
+
+  it("coordenação: logs_coordenacao (sem aluno); sem escola ou papel desconhecido: nada", () => {
+    assert.deepEqual(linhasDoLogDeSenha({ id: "c1", escola_id: "e1", papel: "coordenacao" }, []),
+      [{ tabela: "logs_coordenacao", linha: { escola_id: "e1", usuario_id: "c1", papel: "coordenacao", acao: "trocou-senha", entidade: "usuario", entidade_id: "c1" } }]);
+    assert.deepEqual(linhasDoLogDeSenha({ id: "s1", escola_id: null, papel: "super_admin" }, []), []);
+    assert.deepEqual(linhasDoLogDeSenha({ id: "x", escola_id: "e1", papel: "outro" }, ["a1"]), []);
+  });
+
+  it("nenhuma linha de logs_acesso sai sem aluno_id, e o insert antigo com aluno_id null saiu", () => {
+    for (const papel of ["aluno", "responsavel", "coordenacao"]) {
+      for (const l of linhasDoLogDeSenha({ id: "u", escola_id: "e", papel }, ["a"])) {
+        if (l.tabela === "logs_acesso") assert.ok(l.linha.aluno_id, papel);
+      }
+    }
+    const src = ler("supabase/functions/trocar-senha/index.ts");
+    assert.doesNotMatch(src, /aluno_id:\s*null/);
+    assert.match(src, /await registrarTrocaDeSenha\(quem\);/);
+  });
+});
