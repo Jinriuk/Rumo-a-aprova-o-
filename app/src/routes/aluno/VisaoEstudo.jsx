@@ -110,6 +110,7 @@ export function VisaoEstudo({ aluno, podeEditar, concurso = null, contexto = "Pl
   // quais já começaram ou fecharam. As que ainda não começaram aparecem
   // como "a seguir" (o banco não cria linha para elas antes da hora).
   const [catalogoMissoes, setCatalogoMissoes] = useState({ examTag: null, missoes: [], ajustes: [], nomes: {}, vinculos: [] });
+  const [tentativaCatalogo, setTentativaCatalogo] = useState(0);
   useEffect(() => {
     if (!examTag) return;
     let vivo = true;
@@ -119,11 +120,11 @@ export function VisaoEstudo({ aluno, podeEditar, concurso = null, contexto = "Pl
     Promise.all([db.carregarMissoes(examTag), db.carregarMissoesEscola(examTag), db.carregarNomesMateria().catch(() => ({})),
       db.carregarSemanasDasMissoes(examTag).catch(() => [])])
       .then(([missoes, ajustes, nomes, vinculos]) => { if (vivo) setCatalogoMissoes({ examTag, missoes: missoes ?? [], ajustes: ajustes ?? [], nomes: nomes ?? {}, vinculos: vinculos ?? [] }); })
-      // complementar: sem catálogo, o painel some, a tela fica (e o cartão
-      // do Hoje para de esperar por ele)
-      .catch(() => { if (vivo) setCatalogoMissoes({ examTag, missoes: [], ajustes: [], nomes: {}, vinculos: [] }); });
+      // falha não é "concurso sem missões": o cartão do Hoje diz que não
+      // carregou e oferece tentar de novo (a tela fica)
+      .catch(() => { if (vivo) setCatalogoMissoes({ examTag, missoes: [], ajustes: [], nomes: {}, vinculos: [], erro: true }); });
     return () => { vivo = false; };
-  }, [examTag]);
+  }, [examTag, tentativaCatalogo]);
   // P1.1: em quais missões o servidor ligou as questões integradas. Só o
   // aluno resolve (podeEditar). undefined = ainda perguntando: "Iniciar
   // missão" fica carregando e não decide nada. Set = a resposta (vazio sem
@@ -168,6 +169,7 @@ export function VisaoEstudo({ aluno, podeEditar, concurso = null, contexto = "Pl
       ajustesEscola: doAlvo ? catalogoMissoes.ajustes : [],
       vinculos: doAlvo ? catalogoMissoes.vinculos : [],
       totalSemanas: trilha?.semanas?.length ?? null,
+      materiasDaTrilha: (trilha?.disciplinas ?? []).map((d) => d.codigo),
     });
   }, [catalogoMissoes, examTag, filaMissoes, trilha]);
 
@@ -493,6 +495,8 @@ export function VisaoEstudo({ aluno, podeEditar, concurso = null, contexto = "Pl
                   <MissaoDeAgora missao={missoesSemana.missaoDeAgora} nomesMateria={nomesMateria}
                     questoesIntegradas={questoesIntegradas} carregando={!missoesProntas}
                     semMissoes={missoesProntas && !missoesSemana.comMeta}
+                    erroAoCarregar={missoesProntas && !!catalogoMissoes.erro}
+                    aoTentarDeNovo={() => { setCatalogoMissoes((c) => ({ ...c, examTag: null, erro: false })); setTentativaCatalogo((n) => n + 1); }}
                     aoAgir={podeEditar ? agirNaMissao : undefined}
                     aoRegistrarLivre={podeEditar ? () => abrirRegistroNoHoje(null) : undefined} />
                 </div>
@@ -637,6 +641,8 @@ function BlocoSemana({ w, trilha, ativaNum, meta, podeEditar, aoMudar, aoPratica
   const isNow = w.numero === ativaNum;
   const isPast = w.numero < ativaNum;
   const [aberto, setAberto] = useState(isNow || abertaPeloRitmo);
+  // a semana das missões avança com o aluno no Plano: a nova abre sozinha
+  useEffect(() => { if (abertaPeloRitmo) setAberto(true); }, [abertaPeloRitmo]);
   const previstas = trilha.atividadesPorSemana[w.numero] ?? [];
   const itens = meta?.meta_atividades ?? [];
   const consideradas = itens.filter((x) => x.estado !== "ignorada").length;

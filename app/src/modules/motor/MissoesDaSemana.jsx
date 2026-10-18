@@ -11,20 +11,22 @@ import React, { useState } from "react";
 import { BarraXP } from "../../shared/ui/componentes.jsx";
 import { useTema } from "../../shared/branding/BrandingContext.jsx";
 import { nomeDaMateria } from "./jornada.js";
-import { destinoDoInicio, podeResolverAqui } from "./questoesIntegradas.js";
+import { destinoDoInicio } from "./questoesIntegradas.js";
 import { podeComecar, resumoMissoesDaSemana, nomeCurtoMateria } from "../conteudo/missoesPorSemana.js";
 
 const textoQuestoes = (l) => (l.meta_questoes ? `${l.questoes} de ${l.meta_questoes} questões` : "acompanhada com a coordenação");
-const placar = (l) => (l.meta_questoes ? `${l.questoes}/${l.meta_questoes}` : "");
+const placar = (l) => (l.coordenacao ? "coordenação" : l.meta_questoes ? `${l.questoes}/${l.meta_questoes}` : "");
 
 /* O que o botão da linha faz. null = sem botão. */
 export function acaoDaMissao(linha, questoesIntegradas, { modo = "hoje", podeResolver = true } = {}) {
   if (!linha) return null;
   if (linha.estado === "concluida") {
     if (modo !== "plano") return null;
-    return podeResolver && podeResolverAqui(linha, questoesIntegradas)
-      ? { tipo: "revisar-questoes", rotulo: "Revisar" }
-      : { tipo: "revisar-registro", rotulo: "Revisar" };
+    // o mesmo de "Iniciar": esperando a lista, carrega; sem resposta, abre
+    // as questões e o servidor decide (nunca o registro por falta de resposta)
+    const revisao = destinoDoInicio(linha, questoesIntegradas, { podeResolver });
+    if (revisao === "carregando") return { tipo: "carregando", rotulo: "…" };
+    return revisao === "questoes" ? { tipo: "revisar-questoes", rotulo: "Revisar" } : { tipo: "revisar-registro", rotulo: "Revisar" };
   }
   if (!podeComecar(linha)) return null;
   const destino = destinoDoInicio(linha, questoesIntegradas, { podeResolver });
@@ -32,7 +34,7 @@ export function acaoDaMissao(linha, questoesIntegradas, { modo = "hoje", podeRes
   return destino === "questoes" ? { tipo: "questoes", rotulo: "Iniciar" } : { tipo: "registro", rotulo: "Registrar" };
 }
 
-export function MissaoDeAgora({ missao, nomesMateria, questoesIntegradas, carregando = false, semMissoes = false, aoAgir, aoRegistrarLivre }) {
+export function MissaoDeAgora({ missao, nomesMateria, questoesIntegradas, carregando = false, semMissoes = false, erroAoCarregar = false, aoTentarDeNovo, aoAgir, aoRegistrarLivre }) {
   const T = useTema();
   const acao = carregando ? { tipo: "carregando", rotulo: "…" } : acaoDaMissao(missao, questoesIntegradas);
   const ocupado = acao?.tipo === "carregando";
@@ -51,12 +53,22 @@ export function MissaoDeAgora({ missao, nomesMateria, questoesIntegradas, carreg
             {missao.meta_questoes ? <span style={{ flex: 1 }}><BarraXP pct={missao.pct} alt={8} brilho={false} /></span> : null}
           </div>
         </>
+      ) : erroAoCarregar ? (
+        <>
+          <h2 className="disp" style={{ fontSize: 17, fontWeight: 700, margin: "6px 0 0" }}>Não deu para carregar suas missões</h2>
+          {aoTentarDeNovo && (
+            <button type="button" onClick={aoTentarDeNovo}
+              style={{ display: "block", width: "100%", marginTop: 14, background: T.gold, color: "#0A1622", border: `1.5px solid ${T.gold}`, borderRadius: 9, padding: "12px 16px", fontWeight: 700, fontSize: 14, cursor: "pointer" }}>
+              Tentar de novo
+            </button>
+          )}
+        </>
       ) : (
         <h2 className="disp" style={{ fontSize: 17, fontWeight: 700, margin: "6px 0 0" }}>
           {semMissoes ? "Seu concurso ainda não tem missões com questões" : "Missões em dia"}
         </h2>
       )}
-      {!carregando && !missao && aoRegistrarLivre && (
+      {!carregando && !missao && !erroAoCarregar && aoRegistrarLivre && (
         <button type="button" className="mission-primary-action" onClick={aoRegistrarLivre}
           style={{ display: "block", width: "100%", marginTop: 14, background: "transparent", color: T.gold, border: `1.5px solid ${T.gold}`, borderRadius: 9, padding: "12px 16px", fontWeight: 700, fontSize: 14, cursor: "pointer" }}>
           Registrar estudo

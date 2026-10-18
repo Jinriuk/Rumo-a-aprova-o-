@@ -32,9 +32,12 @@ test.describe("aluno", { tag: ["@j:aluno", "@critica"] }, () => {
     await expect(cartao.getByText(/^\d+ de \d+ questões/)).toBeVisible();
     await expect(cartao.getByRole("button")).toHaveCount(1);
     await expect(cartao.getByRole("button", { name: /^(▶ Iniciar missão|Registrar)$/ })).toBeVisible({ timeout: 15_000 });
-    // a semana das missões (ritmo do aluno) aberta, sem clique; a de agora está nela
-    const semana = page.getByRole("region", { name: "Missões da semana" });
-    await expect(semana.getByText(/^Semana \d+ de \d+ · \d+ de \d+ miss(ão|ões)$/)).toBeVisible();
+    // a semana das missões (ritmo do aluno) aberta, sem clique; a de agora
+    // está nela. No CN local, a da semana 3 (Citologia, Biologia) fica com a
+    // coordenação (Biologia não está na trilha) e as outras passam da semana
+    // 9: a lista é a das missões do concurso.
+    const semana = page.getByRole("region", { name: /^Missões (da semana|do concurso)$/ });
+    await expect(semana.getByText(/^(Semana \d+ de \d+|Missões do concurso) · \d+ de \d+ miss(ão|ões)$/)).toBeVisible();
     const assunto = (await cartao.getByRole("heading").innerText()).trim();
     await expect(semana.getByRole("listitem").filter({ hasText: assunto })).toHaveCount(1);
     await expect(page.getByRole("button", { name: /Iniciar estudo/ })).toBeVisible();
@@ -53,9 +56,12 @@ test.describe("aluno", { tag: ["@j:aluno", "@critica"] }, () => {
     await irParaAba(page, "Plano");
     const atual = page.getByRole("button", { name: /Em andamento/ });
     await expect(atual).toHaveAttribute("aria-expanded", "true");
-    // a missão de agora (Citologia, semana 3 do plano do CN) está na sua semana
+    // as missões dentro da sua semana: Citologia (semana 3 do plano do CN),
+    // com a coordenação porque Biologia não está na trilha, sem botão
     const blocoDaMissao = page.getByRole("region", { name: "Semana 3" });
-    await expect(blocoDaMissao.getByRole("listitem").filter({ hasText: "Citologia sem susto" })).toBeVisible();
+    const citologia = blocoDaMissao.getByRole("listitem").filter({ hasText: "Citologia sem susto" });
+    await expect(citologia).toContainText("coordenação");
+    await expect(citologia.getByRole("button")).toHaveCount(0);
     await expect(blocoDaMissao.getByText("Tarefas da semana")).toBeVisible();
     const fechadas = page.getByRole("button", { name: /^Semana \d+\b.*(Encerrada|Próxima)/ });
     expect(await fechadas.count(), "há outras semanas").toBeGreaterThan(0);
@@ -340,7 +346,7 @@ test.describe("aluno: menos ruído fixo", { tag: ["@j:aluno", "@critica"] }, () 
     // o cartão da missão da vez também diz a matéria pelo nome
     await expect(page.getByRole("region", { name: "Missão de agora" })).toContainText(/Matemática|Português|Inglês|Física|Química|Biologia|História|Geografia/);
     // as linhas das missões, no Hoje e no Plano, dizem a matéria pelo nome
-    const linhas = page.getByRole("region", { name: "Missões da semana" }).getByRole("listitem");
+    const linhas = page.getByRole("region", { name: /^Missões (da semana|do concurso)$/ }).getByRole("listitem");
     await expect(linhas.first()).toBeVisible({ timeout: 15_000 });
     expect(await linhas.first().textContent()).toMatch(/Matemática|Português|Inglês|Física|Química|Biologia|História|Geografia/);
     await irParaAba(page, "Plano");
@@ -379,7 +385,7 @@ test.describe("aluno: menos ruído fixo", { tag: ["@j:aluno", "@critica"] }, () 
     await expect(page.getByText("Registro rápido")).toBeVisible();
     await expect(page.getByText("Fica no assunto desta missão; não avança a fila.")).toBeVisible();
     await irParaAba(page, "Hoje");
-    const naSemana = page.getByRole("region", { name: "Missões da semana" }).locator("li[data-estado='concluida']").filter({ hasText: nome });
+    const naSemana = page.getByRole("region", { name: /^Missões (da semana|do concurso)$/ }).locator("li[data-estado='concluida']").filter({ hasText: nome });
     if (await naSemana.count()) await expect(naSemana.getByRole("button"), "no Hoje, ✓ sem botão").toHaveCount(0);
   });
 

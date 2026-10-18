@@ -63,13 +63,13 @@ export const ROTEIRO_ALUNO = [
   {
     aba: "hoje",
     titulo: "Hoje: o que fazer agora",
-    texto: "Esta é a sua tela principal. Ela mostra a sua missão agora, com um botão só: resolver as questões dela ou registrar o estudo. A linha da semana, logo abaixo, leva ao Plano.",
+    texto: "Esta é a sua tela principal. Ela mostra a missão de agora, com um botão só: \"Iniciar missão\" abre as questões dela; sem questões ligadas, \"Registrar\" abre o registro já com a missão. Logo abaixo ficam as missões da semana, e \"Ver próximas semanas\" mostra as seguintes ali mesmo.",
     dica: "Tocar no seu XP, no topo, abre a sua patente e as conquistas.",
   },
   {
     aba: "plano",
     titulo: "Plano",
-    texto: "As semanas do seu plano. A semana atual fica aberta, com as tarefas para concluir ou adiar; abaixo, as missões de cada matéria. O número na aba \"Plano\" é quantas tarefas ainda estão pendentes.",
+    texto: "As semanas do seu plano, com as missões de cada semana e, abaixo delas, as tarefas para concluir ou adiar. Ficam abertas a semana do calendário e a das suas missões; a missão concluída tem \"Revisar\". O número na aba \"Plano\" é quantas tarefas ainda estão pendentes.",
   },
   {
     aba: "registrar",

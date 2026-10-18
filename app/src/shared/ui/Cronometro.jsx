@@ -8,7 +8,7 @@
    grava os minutos no servidor (contaria duas vezes). Só mexe no tempo que
    a própria sessão ligou: um cronômetro que o aluno já tinha ligado fica
    como estava. */
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { useTema } from "../branding/BrandingContext.jsx";
 
 const CHAVE = "rumo-cronometro-v1";
@@ -31,11 +31,22 @@ export function Cronometro({ aoFinalizar, sessao = false }) {
   const T = useTema();
   const [st, setSt] = useState(carregar);
   const [agora, setAgora] = useState(Date.now());
+  const stRef = useRef(st);
 
   useEffect(() => {
+    stRef.current = st;
     if (st.fase === "parado") localStorage.removeItem(CHAVE);
     else localStorage.setItem(CHAVE, JSON.stringify(st));
   }, [st]);
+
+  // Sessão fechada com o cronômetro fora da tela (no Plano ele não
+  // aparece): ele sai antes de ver sessao=false. O tempo da sessão não
+  // pode sobrar para a próxima.
+  useEffect(() => () => {
+    if (stRef.current.daSessao) {
+      try { localStorage.removeItem(CHAVE); } catch { /* sem storage: nada sobra */ }
+    }
+  }, []);
 
   useEffect(() => {
     if (st.fase === "parado") return;

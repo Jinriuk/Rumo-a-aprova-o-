@@ -122,7 +122,7 @@ test("Hoje e Plano: o botão só existe para quem registra; a sessão abre onde 
   assert.match(tela, /resolvendoRef\.current\?\.focus\?\.\(\{ preventScroll: true \}\)/);
   assert.match(tela, /\(tipoEfetivo = resolvendo\.tipo\) => \{[\s\S]*contextoRegistroDaMissao\(resolvendo\.missao, tipoEfetivo\)[\s\S]*abrirRegistroNoHoje\(ctx\); else irAba\("registrar", ctx\)/);
   const linhas = semComentarios(ler("app/src/modules/motor/MissoesDaSemana.jsx"));
-  assert.match(linhas, /podeResolverAqui\(linha, questoesIntegradas\)/, "revisar com questões, no Plano");
+  assert.match(linhas, /const revisao = destinoDoInicio\(linha, questoesIntegradas, \{ podeResolver \}\);/, "revisar com questões, no Plano (espera a lista, como Iniciar)");
 });
 
 test("Iniciar missão: carrega até saber; com questões abre a sessão; sem, vai ao registro (achado 5 do #192)", () => {

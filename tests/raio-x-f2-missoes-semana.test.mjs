@@ -92,6 +92,22 @@ test("concurso só com missões sem meta (CN no demo): nada a contar, sem 'Miss�
   assert.match(visao, /semMissoes=\{missoesProntas && !missoesSemana\.comMeta\}/);
 });
 
+test("matéria fora da trilha do aluno: a missão fica com a coordenação, sem botão e sem contar (achado do Codex)", () => {
+  const m = montarMissoesPorSemana({ fila: filaDeMissoes({ catalogo: CAT, progresso: [] }), catalogo: CAT, vinculos: VINC, totalSemanas: 12,
+    materiasDaTrilha: ["dir_const"] });
+  const adm1 = m.linhas.find((l) => l.id === "adm1");
+  assert.equal(adm1.estado, "manual");
+  assert.equal(adm1.coordenacao, true);
+  assert.equal(podeComecar(adm1), false);
+  assert.equal(m.missaoDeAgora.id, "con1", "a de agora é de matéria que o aluno registra");
+  assert.equal(resumoMissoesDaSemana(m.porSemana.get(1)).texto, "0 de 1 missão");
+  const concluida = montarMissoesPorSemana({ fila: filaDeMissoes({ catalogo: CAT, progresso: [linha("adm1", "concluida", 20)] }),
+    catalogo: CAT, vinculos: VINC, totalSemanas: 12, materiasDaTrilha: ["dir_const"] });
+  assert.equal(concluida.linhas.find((l) => l.id === "adm1").estado, "concluida", "a concluída continua concluída");
+  const visao = semComentarios(ler("app/src/routes/aluno/VisaoEstudo.jsx"));
+  assert.match(visao, /materiasDaTrilha: \(trilha\?\.disciplinas \?\? \[\]\)\.map\(\(d\) => d\.codigo\)/);
+});
+
 test("missão desativada pela escola e não concluída some", () => {
   const m = montarMissoesPorSemana({ fila: filaDeMissoes({ catalogo: CAT, progresso: [], ajustesEscola: [{ missao_id: "con1", ativa: false }] }),
     catalogo: CAT, ajustesEscola: [{ missao_id: "con1", ativa: false }], vinculos: VINC, totalSemanas: 12 });
@@ -150,4 +166,17 @@ test("dados: a semana de cada missão vem de trilha_plano_missoes, e o cartão e
   assert.match(visao, /db\.carregarSemanasDasMissoes\(examTag\)\.catch\(\(\) => \[\]\)/);
   assert.match(visao, /const missoesProntas = !examTag \|\| \(catalogoMissoes\.examTag === examTag && gam\.versao >= 0\);/);
   assert.match(visao, /carregando=\{!missoesProntas\}/);
+});
+
+test("achados do Codex no #197: Revisar espera a lista, catálogo que falha não vira currículo vazio, semana do ritmo abre, cronômetro da sessão não sobra", () => {
+  const md = semComentarios(ler("app/src/modules/motor/MissoesDaSemana.jsx"));
+  assert.match(md, /const revisao = destinoDoInicio\(linha, questoesIntegradas, \{ podeResolver \}\);\s*if \(revisao === "carregando"\) return \{ tipo: "carregando"/);
+  assert.match(md, /Não deu para carregar suas missões/);
+  const visao = semComentarios(ler("app/src/routes/aluno/VisaoEstudo.jsx"));
+  assert.match(visao, /vinculos: \[\], erro: true \}\); \}\);\s*return \(\) => \{ vivo = false; \};\s*\}, \[examTag, tentativaCatalogo\]\);/);
+  assert.match(visao, /useEffect\(\(\) => \{ if \(abertaPeloRitmo\) setAberto\(true\); \}, \[abertaPeloRitmo\]\);/);
+  const c = semComentarios(ler("app/src/shared/ui/Cronometro.jsx"));
+  assert.match(c, /useEffect\(\(\) => \(\) => \{\s*if \(stRef\.current\.daSessao\)/);
+  const guia = ler("app/src/shared/guia/roteiros.js");
+  assert.doesNotMatch(guia, /leva ao Plano/, "nada no Hoje troca de aba");
 });

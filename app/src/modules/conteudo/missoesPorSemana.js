@@ -15,7 +15,9 @@
      - a missão de agora é a primeira não concluída dessa semana (ordem do
        catálogo), preferindo a que o motor deixa começar;
      - só a missão da vez de cada matéria (atual, ou a próxima a começar)
-       tem botão: as outras o servidor recusa ("fora_da_vez", 0065).
+       tem botão: as outras o servidor recusa ("fora_da_vez", 0065);
+     - matéria fora das que o aluno registra na trilha: a missão fica com a
+       coordenação, como no painel antigo (EST1-A5), sem botão e sem contar.
    Testado em tests/raio-x-f2-missoes-semana.test.mjs.
    ============================================================ */
 
@@ -47,20 +49,24 @@ const fazer = (l) => l.estado === "atual" || l.estado === "a_seguir";
 
 /* Linhas das missões, com semana. `fila` = filaDeMissoes(); `catalogo` =
    carregarMissoes(examTag); `ajustesEscola` = carregarMissoesEscola;
-   `vinculos` = carregarSemanasDasMissoes. Missão desativada pela escola e
+   `vinculos` = carregarSemanasDasMissoes; `materiasDaTrilha` = códigos que
+   o aluno registra (vazio = sem filtro). Missão desativada pela escola e
    não concluída some. Devolve { linhas, porSemana, semSemana, semanaAtual,
-   missaoDeAgora }. */
-export function montarMissoesPorSemana({ fila = [], catalogo = [], ajustesEscola = [], vinculos = [], totalSemanas = null } = {}) {
+   missaoDeAgora, comMeta }. */
+export function montarMissoesPorSemana({ fila = [], catalogo = [], ajustesEscola = [], vinculos = [], totalSemanas = null, materiasDaTrilha = [] } = {}) {
   const daFila = new Map(fila.flatMap((g) => g.missoes).map((mi) => [mi.id, mi]));
   const ajuste = new Map(ajustesEscola.map((a) => [a.missao_id, a]));
   const semanas = semanaPorMissao(vinculos);
+  const registraveis = new Set(materiasDaTrilha);
+  const naTrilha = (cod) => registraveis.size === 0 || !cod || registraveis.has(cod);
 
   const linhas = [];
   for (const m of catalogo) {
     const naFila = daFila.get(m.id);
     if (!naFila && ajuste.get(m.id)?.ativa === false) continue;
     const vinc = semanas.get(m.id);
-    const base = naFila ?? {
+    const comCoordenacao = naFila && naFila.estado !== "concluida" && !naTrilha(naFila.materia_codigo);
+    const base = comCoordenacao ? { ...naFila, estado: "manual", proxima: false, coordenacao: true } : naFila ?? {
       id: m.id, nome: m.nome, materia_codigo: m.materia_codigo, estado: "manual",
       meta_questoes: null, questoes: 0, pct: 0, proxima: false,
     };

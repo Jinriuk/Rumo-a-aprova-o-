@@ -8,6 +8,10 @@
        missão de Penal Militar da semana 1 (13 questões); a da vez passa a
        ser "Crime militar", sem questões ligadas, e a linha dela diz
        "Registrar", que abre o registro já com a missão, no próprio Hoje.
+   As contas criadas pela coordenação recebem código comum (não E2E…):
+   só passam se o código estiver em DEMO_CODIGOS_DESCARTAVEIS (lista
+   separada por vírgula, dita por quem roda) e, depois do login, a escola
+   não for a da vitrine. Qualquer outro código é recusado.
    Capturas em DEMO_SAIDA. Ver playwright.demo.config.js para rodar
    (o projeto deste arquivo é o celular). Gasta créditos da Quest quando a
    missão não tem estoque guardado. */
@@ -28,7 +32,9 @@ test.use({
 
 async function entrar(page, codigo, senha) {
   const recusa = recusaCodigoDoDemo(codigo);
-  if (recusa && !/^[A-Z0-9]{4}-?[A-Z0-9]{4}-?[A-Z0-9]{4}$/.test(codigo)) throw new Error(`Recusado: ${recusa}`);
+  const normal = (c) => String(c ?? "").replace(/[^a-zA-Z0-9]/g, "").toUpperCase();
+  const descartaveis = (process.env.DEMO_CODIGOS_DESCARTAVEIS ?? "").split(",").map(normal).filter(Boolean);
+  if (recusa && !descartaveis.includes(normal(codigo))) throw new Error(`Recusado: ${recusa}`);
   await transporteDemo(page);
   await page.goto("/");
   await page.getByRole("button", { name: /Aluno \/ Responsável/ }).click();
@@ -116,7 +122,9 @@ test("A: Hoje com a missão de agora e a semana aberta; Iniciar abre a sessão n
   const feitas = Math.min(meta, antes + respondidas);
   const linhaDela = semana.getByRole("listitem").filter({ hasText: nome });
   await expect(linhaDela).toContainText(`${feitas}/${meta}`, { timeout: 30_000 });
-  if (feitas < meta) await expect(cartao.getByText(`${feitas} de ${meta} questões`, { exact: true })).toBeVisible();
+  // fecha só com a meta de questões E a de acerto: quem decide é o servidor
+  const fechou = (await linhaDela.getAttribute("data-estado")) === "concluida";
+  if (!fechou) await expect(cartao.getByText(`${feitas} de ${meta} questões`, { exact: true })).toBeVisible();
   else {
     // regra 1: concluída, a missão de agora passa à próxima da semana
     await expect(linhaDela).toHaveAttribute("data-estado", "concluida");
@@ -131,7 +139,7 @@ test("A: Hoje com a missão de agora e a semana aberta; Iniciar abre a sessão n
   const s1 = page.getByRole("region", { name: "Semana 1" });
   const s2 = page.getByRole("region", { name: "Semana 2" });
   await expect(s1.getByRole("listitem").filter({ hasText: nome })).toContainText(`${feitas}/${meta}`);
-  if (feitas >= meta) await expect(s1.getByRole("button", { name: `Revisar: ${nome}` }), "revisão só no Plano").toBeVisible();
+  if (fechou) await expect(s1.getByRole("button", { name: `Revisar: ${nome}` }), "revisão só no Plano").toBeVisible();
   await expect(s1.getByText("Tarefas da semana")).toBeVisible();
   await expect(s2.getByText("Tarefas da semana"), "a semana do calendário também abre").toBeVisible();
   await expect(s2.getByRole("button", { name: "✓ Concluir" }).first()).toBeVisible();
