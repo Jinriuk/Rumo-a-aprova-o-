@@ -32,16 +32,19 @@ export const TAMANHOS_LOTE = [5, 10, 20];
 export const TAMANHO_LOTE = 10;
 const CHAVE_TAMANHO = "triliva-tamanho-lote";
 
-export function tamanhoLembrado(armazenamento = globalThis.localStorage) {
+// O acesso a globalThis.localStorage fica dentro do try: com o
+// armazenamento bloqueado, ler a propriedade já lança (SecurityError), e
+// num parâmetro padrão isso escaparia do try e derrubaria a sessão.
+export function tamanhoLembrado(armazenamento) {
   try {
-    const n = Number(armazenamento?.getItem(CHAVE_TAMANHO));
+    const n = Number((armazenamento ?? globalThis.localStorage)?.getItem(CHAVE_TAMANHO));
     return TAMANHOS_LOTE.includes(n) ? n : TAMANHO_LOTE;
   } catch { return TAMANHO_LOTE; }
 }
 
-export function lembrarTamanho(n, armazenamento = globalThis.localStorage) {
+export function lembrarTamanho(n, armazenamento) {
   if (!TAMANHOS_LOTE.includes(n)) return;
-  try { armazenamento?.setItem(CHAVE_TAMANHO, String(n)); } catch { /* sem armazenamento: vale só nesta sessão */ }
+  try { (armazenamento ?? globalThis.localStorage)?.setItem(CHAVE_TAMANHO, String(n)); } catch { /* sem armazenamento: vale só nesta sessão */ }
 }
 
 // "X de N questões desta missão". X = o que já contava para a missão ao

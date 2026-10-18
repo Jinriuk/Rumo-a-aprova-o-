@@ -111,7 +111,9 @@ export function VisaoEstudo({ aluno, podeEditar, concurso = null, contexto = "Pl
     // na trilha do aluno, e o painel nunca mostra o código cru (dir_adm)
     Promise.all([db.carregarMissoes(examTag), db.carregarMissoesEscola(examTag), db.carregarNomesMateria().catch(() => ({}))])
       .then(([missoes, ajustes, nomes]) => { if (vivo) setCatalogoMissoes({ examTag, missoes: missoes ?? [], ajustes: ajustes ?? [], nomes: nomes ?? {} }); })
-      .catch(() => { /* complementar: sem catálogo, o painel some, a tela fica */ });
+      // complementar: sem catálogo, o painel some, a tela fica (e o cartão
+      // do Hoje para de esperar por ele)
+      .catch(() => { if (vivo) setCatalogoMissoes({ examTag, missoes: [], ajustes: [], nomes: {} }); });
     return () => { vivo = false; };
   }, [examTag]);
   // P1.1: em quais missões o servidor ligou as questões integradas. Só o
@@ -340,7 +342,14 @@ export function VisaoEstudo({ aluno, podeEditar, concurso = null, contexto = "Pl
 
   const itensMeta = (meta?.meta_atividades ?? []);
   const pendentes = itensMeta.filter((x) => x.estado === "pendente").length;
-  const acao = acaoDaVez({ fila: filaMissoes, meta, trilha, registraveis: new Set(trilha.disciplinas.map((d) => d.codigo)) });
+  // achado do Codex no #194: catálogo e progresso das missões não entram no
+  // gate de carregamento da tela. Antes de chegarem, a fila está vazia e o
+  // cartão ofereceria a tarefa ou "semana em dia" no lugar da missão; o
+  // toque nesse meio-tempo registraria sem ligar à missão. Espera os dois.
+  const missoesProntas = !examTag || (catalogoMissoes.examTag === examTag && gam.versao >= 0);
+  const acao = missoesProntas
+    ? acaoDaVez({ fila: filaMissoes, meta, trilha, registraveis: new Set(trilha.disciplinas.map((d) => d.codigo)) })
+    : { tipo: "carregando" };
   // XP da FONTE DE VERDADE (ledger persistido, Fase C0 + PED1). Se o aluno
   // ainda não tem eventos (base nova/antes do backfill), cai na estimativa legada.
   const xp = dados.xpPersistido?.eventos?.length

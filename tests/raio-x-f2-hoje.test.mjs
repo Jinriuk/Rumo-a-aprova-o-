@@ -10,7 +10,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { resolve, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
-import { acaoDaVez, resumoDaSemana, textoDaTarefa, tituloDaTarefa } from "../app/src/modules/motor/jornada.js";
+import { acaoDaVez, resumoDaSemana, textoDaTarefa, tituloDaTarefa, contextoRegistroDaAtividade } from "../app/src/modules/motor/jornada.js";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const ler = (p) => readFileSync(resolve(root, p), "utf8");
@@ -128,4 +128,18 @@ test("Plano: semanas em blocos (a atual aberta), tarefas dentro, Concluir só na
     "semana passada mostra o que foi feito nela, não o estado da atual");
   const plano = visao.slice(visao.indexOf("function Plano("), visao.indexOf("function BlocoSemana("));
   assert.ok(plano.indexOf("trilha.semanas.map") < plano.indexOf("{children}"), "missões depois das semanas");
+// achados do Codex no #194
+test("o cartão espera o catálogo e o progresso das missões antes de escolher a ação", () => {
+  const visao = semComentarios(ler("app/src/routes/aluno/VisaoEstudo.jsx"));
+  assert.match(visao, /const missoesProntas = !examTag \|\| \(catalogoMissoes\.examTag === examTag && gam\.versao >= 0\);/);
+  assert.match(visao, /: \{ tipo: "carregando" \};/);
+  assert.match(visao, /\.catch\(\(\) => \{ if \(vivo\) setCatalogoMissoes\(\{ examTag, missoes: \[\], ajustes: \[\], nomes: \{\} \}\); \}\);/,
+    "catálogo que falha não deixa o cartão esperando para sempre");
+  const card = semComentarios(ler("app/src/modules/motor/MissaoDaVez.jsx"));
+  assert.match(card, /acao\.tipo === "carregando"\) \{[\s\S]*?destino = "carregando";/);
+});
+
+test("o registro aberto pela tarefa leva o mesmo texto que ela mostra ('Estudo:', não 'Missão:')", () => {
+  const ctx = contextoRegistroDaAtividade({ id: "ma-a1", atividade_modelo_id: "a1" }, TRILHA);
+  assert.equal(ctx.titulo, "Estudo: Crase. Leitura: 20 min.");
 });

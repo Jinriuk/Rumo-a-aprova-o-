@@ -192,6 +192,17 @@ test("tamanho do lote: abre direto com o último escolhido (padrão 10), troca d
   mem.setItem("triliva-tamanho-lote", "lixo");
   assert.equal(tamanhoLembrado(mem), 10, "valor estranho volta ao padrão");
   assert.equal(tamanhoLembrado({ getItem: () => { throw new Error("bloqueado"); } }), 10);
+  // achado do Codex no #194: com armazenamento bloqueado, LER a propriedade
+  // localStorage já lança; isso não pode escapar do try
+  const original = Object.getOwnPropertyDescriptor(globalThis, "localStorage");
+  Object.defineProperty(globalThis, "localStorage", { configurable: true, get() { throw new Error("SecurityError"); } });
+  try {
+    assert.equal(tamanhoLembrado(), 10);
+    assert.doesNotThrow(() => lembrarTamanho(5));
+  } finally {
+    if (original) Object.defineProperty(globalThis, "localStorage", original);
+    else delete globalThis.localStorage;
+  }
   const tela = semComentarios(ler("app/src/modules/motor/ResolverQuestoes.jsx"));
   assert.match(tela, /useState\(\(\) => tamanhoLembrado\(\)\)/);
   assert.match(tela, /useEffect\(\(\) => \{ abrir\(tamanho\); \}, \[\]\);/, "abre sozinho, uma vez (pedidoId fixo)");
@@ -207,7 +218,7 @@ test("tamanho do lote: abre direto com o último escolhido (padrão 10), troca d
 
 test("a ficha da coordenação diz onde ficam as questões (na tela do aluno) e pede a credencial quando falta", () => {
   const ficha = ler("app/src/modules/desempenho/FichaAluno.jsx");
-  assert.match(ficha, /toca em \\"Resolver questões\\" na aba Hoje/);
+  assert.match(ficha, /toca no botão da missão na aba Hoje \(\\"Resolver questões\\" quando a missão tem questões ligadas, \\"Registrar estudo\\" quando não tem\)/);
   assert.match(ficha, /Sem credencial, o aluno ainda não entra no app\. Gere a credencial/);
 });
 

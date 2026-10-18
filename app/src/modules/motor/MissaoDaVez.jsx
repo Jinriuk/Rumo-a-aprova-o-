@@ -28,6 +28,11 @@ export function MissaoDaVez({ acao, trilha, nomesMateria, questoesIntegradas, ao
     pct = mi.pct;
     destino = destinoDoInicio(mi, questoesIntegradas, { podeResolver: !!aoResolver });
     contexto = contextoRegistroDaMissao(mi, "missao");
+  } else if (acao.tipo === "carregando") {
+    // catálogo e progresso das missões ainda a caminho: não decide nada
+    materia = null;
+    titulo = "Buscando a sua missão…";
+    destino = "carregando";
   } else if (acao.tipo === "tarefa") {
     materia = trilha.porCodigo[acao.atividade.disciplina_codigo]?.nome ?? nomeDaMateria(acao.atividade.disciplina_codigo, nomesMateria);
     titulo = tituloDaTarefa(acao.atividade.texto);
@@ -50,7 +55,7 @@ export function MissaoDaVez({ acao, trilha, nomesMateria, questoesIntegradas, ao
     <section aria-label="Sua missão agora" className="mission-card"
       style={{ "--mission-accent": T.gold, background: `linear-gradient(160deg, ${T.cardHi}, ${T.card})`, border: `1.5px solid ${T.gold}66`, borderRadius: 14, padding: 16 }}>
       <div style={{ fontSize: 11, color: T.gold, fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.5 }}>
-        {acao.tipo === "missao" ? "Sua missão agora" : acao.tipo === "tarefa" ? "Sua próxima tarefa" : "Semana em dia"}
+        {acao.tipo === "missao" || acao.tipo === "carregando" ? "Sua missão agora" : acao.tipo === "tarefa" ? "Sua próxima tarefa" : "Semana em dia"}
         {materia && <span style={{ color: T.sub }}> · {materia}</span>}
       </div>
       <h2 className="disp" style={{ fontSize: 18, fontWeight: 700, lineHeight: 1.25, margin: "6px 0 0" }}>{titulo}</h2>
