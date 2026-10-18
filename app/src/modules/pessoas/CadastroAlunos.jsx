@@ -623,7 +623,7 @@ export function NovaTurma({ aoMudar }) {
       <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "flex-end" }}>
         <div style={{ flex: 1, minWidth: 200 }}>
           <label htmlFor={`${uid}-turma`} style={lbl}>Nome da turma</label>
-          <input id={`${uid}-turma`} value={nome} onChange={(e) => setNome(e.target.value)} placeholder="ex: Turma CN 2026 — manhã" style={inputS} />
+          <input id={`${uid}-turma`} value={nome} onChange={(e) => setNome(e.target.value)} placeholder="ex: Turma 2026 — manhã" style={inputS} />
         </div>
         <Botao onClick={criar} disabled={!nomeValido(nome) || ocupado}>{ocupado ? "Criando…" : "+ Criar turma"}</Botao>
       </div>

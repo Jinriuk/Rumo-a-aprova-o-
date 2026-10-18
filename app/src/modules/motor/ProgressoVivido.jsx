@@ -7,7 +7,7 @@
 import React, { useEffect, useRef } from "react";
 import { SectionCard, StatusBadge, BarraXP, Erro } from "../../shared/ui/componentes.jsx";
 import { useTema } from "../../shared/branding/BrandingContext.jsx";
-import { resumoRegistroConfirmado, contextoRegistroDaMissao } from "./jornada.js";
+import { resumoRegistroConfirmado, contextoRegistroDaMissao, nomeDaMateria } from "./jornada.js";
 import { podeResolverAqui, destinoDoInicio } from "./questoesIntegradas.js";
 
 const tempoConfirmado = (minutos) => {
@@ -125,7 +125,6 @@ export function FeedbackProgresso({ feedback, aoFechar }) {
   );
 }
 
-const ROTULO_MATERIA = { mat: "Matemática", por: "Português", ing: "Inglês", fis: "Física", qui: "Química", bio: "Biologia", his: "História", geo: "Geografia", red: "Redação", soc: "Estudos Sociais" };
 
 /* Fila de missões do aluno, por matéria, como o motor da 0061 a vê:
    concluídas, a atual e as próximas ("a seguir"), na ordem do catálogo.
@@ -151,7 +150,7 @@ const ROTULO_MATERIA = { mat: "Matemática", por: "Português", ing: "Inglês", 
    `questoesIntegradas` não tem valor padrão: undefined é "ainda carregando"
    e null é "não deu para saber" (destinoDoInicio); um `= null` aqui
    transformava o carregando em "abre a sessão". */
-export function MissoesPersistidas({ fila = [], disciplinas = [], aoPraticar, compacta = false, questoesIntegradas, aoResolver }) {
+export function MissoesPersistidas({ fila = [], disciplinas = [], nomesMateria = null, aoPraticar, compacta = false, questoesIntegradas, aoResolver }) {
   const T = useTema();
   const registraveis = new Set((disciplinas ?? []).map((d) => d.codigo));
   const podeRegistrar = (cod) => registraveis.size === 0 || !cod || registraveis.has(cod);
@@ -172,7 +171,7 @@ export function MissoesPersistidas({ fila = [], disciplinas = [], aoPraticar, co
         : `${fechadas} de ${todasDaFila.length} concluída${fechadas === 1 ? "" : "s"} — uma por vez em cada matéria; contam as práticas que você registra pelo botão da missão.`}>
       <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
         {grupos.map(({ materia_codigo: cod, missoes }) => {
-          const materia = ROTULO_MATERIA[cod] ?? cod ?? "";
+          const materia = nomeDaMateria(cod, nomesMateria);
           const inalcancavel = !podeRegistrar(cod);
           return (
             <div key={cod}>

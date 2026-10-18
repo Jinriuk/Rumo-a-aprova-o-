@@ -8,7 +8,7 @@
 import { test, expect } from "./local/base.js";
 import { sql, fecharBanco } from "./local/api.js";
 import {
-  CONTAS, coletarErros, loginAluno, irParaAba, semEstouroHorizontal, campo, botaoVisivel, sufixo, retratoDaTela,
+  CONTAS, coletarErros, loginAluno, irParaAba, semEstouroHorizontal, campo, botaoVisivel, sufixo, retratoDaTela, sair,
 } from "./_apoio.js";
 
 const CONTA = CONTAS.alunoJornada;
@@ -173,5 +173,51 @@ test.describe("aluno", { tag: ["@j:aluno", "@critica"] }, () => {
     await expect(botaoVisivel(page, "Hoje")).toBeVisible();
     await semEstouroHorizontal(page);
     expect(erros).toEqual([]);
+  });
+});
+
+/* Raio-x, mudança 8 (decisões de 18/10): o aviso de maturidade sai das
+   telas fixas (uma vez, com "Entendi", e uma linha no Plano), o seletor
+   de modo da tela some e a matéria aparece pelo nome. */
+test.describe("aluno: menos ruído fixo", { tag: ["@j:aluno", "@critica"] }, () => {
+  test("aviso de maturidade aparece uma vez, some no Entendi (também depois de atualizar) e fica uma linha no Plano", async ({ page }) => {
+    const erros = coletarErros(page);
+    await loginAluno(page, CONTAS.alunoAviso);
+    const aviso = page.getByRole("note").filter({ hasText: "Só a estrutura da prova" });
+    await expect(aviso).toBeVisible();
+    await aviso.getByRole("button", { name: "Entendi" }).click();
+    await expect(aviso).toHaveCount(0);
+    await page.reload();
+    await expect(botaoVisivel(page, "Hoje")).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByText("Só a estrutura da prova")).toHaveCount(0);
+    for (const aba of ["Registrar", "Desempenho", "Hoje"]) {
+      await irParaAba(page, aba);
+      await expect(page.getByText("Só a estrutura da prova")).toHaveCount(0);
+    }
+    await irParaAba(page, "Plano");
+    await expect(page.getByText("Conteúdo de estudo ainda não montado.")).toBeVisible();
+    expect(erros).toEqual([]);
+  });
+
+  test("Hoje sem 'Preferência desta tela' e com a matéria pelo nome no painel de missões", async ({ page }) => {
+    const erros = coletarErros(page);
+    await loginAluno(page, CONTAS.alunoJornada);
+    await expect(page.getByRole("heading", { name: "Missão da vez" })).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByText("Preferência desta tela")).toHaveCount(0);
+    await expect(page.getByRole("button", { name: /Modo (completo|essencial)/ })).toHaveCount(0);
+    // o cartão inteiro: o ancestral mais próximo que já contém as missões
+    const painel = page.getByRole("heading", { name: "Missão da vez" }).locator("xpath=ancestor::*[.//li][1]");
+    const texto = await painel.textContent();
+    expect(texto).toMatch(/Matemática|Português|Inglês|Física|Química|Biologia|História|Geografia/);
+    expect(texto, "nenhum código cru de matéria").not.toMatch(/\b(mat|por|ing|fis|qui|bio|his|geo|dir_[a-z_]+)\b/);
+    expect(erros).toEqual([]);
+  });
+
+  test("exemplos coerentes: tópico serve a qualquer concurso; código no formato real", async ({ page }) => {
+    await loginAluno(page, CONTAS.alunoJornada);
+    await irParaAba(page, "Registrar");
+    await expect(campo(page, "Tópico *")).toHaveAttribute("placeholder", "ex: assunto que estudou");
+    await sair(page);
+    await expect(page.getByPlaceholder("Ex.: ABCD-2345-EFGH")).toBeVisible();
   });
 });
