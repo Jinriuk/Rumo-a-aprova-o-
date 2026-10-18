@@ -410,10 +410,13 @@ test("T45: aria-labelledby real — o <h2> ganha id e o diálogo aponta pra ele 
 // ============================================================
 // BLOCO 8 — contraste (I4, T23, C11)
 // ============================================================
-test("I4: MetaHero.jsx volta ao padrão canônico #0A1622 sobre T.red (não mais branco)", () => {
-  const src = lerCodigo("app/src/modules/motor/MetaHero.jsx");
-  assert.doesNotMatch(src, /background: T\.red, color: "#fff"/, "ainda tem branco sobre coral (3,42:1)");
-  assert.match(src, /background: T\.red, color: "#0A1622"/, "não voltou ao padrão do botão de perigo canônico");
+test("I4: o botão principal do Hoje usa #0A1622 sobre a cor de destaque (nunca branco)", () => {
+  // o botão vermelho de "missão atrasada" saiu com o cartão da semana
+  // (raio-x fase 2); o botão único do cartão novo segue o mesmo padrão
+  for (const p of ["app/src/modules/motor/MetaHero.jsx", "app/src/modules/motor/MissaoDaVez.jsx"]) {
+    assert.doesNotMatch(lerCodigo(p), /background: T\.(red|gold), color: "#fff"/, `${p}: branco sobre cor (abaixo de 4,5:1)`);
+  }
+  assert.match(lerCodigo("app/src/modules/motor/MissaoDaVez.jsx"), /background: T\.gold, color: "#0A1622"/);
 });
 
 test("T23/C11: T.red foi corrigido no TOKEN — mede ≥4,5:1 como texto contra as 4 superfícies fixas", () => {

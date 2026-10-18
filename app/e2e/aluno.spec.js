@@ -13,6 +13,10 @@ import {
 
 const CONTA = CONTAS.alunoJornada;
 
+const idsDasMissoes = async (alunoId) => (await sql(
+  `select m.id from missoes m join concursos c on c.codigo = m.exam_tag join alunos a on a.concurso_id = c.id
+    where a.id = $1`, [alunoId])).map((r) => r.id);
+
 test.afterAll(async () => { await fecharBanco(); });
 
 test.describe("aluno", { tag: ["@j:aluno", "@critica"] }, () => {
@@ -20,12 +24,22 @@ test.describe("aluno", { tag: ["@j:aluno", "@critica"] }, () => {
     await loginAluno(page, CONTA);
   });
 
-  test("Hoje mostra a missão da semana, o cronômetro e o XP", async ({ page }) => {
+  // Raio-x fase 2 (mudanças 2 e 3): uma ação no Hoje
+  test("Hoje mostra a missão da vez com um botão, a semana numa linha, o cronômetro e o XP", async ({ page }) => {
     const erros = coletarErros(page);
-    await expect(page.getByText(/Sua missão: concluir \d+ objetivos/)).toBeVisible();
+    const cartao = page.getByRole("region", { name: "Sua missão agora" });
+    await expect(cartao).toBeVisible();
+    await expect(cartao.getByText(/^\d+ de \d+ questões/)).toBeVisible();
+    await expect(cartao.getByRole("button")).toHaveCount(1);
+    await expect(cartao.getByRole("button", { name: /^(Resolver questões|Registrar estudo)$/ })).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByRole("button", { name: /^Semana \d+ de \d+ · \d+ de \d+ tarefas?/ })).toBeVisible();
     await expect(page.getByRole("button", { name: /Iniciar estudo/ })).toBeVisible();
     await expect(page.getByText(/\d[\d.]*\s*XP/).first()).toBeVisible();
-    await expect(page.getByRole("heading", { name: "Objetivos da semana" })).toBeVisible();
+    // saíram do Hoje: a semana como "Missão N", a lista de missões, as tarefas e o radar
+    for (const fora of [/^MISSÃO \d+$/, "Radar de desempenho", "Tarefas da semana", "Próxima Missão"]) {
+      await expect(page.getByText(fora)).toHaveCount(0);
+    }
+    await expect(page.getByRole("button", { name: "Iniciar missão" })).toHaveCount(0);
     await semEstouroHorizontal(page);
     expect(erros).toEqual([]);
   });
@@ -38,8 +52,11 @@ test.describe("aluno", { tag: ["@j:aluno", "@critica"] }, () => {
     expect(erros).toEqual([]);
   });
 
-  test("metas: concluir um objetivo grava no banco e continua concluído depois de atualizar", async ({ page }) => {
-    const contador = page.getByText(/^\d+ de \d+ concluídos$/).first();
+  test("metas: concluir uma tarefa (no Plano) grava no banco, continua concluída depois de atualizar e a linha do Hoje acompanha", async ({ page }) => {
+    const linha = page.getByRole("button", { name: /^Semana \d+ de \d+ · \d+ de \d+ tarefas?/ });
+    const linhaAntes = await linha.innerText();
+    await linha.click(); // a linha da semana leva ao Plano, onde moram as tarefas
+    const contador = page.getByText(/^\d+ de \d+ concluídas/).first();
     await expect(contador).toBeVisible();
     const [antes] = await sql(
       `select count(*) filter (where ma.estado = 'concluida')::int as feitas
@@ -57,7 +74,10 @@ test.describe("aluno", { tag: ["@j:aluno", "@critica"] }, () => {
     expect(depois.feitas, "uma atividade a mais concluída no banco").toBe(antes.feitas + 1);
 
     await page.reload();
-    await expect(page.getByText(/^\d+ de \d+ concluídos$/).first()).toHaveText(`${depois.feitas} de ${textoAntes.match(/de (\d+)/)[1]} concluídos`, { timeout: 15_000 });
+    await expect(botaoVisivel(page, "Hoje")).toBeVisible({ timeout: 15_000 });
+    await expect(linha).not.toHaveText(linhaAntes, { timeout: 15_000 });
+    await irParaAba(page, "Plano");
+    await expect(page.getByText(/^\d+ de \d+ concluídas/).first()).toHaveText(new RegExp(`^${depois.feitas} de ${textoAntes.match(/de (\d+)/)[1]} concluídas`), { timeout: 15_000 });
   });
 
   test("registro de estudo: salva, aparece nos recentes e sobrevive ao refresh", async ({ page }) => {
@@ -131,13 +151,12 @@ test.describe("aluno", { tag: ["@j:aluno", "@critica"] }, () => {
   });
 
   // 18/10, achado 5 do #192: com a lista de missões com questões ainda a
-  // caminho, "Iniciar missão" mandava ao registro. Rede lenta simulada: a
-  // resposta da RPC só sai quando o teste libera.
-  test("Iniciar missão espera saber se a missão tem questões (rede lenta) e nunca cai no registro por falta de resposta", async ({ page }) => {
+  // caminho, o botão mandava ao registro. Rede lenta simulada: a resposta
+  // da RPC só sai quando o teste libera. Raio-x fase 2: o botão é o do
+  // cartão do Hoje, e a sessão abre direto (sem "Quantas questões por vez?").
+  test("Resolver questões espera saber se a missão tem questões (rede lenta) e nunca cai no registro por falta de resposta", async ({ page }) => {
     const erros = coletarErros(page);
-    const ids = (await sql(
-      `select m.id from missoes m join concursos c on c.codigo = m.exam_tag join alunos a on a.concurso_id = c.id
-        where a.id = $1`, [CONTA.alunoId])).map((r) => r.id);
+    const ids = await idsDasMissoes(CONTA.alunoId);
     let liberar;
     const lenta = new Promise((ok) => { liberar = ok; });
     await page.route("**/rest/v1/rpc/quest_missoes_disponiveis*", async (route) => {
@@ -146,23 +165,71 @@ test.describe("aluno", { tag: ["@j:aluno", "@critica"] }, () => {
     });
     await page.reload();
 
-    const iniciar = page.getByRole("button", { name: "Iniciar missão" }).first();
-    await expect(iniciar).toBeVisible({ timeout: 15_000 });
-    await expect(iniciar).toBeDisabled();
-    await expect(iniciar).toHaveAttribute("aria-busy", "true");
-    await expect(page.getByRole("status").filter({ hasText: "Carregando…" }).first()).toBeVisible();
-    await iniciar.click({ force: true });           // o toque impaciente
+    const cartao = page.getByRole("region", { name: "Sua missão agora" });
+    const botao = cartao.getByRole("button");
+    await expect(botao).toHaveText("Carregando…", { timeout: 15_000 });
+    await expect(botao).toBeDisabled();
+    await expect(botao).toHaveAttribute("aria-busy", "true");
+    await botao.click({ force: true });           // o toque impaciente
     await page.waitForTimeout(800);
     await expect(page.getByText("Registro rápido"), "não foi ao registro").toHaveCount(0);
-    await expect(page.getByText("Quantas questões por vez?")).toHaveCount(0);
+    await expect(page.getByLabel("Questões da missão")).toHaveCount(0);
 
     liberar();
-    await expect(iniciar).toBeEnabled();
-    await expect(iniciar).not.toHaveAttribute("aria-busy", "true");
-    await iniciar.click();
-    await expect(page.getByText("Quantas questões por vez?"), "abriu a sessão de questões").toBeVisible();
+    await expect(botao).toHaveText("Resolver questões");
+    await expect(botao).toBeEnabled();
+    await botao.click();
+    await expect(page.getByLabel("Questões da missão"), "abriu a sessão de questões").toBeVisible();
+    await expect(page.getByText("Quantas questões por vez?"), "sem tela de escolha antes do lote").toHaveCount(0);
     await expect(page.getByText("Registro rápido")).toHaveCount(0);
     expect(erros).toEqual([]);
+  });
+
+  test("Resolver questões abre direto com o último tamanho (padrão 10) e troca o tamanho dentro da sessão", async ({ page }) => {
+    const ids = await idsDasMissoes(CONTA.alunoId);
+    await page.route("**/rest/v1/rpc/quest_missoes_disponiveis*", (route) =>
+      route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(ids) }));
+    const pedidos = [];
+    await page.route("**/functions/v1/questoes-integradas", async (route) => {
+      if (route.request().method() !== "POST") return route.fallback();
+      const corpo = route.request().postDataJSON();
+      pedidos.push(corpo);
+      await route.fulfill({ status: 200, contentType: "application/json", headers: { "access-control-allow-origin": "*" }, body: JSON.stringify({
+        estado: "ok", retomado: false,
+        entrega: { id: "e2e-entrega", tipo_pratica: "missao", questoes: [
+          { id: "e2e-q1", enunciado: "Questão de teste do E2E.", alternativas: [{ letra: "A", texto: "um" }, { letra: "B", texto: "dois" }] },
+        ] },
+      }) });
+    });
+    await page.evaluate(() => localStorage.removeItem("triliva-tamanho-lote"));
+    await page.reload();
+    await page.getByRole("region", { name: "Sua missão agora" }).getByRole("button", { name: "Resolver questões" }).click({ timeout: 15_000 });
+    const sessao = page.getByLabel("Questões da missão");
+    await expect(sessao.getByText("Questão de teste do E2E.")).toBeVisible();
+    expect(pedidos[0]).toMatchObject({ acao: "entregar", tamanho: 10 });
+    const por = sessao.getByRole("radiogroup", { name: "Por vez:" });
+    await expect(por.getByRole("radio", { name: "10" })).toHaveAttribute("aria-checked", "true");
+    await por.getByRole("radio", { name: "20" }).click();
+    await expect(por.getByRole("radio", { name: "20" })).toHaveAttribute("aria-checked", "true");
+    expect(await page.evaluate(() => localStorage.getItem("triliva-tamanho-lote"))).toBe("20");
+
+    await sessao.getByRole("button", { name: "Fechar" }).click();
+    await page.reload();
+    await page.getByRole("region", { name: "Sua missão agora" }).getByRole("button", { name: "Resolver questões" }).click({ timeout: 15_000 });
+    await expect(page.getByLabel("Questões da missão").getByText("Questão de teste do E2E.")).toBeVisible();
+    expect(pedidos.at(-1)).toMatchObject({ acao: "entregar", tamanho: 20 });
+  });
+
+  test("sem questões ligadas, o botão é Registrar estudo e abre o registro já preenchido com a missão", async ({ page }) => {
+    await page.route("**/rest/v1/rpc/quest_missoes_disponiveis*", (route) =>
+      route.fulfill({ status: 200, contentType: "application/json", body: "[]" }));
+    await page.reload();
+    const cartao = page.getByRole("region", { name: "Sua missão agora" });
+    const assunto = (await cartao.getByRole("heading").innerText()).trim();
+    await cartao.getByRole("button", { name: "Registrar estudo" }).click({ timeout: 15_000 });
+    await expect(page.getByText("Registro rápido")).toBeVisible();
+    await expect(page.getByText(assunto).first(), "o registro sabe de que missão é").toBeVisible();
+    await expect(campo(page, "Matéria")).toBeDisabled();
   });
 
   test("navega por todas as abas sem erro de console", async ({ page }) => {
@@ -202,9 +269,13 @@ test.describe("aluno: menos ruído fixo", { tag: ["@j:aluno", "@critica"] }, () 
   test("Hoje sem 'Preferência desta tela' e com a matéria pelo nome no painel de missões", async ({ page }) => {
     const erros = coletarErros(page);
     await loginAluno(page, CONTAS.alunoJornada);
-    await expect(page.getByRole("heading", { name: "Missão da vez" })).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByRole("region", { name: "Sua missão agora" })).toBeVisible({ timeout: 15_000 });
     await expect(page.getByText("Preferência desta tela")).toHaveCount(0);
     await expect(page.getByRole("button", { name: /Modo (completo|essencial)/ })).toHaveCount(0);
+    // o cartão da missão da vez também diz a matéria pelo nome
+    await expect(page.getByRole("region", { name: "Sua missão agora" })).toContainText(/Matemática|Português|Inglês|Física|Química|Biologia|História|Geografia/);
+    await irParaAba(page, "Plano"); // raio-x fase 2: o painel de missões mora no Plano
+    await expect(page.getByRole("heading", { name: "Missão da vez" })).toBeVisible({ timeout: 15_000 });
     // o cartão inteiro: o ancestral mais próximo que já contém as missões
     const painel = page.getByRole("heading", { name: "Missão da vez" }).locator("xpath=ancestor::*[.//li][1]");
     const texto = await painel.textContent();

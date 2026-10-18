@@ -88,7 +88,7 @@ test.describe("coordenação: turma → aluno → meta → credencial → víncu
       await campo(page, "Confirmar senha").fill(SENHA_NOVA_E2E);
       await page.getByRole("button", { name: "Definir senha e continuar" }).click();
       await expect(botaoVisivel(page, "Hoje"), await retratoDaTela(page)).toBeVisible({ timeout: 20_000 });
-      await expect(page.getByText(/Sua missão: concluir \d+ objetivos/)).toBeVisible();
+      await expect(page.getByRole("button", { name: /^Semana \d+ de \d+ · 0 de \d+ tarefas?/ })).toBeVisible();
       const [u] = await sql("select u.must_change_password from alunos a join usuarios u on u.id = a.usuario_id where a.nome = $1", [aluno]);
       expect(u.must_change_password).toBe(false);
     } finally { await ctx.close(); }

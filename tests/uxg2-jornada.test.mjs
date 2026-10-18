@@ -54,10 +54,11 @@ test("confirmação resume somente os valores devolvidos pelo banco", () => {
 
 test("objetivo inicia prática e a lista compacta preserva acesso ao restante", () => {
   const src = ler("app/src/modules/motor/MetaSemana.jsx");
-  assert.match(src, /Praticar agora/);
+  // raio-x, mudança 3: "Registrar estudo" e "tarefas"
+  assert.match(src, /Registrar estudo <span aria-hidden="true">→<\/span>/);
   assert.match(src, /contextoRegistroDaAtividade/);
   assert.match(src, /compacta = false/);
-  assert.match(src, /Ver todos os \{itens\.length\} objetivos/);
+  assert.match(src, /Ver todas as \{itens\.length\} tarefas/);
 });
 
 test("Registrar usa o retorno do insert e mantém sugestão sob ação explícita", () => {

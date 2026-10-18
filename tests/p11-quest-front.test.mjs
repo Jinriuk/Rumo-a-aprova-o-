@@ -19,7 +19,7 @@ import { readFileSync } from "node:fs";
 import { resolve, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import {
-  mensagemDoEstado, ESTADOS_ESPERADOS_QUEST, textoSimples, podeResolverAqui, resumoDoLote, origemDaQuestao, novoPedidoId, TAMANHO_LOTE,
+  mensagemDoEstado, ESTADOS_ESPERADOS_QUEST, textoSimples, podeResolverAqui, resumoDoLote, origemDaQuestao, novoPedidoId, TAMANHO_LOTE, tamanhoLembrado, lembrarTamanho,
   TAMANHOS_LOTE, progressoDaMissao, fimDoLote, destinoDoInicio, TEXTO_REVISAO,
 } from "../app/src/modules/motor/questoesIntegradas.js";
 
@@ -112,7 +112,10 @@ test("sem a 0065 no ambiente a lista vem vazia; falha de rede vem null (não é 
 
 test("Hoje: o botão só existe para quem registra; falha leva ao Registrar com a missão certa", () => {
   const tela = semComentarios(ler("app/src/routes/aluno/VisaoEstudo.jsx"));
-  assert.match(tela, /aoResolver=\{podeEditar \? \(missao, tipo\) => setResolvendo\(\{ missao, tipo \}\) : undefined\}/);
+  // raio-x fase 2: o cartão da missão da vez abre a sessão; pelo Plano, a
+  // missão de outra matéria também abre (e volta ao Hoje, onde a sessão mora)
+  assert.match(tela, /aoResolver=\{podeEditar \? \(missao\) => setResolvendo\(\{ missao, tipo: "missao" \}\) : undefined\}/);
+  assert.match(tela, /aoResolver=\{podeEditar \? \(missao, tipo\) => \{ setResolvendo\(\{ missao, tipo \}\); irAba\("hoje"\); \} : undefined\}/);
   assert.match(tela, /\{podeEditar && resolvendo && \(/);
   // a sessão abre acima da lista de missões: rola até ela e leva o foco
   // (no celular, "Iniciar missão" fica abaixo da dobra)
@@ -174,15 +177,28 @@ test("CFO PMERJ é pré-edital no front: aceita aluno e acha a trilha do nicho p
   assert.equal(nicho, "pmerj-cfo", "o nicho do front bate com o do seed da trilha");
 });
 
-test("tamanho do lote: o aluno escolhe 5, 10 ou 20 antes do primeiro (padrão 5) e a camada de dados o repassa", () => {
-  assert.equal(TAMANHO_LOTE, 5);
+// Raio-x fase 2 (18/10): "Resolver questões" abre a sessão direto, com o
+// último tamanho escolhido (padrão 10); trocar fica dentro da sessão.
+test("tamanho do lote: abre direto com o último escolhido (padrão 10), troca dentro da sessão, e a camada de dados o repassa", () => {
+  assert.equal(TAMANHO_LOTE, 10);
   assert.deepEqual(TAMANHOS_LOTE, [5, 10, 20]);
+  const guardado = new Map();
+  const mem = { getItem: (k) => guardado.get(k) ?? null, setItem: (k, v) => guardado.set(k, v) };
+  assert.equal(tamanhoLembrado(mem), 10, "nada guardado: 10");
+  lembrarTamanho(20, mem);
+  assert.equal(tamanhoLembrado(mem), 20);
+  lembrarTamanho(7, mem);
+  assert.equal(tamanhoLembrado(mem), 20, "tamanho fora da lista não é guardado");
+  mem.setItem("triliva-tamanho-lote", "lixo");
+  assert.equal(tamanhoLembrado(mem), 10, "valor estranho volta ao padrão");
+  assert.equal(tamanhoLembrado({ getItem: () => { throw new Error("bloqueado"); } }), 10);
   const tela = semComentarios(ler("app/src/modules/motor/ResolverQuestoes.jsx"));
-  assert.match(tela, /useState\(TAMANHO_LOTE\)/, "padrão 5");
-  assert.match(tela, /if \(tamanho === null\) \{[\s\S]*?Quantas questões por vez\?[\s\S]*?role="radiogroup"[\s\S]*?TAMANHOS_LOTE\.map/);
-  assert.match(tela, /role="radio" aria-checked=\{opcao === n\}/);
-  assert.doesNotMatch(tela, /useEffect/, "o lote não abre sozinho: só depois da escolha");
-  assert.match(tela, /const comecar = \(\) => \{ setTamanho\(opcao\); abrir\(opcao\); \};/);
+  assert.match(tela, /useState\(\(\) => tamanhoLembrado\(\)\)/);
+  assert.match(tela, /useEffect\(\(\) => \{ abrir\(tamanho\); \}, \[\]\);/, "abre sozinho, uma vez (pedidoId fixo)");
+  assert.doesNotMatch(tela, /Quantas questões por vez\?|tamanho === null/, "sem a tela de escolha antes do lote");
+  assert.match(tela, /const trocarTamanho = \(n\) => \{ setTamanho\(n\); lembrarTamanho\(n\); \};/);
+  assert.match(tela, /role="radio" aria-checked=\{tamanho === n\} onClick=\{\(\) => trocarTamanho\(n\)\}/);
+  assert.equal((tela.match(/\{seletorTamanho\}/g) ?? []).length, 2, "na questão e no resultado do lote");
   assert.match(tela, /entregarQuestoes\(\{ missaoId: missao\.id, pedidoId: pedidoRef\.current, tamanho: tam \}\)/);
   assert.match(tela, /const novoLote = \(\) => \{\s*pedidoRef\.current = novoPedidoId\(\);\s*setLote\(null\);[\s\S]*?abrir\(tamanho\);\s*\};/, "o lote seguinte mantém o tamanho");
   const dados = semComentarios(ler("app/src/shared/data/index.js"));
@@ -191,7 +207,7 @@ test("tamanho do lote: o aluno escolhe 5, 10 ou 20 antes do primeiro (padrão 5)
 
 test("a ficha da coordenação diz onde ficam as questões (na tela do aluno) e pede a credencial quando falta", () => {
   const ficha = ler("app/src/modules/desempenho/FichaAluno.jsx");
-  assert.match(ficha, /toca em \\"Iniciar missão\\" na aba Hoje/);
+  assert.match(ficha, /toca em \\"Resolver questões\\" na aba Hoje/);
   assert.match(ficha, /Sem credencial, o aluno ainda não entra no app\. Gere a credencial/);
 });
 
@@ -204,8 +220,8 @@ test("progresso da missão: X de N (N = meta_questoes), somando só o que vale p
   assert.match(tela, /const progresso = progressoDaMissao\(missao, respondidasValendo\);/);
   // revisão e lote depois de fechar não somam (o servidor também não conta)
   assert.match(tela, /if \(tipo === "missao" && lote\.tipo_pratica === "missao" && !fechouMissao\) setRespondidasValendo\(\(n\) => n \+ 1\);/);
-  // na escolha, no meio do lote e no fim, sempre pela linha que troca na revisão
-  assert.equal((tela.match(/\{linhaProgresso\}/g) ?? []).length, 3);
+  // no meio do lote e no fim, sempre pela linha que troca na revisão
+  assert.equal((tela.match(/\{linhaProgresso\}/g) ?? []).length, 2);
   assert.doesNotMatch(tela, /\{progresso\.texto\}/);
 });
 

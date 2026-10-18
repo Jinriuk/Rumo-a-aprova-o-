@@ -89,9 +89,9 @@ test("aluno — Hoje e Desempenho carregam sem erros de console", async ({ page 
   const erros = coletarErros(page);
   await loginAluno(page, CONTAS.alunoLucas);
 
-  // aba Hoje já está ativa após login — verifica a missão atual
+  // aba Hoje já está ativa após login — verifica o cartão do topo
   await expect(
-    page.getByText(/MISSÃO|Missão sendo preparada/).first()
+    page.getByText(/Sua missão agora|Sua próxima tarefa|Semana em dia|CICLO CONCLUÍDO/).first()
   ).toBeVisible({ timeout: 15_000 });
 
   // aba Desempenho: usa o mesmo XP persistido para mostrar o radar

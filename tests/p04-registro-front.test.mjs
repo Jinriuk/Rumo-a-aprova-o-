@@ -114,7 +114,7 @@ test("painel compacto (o antigo modo essencial) não esconde o botão da missão
   assert.match(painel, /mi\.estado === "atual" \|\| mi\.proxima\)\.slice\(0, 1\)/, "compacto: só a missão da vez de cada matéria");
   const reg = semComentarios(ler("app/src/modules/motor/Registrar.jsx"));
   assert.match(reg, /\{!contextoInicial && \(/);
-  assert.match(reg, /Registro livre: entra no seu histórico e no volume, mas não avança missão\. Para avançar uma missão, use o botão “Iniciar missão” na aba Hoje\./);
+  assert.match(reg, /Registro livre: entra no seu histórico e no volume, mas não avança missão\. Para avançar uma missão, use o botão da missão: “Resolver questões” no Hoje ou “Iniciar missão” no Plano\./);
 });
 
 // Raio-x, mudança 8: o painel de missões do PMERJ mostrava "DIR_ADM".

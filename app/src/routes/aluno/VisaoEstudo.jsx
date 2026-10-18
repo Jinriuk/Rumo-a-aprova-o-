@@ -10,10 +10,11 @@ import { MenuPrincipal } from "../../shared/ui/MenuPrincipal.jsx";
 import { Cronometro } from "../../shared/ui/Cronometro.jsx";
 import { useTema } from "../../shared/branding/BrandingContext.jsx";
 import { useTrilha } from "../../modules/conteudo/useTrilha.js";
-import { FaixaAspirante, MissaoAtual } from "../../modules/motor/MetaHero.jsx";
+import { FaixaAspirante, CicloEncerrado } from "../../modules/motor/MetaHero.jsx";
+import { MissaoDaVez, LinhaDaSemana } from "../../modules/motor/MissaoDaVez.jsx";
 import { MetaSemana } from "../../modules/motor/MetaSemana.jsx";
 import { ResolverQuestoes } from "../../modules/motor/ResolverQuestoes.jsx";
-import { contextoRegistroDaMissao } from "../../modules/motor/jornada.js";
+import { contextoRegistroDaMissao, acaoDaVez, resumoDaSemana, textoDaTarefa } from "../../modules/motor/jornada.js";
 import { Registrar } from "../../modules/motor/Registrar.jsx";
 import { Arquivo } from "../../modules/motor/Arquivo.jsx";
 import { Conquistas } from "../../modules/motor/Conquistas.jsx";
@@ -337,6 +338,7 @@ export function VisaoEstudo({ aluno, podeEditar, concurso = null, contexto = "Pl
 
   const itensMeta = (meta?.meta_atividades ?? []);
   const pendentes = itensMeta.filter((x) => x.estado === "pendente").length;
+  const acao = acaoDaVez({ fila: filaMissoes, meta, trilha, registraveis: new Set(trilha.disciplinas.map((d) => d.codigo)) });
   // XP da FONTE DE VERDADE (ledger persistido, Fase C0 + PED1). Se o aluno
   // ainda não tem eventos (base nova/antes do backfill), cai na estimativa legada.
   const xp = dados.xpPersistido?.eventos?.length
@@ -348,7 +350,8 @@ export function VisaoEstudo({ aluno, podeEditar, concurso = null, contexto = "Pl
     ["desempenho", "Desempenho", null, "grafico"], ["simulados", "Simulados", null, "alvo"],
     ["conquistas", "Conquistas", null, "medalha"], ["historico", "Histórico", null, "arquivo"], ["plano", "Plano", null, "mapa"],
   ].filter(([k]) => podeEditar || k !== "registrar").map(
-    ([k, lb, badge, icone]) => (k === "hoje" && podeEditar && pendentes > 0 ? [k, lb, pendentes, icone] : [k, lb, badge, icone]),
+    // as tarefas pendentes moram no Plano (raio-x fase 2): o número vai com elas
+    ([k, lb, badge, icone]) => (k === "plano" && podeEditar && pendentes > 0 ? [k, lb, pendentes, icone] : [k, lb, badge, icone]),
   );
 
   return (
@@ -373,11 +376,21 @@ export function VisaoEstudo({ aluno, podeEditar, concurso = null, contexto = "Pl
           <div style={{ display: "flex", flexDirection: "column", gap: 16, paddingTop: 4 }}>
             <FaixaAspirante nome={aluno.nome.split(" ")[0]} contexto={contexto} xp={xp} streak={m?.streak ?? 0}
               aoAbrirConquistas={() => irAba("conquistas")} />
-            <div ref={missaoRef} tabIndex={-1} aria-label="Missão da semana"
-              className={realceMissao ? "mission-impact" : undefined} style={{ scrollMarginTop: 18 }}>
-              <MissaoAtual meta={meta} trilha={trilha} m={m} metas={dados.metas} ciclo={ciclo.estado}
-                aoAvancar={podeEditar ? irAba : undefined} />
-            </div>
+            {/* Raio-x fase 2 (mudanças 2 e 3): uma ação. O cartão é a missão
+                da vez; a sessão de questões abre no lugar dele; a semana é
+                uma linha que leva ao Plano. Lista de missões, tarefas e
+                radar saíram daqui. */}
+            {ciclo.estado === "encerrado" ? (
+              <CicloEncerrado trilha={trilha} m={m} metas={dados.metas} aoAvancar={podeEditar ? irAba : undefined} />
+            ) : !resolvendo && (
+              <div ref={missaoRef} tabIndex={-1} aria-label="Missão da vez"
+                className={realceMissao ? "mission-impact" : undefined} style={{ scrollMarginTop: 18 }}>
+                <MissaoDaVez acao={acao} trilha={trilha} nomesMateria={nomesMateria}
+                  questoesIntegradas={questoesIntegradas}
+                  aoResolver={podeEditar ? (missao) => setResolvendo({ missao, tipo: "missao" }) : undefined}
+                  aoRegistrar={podeEditar ? (ctx) => irAba("registrar", ctx) : undefined} />
+              </div>
+            )}
             {podeEditar && resolvendo && (
               <div ref={resolvendoRef} tabIndex={-1} aria-label="Questões da missão" style={{ scrollMarginTop: 18 }}>
                 <ResolverQuestoes key={`${resolvendo.missao.id}:${resolvendo.tipo}`}
@@ -393,15 +406,10 @@ export function VisaoEstudo({ aluno, podeEditar, concurso = null, contexto = "Pl
                   }} />
               </div>
             )}
-            {examTag && filaMissoes.length > 0 && (
-              <MissoesPersistidas fila={filaMissoes} disciplinas={trilha.disciplinas} nomesMateria={nomesMateria} compacta
-                aoPraticar={podeEditar ? (contexto) => irAba("registrar", contexto) : undefined}
-                questoesIntegradas={questoesIntegradas}
-                aoResolver={podeEditar ? (missao, tipo) => setResolvendo({ missao, tipo }) : undefined} />
+            {ciclo.estado !== "encerrado" && (
+              meta ? <LinhaDaSemana resumo={resumoDaSemana(meta, trilha)} aoAbrir={() => irAba("plano")} />
+                : <div style={{ fontSize: 12.5, color: T.sub, textAlign: "center" }}>As tarefas da semana nascem no servidor, na virada.</div>
             )}
-            <MetaSemana meta={meta} trilha={trilha} podeEditar={podeEditar} aoMudar={recarregar}
-              compacta aoPraticar={(alvo) => irAba("registrar", alvo)}
-              aoAbrirDesempenho={() => irAba("desempenho")} />
           </div>
         )}
         {tab === "concurso" && (
@@ -448,7 +456,22 @@ export function VisaoEstudo({ aluno, podeEditar, concurso = null, contexto = "Pl
         {tab === "historico" && (
           <Arquivo metas={dados.metas} trilha={trilha} registros={dados.registros} />
         )}
-        {tab === "plano" && <Plano trilha={trilha} semanaAtiva={semanaAtiva} meta={meta} codigoConcurso={examTag} />}
+        {tab === "plano" && (
+          <Plano trilha={trilha} semanaAtiva={semanaAtiva} meta={meta} codigoConcurso={examTag}>
+            {/* as tarefas (Concluir/Adiar) e as missões saíram do Hoje e moram aqui */}
+            {ciclo.estado !== "encerrado" && (
+              <MetaSemana meta={meta} trilha={trilha} podeEditar={podeEditar} aoMudar={recarregar}
+                aoPraticar={(alvo) => irAba("registrar", alvo)}
+                aoAbrirDesempenho={() => irAba("desempenho")} />
+            )}
+            {examTag && filaMissoes.length > 0 && (
+              <MissoesPersistidas fila={filaMissoes} disciplinas={trilha.disciplinas} nomesMateria={nomesMateria} compacta
+                aoPraticar={podeEditar ? (contexto) => irAba("registrar", contexto) : undefined}
+                questoesIntegradas={questoesIntegradas}
+                aoResolver={podeEditar ? (missao, tipo) => { setResolvendo({ missao, tipo }); irAba("hoje"); } : undefined} />
+            )}
+          </Plano>
+        )}
       </div>
       </Suspense>
     </div>
@@ -459,7 +482,7 @@ export function VisaoEstudo({ aluno, podeEditar, concurso = null, contexto = "Pl
    missões com estado claro (encerrada / em andamento / a desbloquear),
    "onde estou" e o próximo passo. Textos da metodologia importada;
    estado da semana corrente vem da meta. */
-function Plano({ trilha, semanaAtiva, meta, codigoConcurso = null }) {
+function Plano({ trilha, semanaAtiva, meta, codigoConcurso = null, children }) {
   const T = useTema();
   const estadosPorAtividade = Object.fromEntries(
     (meta?.meta_atividades ?? []).map((ma) => [ma.atividade_modelo_id, ma.estado]),
@@ -481,6 +504,7 @@ function Plano({ trilha, semanaAtiva, meta, codigoConcurso = null }) {
         {/* pré-edital: depois do "Entendi", a informação fica só aqui */}
         <LinhaMaturidade codigo={codigoConcurso} style={{ marginTop: 10 }} />
       </div>
+      {children}
 
       <div style={{ position: "relative" }}>
         {/* trilho vertical que liga as missões */}
@@ -534,7 +558,7 @@ function MissaoJornada({ w, trilha, ativaNum, estadosPorAtividade, T }) {
           {isNow && tarefas.length > 0 && (
             <div style={{ marginTop: 10 }}>
               <BarraXP pct={pct} alt={5} brilho={false} />
-              <div className="num" style={{ fontSize: 11, color: T.sub, marginTop: 4 }}>{dc}/{tarefas.length} objetivos · <b style={{ color: T.gold }}>{pct}%</b></div>
+              <div className="num" style={{ fontSize: 11, color: T.sub, marginTop: 4 }}>{dc}/{tarefas.length} tarefas · <b style={{ color: T.gold }}>{pct}%</b></div>
             </div>
           )}
 
@@ -542,7 +566,7 @@ function MissaoJornada({ w, trilha, ativaNum, estadosPorAtividade, T }) {
             // T1: alvo de toque — padding vertical + minHeight reais no botão.
             <button type="button" onClick={() => setAberto((v) => !v)}
               style={{ marginTop: 10, border: "none", background: "transparent", color: T.sub, fontSize: 12, fontWeight: 600, padding: "8px 0", minHeight: 32, display: "flex", alignItems: "center", gap: 5 }}>
-              {aberto ? "▾ ocultar" : `▸ ver ${tarefas.length} ${tarefas.length === 1 ? "objetivo" : "objetivos"}`}
+              {aberto ? "▾ ocultar" : `▸ ver ${tarefas.length} ${tarefas.length === 1 ? "tarefa" : "tarefas"}`}
             </button>
           )}
         </div>
@@ -557,7 +581,7 @@ function MissaoJornada({ w, trilha, ativaNum, estadosPorAtividade, T }) {
                   <span style={{ marginTop: 3, width: 15, height: 15, borderRadius: "50%", border: `2px solid ${ch ? T.green : T.line}`, background: ch ? T.green : "transparent", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 8, color: "#0A1622", fontWeight: 800 }}>{ch ? "✓" : ""}</span>
                   <span style={{ flex: 1, display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
                     <SubjDot disciplina={trilha.porCodigo[tk.disciplina_codigo]} /><Tag p={tk.prioridade} />
-                    <span style={{ fontSize: 13, color: ch ? T.sub : T.ink, textDecoration: ch ? "line-through" : "none", flexBasis: "100%" }}>{tk.texto}</span>
+                    <span style={{ fontSize: 13, color: ch ? T.sub : T.ink, textDecoration: ch ? "line-through" : "none", flexBasis: "100%" }}>{textoDaTarefa(tk.texto)}</span>
                   </span>
                 </div>
               );

@@ -74,21 +74,25 @@ test("coordenação cadastra aluno PMERJ, gera credencial e o aluno resolve 5 qu
   await page.getByLabel("Confirmar senha", { exact: true }).fill(nova);
   await page.getByRole("button", { name: "Definir senha e continuar" }).click();
 
-  // 4) o botão e o lote
+  // 4) o botão e o lote. Raio-x fase 2: as missões moram no Plano, e a
+  // sessão abre direto com o último tamanho (o teste deixa 5 guardado)
   await expect(page.getByText("Este concurso ainda não recebe alunos")).toHaveCount(0, { timeout: 45_000 });
+  await expect(page.getByRole("region", { name: "Sua missão agora" })).toBeVisible({ timeout: 45_000 });
+  await page.screenshot({ path: `${SAIDA}/j2-hoje-aluno.png`, fullPage: true });
+  await page.evaluate(() => localStorage.setItem("triliva-tamanho-lote", "5"));
+  await page.getByRole("button", { name: /^Plano(\s+\d+)?$/ }).filter({ visible: true }).first().click();
   const botao = page.locator("li").filter({ hasText: MISSAO }).first().getByRole("button", { name: "Iniciar missão" });
   await expect(botao).toBeVisible({ timeout: 45_000 });
-  await page.screenshot({ path: `${SAIDA}/j2-hoje-aluno.png`, fullPage: true });
   await botao.click();
-  await expect(page.getByText("Quantas questões por vez?")).toBeVisible();
-  await page.getByRole("button", { name: "Começar", exact: true }).click();
+  await expect(page.getByText("Quantas questões por vez?")).toHaveCount(0);
   const contador = page.getByText(/^Questão 1 de \d+$/);
   await expect(contador).toBeVisible({ timeout: 45_000 });
   const total = Number((await contador.textContent()).match(/de (\d+)/)[1]);
   expect(total).toBe(5);
   for (let i = 1; i <= total; i++) {
     await expect(page.getByText(`Questão ${i} de ${total}`)).toBeVisible();
-    await page.getByRole("radio").nth(i % 2).check();
+    // só as alternativas: "Por vez: 5 · 10 · 20" também são rádios
+    await page.getByRole("radio", { name: /^Alternativa / }).nth(i % 2).check();
     await page.getByRole("button", { name: "Confirmar resposta" }).click();
     await expect(page.getByText(/^(Certa\.|Errada\. Gabarito: [A-J]\.)$/)).toBeVisible({ timeout: 30_000 });
     await page.getByRole("button", { name: i < total ? "Próxima questão" : "Ver resultado" }).click();

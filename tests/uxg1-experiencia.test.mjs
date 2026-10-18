@@ -173,10 +173,11 @@ test("casca traduz o tema white-label para tokens CSS", () => {
 });
 
 test("missão, progresso e recompensa têm estados visuais identificáveis", () => {
-  const hero = ler("app/src/modules/motor/MetaHero.jsx");
+  // raio-x fase 2: o topo do Hoje é o cartão da missão da vez
+  const hero = ler("app/src/modules/motor/MissaoDaVez.jsx");
   const progresso = ler("app/src/modules/motor/ProgressoVivido.jsx");
   assert.match(hero, /className="mission-card"/);
-  assert.match(hero, /className="mission-progress-fill"/);
+  assert.match(hero, /<BarraXP pct=\{pct\}/);
   assert.match(hero, /className="mission-primary-action"/);
   assert.match(progresso, /reward-island/);
 });

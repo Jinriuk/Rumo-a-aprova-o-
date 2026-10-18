@@ -64,21 +64,15 @@ test("T4: experiencia.css separa objective-confirm (sólido) de objective-practi
 });
 
 // ── T5: última missão do plano cruza com 'atrasada' ──────────────────────────
-test("T5: MetaHero.jsx cruza a última missão com o estado 'atrasada' antes de dizer 'boa prova'", () => {
-  const codigo = src("app/src/modules/motor/MetaHero.jsx");
-  assert.match(
-    codigo,
-    /atrasada\s*\?\s*"🏁 Última missão do plano — ainda há pendências\. Conclua os objetivos acima antes da prova\."\s*\n\s*:\s*"🏁 Última missão do plano — reta final\. Boa prova!"/,
-    "a mensagem de última missão precisa ramificar por `atrasada`, não ser fixa",
-  );
-});
+// T5 (última missão × atrasada) saiu junto com o bloco "Próxima Missão" do
+// Hoje no raio-x fase 2: não há mais frase de "boa prova" para cruzar.
 
 // ── T6: um nome só para o mesmo dado (m.totDone) ─────────────────────────────
 test("T6: jargao.js troca 'alvos' por 'questoesTotal', e MetaHero.jsx usa o rótulo novo", () => {
   const jargao = src("app/src/modules/motor/jargao.js");
   assert.match(jargao, /questoesTotal:\s*"Questões resolvidas"/, "precisa existir o rótulo unificado questoesTotal");
-  const hero = src("app/src/modules/motor/MetaHero.jsx");
-  assert.match(hero, /rotulo=\{L\.questoesTotal\}\s+valor=\{m\.totDone\}/, "o StatCard de questões precisa usar L.questoesTotal, não mais 'Alvos atingidos'");
+  // o radar do Hoje saiu (raio-x fase 2); "Alvos atingidos" não pode voltar
+  assert.doesNotMatch(src("app/src/modules/motor/MetaHero.jsx"), /Alvos atingidos/);
 });
 
 // ── T7: seta de evolução — sem alta/queda para variação zero ─────────────────
@@ -179,7 +173,7 @@ test("T18: MetaSemana.jsx computa 'adiados' e o cabeçalho cita os dois números
   assert.match(codigo, /const adiados = itens\.length - consideradas;/, "precisa existir a contagem explícita de adiados");
   assert.match(
     codigo,
-    /const subObjetivos = `\$\{feitas\} de \$\{consideradas\} concluídos\$\{adiados > 0 \? ` · \$\{adiados\} \$\{adiados === 1 \? "adiado" : "adiados"\}` : ""\}`;/,
+    /const subObjetivos = `\$\{feitas\} de \$\{consideradas\} concluídas\$\{adiados > 0 \? ` · \$\{adiados\} \$\{adiados === 1 \? "adiada" : "adiadas"\}` : ""\}`;/,
     "subObjetivos precisa citar os adiados quando existirem",
   );
   const usos = codigo.match(/sub=\{subObjetivos\}/g) ?? [];

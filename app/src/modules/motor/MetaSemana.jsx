@@ -7,7 +7,7 @@ import React, { useState } from "react";
 import { SectionCard, EmptyState, Erro, StatusBadge } from "../../shared/ui/componentes.jsx";
 import { useTema } from "../../shared/branding/BrandingContext.jsx";
 import { L, PRIORIDADE, xpPorPrioridade, questoesSugeridas } from "./jargao.js";
-import { contextoRegistroDaAtividade } from "./jornada.js";
+import { contextoRegistroDaAtividade, textoDaTarefa } from "./jornada.js";
 import { mensagemAmigavel } from "../../shared/lib/erros.js";
 import * as db from "../../shared/data/index.js";
 
@@ -20,7 +20,7 @@ export function MetaSemana({ meta, trilha, podeEditar, aoMudar, aoAbrirDesempenh
   if (!meta) {
     return (
       <SectionCard titulo={L.objetivos}>
-        <EmptyState icone="⚓" titulo="Nenhum objetivo ainda" dica="A missão da semana é gerada no servidor. Ela aparece aqui automaticamente." />
+        <EmptyState icone="⚓" titulo="Nenhuma tarefa ainda" dica="As tarefas da semana nascem no servidor, na virada. Elas aparecem aqui automaticamente." />
       </SectionCard>
     );
   }
@@ -44,7 +44,7 @@ export function MetaSemana({ meta, trilha, podeEditar, aoMudar, aoAbrirDesempenh
   // bases (esconderia o adiado do cabeçalho, ou incluiria no numerador
   // errado), o cabeçalho passa a citar os adiados explicitamente — os
   // dois números aparecem, e dá pra somar de cabeça e ver que fecham.
-  const subObjetivos = `${feitas} de ${consideradas} concluídos${adiados > 0 ? ` · ${adiados} ${adiados === 1 ? "adiado" : "adiados"}` : ""}`;
+  const subObjetivos = `${feitas} de ${consideradas} concluídas${adiados > 0 ? ` · ${adiados} ${adiados === 1 ? "adiada" : "adiadas"}` : ""}`;
 
   // Semana 100% concluída: mostrar card de parabenização com próximos passos
   if (podeEditar && consideradas > 0 && feitas >= consideradas) {
@@ -54,7 +54,7 @@ export function MetaSemana({ meta, trilha, podeEditar, aoMudar, aoAbrirDesempenh
           <div style={{ fontSize: 20, marginBottom: 6 }}>🎯</div>
           <div className="disp" style={{ fontSize: 16, fontWeight: 800, color: T.green }}>Semana concluída!</div>
           <div style={{ fontSize: 13, color: T.sub, marginTop: 5, lineHeight: 1.5 }}>
-            Você cumpriu todos os {feitas} objetivos desta semana. Ótimo trabalho!
+            Você cumpriu {feitas === 1 ? "a tarefa" : `as ${feitas} tarefas`} desta semana.
           </div>
           <div style={{ display: "flex", gap: 10, marginTop: 14, flexWrap: "wrap" }}>
             {aoAbrirDesempenho && (
@@ -115,7 +115,7 @@ export function MetaSemana({ meta, trilha, podeEditar, aoMudar, aoAbrirDesempenh
       {ocultos > 0 && (
         <div className="objective-list-more">
           <button type="button" onClick={() => setMostrarTodos(true)}>
-            Ver todos os {itens.length} objetivos <span aria-hidden="true">↓</span>
+            Ver todas as {itens.length} tarefas <span aria-hidden="true">↓</span>
           </button>
         </div>
       )}
@@ -142,7 +142,7 @@ function ObjetivoItem({ item, trilha, podeEditar, ocupado, ultimo, aoPraticar, a
         </div>
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ fontSize: 14, fontWeight: 700, color: concluida ? T.sub : T.ink, textDecoration: concluida ? "line-through" : "none", lineHeight: 1.3 }}>
-            {at.texto}
+            {textoDaTarefa(at.texto)}
           </div>
           <div style={{ display: "flex", gap: 7, alignItems: "center", flexWrap: "wrap", marginTop: 6 }}>
             {disc && (
@@ -171,7 +171,7 @@ function ObjetivoItem({ item, trilha, podeEditar, ocupado, ultimo, aoPraticar, a
                   .objective-secondary — desfazer não precisa de destaque. */}
               {!concluida && !adiada && aoPraticar && (
                 <button type="button" className="objective-practice" onClick={aoPraticar} disabled={ocupado}>
-                  Praticar agora <span aria-hidden="true">→</span>
+                  Registrar estudo <span aria-hidden="true">→</span>
                 </button>
               )}
               <button type="button" className={concluida ? "objective-secondary" : "objective-confirm"} onClick={aoConcluir} disabled={ocupado}>

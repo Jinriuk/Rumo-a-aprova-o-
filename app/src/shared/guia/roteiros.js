@@ -61,7 +61,7 @@ export const ROTEIRO_ALUNO = [
   {
     aba: "hoje",
     titulo: "Hoje: o que fazer agora",
-    texto: "Esta é a sua tela principal. Ela mostra a missão da semana e o que falta fazer. O número na aba \"Hoje\" é quantas atividades ainda estão pendentes.",
+    texto: "Esta é a sua tela principal. Ela mostra a sua missão agora, com um botão só: resolver as questões dela ou registrar o estudo. A linha da semana, logo abaixo, leva ao Plano.",
     dica: "Se aparecer o diagnóstico inicial no topo, responda primeiro: ele ajusta o seu plano.",
   },
   {
@@ -97,7 +97,7 @@ export const ROTEIRO_ALUNO = [
   {
     aba: "plano",
     titulo: "Plano",
-    texto: "O plano completo das semanas, com o que está previsto em cada uma.",
+    texto: "As semanas do seu plano. Aqui ficam as tarefas da semana, para concluir ou adiar, e as missões de cada matéria. O número na aba \"Plano\" é quantas tarefas ainda estão pendentes.",
   },
 ];
 
