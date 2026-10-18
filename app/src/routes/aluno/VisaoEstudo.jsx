@@ -66,6 +66,9 @@ export function VisaoEstudo({ aluno, podeEditar, concurso = null, contexto = "Pl
   const [confirmacaoRegistro, setConfirmacaoRegistro] = useState(null);
   const [objetivoConcluido, setObjetivoConcluido] = useState(false);
   const [realceMissao, setRealceMissao] = useState(0);
+  // voltar das Conquistas devolve o foco ao XP que as abriu (sem isto o
+  // botão desmonta e o foco cai no <body>)
+  const [focoXp, setFocoXp] = useState(false);
   const missaoRef = useRef(null);
   const fecharObjetivo = useEnvioUnico("acao");
   // Alvo da confirmação em tela AGORA, lido dentro do await de
@@ -260,6 +263,15 @@ export function VisaoEstudo({ aluno, podeEditar, concurso = null, contexto = "Pl
     return () => { cancelAnimationFrame(quadro); clearTimeout(timer); };
   }, [realceMissao, tab]);
 
+  useEffect(() => {
+    if (!focoXp || tab !== "hoje") return undefined;
+    const quadro = requestAnimationFrame(() => {
+      document.querySelector(".player-rank")?.focus?.();
+      setFocoXp(false);
+    });
+    return () => cancelAnimationFrame(quadro);
+  }, [focoXp, tab]);
+
   // A sessão de questões abre acima da lista de missões: no celular, quem
   // toca "Iniciar missão" lá embaixo não a veria. Rola até ela e leva o foco.
   const chaveResolvendo = resolvendo ? `${resolvendo.missao.id}:${resolvendo.tipo}` : null;
@@ -381,6 +393,7 @@ export function VisaoEstudo({ aluno, podeEditar, concurso = null, contexto = "Pl
 
       {guia.elemento}
       <MenuPrincipal abas={ABAS} ativo={tab} aoTrocar={irAba}
+        rotuloExtra={tab === "conquistas" ? "Conquistas" : undefined}
         usuario={{ nome: aluno.nome, sub: `${patente(xp).nome} · ${xp.toLocaleString("pt-BR")} XP` }} />
 
       <Suspense fallback={<CarregandoBloco titulo="Carregando o painel…" cartoes={2} linhas={3} />}>
@@ -464,7 +477,7 @@ export function VisaoEstudo({ aluno, podeEditar, concurso = null, contexto = "Pl
         {tab === "conquistas" && m && (
           <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
             {/* fora do menu: sem aba acesa, a volta fica explícita */}
-            <button type="button" onClick={() => irAba("hoje")}
+            <button type="button" onClick={() => { irAba("hoje"); setFocoXp(true); }}
               style={{ alignSelf: "flex-start", background: "none", border: "none", color: T.sub, fontSize: 13, fontWeight: 600, padding: "6px 0", minHeight: 36, cursor: "pointer" }}>
               ← Voltar ao Hoje
             </button>
@@ -501,12 +514,19 @@ export function VisaoEstudo({ aluno, podeEditar, concurso = null, contexto = "Pl
    entram nos blocos. A coordenação continua com a visão própria (ficha). */
 function Plano({ trilha, semanaAtiva, meta, metas = [], codigoConcurso = null, podeEditar = false, aoMudar, aoPraticar, children }) {
   const T = useTema();
-  const ativaNum = meta?.semana_numero ?? semanaAtiva?.numero ?? trilha.semanas[0]?.numero;
+  // a semana atual vem do calendário (a virada pode atrasar e a meta ativa
+  // ainda ser a da semana anterior); a meta só preenche o estado das tarefas
+  const ativaNum = semanaAtiva?.numero ?? meta?.semana_numero ?? trilha.semanas[0]?.numero;
   const total = trilha.semanas.length;
   const posicao = Math.max(1, trilha.semanas.findIndex((w) => w.numero === ativaNum) + 1);
   const pctPlano = total > 1 ? Math.round(((posicao - 1) / (total - 1)) * 100) : 0;
   // a meta de cada semana (a atual e as já fechadas): o estado das tarefas
-  const metaPorSemana = Object.fromEntries((metas ?? []).map((x) => [x.semana_numero, x]));
+  // só as metas desta trilha: depois de um ciclo novo, o histórico das
+  // edições anteriores tem os mesmos números de semana
+  const trilhaId = trilha.trilha?.id ?? null;
+  const metaPorSemana = Object.fromEntries((metas ?? [])
+    .filter((x) => !trilhaId || !x.trilha_id || x.trilha_id === trilhaId)
+    .map((x) => [x.semana_numero, x]));
   if (meta) metaPorSemana[meta.semana_numero] = meta;
 
   return (
@@ -550,9 +570,14 @@ function BlocoSemana({ w, trilha, ativaNum, meta, podeEditar, aoMudar, aoPratica
   const feitas = itens.filter((x) => x.estado === "concluida").length;
   const tom = isNow ? "alerta" : isPast ? "ok" : "neutro";
   const rotulo = isPast ? "Encerrada" : isNow ? "Em andamento" : "Próxima";
+  // semana que já passou sem meta: o aluno entrou depois (o motor gera só a
+  // semana corrente). Não houve tarefa atribuída; o previsto não é mostrado
+  // como se tivesse sido.
+  const semRegistro = isPast && !meta;
   const contagem = meta
     ? `${feitas} de ${consideradas} ${consideradas === 1 ? "tarefa" : "tarefas"}`
-    : `${previstas.length} ${previstas.length === 1 ? "tarefa" : "tarefas"}`;
+    : semRegistro ? "sem tarefas atribuídas"
+    : `${previstas.length} ${previstas.length === 1 ? "tarefa prevista" : "tarefas previstas"}`;
   const idCorpo = `semana-${w.numero}-tarefas`;
 
   // nó: encerrada = check; agora = ponto vivo; futura = cadeado
@@ -586,8 +611,14 @@ function BlocoSemana({ w, trilha, ativaNum, meta, podeEditar, aoMudar, aoPratica
 
         {aberto && (
           <div id={idCorpo} style={{ borderTop: `1px solid ${T.line}` }}>
-            <TarefasDaSemana meta={meta} atividades={previstas} trilha={trilha}
-              podeEditar={podeEditar} aoMudar={aoMudar} aoPraticar={podeEditar ? aoPraticar : undefined} />
+            {semRegistro ? (
+              <div style={{ fontSize: 12.5, color: T.sub, padding: "10px 14px", lineHeight: 1.5 }}>
+                Você começou depois desta semana: nenhuma tarefa dela foi atribuída a você.
+              </div>
+            ) : (
+              <TarefasDaSemana meta={meta} atividades={previstas} trilha={trilha}
+                podeEditar={podeEditar} aoMudar={aoMudar} aoPraticar={podeEditar ? aoPraticar : undefined} />
+            )}
           </div>
         )}
       </section>

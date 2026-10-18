@@ -61,11 +61,17 @@ test.describe("aluno", { tag: ["@j:aluno", "@critica"] }, () => {
       await recolhidas.click();
       await expect(page.getByRole("button", { name: "↺ Reabrir" }).first()).toBeVisible();
     }
-    // uma semana fechada abre e mostra as tarefas dela, sem ações
-    const outra = fechadas.first();
-    await outra.click();
-    await expect(outra).toHaveAttribute("aria-expanded", "true");
-    const corpo = page.locator(`#${await outra.getAttribute("aria-controls")}`);
+    // semana passada sem meta (a conta entrou na semana 3): nada inventado
+    const passada = page.getByRole("button", { name: /^Semana 1\b.*Encerrada/ });
+    await passada.click();
+    const corpoPassada = page.locator(`#${await passada.getAttribute("aria-controls")}`);
+    await expect(corpoPassada.getByText("nenhuma tarefa dela foi atribuída a você", { exact: false })).toBeVisible();
+    await expect(corpoPassada.locator(".objective-row")).toHaveCount(0);
+    // semana futura abre e mostra o previsto, sem ações
+    const futura = page.getByRole("button", { name: /^Semana \d+\b.*Próxima/ }).first();
+    await futura.click();
+    await expect(futura).toHaveAttribute("aria-expanded", "true");
+    const corpo = page.locator(`#${await futura.getAttribute("aria-controls")}`);
     await expect(corpo.locator(".objective-row").first()).toBeVisible();
     await expect(corpo.getByRole("button", { name: "✓ Concluir" })).toHaveCount(0);
     // as missões por matéria, abaixo das semanas
@@ -283,8 +289,10 @@ test.describe("aluno", { tag: ["@j:aluno", "@critica"] }, () => {
     // Conquistas abre pelo XP do topo do Hoje e volta
     await page.locator(".player-rank").click();
     await expect(page.getByText(/Evolução de patentes/)).toBeVisible();
+    await expect(page, "a tela fora do menu tem título próprio").toHaveTitle(/^Conquistas · /);
     await page.getByRole("button", { name: "← Voltar ao Hoje" }).click();
     await expect(page.getByRole("region", { name: "Sua missão agora" })).toBeVisible();
+    await expect(page.locator(".player-rank"), "o foco volta ao XP").toBeFocused();
     await semEstouroHorizontal(page);
     expect(erros).toEqual([]);
   });

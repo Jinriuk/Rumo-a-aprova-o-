@@ -496,11 +496,14 @@ test("C2: AreaEscola.jsx passa rotuloExtra para o 3º estado de tela (ficha de a
     "AreaEscola não repassa o nome do aluno pro título quando a ficha está aberta");
 });
 
-test("C2: VisaoEstudo.jsx usa o MenuPrincipal sem rotuloExtra — não tem 3º estado de tela fora de aba", () => {
+// Raio-x fase 2, PR 3: Conquistas saiu do menu e abre pelo XP. É o 3º
+// estado de tela fora de aba que C2 mandava reavaliar: o título vem do
+// rotuloExtra, e só para ele.
+test("C2: VisaoEstudo.jsx usa rotuloExtra só para Conquistas, a única tela fora do menu", () => {
   const src = lerCodigo("app/src/routes/aluno/VisaoEstudo.jsx");
-  const chamada = src.match(/<MenuPrincipal abas=\{ABAS\}[\s\S]{0,150}\/>/);
+  const chamada = src.match(/<MenuPrincipal abas=\{ABAS\}[\s\S]{0,300}?\/>/);
   assert.ok(chamada, "não achei a chamada de MenuPrincipal em VisaoEstudo");
-  assert.doesNotMatch(chamada[0], /rotuloExtra/, "VisaoEstudo não deveria precisar de rotuloExtra — reavaliar se ganhou um 3º estado");
+  assert.match(chamada[0], /rotuloExtra=\{tab === "conquistas" \? "Conquistas" : undefined\}/);
 });
 
 test("index.html mantém o título estático como FALLBACK (antes de qualquer JS rodar, e nas telas sem MenuPrincipal — login, recuperação)", () => {

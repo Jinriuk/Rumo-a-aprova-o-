@@ -124,7 +124,7 @@ test("Plano: semanas em blocos (a atual aberta), tarefas dentro, Concluir só na
   assert.match(visao, /aria-expanded=\{aberto\} aria-controls=\{idCorpo\}/);
   assert.match(visao, /<TarefasDaSemana meta=\{meta\} atividades=\{previstas\}/);
   assert.match(visao, /podeEditar=\{podeEditar && w\.numero === meta\?\.semana_numero && meta\?\.status === "ativa"\}/);
-  assert.match(visao, /const metaPorSemana = Object\.fromEntries\(\(metas \?\? \[\]\)\.map\(\(x\) => \[x\.semana_numero, x\]\)\);/,
+  assert.match(visao, /const metaPorSemana = Object\.fromEntries\(\(metas \?\? \[\]\)[\s\S]*?\.map\(\(x\) => \[x\.semana_numero, x\]\)\);/,
     "semana passada mostra o que foi feito nela, não o estado da atual");
   const plano = visao.slice(visao.indexOf("function Plano("), visao.indexOf("function BlocoSemana("));
   assert.ok(plano.indexOf("trilha.semanas.map") < plano.indexOf("{children}"), "missões depois das semanas");
@@ -144,4 +144,20 @@ test("o cartão espera o catálogo e o progresso das missões antes de escolher 
 test("o registro aberto pela tarefa leva o mesmo texto que ela mostra ('Estudo:', não 'Missão:')", () => {
   const ctx = contextoRegistroDaAtividade({ id: "ma-a1", atividade_modelo_id: "a1" }, TRILHA);
   assert.equal(ctx.titulo, "Estudo: Crase. Leitura: 20 min.");
+});
+
+// achados do Codex no #195
+test("Plano: semana atual pelo calendário, só metas da trilha atual, semana passada sem meta não inventa tarefa", () => {
+  const visao = semComentarios(ler("app/src/routes/aluno/VisaoEstudo.jsx"));
+  assert.match(visao, /const ativaNum = semanaAtiva\?\.numero \?\? meta\?\.semana_numero/);
+  assert.match(visao, /\.filter\(\(x\) => !trilhaId \|\| !x\.trilha_id \|\| x\.trilha_id === trilhaId\)/);
+  assert.match(visao, /const semRegistro = isPast && !meta;/);
+  assert.match(visao, /\{semRegistro \? \([\s\S]*?nenhuma tarefa dela foi atribuída a você/);
+});
+
+test("Conquistas fora do menu: título próprio e o foco volta ao XP", () => {
+  const visao = semComentarios(ler("app/src/routes/aluno/VisaoEstudo.jsx"));
+  assert.match(visao, /rotuloExtra=\{tab === "conquistas" \? "Conquistas" : undefined\}/);
+  assert.match(visao, /onClick=\{\(\) => \{ irAba\("hoje"\); setFocoXp\(true\); \}\}/);
+  assert.match(visao, /document\.querySelector\("\.player-rank"\)\?\.focus\?\.\(\)/);
 });
