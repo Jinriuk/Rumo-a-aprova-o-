@@ -147,8 +147,11 @@ const ROTULO_MATERIA = { mat: "Matemática", por: "Português", ing: "Inglês", 
    P1.1: `questoesIntegradas` (Set de ids que o servidor ligou) e
    `aoResolver(missao, tipo)` fazem "Iniciar missão" abrir as questões nas
    missões ligadas (18/10; antes eram dois botões, "Praticar esta missão" e
-   "Resolver questões aqui"); sem eles, "Iniciar missão" vai ao registro. */
-export function MissoesPersistidas({ fila = [], disciplinas = [], aoPraticar, compacta = false, questoesIntegradas = null, aoResolver }) {
+   "Resolver questões aqui"); sem eles, "Iniciar missão" vai ao registro.
+   `questoesIntegradas` não tem valor padrão: undefined é "ainda carregando"
+   e null é "não deu para saber" (destinoDoInicio); um `= null` aqui
+   transformava o carregando em "abre a sessão". */
+export function MissoesPersistidas({ fila = [], disciplinas = [], aoPraticar, compacta = false, questoesIntegradas, aoResolver }) {
   const T = useTema();
   const registraveis = new Set((disciplinas ?? []).map((d) => d.codigo));
   const podeRegistrar = (cod) => registraveis.size === 0 || !cod || registraveis.has(cod);

@@ -139,6 +139,8 @@ test("Iniciar missão: carrega até saber; com questões abre a sessão; sem, va
 
   const painel = semComentarios(ler("app/src/modules/motor/ProgressoVivido.jsx"));
   assert.match(painel, /const destino = destinoDoInicio\(mi, questoesIntegradas, \{ podeResolver: !!aoResolver && !inalcancavel \}\);/);
+  // sem valor padrão: um "= null" transformava o carregando em "abre a sessão"
+  assert.match(painel, /export function MissoesPersistidas\(\{[^}]*\bquestoesIntegradas, aoResolver \}\)/);
   assert.match(painel, /if \(destino === "questoes"\) aoResolver\(mi, "missao"\);\s*else if \(destino === "registro"\) aoPraticar\(contextoRegistroDaMissao\(mi, "missao"\)\);/,
     "carregando não faz nada no clique");
   assert.match(painel, /disabled=\{carregando\} aria-busy=\{carregando \|\| undefined\}[\s\S]*?>\s*Iniciar missão\s*</);
