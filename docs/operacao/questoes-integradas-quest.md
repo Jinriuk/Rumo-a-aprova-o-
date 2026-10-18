@@ -202,6 +202,27 @@ banca a partir do `cursor_preferida` e gravaria no cursor geral, recomeçando a 
 Testes: `tests/p11-quest-fgv-db.test.mjs` (banco) e os casos `abastecer:` de
 `tests/p11-quest-edge.test.mjs` (fetch falso).
 
+## Lote seguido e busca à frente (0067)
+
+Defeito em produção, 17/10/2026: lote 1 às 22:34:40 (busca cheia, 5 FGV), respondido em ~45 s;
+"Mais questões" às ~22:35 deu "Não há questão nova... registre manualmente". A 0065 segurava
+qualquer busca da missão por `rebusca_minutos` (2). Às 22:40 funcionou.
+
+- **Espera só depois de busca ruim.** `ultima_busca_cheia` fica null quando a busca sai e recebe o
+  resultado do guardar (true = a Quest devolveu o que foi pedido). A espera de 2 min vale quando a
+  última busca veio curta, vazia, falhou ou ainda está em andamento (duas abas, ou dois alunos na
+  mesma missão, não pagam a mesma página duas vezes).
+- **Busca à frente.** Sem estoque que feche o lote, a busca pede `min(meta da missão − questões que
+  o aluno já fez nela, 20)`, nunca menos que o lote. O lote sai do tamanho pedido; o resto fica
+  guardado e serve a todos os alunos. "Já fez" é `aluno_missoes.questoes_acumuladas`.
+- **Limite por hora em questões:** 60 (antes, 6 lotes). Por dia continua 120. O lote é cortado para
+  caber no que sobra.
+- **Custo:** a primeira busca de cada missão pede até 20 (120 créditos) em vez de 5. É o estoque dos
+  próximos lotes da mesma missão, não gasto a mais. Teto por pedido continua 2 chamadas (40 questões).
+
+Testes: `tests/p11-quest-lote-continuo-db.test.mjs` (o caso das 22:35, espera só após busca ruim,
+busca à frente, limite por hora).
+
 ## Regras que o banco garante (testadas em `tests/p11-quest-db.test.mjs`)
 
 - Lote sai **sem gabarito**. O gabarito volta só na resposta.
@@ -214,8 +235,9 @@ Testes: `tests/p11-quest-fgv-db.test.mjs` (banco) e os casos `abastecer:` de
 - `missao` só na missão da vez da matéria; `revisao` em missão já iniciada; fora disso, recusa.
 - Questão já respondida não volta. Anulada ou desatualizada não entra em lote nem é corrigida.
 - Gabarito trocado na Quest sobe `gabarito_versao`; a tentativa guarda a versão usada.
-- Limites por aluno: 120 questões por dia (data de Brasília), 6 lotes por hora, lote de até 20.
-  Busca na Quest no máximo a cada 2 min por missão. Valores em `app.quest_limites()`.
+- Limites por aluno: 120 questões por dia (data de Brasília) e 60 por hora (0067; antes, 6 lotes
+  por hora), lote de até 20. Busca na Quest segura por 2 min só depois de busca curta, vazia, em
+  andamento ou que falhou (0067). Valores em `app.quest_limites()`.
 - O aluno não edita nem apaga, pelo app, registro que veio de questão corrigida.
 - Nada de `app.quest_*` é legível por aluno, coordenação ou anon. O dossiê LGPD leva as
   tentativas (sem enunciado).
