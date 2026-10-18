@@ -220,6 +220,22 @@ test.describe("aluno", { tag: ["@j:aluno", "@critica"] }, () => {
     expect(pedidos.at(-1)).toMatchObject({ acao: "entregar", tamanho: 20 });
   });
 
+  // achado do Codex no #194: antes de o catálogo de missões chegar, o cartão
+  // não oferece tarefa nem "semana em dia" no lugar da missão
+  test("com o catálogo de missões lento, o cartão espera e depois mostra a missão", async ({ page }) => {
+    let liberar;
+    const lenta = new Promise((ok) => { liberar = ok; });
+    await page.route("**/rest/v1/missoes?*", async (route) => { await lenta; await route.fallback(); });
+    await page.reload();
+    const cartao = page.getByRole("region", { name: "Sua missão agora" });
+    await expect(cartao.getByRole("heading", { name: "Buscando a sua missão…" })).toBeVisible({ timeout: 15_000 });
+    await expect(cartao.getByRole("button")).toBeDisabled();
+    await expect(page.getByText("Sua próxima tarefa")).toHaveCount(0);
+    liberar();
+    await expect(cartao.getByText(/^\d+ de \d+ questões/)).toBeVisible({ timeout: 15_000 });
+    await expect(cartao.getByRole("button")).toBeEnabled();
+  });
+
   test("sem questões ligadas, o botão é Registrar estudo e abre o registro já preenchido com a missão", async ({ page }) => {
     await page.route("**/rest/v1/rpc/quest_missoes_disponiveis*", (route) =>
       route.fulfill({ status: 200, contentType: "application/json", body: "[]" }));

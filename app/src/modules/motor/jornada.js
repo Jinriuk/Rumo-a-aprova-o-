@@ -22,7 +22,8 @@ export function contextoRegistroDaAtividade(metaAtividade, trilha) {
     metaAtividadeId: metaAtividade.id,
     atividadeModeloId: atividade.id,
     disciplinaCodigo: atividade.disciplina_codigo,
-    titulo: atividade.texto,
+    // o mesmo texto que a tarefa mostra: "Estudo:", nunca "Missão:" (mudança 3)
+    titulo: textoDaTarefa(atividade.texto),
     questoesSugeridas: questoesSugeridas[atividade.prioridade] ?? 10,
   };
 }
