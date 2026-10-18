@@ -130,6 +130,41 @@ test.describe("aluno", { tag: ["@j:aluno", "@critica"] }, () => {
     await expect(page.getByText(/puxado do cronômetro/)).toBeVisible();
   });
 
+  // 18/10, achado 5 do #192: com a lista de missões com questões ainda a
+  // caminho, "Iniciar missão" mandava ao registro. Rede lenta simulada: a
+  // resposta da RPC só sai quando o teste libera.
+  test("Iniciar missão espera saber se a missão tem questões (rede lenta) e nunca cai no registro por falta de resposta", async ({ page }) => {
+    const erros = coletarErros(page);
+    const ids = (await sql(
+      `select m.id from missoes m join concursos c on c.codigo = m.exam_tag join alunos a on a.concurso_id = c.id
+        where a.id = $1`, [CONTA.alunoId])).map((r) => r.id);
+    let liberar;
+    const lenta = new Promise((ok) => { liberar = ok; });
+    await page.route("**/rest/v1/rpc/quest_missoes_disponiveis*", async (route) => {
+      await lenta;
+      await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(ids) });
+    });
+    await page.reload();
+
+    const iniciar = page.getByRole("button", { name: "Iniciar missão" }).first();
+    await expect(iniciar).toBeVisible({ timeout: 15_000 });
+    await expect(iniciar).toBeDisabled();
+    await expect(iniciar).toHaveAttribute("aria-busy", "true");
+    await expect(page.getByRole("status").filter({ hasText: "Carregando…" }).first()).toBeVisible();
+    await iniciar.click({ force: true });           // o toque impaciente
+    await page.waitForTimeout(800);
+    await expect(page.getByText("Registro rápido"), "não foi ao registro").toHaveCount(0);
+    await expect(page.getByText("Quantas questões por vez?")).toHaveCount(0);
+
+    liberar();
+    await expect(iniciar).toBeEnabled();
+    await expect(iniciar).not.toHaveAttribute("aria-busy", "true");
+    await iniciar.click();
+    await expect(page.getByText("Quantas questões por vez?"), "abriu a sessão de questões").toBeVisible();
+    await expect(page.getByText("Registro rápido")).toHaveCount(0);
+    expect(erros).toEqual([]);
+  });
+
   test("navega por todas as abas sem erro de console", async ({ page }) => {
     const erros = coletarErros(page);
     for (const aba of ["Trilha", "Registrar", "Desempenho", "Simulados", "Conquistas", "Histórico", "Plano", "Hoje"]) {

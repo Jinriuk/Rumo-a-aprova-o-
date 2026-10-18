@@ -8,7 +8,7 @@ import React, { useEffect, useRef } from "react";
 import { SectionCard, StatusBadge, BarraXP, Erro } from "../../shared/ui/componentes.jsx";
 import { useTema } from "../../shared/branding/BrandingContext.jsx";
 import { resumoRegistroConfirmado, contextoRegistroDaMissao } from "./jornada.js";
-import { podeResolverAqui } from "./questoesIntegradas.js";
+import { podeResolverAqui, destinoDoInicio } from "./questoesIntegradas.js";
 
 const tempoConfirmado = (minutos) => {
   if (minutos == null) return null;
@@ -132,7 +132,7 @@ const ROTULO_MATERIA = { mat: "Matemática", por: "Português", ing: "Inglês", 
    Uma missão por vez em cada matéria; cada registro conta para uma só, e
    só registros com acertos informados contam (o Registrar avisa).
    P0.4 (0064): só conta a prática registrada pelo botão da missão
-   ("Praticar esta missão"); registro livre soma volume e não fecha
+   ("Iniciar missão"; até 18/10, "Praticar esta missão"); registro livre soma volume e não fecha
    missão; "Registrar revisão" liga ao assunto de uma missão já feita.
 
    EST1-A5 segue valendo: o alvo mostrado é o critério REAL que fecha a
@@ -145,9 +145,13 @@ const ROTULO_MATERIA = { mat: "Matemática", por: "Português", ing: "Inglês", 
    botão. Desde a 0064 o botão é o único caminho que avança missão, então
    o modo essencial não pode escondê-lo junto com o resto do painel.
    P1.1: `questoesIntegradas` (Set de ids que o servidor ligou) e
-   `aoResolver(missao, tipo)` acrescentam "Resolver questões aqui"; sem
-   eles, o painel é o mesmo de antes. */
-export function MissoesPersistidas({ fila = [], disciplinas = [], aoPraticar, compacta = false, questoesIntegradas = null, aoResolver }) {
+   `aoResolver(missao, tipo)` fazem "Iniciar missão" abrir as questões nas
+   missões ligadas (18/10; antes eram dois botões, "Praticar esta missão" e
+   "Resolver questões aqui"); sem eles, "Iniciar missão" vai ao registro.
+   `questoesIntegradas` não tem valor padrão: undefined é "ainda carregando"
+   e null é "não deu para saber" (destinoDoInicio); um `= null` aqui
+   transformava o carregando em "abre a sessão". */
+export function MissoesPersistidas({ fila = [], disciplinas = [], aoPraticar, compacta = false, questoesIntegradas, aoResolver }) {
   const T = useTema();
   const registraveis = new Set((disciplinas ?? []).map((d) => d.codigo));
   const podeRegistrar = (cod) => registraveis.size === 0 || !cod || registraveis.has(cod);
@@ -219,22 +223,47 @@ export function MissoesPersistidas({ fila = [], disciplinas = [], aoPraticar, co
                       {/* P0.4 (0064): registrar a partir da missão é o que a liga
                           ao assunto dela. Praticar: a atual ou a próxima a começar.
                           Revisar: as que já começaram ou fecharam. */}
-                      {aoPraticar && !coordenacao && (mi.estado === "atual" || mi.proxima) && (
-                        <button type="button" className="journey-use-suggestion" style={{ marginTop: 8 }}
-                          onClick={() => aoPraticar(contextoRegistroDaMissao(mi, "missao"))}>
-                          Praticar esta missão
-                        </button>
-                      )}
+                      {/* 18/10: "Iniciar missão" é um botão só. Com questões
+                          ligadas pelo servidor, abre a sessão de questões; sem,
+                          segue para o registro da missão, como antes. Com
+                          questões, o registro à mão fica como link secundário.
+                          Enquanto a lista do servidor não chega, carrega
+                          (destinoDoInicio). */}
+                      {!coordenacao && (mi.estado === "atual" || mi.proxima) && (() => {
+                        const destino = destinoDoInicio(mi, questoesIntegradas, { podeResolver: !!aoResolver && !inalcancavel });
+                        if (destino === "registro" && !aoPraticar) return null;
+                        const carregando = destino === "carregando";
+                        const iniciar = () => {
+                          if (destino === "questoes") aoResolver(mi, "missao");
+                          else if (destino === "registro") aoPraticar(contextoRegistroDaMissao(mi, "missao"));
+                        };
+                        return (
+                          <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap", marginTop: 8 }}>
+                            <button type="button" className="journey-use-suggestion" onClick={iniciar}
+                              disabled={carregando} aria-busy={carregando || undefined}
+                              style={carregando ? { opacity: 0.6, cursor: "progress" } : undefined}>
+                              Iniciar missão
+                            </button>
+                            {carregando && <span role="status" style={{ fontSize: 12, color: T.sub }}>Carregando…</span>}
+                            {destino !== "registro" && aoPraticar && (
+                              <button type="button" onClick={() => aoPraticar(contextoRegistroDaMissao(mi, "missao"))}
+                                style={{ background: "none", border: "none", padding: 0, color: T.sub, fontSize: 12, textDecoration: "underline", cursor: "pointer" }}>
+                                Registrar à mão
+                              </button>
+                            )}
+                          </div>
+                        );
+                      })()}
                       {aoPraticar && !inalcancavel && mi.estado === "concluida" && (
                         <button type="button" className="journey-use-suggestion" style={{ marginTop: 8 }}
                           onClick={() => aoPraticar(contextoRegistroDaMissao(mi, "revisao"))}>
                           Registrar revisão
                         </button>
                       )}
-                      {aoResolver && !coordenacao && !inalcancavel && podeResolverAqui(mi, questoesIntegradas) && (
+                      {aoResolver && !coordenacao && !inalcancavel && mi.estado === "concluida" && podeResolverAqui(mi, questoesIntegradas) && (
                         <button type="button" className="journey-use-suggestion" style={{ marginTop: 8, marginLeft: 8 }}
-                          onClick={() => aoResolver(mi, mi.estado === "concluida" ? "revisao" : "missao")}>
-                          {mi.estado === "concluida" ? "Revisar com questões" : "Resolver questões aqui"}
+                          onClick={() => aoResolver(mi, "revisao")}>
+                          Revisar com questões
                         </button>
                       )}
                     </li>

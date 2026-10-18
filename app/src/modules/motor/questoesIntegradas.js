@@ -23,10 +23,39 @@ const ESTADOS = {
 
 export const ESTADOS_ESPERADOS_QUEST = Object.keys(ESTADOS);
 
-// Lote pedido ao servidor. 5 e não os 10 do padrão da 0065: sessão curta
-// e metade do custo da primeira busca de cada missão (a Quest cobra 6
-// créditos por questão com gabarito; questão guardada não paga de novo).
+// Tamanho do lote: o aluno escolhe antes do primeiro (5, 10 ou 20; padrão
+// 5, sessão curta). O servidor corta para caber no limite da hora e do dia
+// e, desde a 0067, busca à frente o que falta para a meta: o lote seguinte
+// costuma sair do estoque, sem esperar a Quest.
+export const TAMANHOS_LOTE = [5, 10, 20];
 export const TAMANHO_LOTE = 5;
+
+// "X de N questões desta missão". X = o que já contava para a missão ao
+// abrir (questoes_acumuladas) + o que o aluno respondeu nesta sessão
+// valendo para ela. Em revisão nada soma (fica no assunto, não na missão).
+export function progressoDaMissao(missao, respondidasValendo = 0) {
+  const meta = missao?.meta_questoes ?? null;
+  const feitas = (missao?.questoes ?? 0) + respondidasValendo;
+  return { feitas, meta, texto: meta ? `${feitas} de ${meta} questões desta missão` : `${feitas} questões desta missão` };
+}
+
+// Depois de concluída, a missão não soma mais: o servidor entrega os lotes
+// seguintes como revisão (ficam no assunto). A tela diz isso no lugar de
+// "X de N desta missão" (achado 3 do #192).
+export const TEXTO_REVISAO = "Revisão: estas questões ficam no assunto e não contam para a missão, que já está concluída.";
+
+// Botões do fim do lote. Até a missão fechar no servidor: "Continuar: mais
+// N". No lote que a fechou: "Missão concluída" e "Continuar praticando",
+// avisando que dali em diante é revisão. Nos lotes de revisão: "Continuar
+// praticando".
+export function fimDoLote({ fechouNesteLote = false, emRevisao = false, tamanho }) {
+  if (fechouNesteLote) {
+    return { titulo: "Missão concluída", principal: "Continuar praticando",
+             aviso: "“Continuar praticando” abre questões de revisão: ficam no assunto e não contam para a missão." };
+  }
+  if (emRevisao) return { titulo: null, principal: "Continuar praticando", aviso: null };
+  return { titulo: null, principal: `Continuar: mais ${tamanho}`, aviso: null };
+}
 
 export function mensagemDoEstado(estado) {
   return ESTADOS[estado] ?? ESTADOS.erro;
@@ -70,6 +99,19 @@ export function origemDaQuestao(q) {
 export function podeResolverAqui(missao, disponiveis) {
   if (!missao?.id || !disponiveis?.has?.(missao.id)) return false;
   return missao.estado === "atual" || !!missao.proxima || missao.estado === "concluida";
+}
+
+// Para onde "Iniciar missão" leva (18/10). `disponiveis`: undefined enquanto
+// a lista do servidor não chegou, Set com a resposta, null quando não deu
+// para saber. Enquanto não sabe, carrega: nunca manda ao registro por
+// falta de resposta (achado 5 do #192). Sem saber depois das tentativas,
+// abre as questões e o servidor decide; sem questões, a sessão oferece o
+// registro manual.
+export function destinoDoInicio(missao, disponiveis, { podeResolver = true } = {}) {
+  if (!podeResolver) return "registro";
+  if (disponiveis === undefined) return "carregando";
+  if (disponiveis === null) return "questoes";
+  return podeResolverAqui(missao, disponiveis) ? "questoes" : "registro";
 }
 
 // Resumo do lote a partir das questões respondidas.

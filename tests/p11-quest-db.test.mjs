@@ -205,7 +205,7 @@ test("busca recente não se repete; filtro esgotado entrega o que tem", async ()
   });
 });
 
-test("limite por aluno: questões por dia e lotes por hora", async () => {
+test("limite por aluno: questões por dia e por hora (0067: questões, não lotes)", async () => {
   await emTransacao(async (c, al) => {
     const lim = (await c.query("select app.quest_limites() as l")).rows[0].l;
     await guardar(c, al.m[M1].id, Array.from({ length: 30 }, (_, i) => questao(i)));
@@ -220,11 +220,13 @@ test("limite por aluno: questões por dia e lotes por hora", async () => {
          from generate_series(1, ceil($4 / 40.0)::int)`, [al.escola, al.aluno, al.m[M1].id, lim.questoes_dia]);
     assert.deepEqual(await preparar(c, al, al.m[M1].id, { semBusca: true }), { estado: "limite", motivo: "questoes_dia" });
     await c.query("delete from app.quest_entregas where aluno_id = $1", [al.aluno]);
+    // 0067: a hora conta questões entregues; 12 lotes de 5 batem as 60
     await c.query(
       `insert into app.quest_entregas (pedido_id, escola_id, aluno_id, missao_id, tipo_pratica, questoes, criada_em, expira_em)
-       select gen_random_uuid(), $1, $2, $3, 'missao', array[gen_random_uuid()], now() - interval '10 minutes', now() - interval '1 minute'
-         from generate_series(1, $4)`, [al.escola, al.aluno, al.m[M1].id, lim.lotes_hora]);
-    assert.deepEqual(await preparar(c, al, al.m[M1].id, { semBusca: true }), { estado: "limite", motivo: "lotes_hora" });
+       select gen_random_uuid(), $1, $2, $3, 'missao', array(select gen_random_uuid() from generate_series(1, 5)),
+              now() - interval '10 minutes', now() - interval '1 minute'
+         from generate_series(1, $4 / 5)`, [al.escola, al.aluno, al.m[M1].id, lim.questoes_hora]);
+    assert.deepEqual(await preparar(c, al, al.m[M1].id, { semBusca: true }), { estado: "limite", motivo: "questoes_hora" });
   });
 });
 
