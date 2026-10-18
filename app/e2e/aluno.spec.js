@@ -297,6 +297,7 @@ test.describe("aluno: menos ruído fixo", { tag: ["@j:aluno", "@critica"] }, () 
       await route.fulfill({ response: resposta, json: linhas });
     });
     await loginAluno(page, CONTAS.alunoJornada);
+    await irParaAba(page, "Plano"); // raio-x fase 2: o painel de missões mora no Plano
     const recolhidas = page.getByRole("button", { name: /^▸ 1 concluída · revisar$/ });
     await expect(recolhidas).toBeVisible({ timeout: 15_000 });
     await expect(page.getByRole("button", { name: "Registrar revisão" })).toHaveCount(0);
