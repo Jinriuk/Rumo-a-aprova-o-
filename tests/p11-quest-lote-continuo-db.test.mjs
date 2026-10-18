@@ -78,25 +78,25 @@ const estoque = async (c, al) => Number((await c.query(
 
 // ── 1. espera só depois de busca ruim ───────────────────────────────
 
-test("22:35 de 17/10: busca cheia, lote respondido em 45 s, pedido seguinte busca de novo sem esperar 2 minutos", async () => {
+test("22:35 de 17/10: busca cheia, estoque respondido, pedido seguinte busca de novo sem esperar 2 minutos", async () => {
   await emTransacao(async (c, al) => {
     const r1 = await preparar(c, al);
     assert.equal(r1.estado, "buscar");
-    // a busca de 22:34:40 veio cheia (o que a Quest devolveu = o que foi pedido)
-    await guardar(c, al.missao, varias(1, 5));
-    const lote1 = await preparar(c, al, { semBusca: true });
-    assert.equal(lote1.estado, "ok");
-    assert.equal(lote1.entrega.questoes.length, 5);
-    await responderTudo(c, al, lote1.entrega);
-
-    // ~22:35: ainda dentro de rebusca_minutos da busca anterior
+    // a busca veio cheia: a Quest devolveu tudo o que foi pedido (0068: a
+    // reposição inteira, não só a página)
+    await guardar(c, al.missao, varias(1, r1.faltam));
+    // o aluno responde o estoque inteiro, lote a lote, em menos de 2 minutos
+    for (let i = 0; i < r1.faltam / 5; i++) {
+      const lote = await preparar(c, al, { semBusca: true });
+      assert.equal(lote.estado, "ok");
+      await responderTudo(c, al, lote.entrega);
+    }
     const recente = (await c.query(
       `select ultima_busca_em > now() - interval '2 minutes' as recente, ultima_busca_cheia
          from app.quest_filtros_missao where missao_id = $1`, [al.missao])).rows[0];
     assert.deepEqual(recente, { recente: true, ultima_busca_cheia: true });
     const r2 = await preparar(c, al);
     assert.equal(r2.estado, "buscar", "antes da 0067: sem_questoes e o aviso de registrar à mão");
-    assert.equal(r2.faltam, 20 - await feitas(c, al), "busca à frente: o que falta para a meta");
   });
 });
 

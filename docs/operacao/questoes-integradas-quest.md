@@ -223,11 +223,27 @@ qualquer busca da missão por `rebusca_minutos` (2). Às 22:40 funcionou.
 Testes: `tests/p11-quest-lote-continuo-db.test.mjs` (o caso das 22:35, espera só após busca ruim,
 busca à frente, limite por hora).
 
+## Revisão do Codex (0068)
+
+- **Resposta repetida que fechou a missão:** a retransmissão devolve `missao_concluida = true` quando
+  a tentativa é do registro que fechou a missão. Antes vinha só a correção, e a tela seguia
+  oferecendo "Continuar: mais N".
+- **Uma busca por vez na missão:** a busca é reivindicada por UPDATE condicional, reavaliado depois
+  da trava da linha. Dois alunos na mesma missão (a trava consultiva é por aluno) não recebem os dois
+  `buscar` com o mesmo cursor; quem perde segue com o estoque que houver.
+- **"Cheia" é a reposição inteira:** a busca grava `busca_faltam` (o `faltam` pedido) e cada página
+  guardada desconta as novas. `ultima_busca_cheia` só fica true quando zera. Página cheia de
+  repetidas seguida de 2ª chamada que falha não fura mais a espera de 2 min.
+
+Testes: `tests/p11-quest-0068-db.test.mjs` (a corrida usa duas transações confirmadas, em Química,
+e apaga o que criou).
+
 ## Regras que o banco garante (testadas em `tests/p11-quest-db.test.mjs`)
 
 - Lote sai **sem gabarito**. O gabarito volta só na resposta.
 - Correção no servidor. **Uma tentativa por aluno e questão**: a mesma resposta (ou outra)
-  reenviada devolve a primeira correção, sem segundo registro nem XP duplicado.
+  reenviada devolve a primeira correção, sem segundo registro nem XP duplicado (e, desde a 0068,
+  com `missao_concluida` se aquela resposta fechou a missão).
 - O pedido de lote leva `pedido_id`: reenvio devolve o mesmo lote. Lote aberto da missão é
   retomado em vez de gastar outro.
 - O lote vira **um** registro de estudo (`tipo_pratica` `missao` ou `revisao`, com `missao_id`)

@@ -248,7 +248,11 @@ test("SQL dos filtros: aplica nas missões do CFO PMERJ, nasce desligado, liga s
     await c.query("begin");
     await c.query(semTransacao(gerarSql(M, { inicio: "2026-10-05", turma: 1 })));
     await c.query(semTransacao(gerarSqlFiltros(mapa)));
-    const n = async (onde = "true") => Number((await c.query(`select count(*) as n from app.quest_filtros_missao where ${onde}`)).rows[0].n);
+    // só os filtros do CFO PMERJ: outro arquivo (p11-quest-0068-db) confirma
+    // por um instante um filtro de teste, e os arquivos rodam em paralelo
+    const n = async (onde = "true") => Number((await c.query(
+      `select count(*) as n from app.quest_filtros_missao
+        where missao_id in (select id from missoes where exam_tag = 'pmerj_cfo') and ${onde}`)).rows[0].n);
     assert.equal(await n(), 24);
     assert.equal(await n("ativo"), 0);
     await c.query(semTransacao(gerarSqlFiltros(mapa, { ativar: ["PMERJ-M01-ADM"] })));
