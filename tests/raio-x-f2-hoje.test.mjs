@@ -128,6 +128,8 @@ test("Plano: semanas em blocos (a atual aberta), tarefas dentro, Concluir só na
     "semana passada mostra o que foi feito nela, não o estado da atual");
   const plano = visao.slice(visao.indexOf("function Plano("), visao.indexOf("function BlocoSemana("));
   assert.ok(plano.indexOf("trilha.semanas.map") < plano.indexOf("{children}"), "missões depois das semanas");
+});
+
 // achados do Codex no #194
 test("o cartão espera o catálogo e o progresso das missões antes de escolher a ação", () => {
   const visao = semComentarios(ler("app/src/routes/aluno/VisaoEstudo.jsx"));
