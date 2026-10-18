@@ -124,17 +124,28 @@ export function VisaoEstudo({ aluno, podeEditar, concurso = null, contexto = "Pl
     return () => { vivo = false; };
   }, [examTag]);
   // P1.1: em quais missões o servidor ligou as questões integradas. Só o
-  // aluno resolve (podeEditar). Sem a 0065, ou com erro, vem vazio e o
-  // botão não aparece.
-  const [questoesIntegradas, setQuestoesIntegradas] = useState(() => new Set());
+  // aluno resolve (podeEditar). undefined = ainda perguntando: "Iniciar
+  // missão" fica carregando e não decide nada. Set = a resposta (vazio sem
+  // a 0065). null = não deu para saber depois de 3 tentativas: "Iniciar
+  // missão" abre a sessão e o servidor decide (sem questões, ela oferece o
+  // registro manual). Nunca vai ao registro por falta de resposta.
+  const [questoesIntegradas, setQuestoesIntegradas] = useState(undefined);
   const [resolvendo, setResolvendo] = useState(null);
+  const resolvendoRef = useRef(null);
   useEffect(() => {
-    if (!podeEditar || !examTag) return;   // o painel nem recebe aoResolver
+    if (!podeEditar || !examTag) return undefined;   // o painel nem recebe aoResolver
     let vivo = true;
-    db.missoesComQuestoesIntegradas()
-      .then((ids) => { if (vivo) setQuestoesIntegradas(ids); })
-      .catch(() => { /* complementar: sem a lista, sem botão */ });
-    return () => { vivo = false; };
+    let espera = null;
+    const pedir = (tentativa) => db.missoesComQuestoesIntegradas()
+      .catch(() => null)
+      .then((ids) => {
+        if (!vivo) return;
+        if (ids === null && tentativa < 3) { espera = setTimeout(() => pedir(tentativa + 1), 1500 * tentativa); return; }
+        // recarga que falha não apaga uma resposta que já veio
+        setQuestoesIntegradas((antes) => (ids === null && antes instanceof Set ? antes : ids));
+      });
+    pedir(1);
+    return () => { vivo = false; clearTimeout(espera); };
   }, [podeEditar, examTag, versao]);
 
   const filaMissoes = useMemo(() => {
@@ -248,6 +259,19 @@ export function VisaoEstudo({ aluno, podeEditar, concurso = null, contexto = "Pl
     const timer = setTimeout(() => setRealceMissao(0), 1800);
     return () => { cancelAnimationFrame(quadro); clearTimeout(timer); };
   }, [realceMissao, tab]);
+
+  // A sessão de questões abre acima da lista de missões: no celular, quem
+  // toca "Iniciar missão" lá embaixo não a veria. Rola até ela e leva o foco.
+  const chaveResolvendo = resolvendo ? `${resolvendo.missao.id}:${resolvendo.tipo}` : null;
+  useEffect(() => {
+    if (!chaveResolvendo) return undefined;
+    const quadro = requestAnimationFrame(() => {
+      const reduzido = window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches;
+      resolvendoRef.current?.scrollIntoView({ behavior: reduzido ? "auto" : "smooth", block: "start" });
+      resolvendoRef.current?.focus?.({ preventScroll: true });
+    });
+    return () => cancelAnimationFrame(quadro);
+  }, [chaveResolvendo]);
 
   // índice de navegação da aba Desempenho (rola até a seção) — reduz a
   // sensação de "parede de blocos" sem esconder conteúdo (UX1.2).
@@ -379,15 +403,19 @@ export function VisaoEstudo({ aluno, podeEditar, concurso = null, contexto = "Pl
             {/* P0.4 (0064): no modo essencial o painel fica compacto, mas não
                 some: o botão da missão é o único caminho que a avança */}
             {podeEditar && resolvendo && (
-              <ResolverQuestoes key={`${resolvendo.missao.id}:${resolvendo.tipo}`}
-                missao={resolvendo.missao} tipo={resolvendo.tipo}
-                aoFechar={() => setResolvendo(null)}
-                aoMudar={recarregar}
-                aoRegistrarManual={() => {
-                  const ctx = contextoRegistroDaMissao(resolvendo.missao, resolvendo.tipo);
-                  setResolvendo(null);
-                  irAba("registrar", ctx);
-                }} />
+              <div ref={resolvendoRef} tabIndex={-1} aria-label="Questões da missão" style={{ scrollMarginTop: 18 }}>
+                <ResolverQuestoes key={`${resolvendo.missao.id}:${resolvendo.tipo}`}
+                  missao={resolvendo.missao} tipo={resolvendo.tipo}
+                  aoFechar={() => setResolvendo(null)}
+                  aoMudar={recarregar}
+                  aoRegistrarManual={(tipoEfetivo = resolvendo.tipo) => {
+                    // depois que a missão fecha na sessão, o registro de
+                    // reserva é revisão, não prática da missão
+                    const ctx = contextoRegistroDaMissao(resolvendo.missao, tipoEfetivo);
+                    setResolvendo(null);
+                    irAba("registrar", ctx);
+                  }} />
+              </div>
             )}
             {examTag && filaMissoes.length > 0 && (
               <MissoesPersistidas fila={filaMissoes} disciplinas={trilha.disciplinas} compacta={essencial}

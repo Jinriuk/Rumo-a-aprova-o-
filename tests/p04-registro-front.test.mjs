@@ -4,7 +4,8 @@
 // O banco (0064) confere tudo; aqui a prova é que o front MANDA o que o
 // aluno quis dizer:
 //   • registro sem missão sai 'livre' (soma volume, não conclui missão);
-//   • "Praticar esta missão" sai 'missao' com o id dela, presa à matéria;
+//   • "Iniciar missão" (sem questões ligadas) sai 'missao' com o id dela,
+//     presa à matéria;
 //   • "Registrar revisão" sai 'revisao' com o id da missão revisada;
 //   • a recusa do servidor chega legível ao aluno.
 // O lado banco está em p04-registro-tematico-db.test.mjs.
@@ -86,11 +87,12 @@ test("a recusa do servidor chega ao aluno com o motivo, sem detalhe técnico", a
   } finally { console.error = original; }
 });
 
-test("telas: o painel de missões tem 'Praticar' e 'Revisão', e a área do aluno liga ao Registrar", () => {
+test("telas: o painel de missões tem 'Iniciar missão' e 'Revisão', e a área do aluno liga ao Registrar", () => {
   const painel = semComentarios(ler("app/src/modules/motor/ProgressoVivido.jsx"));
   assert.match(painel, /contextoRegistroDaMissao\(mi, "missao"\)/);
   assert.match(painel, /contextoRegistroDaMissao\(mi, "revisao"\)/);
-  assert.match(painel, />\s*Praticar esta missão\s*</);
+  assert.match(painel, />\s*Iniciar missão\s*</);
+  assert.doesNotMatch(painel, /Praticar esta missão/, "18/10: um botão só, \"Iniciar missão\"");
   assert.match(painel, />\s*Registrar revisão\s*</);
   const visao = semComentarios(ler("app/src/routes/aluno/VisaoEstudo.jsx"));
   assert.match(visao, /<MissoesPersistidas[^>]*aoPraticar=\{podeEditar \? \(contexto\) => irAba\("registrar", contexto\)/s);
@@ -111,5 +113,5 @@ test("modo essencial não esconde o botão da missão, e o registro solto avisa 
   assert.match(painel, /mi\.estado === "atual" \|\| mi\.proxima\)\.slice\(0, 1\)/, "compacto: só a missão da vez de cada matéria");
   const reg = semComentarios(ler("app/src/modules/motor/Registrar.jsx"));
   assert.match(reg, /\{!contextoInicial && \(/);
-  assert.match(reg, /Registro livre: entra no seu histórico e no volume, mas não avança missão\. Para avançar uma missão, use o botão “Praticar esta missão” na aba Hoje\./);
+  assert.match(reg, /Registro livre: entra no seu histórico e no volume, mas não avança missão\. Para avançar uma missão, use o botão “Iniciar missão” na aba Hoje\./);
 });
