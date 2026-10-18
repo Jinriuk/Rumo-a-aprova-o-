@@ -57,22 +57,24 @@ export const ROTEIRO_COORDENACAO = [
   },
 ];
 
+// Raio-x fase 2, PR 3: na ordem das abas do aluno (Hoje, Plano, Registrar,
+// Desempenho, Simulados, Histórico). Trilha e Conquistas saíram do menu.
 export const ROTEIRO_ALUNO = [
   {
     aba: "hoje",
     titulo: "Hoje: o que fazer agora",
     texto: "Esta é a sua tela principal. Ela mostra a sua missão agora, com um botão só: resolver as questões dela ou registrar o estudo. A linha da semana, logo abaixo, leva ao Plano.",
-    dica: "Se aparecer o diagnóstico inicial no topo, responda primeiro: ele ajusta o seu plano.",
+    dica: "Tocar no seu XP, no topo, abre a sua patente e as conquistas.",
+  },
+  {
+    aba: "plano",
+    titulo: "Plano",
+    texto: "As semanas do seu plano. A semana atual fica aberta, com as tarefas para concluir ou adiar; abaixo, as missões de cada matéria. O número na aba \"Plano\" é quantas tarefas ainda estão pendentes.",
   },
   {
     aba: "registrar",
     titulo: "Registrar: conte o que você estudou",
     texto: "Depois de estudar, registre aqui a matéria, as questões feitas, os acertos e o tempo. É isso que alimenta o seu desempenho e o seu XP. O cronômetro no topo registra o tempo para você.",
-  },
-  {
-    aba: "concurso",
-    titulo: "Trilha do concurso",
-    texto: "O caminho até a prova: o que cai, o peso de cada matéria e em que ponto da trilha você está.",
   },
   {
     aba: "desempenho",
@@ -85,19 +87,9 @@ export const ROTEIRO_ALUNO = [
     texto: "Lance aqui o resultado dos simulados que você fizer, para acompanhar a evolução até a prova.",
   },
   {
-    aba: "conquistas",
-    titulo: "Conquistas",
-    texto: "Seu XP, a sua patente e as conquistas que você desbloqueia estudando com constância.",
-  },
-  {
     aba: "historico",
     titulo: "Histórico",
-    texto: "As metas das semanas que já passaram, com o que foi feito e o que ficou pendente em cada uma.",
-  },
-  {
-    aba: "plano",
-    titulo: "Plano",
-    texto: "As semanas do seu plano. Aqui ficam as tarefas da semana, para concluir ou adiar, e as missões de cada matéria. O número na aba \"Plano\" é quantas tarefas ainda estão pendentes.",
+    texto: "As semanas que já passaram, com o que foi feito e o que ficou pendente em cada uma.",
   },
 ];
 

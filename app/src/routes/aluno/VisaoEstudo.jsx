@@ -1,9 +1,9 @@
 /* A visão de estudo de UM aluno, com cara de missão (ref. designs):
-   Hoje / Registrar / Desempenho / Simulados / Histórico / Plano.
+   Hoje / Plano / Registrar / Desempenho / Simulados / Histórico.
    Mesma composição para aluno (edita) e para coordenação (lê) — o
    banco decide o que cada um PODE; aqui só se esconde o que não cabe. */
 import React, { lazy, Suspense, useEffect, useMemo, useRef, useState } from "react";
-import { Tag, SubjDot, ErroComRetry, BarraXP, StatusBadge, CarregandoBloco } from "../../shared/ui/componentes.jsx";
+import { ErroComRetry, BarraXP, StatusBadge, CarregandoBloco } from "../../shared/ui/componentes.jsx";
 import { FeedbackProgresso, MissoesPersistidas } from "../../modules/motor/ProgressoVivido.jsx";
 import { Icone } from "../../shared/ui/Icones.jsx";
 import { MenuPrincipal } from "../../shared/ui/MenuPrincipal.jsx";
@@ -12,13 +12,12 @@ import { useTema } from "../../shared/branding/BrandingContext.jsx";
 import { useTrilha } from "../../modules/conteudo/useTrilha.js";
 import { FaixaAspirante, CicloEncerrado } from "../../modules/motor/MetaHero.jsx";
 import { MissaoDaVez, LinhaDaSemana } from "../../modules/motor/MissaoDaVez.jsx";
-import { MetaSemana } from "../../modules/motor/MetaSemana.jsx";
+import { TarefasDaSemana } from "../../modules/motor/MetaSemana.jsx";
 import { ResolverQuestoes } from "../../modules/motor/ResolverQuestoes.jsx";
-import { contextoRegistroDaMissao, acaoDaVez, resumoDaSemana, textoDaTarefa } from "../../modules/motor/jornada.js";
+import { contextoRegistroDaMissao, acaoDaVez, resumoDaSemana } from "../../modules/motor/jornada.js";
 import { Registrar } from "../../modules/motor/Registrar.jsx";
 import { Arquivo } from "../../modules/motor/Arquivo.jsx";
 import { Conquistas } from "../../modules/motor/Conquistas.jsx";
-import { TrilhaConcurso } from "../../modules/conteudo/TrilhaConcurso.jsx";
 import { filaDeMissoes } from "../../modules/conteudo/missoes.js";
 import { calcularXP, patente } from "../../modules/motor/jargao.js";
 import { InsightsDesempenho } from "../../modules/desempenho/Insights.jsx";
@@ -348,10 +347,13 @@ export function VisaoEstudo({ aluno, podeEditar, concurso = null, contexto = "Pl
     ? dados.xpPersistido.total
     : calcularXP({ metas: dados.metas, totalQuestoes: m?.totDone ?? 0, simulados: dados.simulados.length });
 
+  // Raio-x fase 2, PR 3 (18/10): a Trilha sai (o Plano mostra as semanas) e
+  // Conquistas sai do menu (abre pelo XP no topo do Hoje). No celular cabem
+  // Hoje, Plano, Registrar e Desempenho; Simulados e Histórico vão ao "Mais".
   const ABAS = [
-    ["hoje", "Hoje", null, "ancora"], ["concurso", "Trilha", null, "escudo"], ["registrar", "Registrar", null, "lapis"],
+    ["hoje", "Hoje", null, "ancora"], ["plano", "Plano", null, "mapa"], ["registrar", "Registrar", null, "lapis"],
     ["desempenho", "Desempenho", null, "grafico"], ["simulados", "Simulados", null, "alvo"],
-    ["conquistas", "Conquistas", null, "medalha"], ["historico", "Histórico", null, "arquivo"], ["plano", "Plano", null, "mapa"],
+    ["historico", "Histórico", null, "arquivo"],
   ].filter(([k]) => podeEditar || k !== "registrar").map(
     // as tarefas pendentes moram no Plano (raio-x fase 2): o número vai com elas
     ([k, lb, badge, icone]) => (k === "plano" && podeEditar && pendentes > 0 ? [k, lb, pendentes, icone] : [k, lb, badge, icone]),
@@ -415,9 +417,6 @@ export function VisaoEstudo({ aluno, podeEditar, concurso = null, contexto = "Pl
             )}
           </div>
         )}
-        {tab === "concurso" && (
-          <TrilhaConcurso examTag={concurso?.codigo ?? null} concursoNome={concurso?.nome ?? null} />
-        )}
         {tab === "registrar" && podeEditar && (
           <Registrar aluno={aluno} trilha={trilha} registros={dados.registros}
             aoMudar={recarregar} minutosSugeridos={minutosSugeridos}
@@ -454,19 +453,22 @@ export function VisaoEstudo({ aluno, podeEditar, concurso = null, contexto = "Pl
           <Simulados aluno={aluno} simulados={dados.simulados} podeEditar={podeEditar} semanaAtiva={semanaAtiva} concurso={concurso} aoMudar={recarregar} />
         )}
         {tab === "conquistas" && m && (
-          <Conquistas nome={aluno.nome.split(" ")[0]} xp={xp} m={m} metas={dados.metas} simulados={dados.simulados} />
+          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+            {/* fora do menu: sem aba acesa, a volta fica explícita */}
+            <button type="button" onClick={() => irAba("hoje")}
+              style={{ alignSelf: "flex-start", background: "none", border: "none", color: T.sub, fontSize: 13, fontWeight: 600, padding: "6px 0", minHeight: 36, cursor: "pointer" }}>
+              ← Voltar ao Hoje
+            </button>
+            <Conquistas nome={aluno.nome.split(" ")[0]} xp={xp} m={m} metas={dados.metas} simulados={dados.simulados} />
+          </div>
         )}
         {tab === "historico" && (
           <Arquivo metas={dados.metas} trilha={trilha} registros={dados.registros} />
         )}
         {tab === "plano" && (
-          <Plano trilha={trilha} semanaAtiva={semanaAtiva} meta={meta} codigoConcurso={examTag}>
-            {/* as tarefas (Concluir/Adiar) e as missões saíram do Hoje e moram aqui */}
-            {ciclo.estado !== "encerrado" && (
-              <MetaSemana meta={meta} trilha={trilha} podeEditar={podeEditar} aoMudar={recarregar}
-                aoPraticar={(alvo) => irAba("registrar", alvo)}
-                aoAbrirDesempenho={() => irAba("desempenho")} />
-            )}
+          <Plano trilha={trilha} semanaAtiva={semanaAtiva} meta={meta} metas={dados.metas} codigoConcurso={examTag}
+            podeEditar={podeEditar} aoMudar={recarregar} aoPraticar={(alvo) => irAba("registrar", alvo)}>
+            {/* as missões por matéria, abaixo das semanas (não pertencem a uma semana) */}
             {examTag && filaMissoes.length > 0 && (
               <MissoesPersistidas fila={filaMissoes} disciplinas={trilha.disciplinas} nomesMateria={nomesMateria} compacta
                 aoPraticar={podeEditar ? (contexto) => irAba("registrar", contexto) : undefined}
@@ -481,58 +483,68 @@ export function VisaoEstudo({ aluno, podeEditar, concurso = null, contexto = "Pl
   );
 }
 
-/* O Plano (Fase 16.4): a trilha vira JORNADA — uma linha do tempo de
-   missões com estado claro (encerrada / em andamento / a desbloquear),
-   "onde estou" e o próximo passo. Textos da metodologia importada;
-   estado da semana corrente vem da meta. */
-function Plano({ trilha, semanaAtiva, meta, codigoConcurso = null, children }) {
+/* O Plano (raio-x fase 2, PR 3; decisões de 18/10). Para o aluno, ele
+   substitui a aba Trilha: as semanas em blocos, a atual aberta e as outras
+   fechadas; dentro de cada semana as tarefas, com as concluídas recolhidas
+   em "X concluídas"; Concluir/Adiar só na semana atual. As missões por
+   matéria vêm abaixo das semanas (`children`): no banco a missão não
+   pertence a semana (a fila do motor anda por matéria), então elas não
+   entram nos blocos. A coordenação continua com a visão própria (ficha). */
+function Plano({ trilha, semanaAtiva, meta, metas = [], codigoConcurso = null, podeEditar = false, aoMudar, aoPraticar, children }) {
   const T = useTema();
-  const estadosPorAtividade = Object.fromEntries(
-    (meta?.meta_atividades ?? []).map((ma) => [ma.atividade_modelo_id, ma.estado]),
-  );
-  const ativaNum = semanaAtiva?.numero ?? trilha.semanas[0]?.numero;
+  const ativaNum = meta?.semana_numero ?? semanaAtiva?.numero ?? trilha.semanas[0]?.numero;
   const total = trilha.semanas.length;
   const posicao = Math.max(1, trilha.semanas.findIndex((w) => w.numero === ativaNum) + 1);
-  const pctJornada = total > 1 ? Math.round(((posicao - 1) / (total - 1)) * 100) : 0;
+  const pctPlano = total > 1 ? Math.round(((posicao - 1) / (total - 1)) * 100) : 0;
+  // a meta de cada semana (a atual e as já fechadas): o estado das tarefas
+  const metaPorSemana = Object.fromEntries((metas ?? []).map((x) => [x.semana_numero, x]));
+  if (meta) metaPorSemana[meta.semana_numero] = meta;
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-      {/* onde estou — cabeçalho da jornada */}
       <div style={{ background: `linear-gradient(135deg, ${T.cardHi}, ${T.card})`, border: `1px solid ${T.line}`, borderRadius: 14, padding: "14px 16px" }}>
         <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 10, flexWrap: "wrap" }}>
-          <div style={{ fontSize: 11, color: T.sub, textTransform: "uppercase", letterSpacing: 0.6, fontWeight: 700 }}>Sua jornada</div>
+          <div style={{ fontSize: 11, color: T.sub, textTransform: "uppercase", letterSpacing: 0.6, fontWeight: 700 }}>Seu plano</div>
           <div className="num" style={{ fontSize: 11.5, color: T.sub }}>semana <b className="disp" style={{ color: T.gold, fontSize: 15 }}>{posicao}</b> de {total}</div>
         </div>
-        <div style={{ marginTop: 9 }}><BarraXP pct={pctJornada} alt={7} /></div>
+        <div style={{ marginTop: 9 }}><BarraXP pct={pctPlano} alt={7} /></div>
         {/* pré-edital: depois do "Entendi", a informação fica só aqui */}
         <LinhaMaturidade codigo={codigoConcurso} style={{ marginTop: 10 }} />
       </div>
-      {children}
 
       <div style={{ position: "relative" }}>
-        {/* trilho vertical que liga as missões */}
+        {/* trilho vertical que liga as semanas */}
         <div style={{ position: "absolute", left: 13, top: 14, bottom: 14, width: 2, background: T.line }} />
         <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
           {trilha.semanas.map((w) => (
-            <MissaoJornada key={w.numero} w={w} trilha={trilha} ativaNum={ativaNum}
-              estadosPorAtividade={estadosPorAtividade} T={T} />
+            <BlocoSemana key={w.numero} w={w} trilha={trilha} ativaNum={ativaNum}
+              meta={metaPorSemana[w.numero] ?? null}
+              podeEditar={podeEditar && w.numero === meta?.semana_numero && meta?.status === "ativa"}
+              aoMudar={aoMudar} aoPraticar={aoPraticar} T={T} />
           ))}
         </div>
       </div>
+
+      {children}
     </div>
   );
 }
 
-// Uma etapa da jornada: nó na linha do tempo + cartão da semana.
-function MissaoJornada({ w, trilha, ativaNum, estadosPorAtividade, T }) {
+// Uma semana do Plano: nó na linha do tempo + bloco que abre e fecha.
+function BlocoSemana({ w, trilha, ativaNum, meta, podeEditar, aoMudar, aoPraticar, T }) {
   const isNow = w.numero === ativaNum;
   const isPast = w.numero < ativaNum;
-  const tarefas = trilha.atividadesPorSemana[w.numero] ?? [];
-  const dc = tarefas.filter((tk) => estadosPorAtividade[tk.id] === "concluida").length;
   const [aberto, setAberto] = useState(isNow);
+  const previstas = trilha.atividadesPorSemana[w.numero] ?? [];
+  const itens = meta?.meta_atividades ?? [];
+  const consideradas = itens.filter((x) => x.estado !== "ignorada").length;
+  const feitas = itens.filter((x) => x.estado === "concluida").length;
   const tom = isNow ? "alerta" : isPast ? "ok" : "neutro";
   const rotulo = isPast ? "Encerrada" : isNow ? "Em andamento" : "Próxima";
-  const pct = tarefas.length ? Math.round((dc / tarefas.length) * 100) : 0;
+  const contagem = meta
+    ? `${feitas} de ${consideradas} ${consideradas === 1 ? "tarefa" : "tarefas"}`
+    : `${previstas.length} ${previstas.length === 1 ? "tarefa" : "tarefas"}`;
+  const idCorpo = `semana-${w.numero}-tarefas`;
 
   // nó: encerrada = check; agora = ponto vivo; futura = cadeado
   const no = isNow
@@ -548,50 +560,28 @@ function MissaoJornada({ w, trilha, ativaNum, estadosPorAtividade, T }) {
         </span>
       </div>
 
-      <div style={{ flex: 1, minWidth: 0, background: T.card, border: `1px solid ${isNow ? T.gold : T.line}`, borderWidth: isNow ? 1.5 : 1, borderRadius: 12, overflow: "hidden" }}>
-        <div style={{ padding: "12px 14px" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+      <section aria-label={`Semana ${w.numero}`} style={{ flex: 1, minWidth: 0, background: T.card, border: `1px solid ${isNow ? T.gold : T.line}`, borderWidth: isNow ? 1.5 : 1, borderRadius: 12, overflow: "hidden" }}>
+        <button type="button" aria-expanded={aberto} aria-controls={idCorpo} onClick={() => setAberto((v) => !v)}
+          style={{ display: "block", width: "100%", minHeight: 44, textAlign: "left", background: "transparent", border: "none", color: T.ink, padding: "12px 14px", cursor: "pointer" }}>
+          <span style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
             <span className="disp" style={{ fontSize: 14.5, fontWeight: 700 }}>Semana {w.numero}</span>
             <StatusBadge tom={tom}>{rotulo}</StatusBadge>
             <span className="num" style={{ marginLeft: "auto", fontSize: 11, color: T.sub }}>{fmtBR(String(w.inicio))}–{fmtBR(String(w.fim))}</span>
-          </div>
-          <div style={{ fontStyle: "italic", color: T.sub, fontSize: 13, marginTop: 6, lineHeight: 1.4 }}>{w.foco}</div>
-          {w.simulado && <div style={{ fontSize: 12, color: T.red, fontWeight: 700, marginTop: 6 }}>⚑ {w.simulado}</div>}
+          </span>
+          {w.foco && <span style={{ display: "block", fontStyle: "italic", color: T.sub, fontSize: 13, marginTop: 6, lineHeight: 1.4 }}>{w.foco}</span>}
+          {w.simulado && <span style={{ display: "block", fontSize: 12, color: T.red, fontWeight: 700, marginTop: 6 }}>⚑ {w.simulado}</span>}
+          <span className="num" style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, color: T.sub, marginTop: 8 }}>
+            <span aria-hidden="true">{aberto ? "▾" : "▸"}</span><span>{contagem}</span>
+          </span>
+        </button>
 
-          {isNow && tarefas.length > 0 && (
-            <div style={{ marginTop: 10 }}>
-              <BarraXP pct={pct} alt={5} brilho={false} />
-              <div className="num" style={{ fontSize: 11, color: T.sub, marginTop: 4 }}>{dc}/{tarefas.length} tarefas · <b style={{ color: T.gold }}>{pct}%</b></div>
-            </div>
-          )}
-
-          {tarefas.length > 0 && (
-            // T1: alvo de toque — padding vertical + minHeight reais no botão.
-            <button type="button" onClick={() => setAberto((v) => !v)}
-              style={{ marginTop: 10, border: "none", background: "transparent", color: T.sub, fontSize: 12, fontWeight: 600, padding: "8px 0", minHeight: 32, display: "flex", alignItems: "center", gap: 5 }}>
-              {aberto ? "▾ ocultar" : `▸ ver ${tarefas.length} ${tarefas.length === 1 ? "tarefa" : "tarefas"}`}
-            </button>
-          )}
-        </div>
-
-        {aberto && tarefas.length > 0 && (
-          <div style={{ borderTop: `1px solid ${T.line}`, padding: "8px 14px 12px" }}>
-            {tarefas.map((tk) => {
-              const estado = estadosPorAtividade[tk.id];
-              const ch = estado === "concluida";
-              return (
-                <div key={tk.id} className="chk" style={{ display: "flex", alignItems: "flex-start", gap: 9, padding: "8px 0", opacity: estado === "ignorada" ? 0.45 : 1 }}>
-                  <span style={{ marginTop: 3, width: 15, height: 15, borderRadius: "50%", border: `2px solid ${ch ? T.green : T.line}`, background: ch ? T.green : "transparent", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 8, color: "#0A1622", fontWeight: 800 }}>{ch ? "✓" : ""}</span>
-                  <span style={{ flex: 1, display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
-                    <SubjDot disciplina={trilha.porCodigo[tk.disciplina_codigo]} /><Tag p={tk.prioridade} />
-                    <span style={{ fontSize: 13, color: ch ? T.sub : T.ink, textDecoration: ch ? "line-through" : "none", flexBasis: "100%" }}>{textoDaTarefa(tk.texto)}</span>
-                  </span>
-                </div>
-              );
-            })}
+        {aberto && (
+          <div id={idCorpo} style={{ borderTop: `1px solid ${T.line}` }}>
+            <TarefasDaSemana meta={meta} atividades={previstas} trilha={trilha}
+              podeEditar={podeEditar} aoMudar={aoMudar} aoPraticar={podeEditar ? aoPraticar : undefined} />
           </div>
         )}
-      </div>
+      </section>
     </div>
   );
 }

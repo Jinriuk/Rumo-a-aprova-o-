@@ -44,11 +44,32 @@ test.describe("aluno", { tag: ["@j:aluno", "@critica"] }, () => {
     expect(erros).toEqual([]);
   });
 
-  test("trilha: plano e missões do concurso do aluno", async ({ page }) => {
+  // Raio-x fase 2, PR 3: o Plano no lugar da Trilha
+  test("Plano: semanas em blocos, a atual aberta com as tarefas, as outras fechadas, concluídas recolhidas e missões abaixo", async ({ page }) => {
     const erros = coletarErros(page);
-    await irParaAba(page, "Trilha");
-    await expect(page.getByRole("heading", { name: "Trilha do concurso" })).toBeVisible();
-    await expect(page.getByRole("heading", { name: "Missões do seu concurso" })).toBeVisible();
+    await irParaAba(page, "Plano");
+    const atual = page.getByRole("button", { name: /Em andamento/ });
+    await expect(atual).toHaveAttribute("aria-expanded", "true");
+    const fechadas = page.getByRole("button", { name: /^Semana \d+\b.*(Encerrada|Próxima)/ });
+    expect(await fechadas.count(), "há outras semanas").toBeGreaterThan(0);
+    for (const b of await fechadas.all()) await expect(b).toHaveAttribute("aria-expanded", "false");
+    // dentro da atual: as pendentes com Concluir; as concluídas recolhidas
+    await expect(page.getByRole("button", { name: "✓ Concluir" }).first()).toBeVisible();
+    const recolhidas = page.getByRole("button", { name: /^\d+ concluídas?$/ });
+    if (await recolhidas.count()) {
+      await expect(page.getByRole("button", { name: "↺ Reabrir" })).toHaveCount(0);
+      await recolhidas.click();
+      await expect(page.getByRole("button", { name: "↺ Reabrir" }).first()).toBeVisible();
+    }
+    // uma semana fechada abre e mostra as tarefas dela, sem ações
+    const outra = fechadas.first();
+    await outra.click();
+    await expect(outra).toHaveAttribute("aria-expanded", "true");
+    const corpo = page.locator(`#${await outra.getAttribute("aria-controls")}`);
+    await expect(corpo.locator(".objective-row").first()).toBeVisible();
+    await expect(corpo.getByRole("button", { name: "✓ Concluir" })).toHaveCount(0);
+    // as missões por matéria, abaixo das semanas
+    await expect(page.getByRole("heading", { name: "Missão da vez" })).toBeVisible();
     expect(erros).toEqual([]);
   });
 
@@ -56,7 +77,9 @@ test.describe("aluno", { tag: ["@j:aluno", "@critica"] }, () => {
     const linha = page.getByRole("button", { name: /^Semana \d+ de \d+ · \d+ de \d+ tarefas?/ });
     const linhaAntes = await linha.innerText();
     await linha.click(); // a linha da semana leva ao Plano, onde moram as tarefas
-    const contador = page.getByText(/^\d+ de \d+ concluídas/).first();
+    // o bloco da semana atual: nasce aberto, com "X de Y tarefas" no cabeçalho
+    const atual = page.getByRole("button", { name: /Em andamento/, expanded: true });
+    const contador = atual.getByText(/^\d+ de \d+ tarefas?$/);
     await expect(contador).toBeVisible();
     const [antes] = await sql(
       `select count(*) filter (where ma.estado = 'concluida')::int as feitas
@@ -77,7 +100,7 @@ test.describe("aluno", { tag: ["@j:aluno", "@critica"] }, () => {
     await expect(botaoVisivel(page, "Hoje")).toBeVisible({ timeout: 15_000 });
     await expect(linha).not.toHaveText(linhaAntes, { timeout: 15_000 });
     await irParaAba(page, "Plano");
-    await expect(page.getByText(/^\d+ de \d+ concluídas/).first()).toHaveText(new RegExp(`^${depois.feitas} de ${textoAntes.match(/de (\d+)/)[1]} concluídas`), { timeout: 15_000 });
+    await expect(contador).toHaveText(new RegExp(`^${depois.feitas} de ${textoAntes.match(/de (\d+)/)[1]} tarefas?$`), { timeout: 15_000 });
   });
 
   test("registro de estudo: salva, aparece nos recentes e sobrevive ao refresh", async ({ page }) => {
@@ -234,10 +257,18 @@ test.describe("aluno", { tag: ["@j:aluno", "@critica"] }, () => {
 
   test("navega por todas as abas sem erro de console", async ({ page }) => {
     const erros = coletarErros(page);
-    for (const aba of ["Trilha", "Registrar", "Desempenho", "Simulados", "Conquistas", "Histórico", "Plano", "Hoje"]) {
+    // raio-x fase 2, PR 3: a ordem nova; Trilha e Conquistas fora do menu
+    const menu = page.getByRole("navigation").filter({ has: botaoVisivel(page, "Hoje") }).first();
+    for (const fora of ["Trilha", "Conquistas"]) await expect(menu.getByRole("button", { name: fora, exact: true })).toHaveCount(0);
+    for (const aba of ["Plano", "Registrar", "Desempenho", "Simulados", "Histórico", "Hoje"]) {
       await irParaAba(page, aba);
     }
     await expect(botaoVisivel(page, "Hoje")).toBeVisible();
+    // Conquistas abre pelo XP do topo do Hoje e volta
+    await page.locator(".player-rank").click();
+    await expect(page.getByText(/Evolução de patentes/)).toBeVisible();
+    await page.getByRole("button", { name: "← Voltar ao Hoje" }).click();
+    await expect(page.getByRole("region", { name: "Sua missão agora" })).toBeVisible();
     await semEstouroHorizontal(page);
     expect(erros).toEqual([]);
   });

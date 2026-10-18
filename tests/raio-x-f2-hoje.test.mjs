@@ -82,13 +82,13 @@ test("mudança 3: o item da semana que diz 'Missão:' é um estudo; o título é
 
 test("o Hoje tem uma ação: cartão da missão da vez e linha da semana; lista de missões, tarefas e radar saíram", () => {
   const visao = semComentarios(ler("app/src/routes/aluno/VisaoEstudo.jsx"));
-  const hoje = visao.slice(visao.indexOf('tab === "hoje" && ('), visao.indexOf('tab === "concurso" && ('));
+  const hoje = visao.slice(visao.indexOf('tab === "hoje" && ('), visao.indexOf('tab === "registrar" && podeEditar'));
   assert.match(hoje, /<MissaoDaVez acao=\{acao\}/);
   assert.match(hoje, /<LinhaDaSemana resumo=\{resumoDaSemana\(meta, trilha\)\} aoAbrir=\{\(\) => irAba\("plano"\)\} \/>/);
   assert.doesNotMatch(hoje, /<MissoesPersistidas|<MetaSemana|<MissaoAtual|RadarDesempenho/);
   assert.match(hoje, /\) : !resolvendo && \(/, "a sessão de questões abre no lugar do cartão");
   const plano = visao.slice(visao.indexOf('tab === "plano" && ('));
-  assert.match(plano, /<MetaSemana meta=\{meta\}/, "Concluir/Adiar vão para o Plano");
+  assert.match(plano, /<Plano [^>]*podeEditar=\{podeEditar\} aoMudar=\{recarregar\}/, "Concluir/Adiar vão para o Plano");
   assert.match(plano, /<MissoesPersistidas /);
   assert.match(visao, /k === "plano" && podeEditar && pendentes > 0/, "o número de pendentes vai com as tarefas");
   const hero = semComentarios(ler("app/src/modules/motor/MetaHero.jsx"));
@@ -104,4 +104,28 @@ test("o botão do cartão: questões ligadas → Resolver questões; sem → Reg
   assert.match(card, /disabled=\{carregando\} aria-busy=\{carregando \|\| undefined\}/);
   assert.equal((card.match(/<button /g) ?? []).length, 2, "um botão no cartão, outro na linha da semana");
   assert.match(card, /\$\{mi\.questoes\} de \$\{mi\.meta_questoes\} questões/);
+});
+
+// PR 3: o Plano no lugar da Trilha, para o aluno
+test("abas do aluno: Hoje, Plano, Registrar, Desempenho, Simulados e Histórico por último; Conquistas pelo XP", () => {
+  const visao = semComentarios(ler("app/src/routes/aluno/VisaoEstudo.jsx"));
+  const bloco = visao.slice(visao.indexOf("const ABAS = ["), visao.indexOf("].filter", visao.indexOf("const ABAS = [")));
+  assert.deepEqual([...bloco.matchAll(/\["([a-z]+)", "/g)].map((m) => m[1]), ["hoje", "plano", "registrar", "desempenho", "simulados", "historico"]);
+  assert.doesNotMatch(visao, /<TrilhaConcurso|tab === "concurso"/, "a Trilha sai para o aluno");
+  assert.match(visao, /aoAbrirConquistas=\{\(\) => irAba\("conquistas"\)\}/, "o XP do topo abre as conquistas");
+  assert.match(visao, /tab === "conquistas" && m && \([\s\S]*?← Voltar ao Hoje/);
+  // a coordenação continua com a visão dela (ficha + trilha do concurso)
+  assert.match(ler("app/src/modules/desempenho/FichaAluno.jsx"), /<TrilhaConcurso /);
+});
+
+test("Plano: semanas em blocos (a atual aberta), tarefas dentro, Concluir só na atual, missões abaixo", () => {
+  const visao = semComentarios(ler("app/src/routes/aluno/VisaoEstudo.jsx"));
+  assert.match(visao, /const \[aberto, setAberto\] = useState\(isNow\);/, "a atual nasce aberta, as outras fechadas");
+  assert.match(visao, /aria-expanded=\{aberto\} aria-controls=\{idCorpo\}/);
+  assert.match(visao, /<TarefasDaSemana meta=\{meta\} atividades=\{previstas\}/);
+  assert.match(visao, /podeEditar=\{podeEditar && w\.numero === meta\?\.semana_numero && meta\?\.status === "ativa"\}/);
+  assert.match(visao, /const metaPorSemana = Object\.fromEntries\(\(metas \?\? \[\]\)\.map\(\(x\) => \[x\.semana_numero, x\]\)\);/,
+    "semana passada mostra o que foi feito nela, não o estado da atual");
+  const plano = visao.slice(visao.indexOf("function Plano("), visao.indexOf("function BlocoSemana("));
+  assert.ok(plano.indexOf("trilha.semanas.map") < plano.indexOf("{children}"), "missões depois das semanas");
 });

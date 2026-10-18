@@ -1,85 +1,36 @@
-/* "Objetivos da semana" — a lista de atividades da missão, redesenhada
-   (ref. designs): título em destaque; disciplina, prioridade e XP como
-   info secundária; ação principal CONCLUIR e secundária ADIAR. Menos
-   poluição: um único selo de prioridade, sem estrelas concorrendo.
-   Quem GERA a meta é o servidor; aqui o aluno só marca. */
+/* As tarefas da semana (antes "Objetivos da semana"): título em destaque;
+   disciplina, prioridade e XP como info secundária; ação principal
+   CONCLUIR e secundária ADIAR. Um único selo de prioridade, sem estrelas
+   concorrendo. Quem GERA a meta é o servidor; aqui o aluno só marca. */
 import React, { useState } from "react";
-import { SectionCard, EmptyState, Erro, StatusBadge } from "../../shared/ui/componentes.jsx";
+import { Erro, StatusBadge } from "../../shared/ui/componentes.jsx";
 import { useTema } from "../../shared/branding/BrandingContext.jsx";
 import { L, PRIORIDADE, xpPorPrioridade, questoesSugeridas } from "./jargao.js";
 import { contextoRegistroDaAtividade, textoDaTarefa } from "./jornada.js";
 import { mensagemAmigavel } from "../../shared/lib/erros.js";
 import * as db from "../../shared/data/index.js";
 
-export function MetaSemana({ meta, trilha, podeEditar, aoMudar, aoAbrirDesempenho, aoPraticar, compacta = false }) {
+/* Raio-x fase 2, PR 3 (decisões de 18/10): as tarefas moram dentro do
+   bloco de cada semana no Plano. Pendentes e adiadas à vista; concluídas
+   recolhidas em "X concluídas". `meta` é a meta daquela semana; semana que
+   ainda não começou não tem meta, e a lista mostra o previsto
+   (`atividades` da trilha), sem estado. Só a semana atual edita. */
+export function TarefasDaSemana({ meta = null, atividades = [], trilha, podeEditar = false, aoMudar, aoPraticar }) {
   const T = useTema();
   const [erro, setErro] = useState(null);
   const [ocupado, setOcupado] = useState(null);
-  const [mostrarTodos, setMostrarTodos] = useState(false);
+  const [verFeitas, setVerFeitas] = useState(false);
 
-  if (!meta) {
-    return (
-      <SectionCard titulo={L.objetivos}>
-        <EmptyState icone="⚓" titulo="Nenhuma tarefa ainda" dica="As tarefas da semana nascem no servidor, na virada. Elas aparecem aqui automaticamente." />
-      </SectionCard>
-    );
-  }
-
-  const itens = (meta.meta_atividades ?? [])
-    .map((ma) => ({ ...ma, atividade: trilha.atividadesPorId[ma.atividade_modelo_id] }))
+  const itens = (meta
+    ? (meta.meta_atividades ?? []).map((ma) => ({ ...ma, atividade: trilha.atividadesPorId[ma.atividade_modelo_id] }))
+    : atividades.map((at) => ({ id: at.id, estado: null, atividade: at })))
     .filter((x) => x.atividade)
-    .sort((a, b) => {
-      // pendentes primeiro, cumpridos no fim, adiados antes dos cumpridos
-      const ordem = { pendente: 0, ignorada: 1, concluida: 2 };
-      return (ordem[a.estado] - ordem[b.estado]) || (a.atividade.ordem - b.atividade.ordem);
-    });
+    .sort((a, b) => (a.atividade.ordem ?? 0) - (b.atividade.ordem ?? 0));
+  const abertas = itens.filter((x) => x.estado !== "concluida");
+  const feitas = itens.filter((x) => x.estado === "concluida");
 
-  const feitas = itens.filter((x) => x.estado === "concluida").length;
-  const consideradas = itens.filter((x) => x.estado !== "ignorada").length;
-  const adiados = itens.length - consideradas;
-  // T18: o cabeçalho ("X de Y concluídos") usava `consideradas` (exclui
-  // adiados, correto pra fração de conclusão) enquanto "Ver todos os N
-  // objetivos" (abaixo) usa `itens.length` (inclui adiados). Com pelo
-  // menos 1 adiado, os dois números nunca batiam. Em vez de igualar as
-  // bases (esconderia o adiado do cabeçalho, ou incluiria no numerador
-  // errado), o cabeçalho passa a citar os adiados explicitamente — os
-  // dois números aparecem, e dá pra somar de cabeça e ver que fecham.
-  const subObjetivos = `${feitas} de ${consideradas} concluídas${adiados > 0 ? ` · ${adiados} ${adiados === 1 ? "adiada" : "adiadas"}` : ""}`;
-
-  // Semana 100% concluída: mostrar card de parabenização com próximos passos
-  if (podeEditar && consideradas > 0 && feitas >= consideradas) {
-    return (
-      <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-        <div style={{ background: `linear-gradient(135deg, ${T.green}22, ${T.card})`, border: `1.5px solid ${T.green}66`, borderRadius: 14, padding: "16px" }}>
-          <div style={{ fontSize: 20, marginBottom: 6 }}>🎯</div>
-          <div className="disp" style={{ fontSize: 16, fontWeight: 800, color: T.green }}>Semana concluída!</div>
-          <div style={{ fontSize: 13, color: T.sub, marginTop: 5, lineHeight: 1.5 }}>
-            Você cumpriu {feitas === 1 ? "a tarefa" : `as ${feitas} tarefas`} desta semana.
-          </div>
-          <div style={{ display: "flex", gap: 10, marginTop: 14, flexWrap: "wrap" }}>
-            {aoAbrirDesempenho && (
-              <button type="button" onClick={aoAbrirDesempenho}
-                style={{ border: `1px solid ${T.gold}`, background: `${T.gold}14`, color: T.gold, borderRadius: 9, fontWeight: 700, fontSize: 13, padding: "10px 16px", minHeight: 42 }}>
-                Ver meu desempenho
-              </button>
-            )}
-          </div>
-          <div style={{ fontSize: 11.5, color: T.sub, marginTop: 12, lineHeight: 1.4, borderTop: `1px solid ${T.line}`, paddingTop: 10 }}>
-            💡 <b>Próximos passos sugeridos:</b> revise matérias com acerto abaixo de 60%, faça questões extras ou aguarde a próxima semana começar.
-          </div>
-        </div>
-        {/* ainda mostra a lista completa abaixo do card, para referência */}
-        <SectionCard titulo={L.objetivos} sub={subObjetivos} semPadding>
-          <div style={{ display: "flex", flexDirection: "column" }}>
-            {itens.map((item, i) => (
-              <ObjetivoItem key={item.id} item={item} trilha={trilha} podeEditar={false}
-                ocupado={false} ultimo={i === itens.length - 1}
-                aoConcluir={() => {}} aoAdiar={() => {}} aoPraticar={() => {}} />
-            ))}
-          </div>
-        </SectionCard>
-      </div>
-    );
+  if (!itens.length) {
+    return <div style={{ fontSize: 12.5, color: T.sub, padding: "6px 0" }}>Nenhuma tarefa nesta semana.</div>;
   }
 
   async function mudar(item, novo) {
@@ -91,36 +42,33 @@ export function MetaSemana({ meta, trilha, podeEditar, aoMudar, aoAbrirDesempenh
     } catch (e) { setErro(mensagemAmigavel(e, "acao")); }
     setOcupado(null);
   }
-
-  const limite = compacta && !mostrarTodos ? 3 : null;
-  const praticaveis = itens.filter((item) => item.estado === "pendente");
-  // A prévia da tela inicial mostra o que dá para praticar agora. Quando
-  // não há nenhum pendente (semana toda adiada, por exemplo) ela cai na
-  // lista inteira: um cartão de objetivos vazio esconderia o que existe.
-  const previa = praticaveis.length > 0 ? praticaveis : itens;
-  const visiveis = limite == null ? itens : previa.slice(0, limite);
-  const ocultos = Math.max(0, itens.length - visiveis.length);
+  const linha = (item, ultimo) => (
+    <ObjetivoItem key={item.id} item={item} trilha={trilha} podeEditar={podeEditar}
+      ocupado={ocupado === item.id} ultimo={ultimo}
+      aoPraticar={aoPraticar ? () => aoPraticar(contextoRegistroDaAtividade(item, trilha)) : undefined}
+      aoConcluir={() => mudar(item, item.estado === "concluida" ? "pendente" : "concluida")}
+      aoAdiar={() => mudar(item, item.estado === "ignorada" ? "pendente" : "ignorada")} />
+  );
 
   return (
-    <SectionCard titulo={L.objetivos} sub={subObjetivos} semPadding>
-      <div style={{ display: "flex", flexDirection: "column" }}>
-        {visiveis.map((item, i) => (
-          <ObjetivoItem key={item.id} item={item} trilha={trilha} podeEditar={podeEditar}
-            ocupado={ocupado === item.id} ultimo={i === visiveis.length - 1 && ocultos === 0}
-            aoPraticar={() => aoPraticar?.(contextoRegistroDaAtividade(item, trilha))}
-            aoConcluir={() => mudar(item, item.estado === "concluida" ? "pendente" : "concluida")}
-            aoAdiar={() => mudar(item, item.estado === "ignorada" ? "pendente" : "ignorada")} />
-        ))}
-      </div>
-      {ocultos > 0 && (
+    <div style={{ display: "flex", flexDirection: "column" }}>
+      {abertas.map((item, i) => linha(item, i === abertas.length - 1 && !feitas.length))}
+      {!abertas.length && (
+        <div style={{ fontSize: 13, color: T.green, fontWeight: 600, padding: "10px 14px" }}>
+          ✓ Todas as tarefas desta semana estão concluídas.
+        </div>
+      )}
+      {feitas.length > 0 && (
         <div className="objective-list-more">
-          <button type="button" onClick={() => setMostrarTodos(true)}>
-            Ver todas as {itens.length} tarefas <span aria-hidden="true">↓</span>
+          <button type="button" aria-expanded={verFeitas} onClick={() => setVerFeitas((v) => !v)}>
+            {verFeitas ? "Ocultar concluídas" : `${feitas.length} ${feitas.length === 1 ? "concluída" : "concluídas"}`}
+            <span aria-hidden="true"> {verFeitas ? "↑" : "↓"}</span>
           </button>
         </div>
       )}
+      {verFeitas && feitas.map((item, i) => linha(item, i === feitas.length - 1))}
       {erro && <div style={{ padding: "0 14px 12px" }}><Erro>{erro}</Erro></div>}
-    </SectionCard>
+    </div>
   );
 }
 

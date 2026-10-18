@@ -60,13 +60,14 @@ test("BLOCO1: .menu-rolagem agora tem uma barra visível (Firefox e WebKit/Blink
   assert.match(src, /\.menu-rolagem::-webkit-scrollbar-thumb\s*\{\s*background:/, "sem thumb visível");
 });
 
-test("BLOCO1: aluno (8 abas) e coordenação (6, 'marca' por último) — a lista rola dentro do mesmo container sem paginação própria", () => {
+test("BLOCO1: aluno (6 abas desde o raio-x fase 2) e coordenação (6, 'marca' por último) — a lista rola dentro do mesmo container sem paginação própria", () => {
   // Confirma que a premissa do defeito (contagem de abas) continua batendo
   // com o catálogo — se um dev reduzir/mudar a lista, este teste avisa.
   const visao = lerCodigo("app/src/routes/aluno/VisaoEstudo.jsx");
   const abasAluno = visao.match(/const ABAS = \[([\s\S]*?)\]\.filter/)?.[1] ?? "";
   const contagemAluno = (abasAluno.match(/\[["']/g) ?? []).length;
-  assert.equal(contagemAluno, 8, "VisaoEstudo não tem mais 8 abas — reavaliar se I1/I7 ainda se aplicam");
+  // raio-x fase 2, PR 3: Trilha e Conquistas saíram do menu do aluno
+  assert.equal(contagemAluno, 6, "VisaoEstudo não tem mais 6 abas — reavaliar se I1/I7 ainda se aplicam");
 
   const escola = lerCodigo("app/src/routes/escola/AreaEscola.jsx");
   const abasEscola = escola.match(/const ABAS = \[([\s\S]*?)\];/)?.[1] ?? "";
@@ -130,11 +131,11 @@ test("BLOCO3: Conquistas.jsx — 'Ver carreira completa' e 'Ver mais/menos' por 
   assert.match(m2[1], /minHeight:\s*32/, "'Ver mais/menos' por grupo sem minHeight");
 });
 
-test("BLOCO3: VisaoEstudo.jsx — botão 'ver N objetivos' tem alvo de toque real", () => {
+test("BLOCO3: VisaoEstudo.jsx — o cabeçalho que abre a semana no Plano tem alvo de toque real", () => {
   const src = lerCodigo("app/src/routes/aluno/VisaoEstudo.jsx");
   const m = src.match(/onClick=\{\(\) => setAberto\(\(v\) => !v\)\}\s*\n\s*style=\{\{([^}]*)\}\}/);
-  assert.ok(m, "não achei o botão de expandir objetivos");
-  assert.match(m[1], /minHeight:\s*32/, "sem minHeight — antes era padding: \"4px 0\" só");
+  assert.ok(m, "não achei o botão de abrir a semana");
+  assert.match(m[1], /minHeight:\s*(3[2-9]|4\d)/, "sem minHeight — antes era padding: \"4px 0\" só");
 });
 
 test("BLOCO3: Acumulado.jsx — toggle Tempo/Questões tem alvo de toque real", () => {

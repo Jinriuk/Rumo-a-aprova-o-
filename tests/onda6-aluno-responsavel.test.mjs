@@ -168,16 +168,15 @@ test("T16: Arquivo.jsx usa o StatusBadge compartilhado para os selos de estado d
 });
 
 // ── T18: cabeçalho da meta cita os adiados explicitamente ────────────────────
-test("T18: MetaSemana.jsx computa 'adiados' e o cabeçalho cita os dois números que fecham", () => {
-  const codigo = src("app/src/modules/motor/MetaSemana.jsx");
-  assert.match(codigo, /const adiados = itens\.length - consideradas;/, "precisa existir a contagem explícita de adiados");
-  assert.match(
-    codigo,
-    /const subObjetivos = `\$\{feitas\} de \$\{consideradas\} concluídas\$\{adiados > 0 \? ` · \$\{adiados\} \$\{adiados === 1 \? "adiada" : "adiadas"\}` : ""\}`;/,
-    "subObjetivos precisa citar os adiados quando existirem",
-  );
-  const usos = codigo.match(/sub=\{subObjetivos\}/g) ?? [];
-  assert.equal(usos.length, 2, "os dois SectionCard (semana concluída e lista normal) precisam usar subObjetivos");
+// T18 revisto no raio-x fase 2, PR 3: a lista da semana mora no bloco da
+// semana no Plano. A contagem "X de Y tarefas" tira as adiadas do total (a
+// mesma conta da linha do Hoje), e a adiada continua à vista na lista.
+test("T18: o bloco da semana conta sem as adiadas e a lista mantém a adiada à vista", () => {
+  const visao = src("app/src/routes/aluno/VisaoEstudo.jsx");
+  assert.match(visao, /const consideradas = itens\.filter\(\(x\) => x\.estado !== "ignorada"\)\.length;/);
+  assert.match(visao, /`\$\{feitas\} de \$\{consideradas\} \$\{consideradas === 1 \? "tarefa" : "tarefas"\}`/);
+  const lista = src("app/src/modules/motor/MetaSemana.jsx");
+  assert.match(lista, /const abertas = itens\.filter\(\(x\) => x\.estado !== "concluida"\);/, "adiada não some: fica com as abertas");
 });
 
 // ── T19 + T20: responsável — sem duplicar texto, com detalhe do que falta ────
