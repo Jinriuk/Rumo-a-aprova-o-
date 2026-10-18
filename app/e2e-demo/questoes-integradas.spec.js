@@ -8,11 +8,16 @@
    antes da 0067 o pedido logo depois de uma busca cheia recebia "Não há
    questão nova" (17/10, 22:35).
    Ver playwright.demo.config.js para rodar. Gasta créditos da Quest se a
-   missão não tiver estoque guardado (a 0067 busca até 20 de uma vez). */
+   missão não tiver estoque guardado (a 0067 busca até 20 de uma vez).
+   Só com conta descartável (código E2E…, escola de teste): com conta da
+   vitrine o teste se recusa a rodar (e2e-demo/_contas.js). Se falhar
+   depois da troca de senha, a senha nova se perdeu com o processo: apague
+   a conta e crie outra. */
 import { test, expect } from "@playwright/test";
 import { mkdirSync } from "node:fs";
 import { randomBytes } from "node:crypto";
 import { transporteDemo } from "./_transporte.js";
+import { recusaCodigoDoDemo, recusarEscolaDaVitrine } from "./_contas.js";
 
 const MISSAO = "Organização administrativa: direta, indireta e delegação";
 const SAIDA = process.env.DEMO_SAIDA || "e2e-demo-resultados";
@@ -38,6 +43,8 @@ async function responderLote(page, { total, aoMeio }) {
 
 test("celular: Iniciar missão abre as questões, escolhe 5 e segue lote a lote até a meta", async ({ page }) => {
   test.skip(!process.env.DEMO_ALUNO_CODIGO || !process.env.DEMO_ALUNO_SENHA, "sem aluno de teste do demo");
+  const recusa = recusaCodigoDoDemo(process.env.DEMO_ALUNO_CODIGO);
+  if (recusa) throw new Error(`Recusado: ${recusa}. Este teste troca a senha e fecha missão; use uma conta descartável.`);
   test.setTimeout(600_000);
   mkdirSync(SAIDA, { recursive: true });
   const entregas = [];
@@ -63,6 +70,7 @@ test("celular: Iniciar missão abre as questões, escolhe 5 e segue lote a lote 
   const gate = page.getByText("Escolha sua senha");
   const cartao = page.locator("li").filter({ hasText: MISSAO }).first();
   await expect(gate.or(cartao)).toBeVisible({ timeout: 45_000 });
+  await recusarEscolaDaVitrine(page);   // antes de trocar a senha
   if (await gate.isVisible()) {
     const nova = `Nova-7${randomBytes(9).toString("base64url")}`;
     await page.getByLabel("Nova senha", { exact: true }).fill(nova);

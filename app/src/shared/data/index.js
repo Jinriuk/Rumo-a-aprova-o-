@@ -777,13 +777,16 @@ async function invocar(fn, body) {
 /* ---------- P1.1: questões integradas (Quest) ---------- */
 
 // Missões do próprio aluno com questões integradas ligadas (0065). Sem a
-// 0065 no ambiente, ou em qualquer falha, devolve vazio: o botão não
-// aparece e o registro manual segue igual.
+// 0065 no ambiente (a função não existe) devolve vazio: resposta certa,
+// "nenhuma missão tem questões". Outra falha (rede, 5xx) devolve null: não
+// deu para saber, e quem chama não pode tratar isso como "sem questões"
+// (18/10, achado 5 do #192: "Iniciar missão" mandava ao registro).
+const SEM_FUNCAO_QUEST = new Set(["PGRST202", "42883"]);
 export async function missoesComQuestoesIntegradas() {
   const { data, error } = await supabase.rpc("quest_missoes_disponiveis");
   if (error) {
     console.warn("questões integradas indisponíveis neste ambiente:", error.message);
-    return new Set();
+    return SEM_FUNCAO_QUEST.has(error.code) ? new Set() : null;
   }
   return new Set((data ?? []).map((x) => (typeof x === "string" ? x : x?.quest_missoes_disponiveis)).filter(Boolean));
 }

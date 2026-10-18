@@ -11,6 +11,7 @@ import { test, expect } from "@playwright/test";
 import { mkdirSync } from "node:fs";
 import { randomBytes } from "node:crypto";
 import { transporteDemo } from "./_transporte.js";
+import { recusarEscolaDaVitrine } from "./_contas.js";
 
 const MISSAO = "Organização administrativa: direta, indireta e delegação";
 const SAIDA = process.env.DEMO_SAIDA || "e2e-demo-resultados";
@@ -32,6 +33,8 @@ test("coordenação cadastra aluno PMERJ, gera credencial e o aluno resolve 5 qu
   await coord.getByLabel("Senha", { exact: true }).fill(senhaCoord);
   await coord.getByRole("button", { name: /^Entrar na missão/ }).click();
   await expect(coord.getByText("Painel de gestão")).toBeVisible({ timeout: 45_000 });
+  // cadastra aluno na escola da coordenação: nunca na vitrine
+  await recusarEscolaDaVitrine(coord);
   await coord.getByRole("button", { name: /^Alunos(\s+\d+)?$/ }).filter({ visible: true }).first().click();
   await coord.getByRole("button", { name: /Cadastrar alunos/ }).click();
   await coord.getByLabel("Nome do aluno", { exact: true }).fill(nome);

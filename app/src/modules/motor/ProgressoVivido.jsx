@@ -8,7 +8,7 @@ import React, { useEffect, useRef } from "react";
 import { SectionCard, StatusBadge, BarraXP, Erro } from "../../shared/ui/componentes.jsx";
 import { useTema } from "../../shared/branding/BrandingContext.jsx";
 import { resumoRegistroConfirmado, contextoRegistroDaMissao } from "./jornada.js";
-import { podeResolverAqui } from "./questoesIntegradas.js";
+import { podeResolverAqui, destinoDoInicio } from "./questoesIntegradas.js";
 
 const tempoConfirmado = (minutos) => {
   if (minutos == null) return null;
@@ -223,17 +223,26 @@ export function MissoesPersistidas({ fila = [], disciplinas = [], aoPraticar, co
                       {/* 18/10: "Iniciar missão" é um botão só. Com questões
                           ligadas pelo servidor, abre a sessão de questões; sem,
                           segue para o registro da missão, como antes. Com
-                          questões, o registro à mão fica como link secundário. */}
+                          questões, o registro à mão fica como link secundário.
+                          Enquanto a lista do servidor não chega, carrega
+                          (destinoDoInicio). */}
                       {!coordenacao && (mi.estado === "atual" || mi.proxima) && (() => {
-                        const comQuestoes = aoResolver && !inalcancavel && podeResolverAqui(mi, questoesIntegradas);
-                        if (!comQuestoes && !aoPraticar) return null;
+                        const destino = destinoDoInicio(mi, questoesIntegradas, { podeResolver: !!aoResolver && !inalcancavel });
+                        if (destino === "registro" && !aoPraticar) return null;
+                        const carregando = destino === "carregando";
+                        const iniciar = () => {
+                          if (destino === "questoes") aoResolver(mi, "missao");
+                          else if (destino === "registro") aoPraticar(contextoRegistroDaMissao(mi, "missao"));
+                        };
                         return (
                           <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap", marginTop: 8 }}>
-                            <button type="button" className="journey-use-suggestion"
-                              onClick={() => (comQuestoes ? aoResolver(mi, "missao") : aoPraticar(contextoRegistroDaMissao(mi, "missao")))}>
+                            <button type="button" className="journey-use-suggestion" onClick={iniciar}
+                              disabled={carregando} aria-busy={carregando || undefined}
+                              style={carregando ? { opacity: 0.6, cursor: "progress" } : undefined}>
                               Iniciar missão
                             </button>
-                            {comQuestoes && aoPraticar && (
+                            {carregando && <span role="status" style={{ fontSize: 12, color: T.sub }}>Carregando…</span>}
+                            {destino !== "registro" && aoPraticar && (
                               <button type="button" onClick={() => aoPraticar(contextoRegistroDaMissao(mi, "missao"))}
                                 style={{ background: "none", border: "none", padding: 0, color: T.sub, fontSize: 12, textDecoration: "underline", cursor: "pointer" }}>
                                 Registrar à mão
