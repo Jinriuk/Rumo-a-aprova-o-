@@ -4,10 +4,10 @@
    foi persistido (ledger de XP, missões fechadas, conquistas) e dá
    ao aluno o retorno no momento da ação.
    ============================================================ */
-import React, { useEffect, useRef } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { SectionCard, StatusBadge, BarraXP, Erro } from "../../shared/ui/componentes.jsx";
 import { useTema } from "../../shared/branding/BrandingContext.jsx";
-import { resumoRegistroConfirmado, contextoRegistroDaMissao } from "./jornada.js";
+import { resumoRegistroConfirmado, contextoRegistroDaMissao, nomeDaMateria } from "./jornada.js";
 import { podeResolverAqui, destinoDoInicio } from "./questoesIntegradas.js";
 
 const tempoConfirmado = (minutos) => {
@@ -125,7 +125,6 @@ export function FeedbackProgresso({ feedback, aoFechar }) {
   );
 }
 
-const ROTULO_MATERIA = { mat: "Matemática", por: "Português", ing: "Inglês", fis: "Física", qui: "Química", bio: "Biologia", his: "História", geo: "Geografia", red: "Redação", soc: "Estudos Sociais" };
 
 /* Fila de missões do aluno, por matéria, como o motor da 0061 a vê:
    concluídas, a atual e as próximas ("a seguir"), na ordem do catálogo.
@@ -151,16 +150,24 @@ const ROTULO_MATERIA = { mat: "Matemática", por: "Português", ing: "Inglês", 
    `questoesIntegradas` não tem valor padrão: undefined é "ainda carregando"
    e null é "não deu para saber" (destinoDoInicio); um `= null` aqui
    transformava o carregando em "abre a sessão". */
-export function MissoesPersistidas({ fila = [], disciplinas = [], aoPraticar, compacta = false, questoesIntegradas, aoResolver }) {
+export function MissoesPersistidas({ fila = [], disciplinas = [], nomesMateria = null, aoPraticar, compacta = false, questoesIntegradas, aoResolver }) {
   const T = useTema();
+  // compacto: as concluídas ficam recolhidas, mas a revisão delas continua a
+  // um toque (o "Registrar revisão" só existe no cartão da concluída)
+  const [verConcluidas, setVerConcluidas] = useState(false);
   const registraveis = new Set((disciplinas ?? []).map((d) => d.codigo));
   const podeRegistrar = (cod) => registraveis.size === 0 || !cod || registraveis.has(cod);
   const todasDaFila = fila.flatMap((g) => g.missoes);
+  const concluidasRecolhidas = !compacta ? [] : fila
+    .flatMap((g) => (podeRegistrar(g.materia_codigo) ? g.missoes.filter((mi) => mi.estado === "concluida") : []));
   const grupos = !compacta ? fila : fila
-    .map((g) => ({ ...g, missoes: podeRegistrar(g.materia_codigo) ? g.missoes.filter((mi) => mi.estado === "atual" || mi.proxima).slice(0, 1) : [] }))
+    .map((g) => ({ ...g, missoes: podeRegistrar(g.materia_codigo) ? [
+      ...(verConcluidas ? g.missoes.filter((mi) => mi.estado === "concluida") : []),
+      ...g.missoes.filter((mi) => mi.estado === "atual" || mi.proxima).slice(0, 1),
+    ] : [] }))
     .filter((g) => g.missoes.length > 0);
   const todas = grupos.flatMap((g) => g.missoes);
-  if (!todas.length) return null;
+  if (!todas.length && !concluidasRecolhidas.length) return null;
   const fechadas = todasDaFila.filter((m) => m.estado === "concluida").length;
   const ROTULO_ESTADO = { concluida: "✓ Concluída", atual: "Atual", a_seguir: "A seguir" };
   const TOM_ESTADO = { concluida: "ok", atual: "alerta", a_seguir: "neutro" };
@@ -172,7 +179,7 @@ export function MissoesPersistidas({ fila = [], disciplinas = [], aoPraticar, co
         : `${fechadas} de ${todasDaFila.length} concluída${fechadas === 1 ? "" : "s"} — uma por vez em cada matéria; contam as práticas que você registra pelo botão da missão.`}>
       <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
         {grupos.map(({ materia_codigo: cod, missoes }) => {
-          const materia = ROTULO_MATERIA[cod] ?? cod ?? "";
+          const materia = nomeDaMateria(cod, nomesMateria);
           const inalcancavel = !podeRegistrar(cod);
           return (
             <div key={cod}>
@@ -273,6 +280,14 @@ export function MissoesPersistidas({ fila = [], disciplinas = [], aoPraticar, co
             </div>
           );
         })}
+        {concluidasRecolhidas.length > 0 && (
+          <button type="button" aria-expanded={verConcluidas} onClick={() => setVerConcluidas((v) => !v)}
+            style={{ alignSelf: "flex-start", background: "none", border: "none", padding: "6px 0", minHeight: 36, color: T.sub, fontSize: 12.5, fontWeight: 600, cursor: "pointer" }}>
+            {verConcluidas
+              ? "▾ Ocultar concluídas"
+              : `▸ ${concluidasRecolhidas.length} ${concluidasRecolhidas.length === 1 ? "concluída" : "concluídas"} · revisar`}
+          </button>
+        )}
       </div>
     </SectionCard>
   );

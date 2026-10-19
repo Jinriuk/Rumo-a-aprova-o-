@@ -506,19 +506,6 @@ textarea:focus-visible,
   animation: mission-impact 1.35s cubic-bezier(.2,.75,.2,1) 1 both;
 }
 
-.today-preference {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 10px;
-  padding-top: 2px;
-  color: var(--ui-sub);
-  font-size: 10.5px;
-}
-.today-preference > button { display: inline-flex; min-height: 34px; align-items: center; gap: 7px; padding: 6px 11px; border: 1px solid var(--ui-line); border-radius: 999px; color: var(--ui-sub); background: transparent; font-size: 11px; font-weight: 700; }
-.today-preference > button[aria-pressed="true"] { color: var(--ui-accent); border-color: var(--ui-accent); background: color-mix(in srgb, var(--ui-accent) 7%, transparent); }
-.today-preference i { width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
-
 @keyframes journey-context-enter {
   from { opacity: 0; transform: translateY(-12px) scale(.975); clip-path: inset(42% 5% 42% 5% round 14px); }
   to { opacity: 1; transform: none; clip-path: inset(0 round 14px); }
@@ -545,7 +532,6 @@ textarea:focus-visible,
   .journey-confirmation-facts > span:nth-child(-n+2) { border-bottom: 1px solid var(--ui-line); }
   .journey-confirmation-actions { flex-direction: column; }
   .journey-confirmation-objective { padding: 12px; }
-  .today-preference { flex-wrap: wrap; }
 }
 
 /* ============================================================

@@ -36,8 +36,8 @@ test("S1: a tela pública de login não exibe o código de credencial do seed", 
   );
   assert.match(
     login,
-    /placeholder="Ex\.: [A-Z0-9]+"/,
-    "o campo continua com um exemplo de formato, só que fictício",
+    /placeholder="Ex\.: [A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{4}"/,
+    "o campo continua com um exemplo fictício, no formato real do código (XXXX-XXXX-XXXX, provisionar-aluno)",
   );
 });
 

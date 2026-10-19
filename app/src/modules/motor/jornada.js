@@ -1,5 +1,14 @@
 import { questoesSugeridas } from "./jargao.js";
 
+const ROTULO_MATERIA = { mat: "Matemática", por: "Português", ing: "Inglês", fis: "Física", qui: "Química", bio: "Biologia", his: "História", geo: "Geografia", red: "Redação", soc: "Estudos Sociais" };
+
+/* Raio-x, mudança 8: nome da matéria, nunca o código cru ("DIR_ADM").
+   `nomes` = trilha + catálogo `materias` (VisaoEstudo); o mapa fixo cobre
+   os concursos antigos quando o catálogo não respondeu. */
+export function nomeDaMateria(codigo, nomes = null) {
+  return nomes?.[codigo] ?? ROTULO_MATERIA[codigo] ?? "Outra matéria";
+}
+
 /* Contrato puro da jornada UXG2. O contexto vive apenas na navegação:
    não altera o schema e não finge que o registro está vinculado à
    meta_atividade no banco. */
@@ -63,7 +72,7 @@ export function resumoRegistroConfirmado(registro, porCodigo = {}) {
   const temAcertos = registro.acertos !== null && registro.acertos !== undefined;
   const acertos = temAcertos ? Number(registro.acertos) : null;
   return {
-    materia: porCodigo[registro.disciplina_codigo]?.nome ?? registro.disciplina_codigo ?? "Matéria",
+    materia: porCodigo[registro.disciplina_codigo]?.nome ?? "Matéria",
     topico: registro.topico || "Estudo registrado",
     questoes,
     acertos,

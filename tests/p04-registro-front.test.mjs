@@ -16,7 +16,7 @@ import { readFileSync } from "node:fs";
 import { resolve, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { validarRegistroEstudo } from "../app/src/shared/contratos/registroEstudo.js";
-import { contextoRegistroDaMissao, contextoRegistroDaAtividade } from "../app/src/modules/motor/jornada.js";
+import { contextoRegistroDaMissao, contextoRegistroDaAtividade, nomeDaMateria } from "../app/src/modules/motor/jornada.js";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const ler = (p) => readFileSync(resolve(root, p), "utf8");
@@ -102,16 +102,41 @@ test("telas: o painel de missões tem 'Iniciar missão' e 'Revisão', e a área 
   assert.match(reg, /disabled=\{deMissao\}/, "prática de missão fica presa à matéria");
 });
 
-test("modo essencial não esconde o botão da missão, e o registro solto avisa que não avança missão", () => {
-  // desde a 0064 o botão é o único caminho que avança missão: o modo
-  // essencial deixa o painel compacto, mas não pode tirá-lo da tela
+test("painel compacto (o antigo modo essencial) não esconde o botão da missão, e o registro solto avisa que não avança missão", () => {
+  // desde a 0064 o botão é o único caminho que avança missão. Raio-x,
+  // mudança 8: o modo essencial virou o único, então o painel é sempre
+  // compacto, e continua na tela
   const visao = semComentarios(ler("app/src/routes/aluno/VisaoEstudo.jsx"));
-  assert.match(visao, /<MissoesPersistidas[^>]*compacta=\{essencial\}/s);
-  assert.doesNotMatch(visao, /!essencial && examTag && filaMissoes/, "o painel não pode sumir no modo essencial");
+  assert.match(visao, /<MissoesPersistidas[^>]*\bcompacta\s/s);
+  assert.doesNotMatch(visao, /essencial/, "não há mais modo para alternar");
   const painel = semComentarios(ler("app/src/modules/motor/ProgressoVivido.jsx"));
   assert.match(painel, /compacta = false/);
   assert.match(painel, /mi\.estado === "atual" \|\| mi\.proxima\)\.slice\(0, 1\)/, "compacto: só a missão da vez de cada matéria");
   const reg = semComentarios(ler("app/src/modules/motor/Registrar.jsx"));
   assert.match(reg, /\{!contextoInicial && \(/);
   assert.match(reg, /Registro livre: entra no seu histórico e no volume, mas não avança missão\. Para avançar uma missão, use o botão “Iniciar missão” na aba Hoje\./);
+});
+
+// Raio-x, mudança 8: o painel de missões do PMERJ mostrava "DIR_ADM".
+test("matéria sempre pelo nome: trilha/catálogo, depois o mapa fixo, nunca o código", () => {
+  assert.equal(nomeDaMateria("dir_adm", { dir_adm: "Direito Administrativo" }), "Direito Administrativo");
+  assert.equal(nomeDaMateria("mat"), "Matemática");
+  assert.equal(nomeDaMateria("dir_adm"), "Outra matéria", "sem nome conhecido, nada de código cru");
+  assert.equal(nomeDaMateria("dir_adm", null), "Outra matéria");
+  const painel = semComentarios(ler("app/src/modules/motor/ProgressoVivido.jsx"));
+  assert.match(painel, /const materia = nomeDaMateria\(cod, nomesMateria\);/);
+  assert.doesNotMatch(painel, /\?\? cod \?\?/);
+  const visao = semComentarios(ler("app/src/routes/aluno/VisaoEstudo.jsx"));
+  assert.match(visao, /db\.carregarNomesMateria\(\)\.catch\(\(\) => \(\{\}\)\)/, "nomes do catálogo, sem derrubar a tela");
+  assert.match(visao, /<MissoesPersistidas[^>]*nomesMateria=\{nomesMateria\}/s);
+});
+
+// achado do Codex no #193: o "Registrar revisão" só existe no cartão da
+// missão concluída; com o painel sempre compacto ela fica recolhida, não some
+test("painel compacto: concluídas recolhidas em 'N concluídas · revisar', com a revisão a um toque", () => {
+  const painel = semComentarios(ler("app/src/modules/motor/ProgressoVivido.jsx"));
+  assert.match(painel, /const \[verConcluidas, setVerConcluidas\] = useState\(false\);/);
+  assert.match(painel, /\.\.\.\(verConcluidas \? g\.missoes\.filter\(\(mi\) => mi\.estado === "concluida"\) : \[\]\)/);
+  assert.match(painel, /if \(!todas\.length && !concluidasRecolhidas\.length\) return null;/, "tudo concluído ainda mostra o acesso à revisão");
+  assert.match(painel, /`▸ \$\{concluidasRecolhidas\.length\} \$\{concluidasRecolhidas\.length === 1 \? "concluída" : "concluídas"\} · revisar`/);
 });

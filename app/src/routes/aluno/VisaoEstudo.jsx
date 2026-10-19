@@ -16,12 +16,13 @@ import { ResolverQuestoes } from "../../modules/motor/ResolverQuestoes.jsx";
 import { contextoRegistroDaMissao } from "../../modules/motor/jornada.js";
 import { Registrar } from "../../modules/motor/Registrar.jsx";
 import { Arquivo } from "../../modules/motor/Arquivo.jsx";
-import { Conquistas, ConquistasRecentes } from "../../modules/motor/Conquistas.jsx";
+import { Conquistas } from "../../modules/motor/Conquistas.jsx";
 import { TrilhaConcurso } from "../../modules/conteudo/TrilhaConcurso.jsx";
 import { filaDeMissoes } from "../../modules/conteudo/missoes.js";
 import { calcularXP, patente } from "../../modules/motor/jargao.js";
 import { InsightsDesempenho } from "../../modules/desempenho/Insights.jsx";
 import { NiveisPorMateria } from "../../modules/desempenho/Niveis.jsx";
+import { LinhaMaturidade } from "../../modules/conteudo/SeloMaturidade.jsx";
 import { useEnvioUnico } from "../../shared/hooks/useEnvioUnico.js";
 import { useGuia } from "../../shared/guia/GuiaPassoAPasso.jsx";
 import { ROTEIRO_ALUNO, chaveGuia } from "../../shared/guia/roteiros.js";
@@ -78,18 +79,6 @@ export function VisaoEstudo({ aluno, podeEditar, concurso = null, contexto = "Pl
   const recarregar = () => setVersao((v) => v + 1);
   const recarregarTudo = () => { recarregar(); recarregarTrilha(); };
 
-  // Modo essencial (UX1.2): reduz a aba "Hoje" ao núcleo "o que faço
-  // agora" (faixa + missão + meta + registrar), recolhendo os extras de
-  // gamificação. Preferência persistida por aluno neste navegador.
-  const [essencial, setEssencial] = useState(() => {
-    try { return localStorage.getItem("rumo-modo-essencial") === "1"; } catch { return false; }
-  });
-  const alternarEssencial = () => setEssencial((v) => {
-    const n = !v;
-    try { localStorage.setItem("rumo-modo-essencial", n ? "1" : "0"); } catch { /* ignora */ }
-    return n;
-  });
-
   // ---- missões PERSISTIDAS (PED1): fecham sozinhas quando o aluno bate
   // volume + acurácia. Lê a tabela aluno_missoes (motor no banco).
   const examTag = concurso?.codigo ?? null;
@@ -114,12 +103,14 @@ export function VisaoEstudo({ aluno, podeEditar, concurso = null, contexto = "Pl
   // escola dizem quais missões existem e em que ordem; aluno_missoes diz
   // quais já começaram ou fecharam. As que ainda não começaram aparecem
   // como "a seguir" (o banco não cria linha para elas antes da hora).
-  const [catalogoMissoes, setCatalogoMissoes] = useState({ examTag: null, missoes: [], ajustes: [] });
+  const [catalogoMissoes, setCatalogoMissoes] = useState({ examTag: null, missoes: [], ajustes: [], nomes: {} });
   useEffect(() => {
     if (!examTag) return;
     let vivo = true;
-    Promise.all([db.carregarMissoes(examTag), db.carregarMissoesEscola(examTag)])
-      .then(([missoes, ajustes]) => { if (vivo) setCatalogoMissoes({ examTag, missoes: missoes ?? [], ajustes: ajustes ?? [] }); })
+    // nomes do catálogo `materias`: a matéria de uma missão pode não estar
+    // na trilha do aluno, e o painel nunca mostra o código cru (dir_adm)
+    Promise.all([db.carregarMissoes(examTag), db.carregarMissoesEscola(examTag), db.carregarNomesMateria().catch(() => ({}))])
+      .then(([missoes, ajustes, nomes]) => { if (vivo) setCatalogoMissoes({ examTag, missoes: missoes ?? [], ajustes: ajustes ?? [], nomes: nomes ?? {} }); })
       .catch(() => { /* complementar: sem catálogo, o painel some, a tela fica */ });
     return () => { vivo = false; };
   }, [examTag]);
@@ -156,6 +147,13 @@ export function VisaoEstudo({ aluno, podeEditar, concurso = null, contexto = "Pl
       progresso: gam.missoes,
     });
   }, [catalogoMissoes, examTag, gam.missoes]);
+
+  // Raio-x, mudança 8: matéria sempre pelo nome. A trilha do aluno manda
+  // (é o nome que ele vê no Registrar); o catálogo cobre o resto.
+  const nomesMateria = useMemo(() => ({
+    ...catalogoMissoes.nomes,
+    ...Object.fromEntries((trilha?.disciplinas ?? []).map((d) => [d.codigo, d.nome])),
+  }), [catalogoMissoes.nomes, trilha]);
 
   // feedback no MOMENTO DA AÇÃO: compara o XP do ledger (fonte de verdade
   // C0) e as missões fechadas entre recargas, e celebra o delta (só para
@@ -334,6 +332,9 @@ export function VisaoEstudo({ aluno, podeEditar, concurso = null, contexto = "Pl
       <div style={{ fontSize: 13, color: "#7E93A6", marginTop: 6, lineHeight: 1.5, maxWidth: 300, marginInline: "auto" }}>
         Sua trilha de estudo ainda não foi configurada pela coordenação. Em breve você terá acesso ao seu plano.
       </div>
+      {/* sem trilha não há Plano: a linha do aviso de maturidade fica aqui
+          (concurso beta/esqueleto recebe aluno sem calendário semanal) */}
+      <LinhaMaturidade codigo={examTag} style={{ justifyContent: "center", marginTop: 14 }} />
     </div>
   );
 
@@ -375,33 +376,11 @@ export function VisaoEstudo({ aluno, podeEditar, concurso = null, contexto = "Pl
           <div style={{ display: "flex", flexDirection: "column", gap: 16, paddingTop: 4 }}>
             <FaixaAspirante nome={aluno.nome.split(" ")[0]} contexto={contexto} xp={xp} streak={m?.streak ?? 0}
               aoAbrirConquistas={() => irAba("conquistas")} />
-            {/* T10: preferência de tela perto do TOPO da aba — antes era o
-                último nó, sem destaque, e quem está sobrecarregado (o
-                público que mais quer o modo essencial) tinha que rolar a
-                aba inteira pra achá-lo. Não é fixed (competiria com a
-                barra inferior no mobile): só entra mais cedo no fluxo. */}
-            {essencial && (
-              <div style={{ fontSize: 11.5, color: T.sub, textAlign: "center", lineHeight: 1.5 }}>
-                Modo essencial ativo — missões extras e conquistas estão recolhidas.
-              </div>
-            )}
-            {podeEditar && (
-              <div className="today-preference">
-                <span>Preferência desta tela</span>
-                <button type="button" onClick={alternarEssencial} aria-pressed={essencial}
-                  title={essencial ? "Mostrar missões extras e conquistas" : "Recolher missões extras e conquistas"}>
-                  <i aria-hidden="true" />
-                  {essencial ? "Modo essencial" : "Modo completo"}
-                </button>
-              </div>
-            )}
             <div ref={missaoRef} tabIndex={-1} aria-label="Missão da semana"
               className={realceMissao ? "mission-impact" : undefined} style={{ scrollMarginTop: 18 }}>
               <MissaoAtual meta={meta} trilha={trilha} m={m} metas={dados.metas} ciclo={ciclo.estado}
                 aoAvancar={podeEditar ? irAba : undefined} />
             </div>
-            {/* P0.4 (0064): no modo essencial o painel fica compacto, mas não
-                some: o botão da missão é o único caminho que a avança */}
             {podeEditar && resolvendo && (
               <div ref={resolvendoRef} tabIndex={-1} aria-label="Questões da missão" style={{ scrollMarginTop: 18 }}>
                 <ResolverQuestoes key={`${resolvendo.missao.id}:${resolvendo.tipo}`}
@@ -418,7 +397,7 @@ export function VisaoEstudo({ aluno, podeEditar, concurso = null, contexto = "Pl
               </div>
             )}
             {examTag && filaMissoes.length > 0 && (
-              <MissoesPersistidas fila={filaMissoes} disciplinas={trilha.disciplinas} compacta={essencial}
+              <MissoesPersistidas fila={filaMissoes} disciplinas={trilha.disciplinas} nomesMateria={nomesMateria} compacta
                 aoPraticar={podeEditar ? (contexto) => irAba("registrar", contexto) : undefined}
                 questoesIntegradas={questoesIntegradas}
                 aoResolver={podeEditar ? (missao, tipo) => setResolvendo({ missao, tipo }) : undefined} />
@@ -426,7 +405,6 @@ export function VisaoEstudo({ aluno, podeEditar, concurso = null, contexto = "Pl
             <MetaSemana meta={meta} trilha={trilha} podeEditar={podeEditar} aoMudar={recarregar}
               compacta aoPraticar={(alvo) => irAba("registrar", alvo)}
               aoAbrirDesempenho={() => irAba("desempenho")} />
-            {!essencial && m && <ConquistasRecentes m={m} metas={dados.metas} simulados={dados.simulados} aoAbrir={() => irAba("conquistas")} />}
           </div>
         )}
         {tab === "concurso" && (
@@ -473,7 +451,7 @@ export function VisaoEstudo({ aluno, podeEditar, concurso = null, contexto = "Pl
         {tab === "historico" && (
           <Arquivo metas={dados.metas} trilha={trilha} registros={dados.registros} />
         )}
-        {tab === "plano" && <Plano trilha={trilha} semanaAtiva={semanaAtiva} meta={meta} />}
+        {tab === "plano" && <Plano trilha={trilha} semanaAtiva={semanaAtiva} meta={meta} codigoConcurso={examTag} />}
       </div>
       </Suspense>
     </div>
@@ -484,7 +462,7 @@ export function VisaoEstudo({ aluno, podeEditar, concurso = null, contexto = "Pl
    missões com estado claro (encerrada / em andamento / a desbloquear),
    "onde estou" e o próximo passo. Textos da metodologia importada;
    estado da semana corrente vem da meta. */
-function Plano({ trilha, semanaAtiva, meta }) {
+function Plano({ trilha, semanaAtiva, meta, codigoConcurso = null }) {
   const T = useTema();
   const estadosPorAtividade = Object.fromEntries(
     (meta?.meta_atividades ?? []).map((ma) => [ma.atividade_modelo_id, ma.estado]),
@@ -503,6 +481,8 @@ function Plano({ trilha, semanaAtiva, meta }) {
           <div className="num" style={{ fontSize: 11.5, color: T.sub }}>semana <b className="disp" style={{ color: T.gold, fontSize: 15 }}>{posicao}</b> de {total}</div>
         </div>
         <div style={{ marginTop: 9 }}><BarraXP pct={pctJornada} alt={7} /></div>
+        {/* pré-edital: depois do "Entendi", a informação fica só aqui */}
+        <LinhaMaturidade codigo={codigoConcurso} style={{ marginTop: 10 }} />
       </div>
 
       <div style={{ position: "relative" }}>

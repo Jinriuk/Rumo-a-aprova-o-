@@ -527,13 +527,12 @@ test("T40: AreaEscola.jsx não mostra mais o snapshot velho do aluno — relê d
 });
 
 // ── Bloco 14 (T10/T43/T46): chrome de diálogo ───────────────────────────────
-test("T10: o toggle 'Preferência desta tela' vem ANTES da Missão da semana na aba Hoje", () => {
+// Raio-x, mudança 8 (decisão de 18/10): o toggle de T10 saiu. Ninguém o
+// entendia sem o guia; todos ficam com o comportamento do modo essencial.
+test("T10 revisto: a aba Hoje não tem mais 'Preferência desta tela'", () => {
   const codigo = src("app/src/routes/aluno/VisaoEstudo.jsx");
-  const iHoje = codigo.indexOf('tab === "hoje" && (');
-  const iToggle = codigo.indexOf('className="today-preference"', iHoje);
-  const iMissao = codigo.indexOf('aria-label="Missão da semana"', iHoje);
-  assert.ok(iHoje >= 0 && iToggle >= 0 && iMissao >= 0, "os três marcadores precisam existir na aba Hoje");
-  assert.ok(iToggle < iMissao, "o toggle precisa vir mais cedo no fluxo, antes da Missão da semana — não mais o último nó da aba");
+  assert.doesNotMatch(codigo, /today-preference|Preferência desta tela|Modo completo|rumo-modo-essencial/);
+  assert.doesNotMatch(src("app/src/shared/ui/experiencia.css"), /today-preference/, "sem CSS órfão");
 });
 
 test("T43: 'Fechar' do modal de vínculos usa o mesmo registro visual dos BotaoMini ao lado", () => {

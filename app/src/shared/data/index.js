@@ -418,7 +418,7 @@ export async function carregarMissoes(examTag, { nivel } = {}) {
    O catálogo é global e minúsculo (9 linhas), então não leva filtro por
    exam_tag: é um mapa código → nome. Uma missão cuja matéria não esteja
    em `prova_materias` daquele exame continua ganhando nome. */
-async function carregarNomesMateria() {
+export async function carregarNomesMateria() {
   const { data, error } = await supabase.from("materias").select("codigo, nome");
   if (error) throw falha("catálogo de matérias", error);
   return Object.fromEntries((data ?? []).map((m) => [m.codigo, m.nome]));
