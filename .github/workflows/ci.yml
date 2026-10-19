@@ -192,7 +192,7 @@ jobs:
             tests/package-lock.json
 
       - name: CLI do Supabase (versão fixada)
-        uses: supabase/setup-cli@v1
+        uses: supabase/setup-cli@v3
         with:
           version: ${{ env.SUPABASE_CLI_VERSION }}
 
