@@ -42,7 +42,7 @@ export function NiveisPorMateria({ m, trilha, diasParaProva }) {
 
   const geral = calcularNivelGeral(porMateriaFirme, { diasParaProva });
   const resumo = resumirDiagnosticoAluno(porMateriaFirme);
-  const nomeDe = (cod) => m.matStats.find((s) => s.id === cod)?.name ?? cod;
+  const nomeDe = (cod) => m.matStats.find((s) => s.id === cod)?.name ?? "Outra matéria";
   const corDe = (cod) => trilha?.porCodigo?.[cod]?.cor ?? T.sub;
 
   const comDado = linhas.filter((l) => l.nivel);

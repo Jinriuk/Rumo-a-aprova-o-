@@ -37,6 +37,9 @@ export const CONTAS = {
   // ESCREVEM: a do aluno (concluir objetivo, registro, simulado) e a de
   // concorrência. Assim o Lucas, que o responsável lê, fica como o seed fez.
   alunoJornada: { id: "aaaaaaaa-1111-4111-8111-000000000037", codigo: "E2EIGOR2026XX", escola: VITRINE, papel: "aluno", nome: "Igor Fonseca Macedo", alunoId: "a0000000-0000-4000-8000-000000000037" },
+  // aluno da vitrine num concurso que não está completo (EPCAR, esqueleto):
+  // o aviso de maturidade aparece para ele uma vez, até o "Entendi"
+  alunoAviso: { id: "aaaaaaaa-1111-4111-8111-000000000031", codigo: "E2EEDUARDO26X", escola: VITRINE, papel: "aluno", nome: "Eduardo Ramos Vieira", alunoId: "a0000000-0000-4000-8000-000000000031" },
   alunoConcorrencia: { id: "aaaaaaaa-1111-4111-8111-000000000030", codigo: "E2ENATHALIA26", escola: VITRINE, papel: "aluno", nome: "Nathalia Freitas Campos", alunoId: "a0000000-0000-4000-8000-000000000030" },
   // responsável dedicado à revogação: vinculado ao Lucas pela fixture; a
   // jornada revoga pela tela da coordenação e o afterAll refaz o vínculo

@@ -41,7 +41,8 @@ test("cadastro não chama gerar-meta para aluno sem trilha", () => {
 
 test("422 sem_trilha do gerar-meta é falha esperada (fora do console.error)", () => {
   const dados = src("app/src/shared/data/index.js");
-  assert.match(dados, /const ESTADOS_ESPERADOS = new Set\(\["sem_trilha"\]\);/);
+  // P1.1 acrescentou os estados da questoes-integradas; sem_trilha segue no conjunto
+  assert.match(dados, /const ESTADOS_ESPERADOS = new Set\(\[\s*"sem_trilha",/);
   const corpo = corpoDe(dados, "async function invocar(");
   assert.match(corpo, /falha\(fn, new Error\(detalhe\), \{ esperada: ESTADOS_ESPERADOS\.has\(estado\) \}\)/);
 });

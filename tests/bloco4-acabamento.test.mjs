@@ -38,8 +38,10 @@ test("D08: o <body> declara a família e a cor do tema (portais herdam dele)", (
 // ── D12 e placeholder ──────────────────────────────────────────────
 test("D12: o exemplo do onboarding não crava ano", () => {
   const onb = src("app/src/modules/motor/Onboarding.jsx");
-  assert.doesNotMatch(onb, /placeholder="ex: passar no Colégio Naval em 20\d\d"/);
-  assert.match(onb, /placeholder="ex: passar no Colégio Naval"/);
+  assert.doesNotMatch(onb, /passar no [^"`]* em 20\d\d/);
+  // raio-x, mudança 8: o exemplo usa o concurso do aluno, não o Colégio Naval
+  assert.match(onb, /placeholder=\{`ex: passar no \$\{concursoNome \?\? "concurso"\}`\}/);
+  assert.match(src("app/src/routes/aluno/AreaAluno.jsx"), /<Onboarding [^>]*concursoNome=\{/);
 });
 
 test("placeholder do Tópico: curto, sem travessão e sem o '(obrigatório)' que o asterisco já diz", () => {

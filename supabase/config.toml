@@ -110,3 +110,8 @@ verify_jwt = false
 # da tela de entrada. A trava é a origem da allowlist, o teto de corpo,
 # o limite por IP e os tetos globais da 0059 (ver o cabeçalho da função).
 verify_jwt = false
+
+[functions.questoes-integradas]
+# P1.1: aluno (chamador → 401/403) para entregar e responder; super_admin
+# ativo (internal_admins) para medir cobertura. Tudo no código.
+verify_jwt = false

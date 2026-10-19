@@ -10,9 +10,8 @@ import React, { useId, useState } from "react";
 import { SectionCard, Botao, Erro, useInputStyle } from "../../shared/ui/componentes.jsx";
 import { useTema } from "../../shared/branding/BrandingContext.jsx";
 import { mensagemAmigavel } from "../../shared/lib/erros.js";
+import { nomeDaMateria } from "./jornada.js";
 import * as db from "../../shared/data/index.js";
-
-const ROTULO_MATERIA = { mat: "Matemática", por: "Português", ing: "Inglês", fis: "Física", qui: "Química", bio: "Biologia", his: "História", geo: "Geografia", red: "Redação", soc: "Estudos Sociais" };
 
 const EXPERIENCIAS = [
   ["nunca estudou", "Estou começando agora"],
@@ -21,7 +20,7 @@ const EXPERIENCIAS = [
   ["ja prestou prova", "Já prestei essa prova antes"],
 ];
 
-export function Onboarding({ aluno, materias = [], aoConcluir }) {
+export function Onboarding({ aluno, materias = [], concursoNome = null, aoConcluir }) {
   const T = useTema();
   const { input: inputS, label: lbl } = useInputStyle();
   const [f, setF] = useState({ experiencia: "", disponibilidade: "", dificuldade: "", objetivo: "" });
@@ -79,7 +78,7 @@ export function Onboarding({ aluno, materias = [], aoConcluir }) {
             <option value="" style={{ background: T.bg2 }}>Prefiro não dizer ainda</option>
             {materias.map((mt) => {
               const cod = mt.codigo ?? mt.materia_codigo;
-              const nome = mt.nome ?? ROTULO_MATERIA[cod] ?? cod;
+              const nome = mt.nome ?? nomeDaMateria(cod);
               return <option key={cod} value={cod} style={{ background: T.bg2 }}>{nome}</option>;
             })}
           </select>
@@ -88,7 +87,7 @@ export function Onboarding({ aluno, materias = [], aoConcluir }) {
         <div>
           <label htmlFor={id("obj")} style={lbl}>Seu objetivo (opcional)</label>
           <input id={id("obj")} value={f.objetivo} onChange={(e) => set("objetivo", e.target.value)}
-            placeholder="ex: passar no Colégio Naval" style={inputS} />
+            placeholder={`ex: passar no ${concursoNome ?? "concurso"}`} style={inputS} />
         </div>
 
         <Botao onClick={salvar} disabled={!podeSalvar} style={{ width: "100%" }}>

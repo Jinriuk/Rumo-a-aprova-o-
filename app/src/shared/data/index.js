@@ -403,6 +403,23 @@ export async function carregarMissoes(examTag, { nivel } = {}) {
   return data;
 }
 
+/* Raio-x fase 2 (desenho de 18/10): em que semana cada missão cai, pelo
+   plano do concurso (trilha_plano_missoes.semana_sugerida). Global e só
+   leitura (RLS: select para todo autenticado). Um concurso pode ter mais
+   de um plano (anual, intensiva…): quem escolhe é escolherPlano
+   (conteudo/missoesPorSemana.js), aqui só se busca. */
+export async function carregarSemanasDasMissoes(examTag) {
+  const { data, error } = await supabase
+    .from("trilha_plano_missoes")
+    .select("missao_id, semana_sugerida, ordem, trilha_planos!inner(id, exam_tag, tipo, ordem)")
+    .eq("trilha_planos.exam_tag", examTag);
+  if (error) throw falha("semanas das missões", error);
+  return (data ?? []).map((x) => ({
+    missao_id: x.missao_id, semana: x.semana_sugerida, ordem: x.ordem,
+    plano_id: x.trilha_planos?.id, plano_ordem: x.trilha_planos?.ordem ?? 0,
+  }));
+}
+
 /* T38: nome real da matéria por código, para anexar às missões — evita
    mostrar o código cru (qui, mat…) na trilha do concurso.
 
@@ -418,7 +435,7 @@ export async function carregarMissoes(examTag, { nivel } = {}) {
    O catálogo é global e minúsculo (9 linhas), então não leva filtro por
    exam_tag: é um mapa código → nome. Uma missão cuja matéria não esteja
    em `prova_materias` daquele exame continua ganhando nome. */
-async function carregarNomesMateria() {
+export async function carregarNomesMateria() {
   const { data, error } = await supabase.from("materias").select("codigo, nome");
   if (error) throw falha("catálogo de matérias", error);
   return Object.fromEntries((data ?? []).map((m) => [m.codigo, m.nome]));
@@ -738,13 +755,24 @@ export async function listarSimuladosEscola({ signal } = {}) {
 // PREVISÍVEIS, não falha de sistema: saem do console.error como a
 // credencial inválida do login. `sem_trilha` é o 422 do gerar-meta para
 // aluno sem trilha atribuída, um estado válido do cadastro.
-const ESTADOS_ESPERADOS = new Set(["sem_trilha"]);
+// P1.1: os estados da questoes-integradas também são previsíveis (a tela
+// diz o que fazer); o 503 do fornecedor já é relatado pela própria função.
+const ESTADOS_ESPERADOS = new Set([
+  "sem_trilha",
+  "fornecedor_indisponivel", "sem_questoes", "limite", "indisponivel", "fora_da_vez", "missao_invalida",
+  "sem_aluno", "expirada", "anulada", "resposta_invalida", "nao_encontrada",
+]);
 
 async function invocar(fn, body) {
   const { data, error } = await supabase.functions.invoke(fn, { body });
   if (error) {
     let detalhe = error.message;
     let estado;
+    // Etapa 4: resposta 5xx de Edge Function traz x-correlation-id; o
+    // erro carrega o mesmo id, e o relato do front (observabilidade.js)
+    // o reaproveita. Função antiga, sem o cabeçalho: fica sem.
+    let correlationId = null;
+    try { correlationId = error.context?.headers?.get?.("x-correlation-id") ?? null; } catch { /* sem cabeçalhos */ }
     try {
       const ctx = await error.context?.json?.();
       if (ctx?.error) detalhe = ctx.error;
@@ -752,6 +780,7 @@ async function invocar(fn, body) {
     } catch { /* corpo não-JSON: fica a mensagem original */ }
     const e = falha(fn, new Error(detalhe), { esperada: ESTADOS_ESPERADOS.has(estado) });
     if (estado) e.estado = estado;
+    if (correlationId) e.correlation_id = correlationId;
     throw e;
   }
   if (data?.error) {
@@ -761,6 +790,34 @@ async function invocar(fn, body) {
   }
   return data;
 }
+
+/* ---------- P1.1: questões integradas (Quest) ---------- */
+
+// Missões do próprio aluno com questões integradas ligadas (0065). Sem a
+// 0065 no ambiente (a função não existe) devolve vazio: resposta certa,
+// "nenhuma missão tem questões". Outra falha (rede, 5xx) devolve null: não
+// deu para saber, e quem chama não pode tratar isso como "sem questões"
+// (18/10, achado 5 do #192: "Iniciar missão" mandava ao registro).
+const SEM_FUNCAO_QUEST = new Set(["PGRST202", "42883"]);
+export async function missoesComQuestoesIntegradas() {
+  const { data, error } = await supabase.rpc("quest_missoes_disponiveis");
+  if (error) {
+    console.warn("questões integradas indisponíveis neste ambiente:", error.message);
+    return SEM_FUNCAO_QUEST.has(error.code) ? new Set() : null;
+  }
+  return new Set((data ?? []).map((x) => (typeof x === "string" ? x : x?.quest_missoes_disponiveis)).filter(Boolean));
+}
+
+// Lote SEM gabarito. pedidoId repetido devolve o mesmo lote (retransmissão).
+export const entregarQuestoes = ({ missaoId, pedidoId, tamanho }) =>
+  invocar("questoes-integradas", { acao: "entregar", missao_id: missaoId, pedido_id: pedidoId, ...(tamanho ? { tamanho } : {}) });
+
+// Correção no servidor. Reenviar devolve a primeira correção (idempotente).
+export const responderQuestao = ({ entregaId, questaoId, resposta, duracaoMs }) =>
+  invocar("questoes-integradas", {
+    acao: "responder", entrega_id: entregaId, questao_id: questaoId, resposta,
+    ...(Number.isInteger(duracaoMs) ? { duracao_ms: duracaoMs } : {}),
+  });
 
 export const provisionarAluno = (alunoId) => invocar("provisionar-aluno", { tipo: "aluno", aluno_id: alunoId });
 export const provisionarResponsavel = (alunoId, nome) =>
@@ -779,11 +836,21 @@ export const reativarCredencial = (usuarioId) =>
   invocar("provisionar-aluno", { tipo: "reativar-credencial", usuario_id: usuarioId });
 
 // Etapa 7 / BLOCO B2 — o próprio usuário logado troca a senha temporária
-// (ou qualquer senha) pela pessoal. Sem sessão renovada: o JWT atual
-// continua válido (a troca de senha no GoTrue não invalida a sessão
-// corrente), só o perfil precisa ser relido pra `must_change_password`
-// cair — quem chama recarrega a sessão/perfil depois.
-export const trocarSenha = (senhaNova) => invocar("trocar-senha", { senha_nova: senhaNova });
+// (ou qualquer senha) pela pessoal. P1.1: a troca pela Admin API APAGA
+// as sessões da conta (auth.sessions fica vazia). O JWT em memória ainda
+// passa no PostgREST, que só confere a assinatura, mas toda Edge Function
+// (getUser) responde 401 e o refresh falha na próxima renovação. Por isso
+// entra de novo com a senha nova logo depois; o SIGNED_IN relê o perfil.
+export async function trocarSenha(senhaNova) {
+  const resultado = await invocar("trocar-senha", { senha_nova: senhaNova });
+  const { data } = await supabase.auth.getSession();
+  const email = data?.session?.user?.email;
+  if (email) {
+    const { error } = await supabase.auth.signInWithPassword({ email, password: senhaNova });
+    if (error) throw falha("entrar de novo após trocar a senha", error, { esperada: credencialInvalida(error) });
+  }
+  return resultado;
+}
 export const gerarMeta = (alunoId) => invocar("gerar-meta", { aluno_id: alunoId });
 // Tarefa 1: a Edge Function nunca devolve o link de acesso — só o status
 // (…_enviado | …_pendente). A UI do backoffice lê por aqui, não por `.link`

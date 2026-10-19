@@ -10,7 +10,7 @@
 export const L = {
   missao: "Missão",
   proximaMissao: "Próxima Missão",
-  objetivos: "Objetivos da semana",
+  objetivos: "Tarefas da semana",   // raio-x, mudança 3: "tarefas", não objetivos/alvos/metas
   concluir: "Concluir",
   adiar: "Adiar",
   cumprido: "Cumprido",

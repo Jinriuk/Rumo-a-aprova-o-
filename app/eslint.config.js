@@ -51,7 +51,7 @@ const a11yComoWarn = Object.fromEntries(
 );
 
 export default [
-  { ignores: ["dist/**", "dist-e2e/**", "e2e-resultados/**", "playwright-report/**", "test-results/**"] },
+  { ignores: ["dist/**", "dist-e2e/**", "dist-demo/**", "e2e-resultados/**", "e2e-demo-resultados/**", "playwright-report/**", "test-results/**"] },
 
   js.configs.recommended,
 
@@ -114,7 +114,7 @@ export default [
 
   {
     // Testes Node (tests/) e scripts de operador rodam fora do browser.
-    files: ["**/e2e/**/*.js", "**/*.spec.js"],
+    files: ["**/e2e/**/*.js", "**/e2e-demo/**/*.js", "**/*.spec.js"],
     languageOptions: {
       globals: { ...globals.node, ...globals.browser },
     },

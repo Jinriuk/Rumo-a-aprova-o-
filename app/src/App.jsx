@@ -11,6 +11,7 @@ import { FaixaDemo } from "./shared/branding/FaixaDemo.jsx";
 import { FONTES_CSS } from "./shared/ui/tema.js";
 import { ehRotaRecuperacao } from "./shared/lib/recuperacao.js";
 import * as db from "./shared/data/index.js";
+import { definirPapel, papelDaSessao } from "./shared/lib/observabilidade.js";
 
 // FIX1 (OBS-RC1-006): cada área vira um chunk próprio — o usuário baixa
 // só a dele (o aluno no celular não paga pelo painel da coordenação nem
@@ -68,6 +69,13 @@ const AREAS = {
 // por props.
 export default function App() {
   const sessaoEstado = useSessao();
+  // Etapa 4: o relato de erro diz o PAPEL de quem estava na tela (nunca
+  // quem é a pessoa). Na renderização, não num efeito: se a área do papel
+  // quebrar logo na primeira renderização, a fronteira de fora desmonta o
+  // App antes de qualquer efeito rodar, e o relato sairia como "anonimo".
+  // Só grava uma variável do módulo; repetir não muda nada.
+  const { sessao, perfil, superAdmin } = sessaoEstado;
+  definirPapel(papelDaSessao({ sessao, perfil, superAdmin }));
   const mostrarFaixaDemo = EH_DEMO || escolaEhDemo(sessaoEstado.perfil?.escola);
   return (
     <>

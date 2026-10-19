@@ -33,8 +33,8 @@ test("missão fecha ao bater volume+acurácia e credita XP no ledger do C0", asy
     // 0061: a missão só conta registros recebidos depois de começar (os 30/22
     // da seed não entram). 60/58 sozinho bate a meta de 60 com ≥70%.
     await c.query(
-      `insert into registros_estudo (escola_id, aluno_id, data, disciplina_codigo, topico, questoes, acertos, minutos)
-       values ($1,$2, current_date, 'mat', 'Geometria plana', 60, 58, 60)`, [ESCOLA_A, ALUNO_LUCAS]);
+      `insert into registros_estudo (escola_id, aluno_id, data, disciplina_codigo, topico, questoes, acertos, minutos, tipo_pratica, missao_id)
+       values ($1,$2, current_date, 'mat', 'Geometria plana', 60, 58, 60, 'missao', (select m.id from missoes m where m.exam_tag = 'cn' and m.materia_codigo = 'mat' and m.meta_questoes > 0 order by m.ordem, m.id limit 1))`, [ESCOLA_A, ALUNO_LUCAS]);
 
     const mis = await c.query(
       `select am.estado, am.xp_concedido from aluno_missoes am join missoes m on m.id=am.missao_id
@@ -56,8 +56,8 @@ test("missão fecha ao bater volume+acurácia e credita XP no ledger do C0", asy
 test("idempotência: reprocessar o aluno N vezes não duplica XP de missão", async () => {
   await como(IDS.alunoA, async (c) => {
     await c.query(
-      `insert into registros_estudo (escola_id, aluno_id, data, disciplina_codigo, topico, questoes, acertos)
-       values ($1,$2, current_date, 'mat', 'Geo', 40, 40)`, [ESCOLA_A, ALUNO_LUCAS]);
+      `insert into registros_estudo (escola_id, aluno_id, data, disciplina_codigo, topico, questoes, acertos, tipo_pratica, missao_id)
+       values ($1,$2, current_date, 'mat', 'Geo', 40, 40, 'missao', (select m.id from missoes m where m.exam_tag = 'cn' and m.materia_codigo = 'mat' and m.meta_questoes > 0 order by m.ordem, m.id limit 1))`, [ESCOLA_A, ALUNO_LUCAS]);
     const um = await xpMissao(c, ALUNO_LUCAS);
 
     // reprocessar é do servidor (gatilho SECURITY DEFINER ou operador):
@@ -86,8 +86,8 @@ test("missão: antes do critério fica em andamento; ao bater, fecha", async () 
     // 0061: as 10 questões de mat da seed não contam (anteriores ao início
     // da missão); +30 → 30 (<60): em andamento
     await c.query(
-      `insert into registros_estudo (escola_id, aluno_id, data, disciplina_codigo, topico, questoes, acertos)
-       values ($1,$2, current_date, 'mat', 'parcial', 30, 28)`, [ESCOLA_B, ALUNO_BRUNO]);
+      `insert into registros_estudo (escola_id, aluno_id, data, disciplina_codigo, topico, questoes, acertos, tipo_pratica, missao_id)
+       values ($1,$2, current_date, 'mat', 'parcial', 30, 28, 'missao', (select m.id from missoes m where m.exam_tag = 'cn' and m.materia_codigo = 'mat' and m.meta_questoes > 0 order by m.ordem, m.id limit 1))`, [ESCOLA_B, ALUNO_BRUNO]);
     let mis = await c.query(
       `select am.estado, am.questoes_acumuladas from aluno_missoes am join missoes m on m.id=am.missao_id
        where am.aluno_id=$1 and m.materia_codigo='mat'`, [ALUNO_BRUNO]);
@@ -97,8 +97,8 @@ test("missão: antes do critério fica em andamento; ao bater, fecha", async () 
 
     // +40 com bom acerto → 70 questões da missão, ≥70%: fecha
     await c.query(
-      `insert into registros_estudo (escola_id, aluno_id, data, disciplina_codigo, topico, questoes, acertos)
-       values ($1,$2, current_date, 'mat', 'fechou', 40, 38)`, [ESCOLA_B, ALUNO_BRUNO]);
+      `insert into registros_estudo (escola_id, aluno_id, data, disciplina_codigo, topico, questoes, acertos, tipo_pratica, missao_id)
+       values ($1,$2, current_date, 'mat', 'fechou', 40, 38, 'missao', (select m.id from missoes m where m.exam_tag = 'cn' and m.materia_codigo = 'mat' and m.meta_questoes > 0 order by m.ordem, m.id limit 1))`, [ESCOLA_B, ALUNO_BRUNO]);
     mis = await c.query(
       `select am.estado from aluno_missoes am join missoes m on m.id=am.missao_id
        where am.aluno_id=$1 and m.materia_codigo='mat'`, [ALUNO_BRUNO]);
@@ -114,8 +114,8 @@ test("missão: antes do critério fica em andamento; ao bater, fecha", async () 
 test("antigaming: volume alto com acurácia baixa não fecha a missão", async () => {
   await como(IDS.alunoB, async (c) => {
     await c.query(
-      `insert into registros_estudo (escola_id, aluno_id, data, disciplina_codigo, topico, questoes, acertos)
-       values ($1,$2, current_date, 'mat', 'chutometro', 200, 40)`, [ESCOLA_B, ALUNO_BRUNO]); // 20%
+      `insert into registros_estudo (escola_id, aluno_id, data, disciplina_codigo, topico, questoes, acertos, tipo_pratica, missao_id)
+       values ($1,$2, current_date, 'mat', 'chutometro', 200, 40, 'missao', (select m.id from missoes m where m.exam_tag = 'cn' and m.materia_codigo = 'mat' and m.meta_questoes > 0 order by m.ordem, m.id limit 1))`, [ESCOLA_B, ALUNO_BRUNO]); // 20%
     const mis = await c.query(
       `select am.estado from aluno_missoes am join missoes m on m.id=am.missao_id
        where am.aluno_id=$1 and m.materia_codigo='mat'`, [ALUNO_BRUNO]);

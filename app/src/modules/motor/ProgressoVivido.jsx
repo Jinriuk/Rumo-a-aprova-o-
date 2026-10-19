@@ -4,10 +4,11 @@
    foi persistido (ledger de XP, missões fechadas, conquistas) e dá
    ao aluno o retorno no momento da ação.
    ============================================================ */
-import React, { useEffect, useRef } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { SectionCard, StatusBadge, BarraXP, Erro } from "../../shared/ui/componentes.jsx";
 import { useTema } from "../../shared/branding/BrandingContext.jsx";
-import { resumoRegistroConfirmado } from "./jornada.js";
+import { resumoRegistroConfirmado, contextoRegistroDaMissao, nomeDaMateria } from "./jornada.js";
+import { podeResolverAqui, destinoDoInicio } from "./questoesIntegradas.js";
 
 const tempoConfirmado = (minutos) => {
   if (minutos == null) return null;
@@ -124,76 +125,169 @@ export function FeedbackProgresso({ feedback, aoFechar }) {
   );
 }
 
-const ROTULO_MATERIA = { mat: "Matemática", por: "Português", ing: "Inglês", fis: "Física", qui: "Química", bio: "Biologia", his: "História", geo: "Geografia", red: "Redação", soc: "Estudos Sociais" };
 
-/* Lista das missões do aluno COMO O BANCO as vê: fechadas com check,
-   em andamento com a barra de volume/acurácia. Substitui a leitura de
-   "missão é só texto" — agora a missão fecha sozinha e isso aparece.
+/* Fila de missões do aluno, por matéria, como o motor da 0061 a vê:
+   concluídas, a atual e as próximas ("a seguir"), na ordem do catálogo.
+   Uma missão por vez em cada matéria; cada registro conta para uma só, e
+   só registros com acertos informados contam (o Registrar avisa).
+   P0.4 (0064): só conta a prática registrada pelo botão da missão
+   ("Iniciar missão"; até 18/10, "Praticar esta missão"); registro livre soma volume e não fecha
+   missão; "Registrar revisão" liga ao assunto de uma missão já feita.
 
-   EST1-A5: mostra o critério REAL que o motor aplica (meta_questoes +
-   meta_acuracia), não o texto aspiracional (achado PEDAGOGIA-04); e
-   marca honestamente as missões cuja matéria o aluno não pode registrar
-   na própria trilha — em vez de deixá-las travadas em 0% para sempre
-   (achado PEDAGOGIA-05, ex.: missão de Biologia numa trilha CN sem
-   disciplina de Biologia). `disciplinas` = as disciplinas registráveis
-   da trilha do aluno (mesma lista do seletor do Registrar). */
-export function MissoesPersistidas({ missoes = [], disciplinas = [] }) {
+   EST1-A5 segue valendo: o alvo mostrado é o critério REAL que fecha a
+   missão (meta da escola, senão a do catálogo, + acurácia), não o texto
+   aspiracional; e a matéria que o aluno não registra na própria trilha
+   aparece marcada, em vez de travada em 0% para sempre.
+   `fila` = filaDeMissoes() (modules/conteudo/missoes.js);
+   `disciplinas` = as registráveis da trilha (mesma lista do Registrar).
+   `compacta` (modo essencial): só a missão da vez de cada matéria, com o
+   botão. Desde a 0064 o botão é o único caminho que avança missão, então
+   o modo essencial não pode escondê-lo junto com o resto do painel.
+   P1.1: `questoesIntegradas` (Set de ids que o servidor ligou) e
+   `aoResolver(missao, tipo)` fazem "Iniciar missão" abrir as questões nas
+   missões ligadas (18/10; antes eram dois botões, "Praticar esta missão" e
+   "Resolver questões aqui"); sem eles, "Iniciar missão" vai ao registro.
+   `questoesIntegradas` não tem valor padrão: undefined é "ainda carregando"
+   e null é "não deu para saber" (destinoDoInicio); um `= null` aqui
+   transformava o carregando em "abre a sessão". */
+export function MissoesPersistidas({ fila = [], disciplinas = [], nomesMateria = null, aoPraticar, compacta = false, questoesIntegradas, aoResolver }) {
   const T = useTema();
-  if (!missoes.length) return null;
+  // compacto: as concluídas ficam recolhidas, mas a revisão delas continua a
+  // um toque (o "Registrar revisão" só existe no cartão da concluída)
+  const [verConcluidas, setVerConcluidas] = useState(false);
   const registraveis = new Set((disciplinas ?? []).map((d) => d.codigo));
   const podeRegistrar = (cod) => registraveis.size === 0 || !cod || registraveis.has(cod);
-  const ordem = { concluida: 0, em_andamento: 1 };
-  const lista = [...missoes].sort((a, b) => (ordem[a.estado] ?? 9) - (ordem[b.estado] ?? 9));
-  const fechadas = missoes.filter((m) => m.estado === "concluida").length;
+  const todasDaFila = fila.flatMap((g) => g.missoes);
+  const concluidasRecolhidas = !compacta ? [] : fila
+    .flatMap((g) => (podeRegistrar(g.materia_codigo) ? g.missoes.filter((mi) => mi.estado === "concluida") : []));
+  const grupos = !compacta ? fila : fila
+    .map((g) => ({ ...g, missoes: podeRegistrar(g.materia_codigo) ? [
+      ...(verConcluidas ? g.missoes.filter((mi) => mi.estado === "concluida") : []),
+      ...g.missoes.filter((mi) => mi.estado === "atual" || mi.proxima).slice(0, 1),
+    ] : [] }))
+    .filter((g) => g.missoes.length > 0);
+  const todas = grupos.flatMap((g) => g.missoes);
+  if (!todas.length && !concluidasRecolhidas.length) return null;
+  const fechadas = todasDaFila.filter((m) => m.estado === "concluida").length;
+  const ROTULO_ESTADO = { concluida: "✓ Concluída", atual: "Atual", a_seguir: "A seguir" };
+  const TOM_ESTADO = { concluida: "ok", atual: "alerta", a_seguir: "neutro" };
 
   return (
-    <SectionCard titulo="Missões" sub={`${fechadas} de ${missoes.length} concluída${fechadas === 1 ? "" : "s"} — fecham sozinhas quando você bate o critério.`}>
-      <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-        {lista.map((mi) => {
-          const nome = mi.missoes?.nome ?? "Missão";
-          const codMateria = mi.missoes?.materia_codigo;
-          const materia = ROTULO_MATERIA[codMateria] ?? codMateria ?? "";
-          const fechada = mi.estado === "concluida";
-          const pct = mi.acuracia ?? 0;
-          // critério REAL do motor (mesmo que fecha a missão): volume + acerto.
-          const metaQ = mi.missoes?.meta_questoes ?? null;
-          const metaAcc = mi.missoes?.meta_acuracia ?? null;
-          const alvo = metaQ != null
-            ? `alvo: ${metaQ} questões${metaAcc != null ? ` e ≥${metaAcc}% de acerto` : ""}`
-            : "acompanhamento da coordenação (sem fechamento automático)";
-          // não fecha sozinha se a matéria não é registrável na trilha do aluno.
-          const inalcancavel = !fechada && metaQ != null && !podeRegistrar(codMateria);
+    <SectionCard titulo={compacta ? "Missão da vez" : "Missões"}
+      sub={compacta
+        ? "Conta para a missão só a prática registrada pelo botão dela."
+        : `${fechadas} de ${todasDaFila.length} concluída${fechadas === 1 ? "" : "s"} — uma por vez em cada matéria; contam as práticas que você registra pelo botão da missão.`}>
+      <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+        {grupos.map(({ materia_codigo: cod, missoes }) => {
+          const materia = nomeDaMateria(cod, nomesMateria);
+          const inalcancavel = !podeRegistrar(cod);
           return (
-            <div key={mi.id} style={{ background: T.card, border: `1px solid ${fechada ? T.green : T.line}`, borderRadius: 10, padding: "11px 13px" }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-                <span style={{ fontWeight: 700, fontSize: 13.5 }}>{nome}</span>
-                {materia && <span style={{ fontSize: 11, color: T.sub }}>· {materia}</span>}
-                <span style={{ marginLeft: "auto" }}>
-                  <StatusBadge tom={fechada ? "ok" : inalcancavel ? "neutro" : "alerta"}>
-                    {fechada ? "✓ Concluída" : inalcancavel ? "Com a coordenação" : "Em andamento"}
-                  </StatusBadge>
-                </span>
-              </div>
-              {fechada ? (
-                <div style={{ fontSize: 11.5, color: T.green, marginTop: 6, fontWeight: 600 }}>
-                  +{mi.xp_concedido} XP concedidos · {mi.questoes_acumuladas} questões{mi.acuracia != null ? ` · ${mi.acuracia}% de acerto` : ""}
-                </div>
-              ) : inalcancavel ? (
-                <div style={{ fontSize: 11.5, color: T.sub, marginTop: 6, lineHeight: 1.5 }}>
-                  {materia} não está entre as matérias que você registra nesta trilha — esta missão é
-                  acompanhada com a coordenação, não fecha sozinha pelo seu registro de estudo.
-                </div>
-              ) : (
-                <div style={{ marginTop: 8 }}>
-                  <BarraXP pct={Math.min(100, pct)} alt={5} brilho={false} />
-                  <div style={{ fontSize: 11, color: T.sub, marginTop: 4 }}>
-                    {mi.questoes_acumuladas}{metaQ != null ? `/${metaQ}` : ""} questões{mi.acuracia != null ? ` · ${mi.acuracia}% de acerto` : " · registre acertos para medir o domínio"} · {alvo}
-                  </div>
+            <div key={cod}>
+              <div style={{ fontSize: 12, fontWeight: 700, color: T.sub, textTransform: "uppercase", letterSpacing: 0.4, marginBottom: 6 }}>{materia}</div>
+              {inalcancavel && (
+                <div style={{ fontSize: 11.5, color: T.sub, marginBottom: 6, lineHeight: 1.5 }}>
+                  {materia} não está entre as matérias que você registra nesta trilha — estas missões são
+                  acompanhadas com a coordenação, não fecham sozinhas pelo seu registro de estudo.
                 </div>
               )}
+              <ol style={{ listStyle: "none", margin: 0, padding: 0, display: "flex", flexDirection: "column", gap: 8 }}>
+                {missoes.map((mi) => {
+                  const alvo = `alvo: ${mi.meta_questoes} questões${mi.meta_acuracia != null ? ` e ≥${mi.meta_acuracia}% de acerto` : ""}`;
+                  // matéria fora da trilha: o aluno não registra, então não há
+                  // "atual" nem "começa no próximo registro" (EST1-A5)
+                  const coordenacao = inalcancavel && mi.estado !== "concluida";
+                  const borda = mi.estado === "concluida" ? T.green : mi.estado === "atual" && !coordenacao ? T.gold : T.line;
+                  return (
+                    <li key={mi.id} data-estado={coordenacao ? "coordenacao" : mi.estado}
+                      style={{ background: T.card, border: `1px solid ${borda}`, borderRadius: 10, padding: "11px 13px", opacity: mi.estado === "a_seguir" || coordenacao ? 0.75 : 1 }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                        <span style={{ fontWeight: 700, fontSize: 13.5 }}>{mi.nome}</span>
+                        <span style={{ marginLeft: "auto" }}>
+                          <StatusBadge tom={coordenacao ? "neutro" : TOM_ESTADO[mi.estado]}>{coordenacao ? "Com a coordenação" : ROTULO_ESTADO[mi.estado]}</StatusBadge>
+                        </span>
+                      </div>
+                      {mi.estado === "concluida" ? (
+                        <div style={{ fontSize: 11.5, color: T.green, marginTop: 6, fontWeight: 600 }}>
+                          +{mi.xp_concedido} XP concedidos · {mi.questoes} questões{mi.acuracia != null ? ` · ${mi.acuracia}% de acerto` : ""}
+                        </div>
+                      ) : coordenacao ? (
+                        <div style={{ fontSize: 11, color: T.sub, marginTop: 4 }}>
+                          {alvo} · +{mi.xp} XP
+                        </div>
+                      ) : mi.estado === "atual" ? (
+                        <div style={{ marginTop: 8 }}>
+                          {/* fecha com volume E acurácia: a barra é o menor dos dois */}
+                          <BarraXP pct={mi.pct} alt={5} brilho={false} />
+                          <div style={{ fontSize: 11, color: T.sub, marginTop: 4 }}>
+                            {mi.questoes}/{mi.meta_questoes} questões{mi.acuracia != null ? ` · ${mi.acuracia}% de acerto` : ""} · {mi.volume_batido && mi.falta_acerto ? `volume batido; falta chegar a ≥${mi.meta_acuracia}% de acerto` : alvo}
+                          </div>
+                        </div>
+                      ) : (
+                        <div style={{ fontSize: 11, color: T.sub, marginTop: 4 }}>
+                          {mi.proxima ? "começa na sua próxima prática desta missão com acertos" : "começa depois da anterior"} · {alvo} · +{mi.xp} XP
+                        </div>
+                      )}
+                      {/* P0.4 (0064): registrar a partir da missão é o que a liga
+                          ao assunto dela. Praticar: a atual ou a próxima a começar.
+                          Revisar: as que já começaram ou fecharam. */}
+                      {/* 18/10: "Iniciar missão" é um botão só. Com questões
+                          ligadas pelo servidor, abre a sessão de questões; sem,
+                          segue para o registro da missão, como antes. Com
+                          questões, o registro à mão fica como link secundário.
+                          Enquanto a lista do servidor não chega, carrega
+                          (destinoDoInicio). */}
+                      {!coordenacao && (mi.estado === "atual" || mi.proxima) && (() => {
+                        const destino = destinoDoInicio(mi, questoesIntegradas, { podeResolver: !!aoResolver && !inalcancavel });
+                        if (destino === "registro" && !aoPraticar) return null;
+                        const carregando = destino === "carregando";
+                        const iniciar = () => {
+                          if (destino === "questoes") aoResolver(mi, "missao");
+                          else if (destino === "registro") aoPraticar(contextoRegistroDaMissao(mi, "missao"));
+                        };
+                        return (
+                          <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap", marginTop: 8 }}>
+                            <button type="button" className="journey-use-suggestion" onClick={iniciar}
+                              disabled={carregando} aria-busy={carregando || undefined}
+                              style={carregando ? { opacity: 0.6, cursor: "progress" } : undefined}>
+                              Iniciar missão
+                            </button>
+                            {carregando && <span role="status" style={{ fontSize: 12, color: T.sub }}>Carregando…</span>}
+                            {destino !== "registro" && aoPraticar && (
+                              <button type="button" onClick={() => aoPraticar(contextoRegistroDaMissao(mi, "missao"))}
+                                style={{ background: "none", border: "none", padding: 0, color: T.sub, fontSize: 12, textDecoration: "underline", cursor: "pointer" }}>
+                                Registrar à mão
+                              </button>
+                            )}
+                          </div>
+                        );
+                      })()}
+                      {aoPraticar && !inalcancavel && mi.estado === "concluida" && (
+                        <button type="button" className="journey-use-suggestion" style={{ marginTop: 8 }}
+                          onClick={() => aoPraticar(contextoRegistroDaMissao(mi, "revisao"))}>
+                          Registrar revisão
+                        </button>
+                      )}
+                      {aoResolver && !coordenacao && !inalcancavel && mi.estado === "concluida" && podeResolverAqui(mi, questoesIntegradas) && (
+                        <button type="button" className="journey-use-suggestion" style={{ marginTop: 8, marginLeft: 8 }}
+                          onClick={() => aoResolver(mi, "revisao")}>
+                          Revisar com questões
+                        </button>
+                      )}
+                    </li>
+                  );
+                })}
+              </ol>
             </div>
           );
         })}
+        {concluidasRecolhidas.length > 0 && (
+          <button type="button" aria-expanded={verConcluidas} onClick={() => setVerConcluidas((v) => !v)}
+            style={{ alignSelf: "flex-start", background: "none", border: "none", padding: "6px 0", minHeight: 36, color: T.sub, fontSize: 12.5, fontWeight: 600, cursor: "pointer" }}>
+            {verConcluidas
+              ? "▾ Ocultar concluídas"
+              : `▸ ${concluidasRecolhidas.length} ${concluidasRecolhidas.length === 1 ? "concluída" : "concluídas"} · revisar`}
+          </button>
+        )}
       </div>
     </SectionCard>
   );

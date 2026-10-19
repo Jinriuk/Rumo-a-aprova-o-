@@ -52,12 +52,13 @@ test("confirmação resume somente os valores devolvidos pelo banco", () => {
   });
 });
 
-test("objetivo inicia prática e a lista compacta preserva acesso ao restante", () => {
+test("tarefa inicia o registro e as concluídas ficam recolhidas, a um toque", () => {
   const src = ler("app/src/modules/motor/MetaSemana.jsx");
-  assert.match(src, /Praticar agora/);
+  // raio-x, mudança 3 e PR 3: "Registrar estudo", "X concluídas"
+  assert.match(src, /Registrar estudo <span aria-hidden="true">→<\/span>/);
   assert.match(src, /contextoRegistroDaAtividade/);
-  assert.match(src, /compacta = false/);
-  assert.match(src, /Ver todos os \{itens\.length\} objetivos/);
+  assert.match(src, /`\$\{feitas\.length\} \$\{feitas\.length === 1 \? "concluída" : "concluídas"\}`/);
+  assert.match(src, /\{verFeitas && feitas\.map\(/);
 });
 
 test("Registrar usa o retorno do insert e mantém sugestão sob ação explícita", () => {
@@ -141,12 +142,11 @@ test("R2-fix: objetivo pendente sem atividade na trilha não vira contexto vazio
   assert.equal(objetivosPendentesEmOrdem(meta, trilha).length, 1);
 });
 
-test("R2-fix: a prévia compacta nunca fica vazia quando não há pendente", () => {
+test("R2-fix: a lista da semana nunca fica vazia quando não há pendente", () => {
   const src = ler("app/src/modules/motor/MetaSemana.jsx");
-  assert.match(src, /const previa = praticaveis\.length > 0 \? praticaveis : itens;/);
-  assert.match(src, /const visiveis = limite == null \? itens : previa\.slice\(0, limite\);/);
-  // a lista compacta não pode voltar a fatiar direto os praticáveis
-  assert.doesNotMatch(src, /limite == null \? itens : praticaveis\.slice/);
+  // tudo concluído: diz isso e mantém as concluídas a um toque
+  assert.match(src, /\{!abertas\.length && \(\s*<div[^>]*>\s*✓ Todas as tarefas desta semana estão concluídas\./);
+  assert.match(src, /\{feitas\.length > 0 && \(/);
 });
 
 test("R2-fix: o foco acompanha a jornada em vez de cair no body", () => {

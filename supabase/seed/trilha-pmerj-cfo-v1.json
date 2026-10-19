@@ -1,0 +1,2941 @@
+{
+  "comentario": "Fonte editorial da trilha CFO PMERJ pré-edital. Gerar o SQL de uma turma com scripts/gerar-seed-trilha-pmerj-cfo.mjs --inicio AAAA-MM-DD --turma N. Os textos do Anexo II são literais; sínteses e missões são autorais.",
+  "versaoManifesto": 1,
+  "conteudoVersao": "v1-pre-edital",
+  "nicho": "pmerj-cfo",
+  "examTag": "pmerj_cfo",
+  "nome": "CFO PMERJ, preparação pré-edital",
+  "statusDado": "inferencia",
+  "fontePrograma": "Anexo II do edital CFO PMERJ 2024, retificado (edital_cfo_2024_retificado-3-19.11.24.pdf, pp. 56–61); aplicabilidade ao próximo ciclo provisória",
+  "documentos": [
+    "docs/conteudo/pmerj-cfo/PMERJ_CFO_Desenho_da_Trilha_e_Auditoria_do_Banco.md",
+    "docs/conteudo/pmerj-cfo/PMERJ_CFO_Matriz_e_Modelo_de_Metas.md"
+  ],
+  "dataProvaConfirmada": null,
+  "concurso": {
+    "codigo": "pmerj_cfo",
+    "nome": "CFO PMERJ, preparação pré-edital",
+    "organizacao": "Polícia Militar do Estado do Rio de Janeiro",
+    "nivel": "superior",
+    "observacao": "Pré-edital: programa do Anexo II de 2024 (FGV) como base histórica; banca do próximo ciclo autorizada (Cesgranrio) sem edital publicado. Data da prova não confirmada.",
+    "ordem": 6
+  },
+  "turmaPadrao": {
+    "perfil": "Bacharel em Direito ou base jurídica prévia",
+    "horasSemana": 15,
+    "horasLeitura": 5,
+    "horasQuestoesComCorrecao": 8,
+    "horasEscrita": 2,
+    "decisao": "Dono do produto, 03/10/2026. Substitui a turma de referência de 22 h da seção 6.1."
+  },
+  "orcamento": {
+    "minutosPorQuestaoCorrigida": 3,
+    "unidadePeso": 16,
+    "reservaRevisao": 0.25,
+    "reservaMisto": 0.1,
+    "simuladoCompleto": {
+      "questoes": 80,
+      "minutosProva": 240,
+      "minutosCorrecao": 120,
+      "revisaoSobreRestante": 0.375
+    },
+    "semanaNormal": {
+      "dir_adm": {
+        "N": 20,
+        "R": 7,
+        "S": 3
+      },
+      "dir_const": {
+        "N": 20,
+        "R": 7,
+        "S": 3
+      },
+      "dir_pen": {
+        "N": 20,
+        "R": 7,
+        "S": 3
+      },
+      "dir_proc_pen": {
+        "N": 20,
+        "R": 7,
+        "S": 3
+      },
+      "dir_pen_mil": {
+        "N": 13,
+        "R": 5,
+        "S": 2
+      },
+      "dir_hum": {
+        "N": 13,
+        "R": 5,
+        "S": 2
+      }
+    },
+    "semanaSimulado": {
+      "dir_adm": {
+        "N": 4,
+        "R": 2,
+        "S": 15
+      },
+      "dir_const": {
+        "N": 4,
+        "R": 2,
+        "S": 15
+      },
+      "dir_pen": {
+        "N": 4,
+        "R": 2,
+        "S": 15
+      },
+      "dir_proc_pen": {
+        "N": 4,
+        "R": 2,
+        "S": 15
+      },
+      "dir_pen_mil": {
+        "N": 3,
+        "R": 1,
+        "S": 10
+      },
+      "dir_hum": {
+        "N": 3,
+        "R": 1,
+        "S": 10
+      }
+    },
+    "leituraMinutosPorSemana": {
+      "dir_adm": 56,
+      "dir_const": 56,
+      "dir_pen": 56,
+      "dir_proc_pen": 56,
+      "dir_pen_mil": 38,
+      "dir_hum": 38
+    },
+    "regra": "B = maior múltiplo de 16 que cabe no tempo de questões (16 é o denominador comum dos pesos 15/80 = 3/16 e 10/80 = 2/16, então cada matéria recebe a parte exata). Por matéria: S = 10% do total da matéria, R = 25% arredondado para baixo, N = o restante. Semana de simulado: o simulado sai primeiro do tempo (4 h + 2 h); o restante segue a mesma regra, com R = 37,5% (proporção 30/80 da seção 6.2) arredondado para baixo."
+  },
+  "materias": [
+    {
+      "sigla": "ADM",
+      "codigo": "dir_adm",
+      "nome": "Direito Administrativo",
+      "abrev": "Adm",
+      "cor": "#CDA349",
+      "questoesFgv2024": 15,
+      "ordem": 0
+    },
+    {
+      "sigla": "CONST",
+      "codigo": "dir_const",
+      "nome": "Direito Constitucional",
+      "abrev": "Const",
+      "cor": "#49B6CF",
+      "questoesFgv2024": 15,
+      "ordem": 1
+    },
+    {
+      "sigla": "PEN",
+      "codigo": "dir_pen",
+      "nome": "Direito Penal",
+      "abrev": "Pen",
+      "cor": "#E0788E",
+      "questoesFgv2024": 15,
+      "ordem": 2
+    },
+    {
+      "sigla": "CPP",
+      "codigo": "dir_proc_pen",
+      "nome": "Direito Processual Penal",
+      "abrev": "PPen",
+      "cor": "#9A8CF0",
+      "questoesFgv2024": 15,
+      "ordem": 3
+    },
+    {
+      "sigla": "CPM",
+      "codigo": "dir_pen_mil",
+      "nome": "Direito Penal Militar",
+      "abrev": "PMil",
+      "cor": "#5FC089",
+      "questoesFgv2024": 10,
+      "ordem": 4
+    },
+    {
+      "sigla": "DH",
+      "codigo": "dir_hum",
+      "nome": "Direitos Humanos",
+      "abrev": "DH",
+      "cor": "#E0954A",
+      "questoesFgv2024": 10,
+      "ordem": 5
+    }
+  ],
+  "disciplinasOperacionais": [
+    {
+      "codigo": "esc",
+      "nome": "Escrita jurídica",
+      "abrev": "Esc",
+      "cor": "#B0A8C8"
+    },
+    {
+      "codigo": "sim",
+      "nome": "Simulado",
+      "abrev": "Sim",
+      "cor": "#C77DFF"
+    }
+  ],
+  "anexoII": [
+    {
+      "chave": "ADM-01",
+      "materia": "dir_adm",
+      "posicao": 1,
+      "texto": "Princípios de Direito Administrativo.",
+      "questoesFgv2024": "0 C",
+      "prioridade": "alta"
+    },
+    {
+      "chave": "ADM-02",
+      "materia": "dir_adm",
+      "posicao": 2,
+      "texto": "Administração Pública: conceito, estrutura, poderes e deveres do administrador público.",
+      "questoesFgv2024": "0 C",
+      "prioridade": "alta"
+    },
+    {
+      "chave": "ADM-03",
+      "materia": "dir_adm",
+      "posicao": 3,
+      "texto": "Administração Direta e Indireta.",
+      "questoesFgv2024": "0 C",
+      "prioridade": "alta"
+    },
+    {
+      "chave": "ADM-04",
+      "materia": "dir_adm",
+      "posicao": 4,
+      "texto": "Entidades do Terceiro Setor.",
+      "questoesFgv2024": "1 C — Q3",
+      "prioridade": "alta"
+    },
+    {
+      "chave": "ADM-05",
+      "materia": "dir_adm",
+      "posicao": 5,
+      "texto": "A reforma do Estado: disciplina e efeitos.",
+      "questoesFgv2024": "0 C",
+      "prioridade": "media"
+    },
+    {
+      "chave": "ADM-06",
+      "materia": "dir_adm",
+      "posicao": 6,
+      "texto": "Terceirização.",
+      "questoesFgv2024": "0 C",
+      "prioridade": "alta"
+    },
+    {
+      "chave": "ADM-07",
+      "materia": "dir_adm",
+      "posicao": 7,
+      "texto": "As organizações sociais e as organizações da sociedade civil de interesse público: Lei Federal nº 9.637/1998 e Lei Federal nº 9.790/1999.",
+      "questoesFgv2024": "0 C",
+      "prioridade": "alta"
+    },
+    {
+      "chave": "ADM-08",
+      "materia": "dir_adm",
+      "posicao": 8,
+      "texto": "Lei nº 13019/2014.",
+      "questoesFgv2024": "1 C — Q10",
+      "prioridade": "alta"
+    },
+    {
+      "chave": "ADM-09",
+      "materia": "dir_adm",
+      "posicao": 9,
+      "texto": "Parcerias Público- Privadas: Lei Federal nº 11.079/2004.",
+      "questoesFgv2024": "1 C — Q15",
+      "prioridade": "alta"
+    },
+    {
+      "chave": "ADM-10",
+      "materia": "dir_adm",
+      "posicao": 10,
+      "texto": "Consórcio Público: Lei Federal nº 11.107/2005.",
+      "questoesFgv2024": "1 C — Q14",
+      "prioridade": "alta"
+    },
+    {
+      "chave": "ADM-11",
+      "materia": "dir_adm",
+      "posicao": 11,
+      "texto": "Poderes administrativos.",
+      "questoesFgv2024": "1 C — Q6",
+      "prioridade": "alta"
+    },
+    {
+      "chave": "ADM-12",
+      "materia": "dir_adm",
+      "posicao": 12,
+      "texto": "Ato administrativo.",
+      "questoesFgv2024": "1 C — Q4",
+      "prioridade": "alta"
+    },
+    {
+      "chave": "ADM-13",
+      "materia": "dir_adm",
+      "posicao": 13,
+      "texto": "Processo Administrativo.",
+      "questoesFgv2024": "0 C",
+      "prioridade": "alta"
+    },
+    {
+      "chave": "ADM-14",
+      "materia": "dir_adm",
+      "posicao": 14,
+      "texto": "Licitação: conceito, natureza jurídica, princípios, finalidades, tipos, modalidades, procedimento, dispensa e inexigibilidade.",
+      "questoesFgv2024": "1 C — Q9",
+      "prioridade": "alta"
+    },
+    {
+      "chave": "ADM-15",
+      "materia": "dir_adm",
+      "posicao": 15,
+      "texto": "Contratos administrativos.",
+      "questoesFgv2024": "0 C",
+      "prioridade": "alta"
+    },
+    {
+      "chave": "ADM-16",
+      "materia": "dir_adm",
+      "posicao": 16,
+      "texto": "Serviço Público.",
+      "questoesFgv2024": "0 C",
+      "prioridade": "alta"
+    },
+    {
+      "chave": "ADM-17",
+      "materia": "dir_adm",
+      "posicao": 17,
+      "texto": "Concessão de obras e serviços públicos: Lei Federal nº 8.987/1995 e Lei Federal nº 9.074/1995.",
+      "questoesFgv2024": "1 C — Q2",
+      "prioridade": "alta"
+    },
+    {
+      "chave": "ADM-18",
+      "materia": "dir_adm",
+      "posicao": 18,
+      "texto": "Agentes públicos; servidores públicos: conceito, regime jurídico, categorias, direitos e deveres.",
+      "questoesFgv2024": "0 C",
+      "prioridade": "alta"
+    },
+    {
+      "chave": "ADM-19",
+      "materia": "dir_adm",
+      "posicao": 19,
+      "texto": "Cargo, emprego e função: normas constitucionais, provimento, vacância.",
+      "questoesFgv2024": "0 C",
+      "prioridade": "alta"
+    },
+    {
+      "chave": "ADM-20",
+      "materia": "dir_adm",
+      "posicao": 20,
+      "texto": "Responsabilidades dos agentes públicos: civil, administrativa e penal.",
+      "questoesFgv2024": "0 C",
+      "prioridade": "alta"
+    },
+    {
+      "chave": "ADM-21",
+      "materia": "dir_adm",
+      "posicao": 21,
+      "texto": "Processo administrativo disciplinar.",
+      "questoesFgv2024": "1 C — Q5",
+      "prioridade": "alta"
+    },
+    {
+      "chave": "ADM-22",
+      "materia": "dir_adm",
+      "posicao": 22,
+      "texto": "Regime previdenciário do servidor público.",
+      "questoesFgv2024": "0 C",
+      "prioridade": "media"
+    },
+    {
+      "chave": "ADM-23",
+      "materia": "dir_adm",
+      "posicao": 23,
+      "texto": "Lei Orgânica Nacional das Polícias Militares e dos Corpos de Bombeiros Militares dos Estados, do Distrito Federal e dos Territórios (Lei nº 14751/2023).",
+      "questoesFgv2024": "1 C — Q13",
+      "prioridade": "alta"
+    },
+    {
+      "chave": "ADM-24",
+      "materia": "dir_adm",
+      "posicao": 24,
+      "texto": "Lei nº 443/1981 - Estatuto da Polícia Militar do Estado do Rio de Janeiro.",
+      "questoesFgv2024": "2 C — Q7, Q8",
+      "prioridade": "alta"
+    },
+    {
+      "chave": "ADM-25",
+      "materia": "dir_adm",
+      "posicao": 25,
+      "texto": "Concurso público.",
+      "questoesFgv2024": "0 C",
+      "prioridade": "alta"
+    },
+    {
+      "chave": "ADM-26",
+      "materia": "dir_adm",
+      "posicao": 26,
+      "texto": "Bens públicos: regime jurídico e classificação, formas de utilização, concessão, permissão e autorização de uso.",
+      "questoesFgv2024": "0 C",
+      "prioridade": "media"
+    },
+    {
+      "chave": "ADM-27",
+      "materia": "dir_adm",
+      "posicao": 27,
+      "texto": "Desafetação e alienação.",
+      "questoesFgv2024": "0 C",
+      "prioridade": "media"
+    },
+    {
+      "chave": "ADM-28",
+      "materia": "dir_adm",
+      "posicao": 28,
+      "texto": "Desapropriação: conceito.",
+      "questoesFgv2024": "0 C",
+      "prioridade": "media"
+    },
+    {
+      "chave": "ADM-29",
+      "materia": "dir_adm",
+      "posicao": 29,
+      "texto": "Desapropriação por necessidade pública, por utilidade pública, e por interesse social.",
+      "questoesFgv2024": "0 C",
+      "prioridade": "media"
+    },
+    {
+      "chave": "ADM-30",
+      "materia": "dir_adm",
+      "posicao": 30,
+      "texto": "Indenização.",
+      "questoesFgv2024": "0 C",
+      "prioridade": "media"
+    },
+    {
+      "chave": "ADM-31",
+      "materia": "dir_adm",
+      "posicao": 31,
+      "texto": "Desapropriação indireta.",
+      "questoesFgv2024": "0 C",
+      "prioridade": "media"
+    },
+    {
+      "chave": "ADM-32",
+      "materia": "dir_adm",
+      "posicao": 32,
+      "texto": "Limitações administrativas.",
+      "questoesFgv2024": "0 C",
+      "prioridade": "media"
+    },
+    {
+      "chave": "ADM-33",
+      "materia": "dir_adm",
+      "posicao": 33,
+      "texto": "Função social da propriedade.",
+      "questoesFgv2024": "0 C",
+      "prioridade": "media"
+    },
+    {
+      "chave": "ADM-34",
+      "materia": "dir_adm",
+      "posicao": 34,
+      "texto": "Responsabilidade civil do Estado.",
+      "questoesFgv2024": "0 C",
+      "prioridade": "alta"
+    },
+    {
+      "chave": "ADM-35",
+      "materia": "dir_adm",
+      "posicao": 35,
+      "texto": "Controle da Administração.",
+      "questoesFgv2024": "0 C",
+      "prioridade": "alta"
+    },
+    {
+      "chave": "ADM-36",
+      "materia": "dir_adm",
+      "posicao": 36,
+      "texto": "Improbidade Administrativa.",
+      "questoesFgv2024": "1 C — Q11",
+      "prioridade": "alta"
+    },
+    {
+      "chave": "ADM-37",
+      "materia": "dir_adm",
+      "posicao": 37,
+      "texto": "Lei Anticorrupção: Lei Federal nº 12.846/2013.",
+      "questoesFgv2024": "1 C — Q12",
+      "prioridade": "alta"
+    },
+    {
+      "chave": "ADM-38",
+      "materia": "dir_adm",
+      "posicao": 38,
+      "texto": "Infrações e sanções administrativas: conceito, finalidades, sujeitos, princípios e classificação.",
+      "questoesFgv2024": "0 C",
+      "prioridade": "media"
+    },
+    {
+      "chave": "ADM-39",
+      "materia": "dir_adm",
+      "posicao": 39,
+      "texto": "As infrações administrativas na Lei de Responsabilidade Fiscal.",
+      "questoesFgv2024": "0 C",
+      "prioridade": "media"
+    },
+    {
+      "chave": "ADM-40",
+      "materia": "dir_adm",
+      "posicao": 40,
+      "texto": "Direito de acesso à informação: Lei nº 12.527/2011 e Lei nº 13.709/2018 (Lei Geral de Proteção de Dados Pessoais---LGPD).",
+      "questoesFgv2024": "1 C — Q1",
+      "prioridade": "alta"
+    },
+    {
+      "chave": "CONST-01",
+      "materia": "dir_const",
+      "posicao": 1,
+      "texto": "Natureza, conceito e objeto.",
+      "questoesFgv2024": "0 C",
+      "prioridade": "media"
+    },
+    {
+      "chave": "CONST-02",
+      "materia": "dir_const",
+      "posicao": 2,
+      "texto": "Constituição: conceito, teorias e elementos.",
+      "questoesFgv2024": "0 C",
+      "prioridade": "alta"
+    },
+    {
+      "chave": "CONST-03",
+      "materia": "dir_const",
+      "posicao": 3,
+      "texto": "Interpretação do texto constitucional: teorias e métodos.",
+      "questoesFgv2024": "0 C",
+      "prioridade": "alta"
+    },
+    {
+      "chave": "CONST-04",
+      "materia": "dir_const",
+      "posicao": 4,
+      "texto": "Normas constitucionais: natureza, eficácia e aplicabilidade.",
+      "questoesFgv2024": "1 C — Q16",
+      "prioridade": "alta"
+    },
+    {
+      "chave": "CONST-05",
+      "materia": "dir_const",
+      "posicao": 5,
+      "texto": "Poder Constituinte: fundamentos; reforma e revisão constitucionais; limitações; emendas à Constituição.",
+      "questoesFgv2024": "1 C — Q17",
+      "prioridade": "alta"
+    },
+    {
+      "chave": "CONST-06",
+      "materia": "dir_const",
+      "posicao": 6,
+      "texto": "Estado Democrático de Direito: conceito; fundamentos constitucionais; princípio da República.",
+      "questoesFgv2024": "0 C",
+      "prioridade": "alta"
+    },
+    {
+      "chave": "CONST-07",
+      "materia": "dir_const",
+      "posicao": 7,
+      "texto": "Controle de constitucionalidade: conceito e sistemas existentes.",
+      "questoesFgv2024": "0 C",
+      "prioridade": "alta"
+    },
+    {
+      "chave": "CONST-08",
+      "materia": "dir_const",
+      "posicao": 8,
+      "texto": "Sistema brasileiro de controle de constitucionalidade: disciplina constitucional e infraconstitucional.",
+      "questoesFgv2024": "0 C",
+      "prioridade": "alta"
+    },
+    {
+      "chave": "CONST-09",
+      "materia": "dir_const",
+      "posicao": 9,
+      "texto": "Ação declaratória de constitucionalidade, ação direta de inconstitucionalidade, arguição de descumprimento de preceito fundamental Súmula vinculante (Lei nº 11.417/2006).",
+      "questoesFgv2024": "1 C — Q18",
+      "prioridade": "alta"
+    },
+    {
+      "chave": "CONST-10",
+      "materia": "dir_const",
+      "posicao": 10,
+      "texto": "Dos direitos e deveres fundamentais: direitos e deveres individuais e coletivos; declaração dos direitos e sua formação histórica; natureza e eficácia das normas sobre direitos fundamentais; conceito de direitos e de garantias; classificação dos direitos fundamentais.",
+      "questoesFgv2024": "1 C — Q19",
+      "prioridade": "alta"
+    },
+    {
+      "chave": "CONST-11",
+      "materia": "dir_const",
+      "posicao": 11,
+      "texto": "direitos Sociais; conceito e classificação; direitos dos trabalhadores (individuais e coletivos); direito ambiental; nacionalidade, cidadania e direitos políticos; partidos políticos.",
+      "questoesFgv2024": "2 C — Q20, Q23",
+      "prioridade": "alta"
+    },
+    {
+      "chave": "CONST-12",
+      "materia": "dir_const",
+      "posicao": 12,
+      "texto": "Plebiscito e referendo (conceitos e distinções); direitos políticos negativos (conceito e significado; perda, suspensão e reaquisição dos direitos políticos; inelegibilidades).",
+      "questoesFgv2024": "1 C — Q22",
+      "prioridade": "alta"
+    },
+    {
+      "chave": "CONST-13",
+      "materia": "dir_const",
+      "posicao": 13,
+      "texto": "Ações constitucionais: Mandado de Segurança (Lei nº 12.016/2009); Mandado de Injunção (Lei nº 13.300/2016); Ação Popular (Lei nº 4.717/1965), Habeas Data (Lei nº 9.507/1997) e Habeas Corpus.",
+      "questoesFgv2024": "0 C",
+      "prioridade": "alta"
+    },
+    {
+      "chave": "CONST-14",
+      "materia": "dir_const",
+      "posicao": 14,
+      "texto": "Acesso à informação (Lei nº 12.527/2011).",
+      "questoesFgv2024": "0 C",
+      "prioridade": "alta"
+    },
+    {
+      "chave": "CONST-15",
+      "materia": "dir_const",
+      "posicao": 15,
+      "texto": "Ação Civil Pública.",
+      "questoesFgv2024": "0 C",
+      "prioridade": "alta"
+    },
+    {
+      "chave": "CONST-16",
+      "materia": "dir_const",
+      "posicao": 16,
+      "texto": "Organização do Estado: organização político-administrativa.",
+      "questoesFgv2024": "0 C",
+      "prioridade": "alta"
+    },
+    {
+      "chave": "CONST-17",
+      "materia": "dir_const",
+      "posicao": 17,
+      "texto": "Divisão de competências: União, Estados, Distrito Federal e Municípios.",
+      "questoesFgv2024": "2 C — Q21, Q24",
+      "prioridade": "alta"
+    },
+    {
+      "chave": "CONST-18",
+      "materia": "dir_const",
+      "posicao": 18,
+      "texto": "intervenção nos Estados e Municípios (autonomia e intervenção, competência interventiva, pressupostos formais e substanciais, procedimento, limites e controle).",
+      "questoesFgv2024": "1 C — Q25",
+      "prioridade": "alta"
+    },
+    {
+      "chave": "CONST-19",
+      "materia": "dir_const",
+      "posicao": 19,
+      "texto": "Administração Pública: disposições gerais e servidores públicos.",
+      "questoesFgv2024": "1 C — Q26*",
+      "prioridade": "alta"
+    },
+    {
+      "chave": "CONST-20",
+      "materia": "dir_const",
+      "posicao": 20,
+      "texto": "Poder Legislativo: fundamento, competências e garantias de independência.",
+      "questoesFgv2024": "1 C — Q27",
+      "prioridade": "alta"
+    },
+    {
+      "chave": "CONST-21",
+      "materia": "dir_const",
+      "posicao": 21,
+      "texto": "Poder Executivo: forma e sistema de governo; chefia de Estado e chefia de Governo; atribuições e responsabilidades do Presidente da República; Ministros de Estado.",
+      "questoesFgv2024": "0 C",
+      "prioridade": "alta"
+    },
+    {
+      "chave": "CONST-22",
+      "materia": "dir_const",
+      "posicao": 22,
+      "texto": "Poder Judiciário: disposições gerais; o Supremo Tribunal Federal; o Superior Tribunal de Justiça; Tribunais Regionais Federais e Juízes Federais; Tribunais e Juízes dos Estados e do DF.",
+      "questoesFgv2024": "1 C — Q28",
+      "prioridade": "alta"
+    },
+    {
+      "chave": "CONST-23",
+      "materia": "dir_const",
+      "posicao": 23,
+      "texto": "Garantias da magistratura.",
+      "questoesFgv2024": "0 C",
+      "prioridade": "media"
+    },
+    {
+      "chave": "CONST-24",
+      "materia": "dir_const",
+      "posicao": 24,
+      "texto": "Funções essenciais à Justiça: Ministério Público.",
+      "questoesFgv2024": "0 C",
+      "prioridade": "alta"
+    },
+    {
+      "chave": "CONST-25",
+      "materia": "dir_const",
+      "posicao": 25,
+      "texto": "Defesa do Estado e das instituições democráticas.",
+      "questoesFgv2024": "0 C",
+      "prioridade": "alta"
+    },
+    {
+      "chave": "CONST-26",
+      "materia": "dir_const",
+      "posicao": 26,
+      "texto": "Segurança Pública: organização da segurança pública.",
+      "questoesFgv2024": "0 C",
+      "prioridade": "alta"
+    },
+    {
+      "chave": "CONST-27",
+      "materia": "dir_const",
+      "posicao": 27,
+      "texto": "Ordem social: base e objetivos da ordem social; seguridade social; educação, cultura e desporto; ciência, tecnologia e inovação; comunicação social; meio ambiente; família, criança, adolescente, jovem e idoso.",
+      "questoesFgv2024": "2 C — Q29, Q30",
+      "prioridade": "alta"
+    },
+    {
+      "chave": "CONST-28",
+      "materia": "dir_const",
+      "posicao": 28,
+      "texto": "A Constituição do Estado do Rio de Janeiro.",
+      "questoesFgv2024": "0 C",
+      "prioridade": "media"
+    },
+    {
+      "chave": "CONST-29",
+      "materia": "dir_const",
+      "posicao": 29,
+      "texto": "Convenção Internacional sobre os Direitos das Pessoas com Deficiência.",
+      "questoesFgv2024": "0 C",
+      "prioridade": "media"
+    },
+    {
+      "chave": "PEN-01",
+      "materia": "dir_pen",
+      "posicao": 1,
+      "texto": "Conceito do Direito Penal.",
+      "questoesFgv2024": "0 C",
+      "prioridade": "media"
+    },
+    {
+      "chave": "PEN-02",
+      "materia": "dir_pen",
+      "posicao": 2,
+      "texto": "Fontes e princípios do Direito Penal.",
+      "questoesFgv2024": "0 C",
+      "prioridade": "alta"
+    },
+    {
+      "chave": "PEN-03",
+      "materia": "dir_pen",
+      "posicao": 3,
+      "texto": "Aplicação da lei penal.",
+      "questoesFgv2024": "0 C",
+      "prioridade": "alta"
+    },
+    {
+      "chave": "PEN-04",
+      "materia": "dir_pen",
+      "posicao": 4,
+      "texto": "Teoria da norma penal.",
+      "questoesFgv2024": "0 C",
+      "prioridade": "media"
+    },
+    {
+      "chave": "PEN-05",
+      "materia": "dir_pen",
+      "posicao": 5,
+      "texto": "Lei penal: fontes, características, interpretação, integração, vigência e aplicação.",
+      "questoesFgv2024": "0 C",
+      "prioridade": "alta"
+    },
+    {
+      "chave": "PEN-06",
+      "materia": "dir_pen",
+      "posicao": 6,
+      "texto": "A lei penal no tempo e no espaço.",
+      "questoesFgv2024": "0 C",
+      "prioridade": "alta"
+    },
+    {
+      "chave": "PEN-07",
+      "materia": "dir_pen",
+      "posicao": 7,
+      "texto": "Territorialidade e extraterritorialidade da lei penal.",
+      "questoesFgv2024": "0 C",
+      "prioridade": "media"
+    },
+    {
+      "chave": "PEN-08",
+      "materia": "dir_pen",
+      "posicao": 8,
+      "texto": "Imunidade.",
+      "questoesFgv2024": "0 C",
+      "prioridade": "media"
+    },
+    {
+      "chave": "PEN-09",
+      "materia": "dir_pen",
+      "posicao": 9,
+      "texto": "Analogia.",
+      "questoesFgv2024": "0 C",
+      "prioridade": "alta"
+    },
+    {
+      "chave": "PEN-10",
+      "materia": "dir_pen",
+      "posicao": 10,
+      "texto": "Irretroatividade da lei penal.",
+      "questoesFgv2024": "0 C",
+      "prioridade": "alta"
+    },
+    {
+      "chave": "PEN-11",
+      "materia": "dir_pen",
+      "posicao": 11,
+      "texto": "Conflito aparente de normas.",
+      "questoesFgv2024": "0 C",
+      "prioridade": "alta"
+    },
+    {
+      "chave": "PEN-12",
+      "materia": "dir_pen",
+      "posicao": 12,
+      "texto": "Teoria do crime: classificação das Infrações Penais.",
+      "questoesFgv2024": "0 C",
+      "prioridade": "alta"
+    },
+    {
+      "chave": "PEN-13",
+      "materia": "dir_pen",
+      "posicao": 13,
+      "texto": "Conceito de crime.",
+      "questoesFgv2024": "0 C",
+      "prioridade": "alta"
+    },
+    {
+      "chave": "PEN-14",
+      "materia": "dir_pen",
+      "posicao": 14,
+      "texto": "Fato típico e seus elementos.",
+      "questoesFgv2024": "0 C",
+      "prioridade": "alta"
+    },
+    {
+      "chave": "PEN-15",
+      "materia": "dir_pen",
+      "posicao": 15,
+      "texto": "Bem jurídico.",
+      "questoesFgv2024": "0 C",
+      "prioridade": "media"
+    },
+    {
+      "chave": "PEN-16",
+      "materia": "dir_pen",
+      "posicao": 16,
+      "texto": "Conduta.",
+      "questoesFgv2024": "0 C",
+      "prioridade": "alta"
+    },
+    {
+      "chave": "PEN-17",
+      "materia": "dir_pen",
+      "posicao": 17,
+      "texto": "Resultado.",
+      "questoesFgv2024": "0 C",
+      "prioridade": "alta"
+    },
+    {
+      "chave": "PEN-18",
+      "materia": "dir_pen",
+      "posicao": 18,
+      "texto": "Relação de causalidade.",
+      "questoesFgv2024": "0 C",
+      "prioridade": "alta"
+    },
+    {
+      "chave": "PEN-19",
+      "materia": "dir_pen",
+      "posicao": 19,
+      "texto": "Imputação Objetiva.",
+      "questoesFgv2024": "0 C",
+      "prioridade": "media"
+    },
+    {
+      "chave": "PEN-20",
+      "materia": "dir_pen",
+      "posicao": 20,
+      "texto": "Teoria do tipo.",
+      "questoesFgv2024": "0 C",
+      "prioridade": "alta"
+    },
+    {
+      "chave": "PEN-21",
+      "materia": "dir_pen",
+      "posicao": 21,
+      "texto": "Crime Doloso.",
+      "questoesFgv2024": "0 C",
+      "prioridade": "alta"
+    },
+    {
+      "chave": "PEN-22",
+      "materia": "dir_pen",
+      "posicao": 22,
+      "texto": "Crime Culposo.",
+      "questoesFgv2024": "0 C",
+      "prioridade": "alta"
+    },
+    {
+      "chave": "PEN-23",
+      "materia": "dir_pen",
+      "posicao": 23,
+      "texto": "Crime Preterdoloso.",
+      "questoesFgv2024": "0 C",
+      "prioridade": "media"
+    },
+    {
+      "chave": "PEN-24",
+      "materia": "dir_pen",
+      "posicao": 24,
+      "texto": "Iter criminis.",
+      "questoesFgv2024": "0 C",
+      "prioridade": "alta"
+    },
+    {
+      "chave": "PEN-25",
+      "materia": "dir_pen",
+      "posicao": 25,
+      "texto": "Consumação e Tentativa.",
+      "questoesFgv2024": "0 C",
+      "prioridade": "alta"
+    },
+    {
+      "chave": "PEN-26",
+      "materia": "dir_pen",
+      "posicao": 26,
+      "texto": "Desistência voluntária, arrependimento eficaz e arrependimento posterior.",
+      "questoesFgv2024": "0 C",
+      "prioridade": "alta"
+    },
+    {
+      "chave": "PEN-27",
+      "materia": "dir_pen",
+      "posicao": 27,
+      "texto": "Crime impossível.",
+      "questoesFgv2024": "0 C",
+      "prioridade": "media"
+    },
+    {
+      "chave": "PEN-28",
+      "materia": "dir_pen",
+      "posicao": 28,
+      "texto": "Ilicitude e suas causas excludentes.",
+      "questoesFgv2024": "0 C",
+      "prioridade": "alta"
+    },
+    {
+      "chave": "PEN-29",
+      "materia": "dir_pen",
+      "posicao": 29,
+      "texto": "Culpabilidade, elementos e causas excludentes.",
+      "questoesFgv2024": "1 C — Q43",
+      "prioridade": "alta"
+    },
+    {
+      "chave": "PEN-30",
+      "materia": "dir_pen",
+      "posicao": 30,
+      "texto": "Erro: erro de tipo e erro de proibição.",
+      "questoesFgv2024": "0 C",
+      "prioridade": "alta"
+    },
+    {
+      "chave": "PEN-31",
+      "materia": "dir_pen",
+      "posicao": 31,
+      "texto": "Erro na execução e resultado diverso do pretendido.",
+      "questoesFgv2024": "1 C — Q44",
+      "prioridade": "alta"
+    },
+    {
+      "chave": "PEN-32",
+      "materia": "dir_pen",
+      "posicao": 32,
+      "texto": "Concurso de pessoas.",
+      "questoesFgv2024": "0 C",
+      "prioridade": "alta"
+    },
+    {
+      "chave": "PEN-33",
+      "materia": "dir_pen",
+      "posicao": 33,
+      "texto": "Penas, espécies de pena e medida de segurança.",
+      "questoesFgv2024": "1 C — Q45",
+      "prioridade": "alta"
+    },
+    {
+      "chave": "PEN-34",
+      "materia": "dir_pen",
+      "posicao": 34,
+      "texto": "Aplicação da pena.",
+      "questoesFgv2024": "1 C — Q42",
+      "prioridade": "alta"
+    },
+    {
+      "chave": "PEN-35",
+      "materia": "dir_pen",
+      "posicao": 35,
+      "texto": "Concurso de crimes.",
+      "questoesFgv2024": "0 C",
+      "prioridade": "alta"
+    },
+    {
+      "chave": "PEN-36",
+      "materia": "dir_pen",
+      "posicao": 36,
+      "texto": "Efeitos da condenação.",
+      "questoesFgv2024": "0 C",
+      "prioridade": "media"
+    },
+    {
+      "chave": "PEN-37",
+      "materia": "dir_pen",
+      "posicao": 37,
+      "texto": "Reabilitação.",
+      "questoesFgv2024": "0 C",
+      "prioridade": "media"
+    },
+    {
+      "chave": "PEN-38",
+      "materia": "dir_pen",
+      "posicao": 38,
+      "texto": "Ação penal.",
+      "questoesFgv2024": "0 C",
+      "prioridade": "alta"
+    },
+    {
+      "chave": "PEN-39",
+      "materia": "dir_pen",
+      "posicao": 39,
+      "texto": "Causas extintivas da punibilidade.",
+      "questoesFgv2024": "0 C",
+      "prioridade": "alta"
+    },
+    {
+      "chave": "PEN-40",
+      "materia": "dir_pen",
+      "posicao": 40,
+      "texto": "Prescrição: termos iniciais, causas suspensivas ou impeditivas e interruptivas.",
+      "questoesFgv2024": "1 C — Q41",
+      "prioridade": "alta"
+    },
+    {
+      "chave": "PEN-41",
+      "materia": "dir_pen",
+      "posicao": 41,
+      "texto": "Crimes em espécie: Crimes Contra a Pessoa;",
+      "questoesFgv2024": "1 C — Q31",
+      "prioridade": "alta"
+    },
+    {
+      "chave": "PEN-42",
+      "materia": "dir_pen",
+      "posicao": 42,
+      "texto": "Crimes contra o Patrimônio;",
+      "questoesFgv2024": "0 C",
+      "prioridade": "alta"
+    },
+    {
+      "chave": "PEN-43",
+      "materia": "dir_pen",
+      "posicao": 43,
+      "texto": "Crimes Contra a Propriedade Imaterial;",
+      "questoesFgv2024": "0 C",
+      "prioridade": "baixa"
+    },
+    {
+      "chave": "PEN-44",
+      "materia": "dir_pen",
+      "posicao": 44,
+      "texto": "Crimes contra a Dignidade Sexual;",
+      "questoesFgv2024": "1 C — Q32",
+      "prioridade": "alta"
+    },
+    {
+      "chave": "PEN-45",
+      "materia": "dir_pen",
+      "posicao": 45,
+      "texto": "Crimes contra a Incolumidade Pública;",
+      "questoesFgv2024": "0 C",
+      "prioridade": "media"
+    },
+    {
+      "chave": "PEN-46",
+      "materia": "dir_pen",
+      "posicao": 46,
+      "texto": "Crimes Contra a Família;",
+      "questoesFgv2024": "0 C",
+      "prioridade": "media"
+    },
+    {
+      "chave": "PEN-47",
+      "materia": "dir_pen",
+      "posicao": 47,
+      "texto": "Crimes Contra a Paz Pública;",
+      "questoesFgv2024": "0 C",
+      "prioridade": "media"
+    },
+    {
+      "chave": "PEN-48",
+      "materia": "dir_pen",
+      "posicao": 48,
+      "texto": "Crimes contra a Fé Pública;",
+      "questoesFgv2024": "1 C — Q34",
+      "prioridade": "alta"
+    },
+    {
+      "chave": "PEN-49",
+      "materia": "dir_pen",
+      "posicao": 49,
+      "texto": "Crimes contra a Administração Pública;",
+      "questoesFgv2024": "0 C",
+      "prioridade": "alta"
+    },
+    {
+      "chave": "PEN-50",
+      "materia": "dir_pen",
+      "posicao": 50,
+      "texto": "Crimes contra a Administração da Justiça;",
+      "questoesFgv2024": "1 C — Q35",
+      "prioridade": "alta"
+    },
+    {
+      "chave": "PEN-51",
+      "materia": "dir_pen",
+      "posicao": 51,
+      "texto": "Crimes contra o estado democrático de direito.",
+      "questoesFgv2024": "1 C — Q36",
+      "prioridade": "alta"
+    },
+    {
+      "chave": "PEN-52",
+      "materia": "dir_pen",
+      "posicao": 52,
+      "texto": "Legislação extravagante: Crimes resultantes de preconceiro de raça ou de cor (Lei nº 7.716/1989);",
+      "questoesFgv2024": "1 C — Q33",
+      "prioridade": "alta"
+    },
+    {
+      "chave": "PEN-53",
+      "materia": "dir_pen",
+      "posicao": 53,
+      "texto": "Crimes previstos no Estatuto da Criança e do Adolescente (Lei nº 8.069/1990).",
+      "questoesFgv2024": "0 C",
+      "prioridade": "alta"
+    },
+    {
+      "chave": "PEN-54",
+      "materia": "dir_pen",
+      "posicao": 54,
+      "texto": "Crimes Hediondos (Lei nº 8.072/1990);",
+      "questoesFgv2024": "0 C",
+      "prioridade": "alta"
+    },
+    {
+      "chave": "PEN-55",
+      "materia": "dir_pen",
+      "posicao": 55,
+      "texto": "Crimes contra as relações de consumo (Lei nº 8.078/1990);",
+      "questoesFgv2024": "0 C",
+      "prioridade": "media"
+    },
+    {
+      "chave": "PEN-56",
+      "materia": "dir_pen",
+      "posicao": 56,
+      "texto": "Convenção interamericana sobre direitos humanos (Pacto de São José e Decreto nº 678/1992);",
+      "questoesFgv2024": "0 C",
+      "prioridade": "alta"
+    },
+    {
+      "chave": "PEN-57",
+      "materia": "dir_pen",
+      "posicao": 57,
+      "texto": "Crimes de trânsito (Lei nº 9.503/1997);",
+      "questoesFgv2024": "1 C — Q37",
+      "prioridade": "alta"
+    },
+    {
+      "chave": "PEN-58",
+      "materia": "dir_pen",
+      "posicao": 58,
+      "texto": "Crimes de tortura (Lei nº 9.455/1998);",
+      "questoesFgv2024": "0 C",
+      "prioridade": "alta"
+    },
+    {
+      "chave": "PEN-59",
+      "materia": "dir_pen",
+      "posicao": 59,
+      "texto": "Crimes contra o meio ambiente (Lei nº 9.605/1998);",
+      "questoesFgv2024": "1 C — Q38",
+      "prioridade": "alta"
+    },
+    {
+      "chave": "PEN-60",
+      "materia": "dir_pen",
+      "posicao": 60,
+      "texto": "Lavagem de dinheiro (Lei nº 9.613/1998);",
+      "questoesFgv2024": "0 C",
+      "prioridade": "media"
+    },
+    {
+      "chave": "PEN-61",
+      "materia": "dir_pen",
+      "posicao": 61,
+      "texto": "Crimes previstos no Estatuto da Pessoa Idosa (Lei nº 10.741/2003);",
+      "questoesFgv2024": "0 C",
+      "prioridade": "media"
+    },
+    {
+      "chave": "PEN-62",
+      "materia": "dir_pen",
+      "posicao": 62,
+      "texto": "Estatuto do Desarmamento (Lei nº 10.826/2003);",
+      "questoesFgv2024": "0 C",
+      "prioridade": "alta"
+    },
+    {
+      "chave": "PEN-63",
+      "materia": "dir_pen",
+      "posicao": 63,
+      "texto": "Lei Maria da Penha (Lei nº 11.340/2006);",
+      "questoesFgv2024": "0 C",
+      "prioridade": "alta"
+    },
+    {
+      "chave": "PEN-64",
+      "materia": "dir_pen",
+      "posicao": 64,
+      "texto": "Lei Antidrogas (Lei nº 11.343/2006);",
+      "questoesFgv2024": "1 C — Q39",
+      "prioridade": "alta"
+    },
+    {
+      "chave": "PEN-65",
+      "materia": "dir_pen",
+      "posicao": 65,
+      "texto": "Crime Organizado (Lei nº 12.850/2013);",
+      "questoesFgv2024": "1 C — Q40",
+      "prioridade": "alta"
+    },
+    {
+      "chave": "PEN-66",
+      "materia": "dir_pen",
+      "posicao": 66,
+      "texto": "Crimes previstos no Estatuto da Pessoa com Deficiência (Lei nº 13.146/2015);",
+      "questoesFgv2024": "0 C",
+      "prioridade": "media"
+    },
+    {
+      "chave": "PEN-67",
+      "materia": "dir_pen",
+      "posicao": 67,
+      "texto": "Lei de abuso de autoridade (Lei nº 13.869/2019);",
+      "questoesFgv2024": "0 C",
+      "prioridade": "alta"
+    },
+    {
+      "chave": "PEN-68",
+      "materia": "dir_pen",
+      "posicao": 68,
+      "texto": "Disposições penais do Pacote Anticrime (Lei nº 13.964/2019);",
+      "questoesFgv2024": "0 C",
+      "prioridade": "alta"
+    },
+    {
+      "chave": "PEN-69",
+      "materia": "dir_pen",
+      "posicao": 69,
+      "texto": "Lei Henry Borel (Lei nº 14.344/2022).",
+      "questoesFgv2024": "0 C",
+      "prioridade": "alta"
+    },
+    {
+      "chave": "PEN-70",
+      "materia": "dir_pen",
+      "posicao": 70,
+      "texto": "Disposições constitucionais aplicáveis ao Direito Penal.",
+      "questoesFgv2024": "0 C",
+      "prioridade": "alta"
+    },
+    {
+      "chave": "PEN-71",
+      "materia": "dir_pen",
+      "posicao": 71,
+      "texto": "Entendimentos dos Tribunais Superiores acerca dos institutos de Direito Penal.",
+      "questoesFgv2024": "0 C",
+      "prioridade": "alta"
+    },
+    {
+      "chave": "CPP-01",
+      "materia": "dir_proc_pen",
+      "posicao": 1,
+      "texto": "Princípios aplicáveis ao Direito Processual Penal.",
+      "questoesFgv2024": "0 C",
+      "prioridade": "alta"
+    },
+    {
+      "chave": "CPP-02",
+      "materia": "dir_proc_pen",
+      "posicao": 2,
+      "texto": "Sistemas Processuais Penais.",
+      "questoesFgv2024": "0 C",
+      "prioridade": "alta"
+    },
+    {
+      "chave": "CPP-03",
+      "materia": "dir_proc_pen",
+      "posicao": 3,
+      "texto": "Aplicação da lei processual penal no tempo, no espaço e em relação às pessoas.",
+      "questoesFgv2024": "0 C",
+      "prioridade": "media"
+    },
+    {
+      "chave": "CPP-04",
+      "materia": "dir_proc_pen",
+      "posicao": 4,
+      "texto": "Disposições preliminares do Código de Processo Penal.",
+      "questoesFgv2024": "0 C",
+      "prioridade": "alta"
+    },
+    {
+      "chave": "CPP-05",
+      "materia": "dir_proc_pen",
+      "posicao": 5,
+      "texto": "Aplicação e interpretação da lei processual.",
+      "questoesFgv2024": "0 C",
+      "prioridade": "media"
+    },
+    {
+      "chave": "CPP-06",
+      "materia": "dir_proc_pen",
+      "posicao": 6,
+      "texto": "Inquérito policial.",
+      "questoesFgv2024": "0 C",
+      "prioridade": "alta"
+    },
+    {
+      "chave": "CPP-07",
+      "materia": "dir_proc_pen",
+      "posicao": 7,
+      "texto": "Arquivamento e desarquivamento do inquérito policial e de peças de informação.",
+      "questoesFgv2024": "0 C",
+      "prioridade": "alta"
+    },
+    {
+      "chave": "CPP-08",
+      "materia": "dir_proc_pen",
+      "posicao": 8,
+      "texto": "Acordo de não persecução penal.",
+      "questoesFgv2024": "1 C — Q46",
+      "prioridade": "alta"
+    },
+    {
+      "chave": "CPP-09",
+      "materia": "dir_proc_pen",
+      "posicao": 9,
+      "texto": "Ação penal.",
+      "questoesFgv2024": "0 C",
+      "prioridade": "alta"
+    },
+    {
+      "chave": "CPP-10",
+      "materia": "dir_proc_pen",
+      "posicao": 10,
+      "texto": "Ação penal pública, ação penal privada, ação penal privada subsidiária da pública.",
+      "questoesFgv2024": "1 C — Q47",
+      "prioridade": "alta"
+    },
+    {
+      "chave": "CPP-11",
+      "materia": "dir_proc_pen",
+      "posicao": 11,
+      "texto": "Características e disposições aplicáveis às diferentes espécies de ação penal.",
+      "questoesFgv2024": "0 C",
+      "prioridade": "alta"
+    },
+    {
+      "chave": "CPP-12",
+      "materia": "dir_proc_pen",
+      "posicao": 12,
+      "texto": "Competência.",
+      "questoesFgv2024": "1 C — Q48",
+      "prioridade": "alta"
+    },
+    {
+      "chave": "CPP-13",
+      "materia": "dir_proc_pen",
+      "posicao": 13,
+      "texto": "Conexão e continência.",
+      "questoesFgv2024": "0 C",
+      "prioridade": "alta"
+    },
+    {
+      "chave": "CPP-14",
+      "materia": "dir_proc_pen",
+      "posicao": 14,
+      "texto": "Questões e processos incidentes.",
+      "questoesFgv2024": "0 C",
+      "prioridade": "media"
+    },
+    {
+      "chave": "CPP-15",
+      "materia": "dir_proc_pen",
+      "posicao": 15,
+      "texto": "Questões prejudiciais.",
+      "questoesFgv2024": "0 C",
+      "prioridade": "media"
+    },
+    {
+      "chave": "CPP-16",
+      "materia": "dir_proc_pen",
+      "posicao": 16,
+      "texto": "Exceções.",
+      "questoesFgv2024": "0 C",
+      "prioridade": "media"
+    },
+    {
+      "chave": "CPP-17",
+      "materia": "dir_proc_pen",
+      "posicao": 17,
+      "texto": "Medidas Assecuratórias.",
+      "questoesFgv2024": "0 C",
+      "prioridade": "media"
+    },
+    {
+      "chave": "CPP-18",
+      "materia": "dir_proc_pen",
+      "posicao": 18,
+      "texto": "Decreto-Lei nº 3.240/1941; Incidente de Falsidade.",
+      "questoesFgv2024": "0 C",
+      "prioridade": "media"
+    },
+    {
+      "chave": "CPP-19",
+      "materia": "dir_proc_pen",
+      "posicao": 19,
+      "texto": "Incidente de Sanidade Mental do Acusado.",
+      "questoesFgv2024": "1 C — Q49",
+      "prioridade": "alta"
+    },
+    {
+      "chave": "CPP-20",
+      "materia": "dir_proc_pen",
+      "posicao": 20,
+      "texto": "Teoria Geral e Admissibilidade da Prova.",
+      "questoesFgv2024": "0 C",
+      "prioridade": "alta"
+    },
+    {
+      "chave": "CPP-21",
+      "materia": "dir_proc_pen",
+      "posicao": 21,
+      "texto": "Meios de prova.",
+      "questoesFgv2024": "0 C",
+      "prioridade": "alta"
+    },
+    {
+      "chave": "CPP-22",
+      "materia": "dir_proc_pen",
+      "posicao": 22,
+      "texto": "Meios de obtenção da prova.",
+      "questoesFgv2024": "0 C",
+      "prioridade": "alta"
+    },
+    {
+      "chave": "CPP-23",
+      "materia": "dir_proc_pen",
+      "posicao": 23,
+      "texto": "Provas em espécie.",
+      "questoesFgv2024": "1 C — Q50",
+      "prioridade": "alta"
+    },
+    {
+      "chave": "CPP-24",
+      "materia": "dir_proc_pen",
+      "posicao": 24,
+      "texto": "Provas inominadas e provas atípicas.",
+      "questoesFgv2024": "0 C",
+      "prioridade": "media"
+    },
+    {
+      "chave": "CPP-25",
+      "materia": "dir_proc_pen",
+      "posicao": 25,
+      "texto": "Cautelares reais e pessoais.",
+      "questoesFgv2024": "0 C",
+      "prioridade": "alta"
+    },
+    {
+      "chave": "CPP-26",
+      "materia": "dir_proc_pen",
+      "posicao": 26,
+      "texto": "Sujeitos do processo: do Juiz, do Ministério Público, do Acusado, do Defensor, dos Assistentes e Auxiliares da Justiça.",
+      "questoesFgv2024": "1 C — Q56",
+      "prioridade": "alta"
+    },
+    {
+      "chave": "CPP-27",
+      "materia": "dir_proc_pen",
+      "posicao": 27,
+      "texto": "Prisão: prisão em flagrante; prisão preventiva; prisão temporária.",
+      "questoesFgv2024": "1 C — Q51",
+      "prioridade": "alta"
+    },
+    {
+      "chave": "CPP-28",
+      "materia": "dir_proc_pen",
+      "posicao": 28,
+      "texto": "Liberdade.",
+      "questoesFgv2024": "0 C",
+      "prioridade": "alta"
+    },
+    {
+      "chave": "CPP-29",
+      "materia": "dir_proc_pen",
+      "posicao": 29,
+      "texto": "Medidas cautelares pessoais diversas da prisão: fiança; prisão domiciliar; audiência de custódia.",
+      "questoesFgv2024": "1 C — Q55",
+      "prioridade": "alta"
+    },
+    {
+      "chave": "CPP-30",
+      "materia": "dir_proc_pen",
+      "posicao": 30,
+      "texto": "Fatos e atos processuais: citação, notificação e intimação.",
+      "questoesFgv2024": "0 C",
+      "prioridade": "alta"
+    },
+    {
+      "chave": "CPP-31",
+      "materia": "dir_proc_pen",
+      "posicao": 31,
+      "texto": "Da sentença.",
+      "questoesFgv2024": "0 C",
+      "prioridade": "alta"
+    },
+    {
+      "chave": "CPP-32",
+      "materia": "dir_proc_pen",
+      "posicao": 32,
+      "texto": "Teoria Geral do Procedimento.",
+      "questoesFgv2024": "0 C",
+      "prioridade": "alta"
+    },
+    {
+      "chave": "CPP-33",
+      "materia": "dir_proc_pen",
+      "posicao": 33,
+      "texto": "Procedimento comum ordinário, sumário e sumaríssimo.",
+      "questoesFgv2024": "0 C",
+      "prioridade": "alta"
+    },
+    {
+      "chave": "CPP-34",
+      "materia": "dir_proc_pen",
+      "posicao": 34,
+      "texto": "Procedimento dos Juizados Especiais Criminais (Lei nº 9.099/1995).",
+      "questoesFgv2024": "1 C — Q54",
+      "prioridade": "alta"
+    },
+    {
+      "chave": "CPP-35",
+      "materia": "dir_proc_pen",
+      "posicao": 35,
+      "texto": "Procedimento previsto na Lei Maria da Penha (Lei nº 11.340/2006).",
+      "questoesFgv2024": "0 C",
+      "prioridade": "alta"
+    },
+    {
+      "chave": "CPP-36",
+      "materia": "dir_proc_pen",
+      "posicao": 36,
+      "texto": "Procedimento previsto na Lei Henry Borel (Lei nº 14.344/2022).",
+      "questoesFgv2024": "1 C — Q60",
+      "prioridade": "alta"
+    },
+    {
+      "chave": "CPP-37",
+      "materia": "dir_proc_pen",
+      "posicao": 37,
+      "texto": "Processo e julgamento dos crimes de responsabilidade dos funcionários públicos.",
+      "questoesFgv2024": "0 C",
+      "prioridade": "media"
+    },
+    {
+      "chave": "CPP-38",
+      "materia": "dir_proc_pen",
+      "posicao": 38,
+      "texto": "Teoria Geral dos Recursos: princípios básicos.",
+      "questoesFgv2024": "0 C",
+      "prioridade": "alta"
+    },
+    {
+      "chave": "CPP-39",
+      "materia": "dir_proc_pen",
+      "posicao": 39,
+      "texto": "Recursos em espécie.",
+      "questoesFgv2024": "1 C — Q52",
+      "prioridade": "alta"
+    },
+    {
+      "chave": "CPP-40",
+      "materia": "dir_proc_pen",
+      "posicao": 40,
+      "texto": "Habeas Corpus.",
+      "questoesFgv2024": "1 C — Q59",
+      "prioridade": "alta"
+    },
+    {
+      "chave": "CPP-41",
+      "materia": "dir_proc_pen",
+      "posicao": 41,
+      "texto": "Mandado de segurança em matéria criminal.",
+      "questoesFgv2024": "0 C",
+      "prioridade": "media"
+    },
+    {
+      "chave": "CPP-42",
+      "materia": "dir_proc_pen",
+      "posicao": 42,
+      "texto": "Revisão Criminal.",
+      "questoesFgv2024": "0 C",
+      "prioridade": "alta"
+    },
+    {
+      "chave": "CPP-43",
+      "materia": "dir_proc_pen",
+      "posicao": 43,
+      "texto": "Nulidades.",
+      "questoesFgv2024": "0 C",
+      "prioridade": "alta"
+    },
+    {
+      "chave": "CPP-44",
+      "materia": "dir_proc_pen",
+      "posicao": 44,
+      "texto": "Execução Penal.",
+      "questoesFgv2024": "1 C — Q53",
+      "prioridade": "alta"
+    },
+    {
+      "chave": "CPP-45",
+      "materia": "dir_proc_pen",
+      "posicao": 45,
+      "texto": "Disposições processuais existentes no Estatuto da Criança e do Adolescente (Lei nº 8.069/1990), na Lei da Interceptação Telefônica (Lei nº 9.296/1996), na Lei do Crime Organizado (Lei nº 12.850/2013) e no Pacote Anticrime (Lei nº 13.964/2019).",
+      "questoesFgv2024": "2 C — Q57, Q58",
+      "prioridade": "alta"
+    },
+    {
+      "chave": "CPP-46",
+      "materia": "dir_proc_pen",
+      "posicao": 46,
+      "texto": "Disposições constitucionais aplicáveis ao Direito Processual Penal.",
+      "questoesFgv2024": "0 C",
+      "prioridade": "alta"
+    },
+    {
+      "chave": "CPP-47",
+      "materia": "dir_proc_pen",
+      "posicao": 47,
+      "texto": "Entendimento dos Tribunais Superiores acerca dos institutos de Direito Processual Penal.",
+      "questoesFgv2024": "0 C",
+      "prioridade": "alta"
+    },
+    {
+      "chave": "CPM-01",
+      "materia": "dir_pen_mil",
+      "posicao": 1,
+      "texto": "Aplicação e especificidades da lei penal militar.",
+      "questoesFgv2024": "1 C — Q61",
+      "prioridade": "alta"
+    },
+    {
+      "chave": "CPM-02",
+      "materia": "dir_pen_mil",
+      "posicao": 2,
+      "texto": "Crime.",
+      "questoesFgv2024": "0 C",
+      "prioridade": "alta"
+    },
+    {
+      "chave": "CPM-03",
+      "materia": "dir_pen_mil",
+      "posicao": 3,
+      "texto": "Imputabilidade penal.",
+      "questoesFgv2024": "1 C — Q64",
+      "prioridade": "alta"
+    },
+    {
+      "chave": "CPM-04",
+      "materia": "dir_pen_mil",
+      "posicao": 4,
+      "texto": "Concurso de agentes.",
+      "questoesFgv2024": "0 C",
+      "prioridade": "alta"
+    },
+    {
+      "chave": "CPM-05",
+      "materia": "dir_pen_mil",
+      "posicao": 5,
+      "texto": "Penas.",
+      "questoesFgv2024": "0 C",
+      "prioridade": "alta"
+    },
+    {
+      "chave": "CPM-06",
+      "materia": "dir_pen_mil",
+      "posicao": 6,
+      "texto": "Aplicação da pena.",
+      "questoesFgv2024": "2 C — Q65, Q68",
+      "prioridade": "alta"
+    },
+    {
+      "chave": "CPM-07",
+      "materia": "dir_pen_mil",
+      "posicao": 7,
+      "texto": "Suspensão condicional da pena.",
+      "questoesFgv2024": "1 C — Q69",
+      "prioridade": "alta"
+    },
+    {
+      "chave": "CPM-08",
+      "materia": "dir_pen_mil",
+      "posicao": 8,
+      "texto": "Livramento condicional.",
+      "questoesFgv2024": "0 C",
+      "prioridade": "media"
+    },
+    {
+      "chave": "CPM-09",
+      "materia": "dir_pen_mil",
+      "posicao": 9,
+      "texto": "Penas acessórias.",
+      "questoesFgv2024": "0 C",
+      "prioridade": "media"
+    },
+    {
+      "chave": "CPM-10",
+      "materia": "dir_pen_mil",
+      "posicao": 10,
+      "texto": "Efeitos da condenação.",
+      "questoesFgv2024": "0 C",
+      "prioridade": "media"
+    },
+    {
+      "chave": "CPM-11",
+      "materia": "dir_pen_mil",
+      "posicao": 11,
+      "texto": "Medidas de segurança.",
+      "questoesFgv2024": "0 C",
+      "prioridade": "media"
+    },
+    {
+      "chave": "CPM-12",
+      "materia": "dir_pen_mil",
+      "posicao": 12,
+      "texto": "Ação penal.",
+      "questoesFgv2024": "0 C",
+      "prioridade": "alta"
+    },
+    {
+      "chave": "CPM-13",
+      "materia": "dir_pen_mil",
+      "posicao": 13,
+      "texto": "Extinção da punibilidade.",
+      "questoesFgv2024": "0 C",
+      "prioridade": "alta"
+    },
+    {
+      "chave": "CPM-14",
+      "materia": "dir_pen_mil",
+      "posicao": 14,
+      "texto": "Crimes militares em tempo de paz.",
+      "questoesFgv2024": "1 C — Q66",
+      "prioridade": "alta"
+    },
+    {
+      "chave": "CPM-15",
+      "materia": "dir_pen_mil",
+      "posicao": 15,
+      "texto": "Crimes propriamente militares.",
+      "questoesFgv2024": "0 C",
+      "prioridade": "alta"
+    },
+    {
+      "chave": "CPM-16",
+      "materia": "dir_pen_mil",
+      "posicao": 16,
+      "texto": "Crimes impropriamente militares.",
+      "questoesFgv2024": "0 C",
+      "prioridade": "alta"
+    },
+    {
+      "chave": "CPM-17",
+      "materia": "dir_pen_mil",
+      "posicao": 17,
+      "texto": "Crimes contra a pessoa.",
+      "questoesFgv2024": "2 C — Q63, Q70",
+      "prioridade": "alta"
+    },
+    {
+      "chave": "CPM-18",
+      "materia": "dir_pen_mil",
+      "posicao": 18,
+      "texto": "Crimes contra o patrimônio.",
+      "questoesFgv2024": "0 C",
+      "prioridade": "alta"
+    },
+    {
+      "chave": "CPM-19",
+      "materia": "dir_pen_mil",
+      "posicao": 19,
+      "texto": "Crimes contra a administração militar.",
+      "questoesFgv2024": "2 C — Q62, Q67",
+      "prioridade": "alta"
+    },
+    {
+      "chave": "CPM-20",
+      "materia": "dir_pen_mil",
+      "posicao": 20,
+      "texto": "Crimes em tempo de guerra.",
+      "questoesFgv2024": "0 C",
+      "prioridade": "baixa"
+    },
+    {
+      "chave": "DH-01",
+      "materia": "dir_hum",
+      "posicao": 1,
+      "texto": "Legislação de proteção de diretos humanos.",
+      "questoesFgv2024": "0 C",
+      "prioridade": "alta"
+    },
+    {
+      "chave": "DH-02",
+      "materia": "dir_hum",
+      "posicao": 2,
+      "texto": "Convenções internacionais sobre direitos humanos.",
+      "questoesFgv2024": "3 C — Q71, Q73, Q74",
+      "prioridade": "alta"
+    },
+    {
+      "chave": "DH-03",
+      "materia": "dir_hum",
+      "posicao": 3,
+      "texto": "Direitos humanos e desigualdade: dimensões sociais, espaciais e políticas da concentração de renda.",
+      "questoesFgv2024": "0 C",
+      "prioridade": "media"
+    },
+    {
+      "chave": "DH-04",
+      "materia": "dir_hum",
+      "posicao": 4,
+      "texto": "População em situação de rua. Interseccionalidade e direitos humanos: raça, gênero, idade, pessoas com deficiência.",
+      "questoesFgv2024": "0 C",
+      "prioridade": "alta"
+    },
+    {
+      "chave": "DH-05",
+      "materia": "dir_hum",
+      "posicao": 5,
+      "texto": "Direitos da população LGBTQIA+.",
+      "questoesFgv2024": "1 C — Q75",
+      "prioridade": "alta"
+    },
+    {
+      "chave": "DH-06",
+      "materia": "dir_hum",
+      "posicao": 6,
+      "texto": "Desigualdade racial. Racismo estrutural e histórico. Escravidão, pobreza e desigualdade racial. Racismo e violência. História do movimento negro e do antirracismo no Brasil. Políticas de promoção da igualdade racial e de combate ao racismo. Políticas afirmativas. Dados da desigualdade racial. Renda, saúde, educação, violência.",
+      "questoesFgv2024": "1 C — Q78",
+      "prioridade": "alta"
+    },
+    {
+      "chave": "DH-07",
+      "materia": "dir_hum",
+      "posicao": 7,
+      "texto": "Letalidade policial. ADPF 635. Sentença da Corte Interamericana de Direitos Humanos no Caso Nova Brasília.",
+      "questoesFgv2024": "1 C — Q80",
+      "prioridade": "alta"
+    },
+    {
+      "chave": "DH-08",
+      "materia": "dir_hum",
+      "posicao": 8,
+      "texto": "Violência contra a mulher: física, sexual, psicológica, patrimonial e moral.",
+      "questoesFgv2024": "1 C — Q72",
+      "prioridade": "alta"
+    },
+    {
+      "chave": "DH-09",
+      "materia": "dir_hum",
+      "posicao": 9,
+      "texto": "Direitos dos indígenas e quilombolas. População e legislação indígena. Diversidade, valores culturais, tradições, usos e costumes dos povos indígenas. Terras indígenas e tensões fundiárias. Regime jurídico das terras tradicionalmente ocupadas pelos índios. Processo de demarcação das terras indígenas.",
+      "questoesFgv2024": "0 C",
+      "prioridade": "alta"
+    },
+    {
+      "chave": "DH-10",
+      "materia": "dir_hum",
+      "posicao": 10,
+      "texto": "Direitos da pessoa idosa. Inclusão social do idoso. Política Nacional do Idoso. Legislação referente ao idoso. Estatuto do Idoso.",
+      "questoesFgv2024": "1 C — Q79",
+      "prioridade": "alta"
+    },
+    {
+      "chave": "DH-11",
+      "materia": "dir_hum",
+      "posicao": 11,
+      "texto": "Direitos da pessoa com deficiência. Inclusão social da pessoa com deficiência. Evolução do movimento das pessoas com deficiência no Brasil. Desafios à inclusão social da pessoa com deficiência. Legislação referente à pessoa com deficiência. Lei Brasileira de Inclusão da Pessoa com Deficiência. Convenção sobre os direitos da pessoa com deficiência e seu protocolo facultativo.",
+      "questoesFgv2024": "1 C — Q76",
+      "prioridade": "alta"
+    },
+    {
+      "chave": "DH-12",
+      "materia": "dir_hum",
+      "posicao": 12,
+      "texto": "Fundamentos de Direito Constitucional Positivo Brasileiro referentes à área temática Direitos Humanos.",
+      "questoesFgv2024": "1 C — Q77",
+      "prioridade": "alta"
+    }
+  ],
+  "apendiceA": [
+    {
+      "semana": 1,
+      "ADM": "1–3",
+      "CONST": "1–6",
+      "PEN": "1–11,56,70–71",
+      "CPP": "1–5,46–47",
+      "CPM": "1",
+      "DH": "1,12"
+    },
+    {
+      "semana": 2,
+      "ADM": "11–12",
+      "CONST": "10–12",
+      "PEN": "12–23",
+      "CPP": "6–8",
+      "CPM": "2–4",
+      "DH": "2"
+    },
+    {
+      "semana": 3,
+      "ADM": "13,18–21",
+      "CONST": "7–9",
+      "PEN": "24–32",
+      "CPP": "9–13",
+      "CPM": "5–6",
+      "DH": "—"
+    },
+    {
+      "semana": 4,
+      "ADM": "40",
+      "CONST": "13–15",
+      "PEN": "38–40",
+      "CPP": "14–19",
+      "CPM": "7–11",
+      "DH": "7"
+    },
+    {
+      "semana": 5,
+      "ADM": "14–15",
+      "CONST": "16–18",
+      "PEN": "33–37",
+      "CPP": "20–24,45",
+      "CPM": "12–13",
+      "DH": "8"
+    },
+    {
+      "semana": 6,
+      "ADM": "9–10,16–17",
+      "CONST": "19–21",
+      "PEN": "41–42,44",
+      "CPP": "25,27–29",
+      "CPM": "14–16",
+      "DH": "6"
+    },
+    {
+      "semana": 7,
+      "ADM": "4–8",
+      "CONST": "22–24",
+      "PEN": "48–51",
+      "CPP": "26,30–34",
+      "CPM": "17",
+      "DH": "3–5"
+    },
+    {
+      "semana": 8,
+      "ADM": "23–24",
+      "CONST": "25–26",
+      "PEN": "58,62,64,67",
+      "CPP": "35–37",
+      "CPM": "18",
+      "DH": "9"
+    },
+    {
+      "semana": 9,
+      "ADM": "22,25",
+      "CONST": "27,29",
+      "PEN": "54,60,65,68",
+      "CPP": "38–43",
+      "CPM": "19",
+      "DH": "10"
+    },
+    {
+      "semana": 10,
+      "ADM": "26–33",
+      "CONST": "28",
+      "PEN": "52–53,61,63,66,69",
+      "CPP": "44",
+      "CPM": "—",
+      "DH": "11"
+    },
+    {
+      "semana": 11,
+      "ADM": "34–37",
+      "CONST": "—",
+      "PEN": "43,45–47,55,57,59",
+      "CPP": "—",
+      "CPM": "20",
+      "DH": "—"
+    },
+    {
+      "semana": 12,
+      "ADM": "38–39",
+      "CONST": "—",
+      "PEN": "—",
+      "CPP": "—",
+      "CPM": "—",
+      "DH": "—"
+    }
+  ],
+  "semanas": [
+    {
+      "n": 1,
+      "tipo": "normal",
+      "foco": "Diagnosticar rotina; instalar fundamentos nas seis matérias",
+      "escrita": "Um parágrafo jurídico estruturado e revisão do raciocínio",
+      "sinteses": {
+        "dir_adm": "Princípios, organização e administração direta/indireta",
+        "dir_const": "Constituição, interpretação, eficácia, poder constituinte e Estado de Direito",
+        "dir_pen": "Fontes, princípios e aplicação temporal/espacial da lei",
+        "dir_proc_pen": "Princípios, sistemas e aplicação da lei processual",
+        "dir_pen_mil": "Aplicação e especificidades; identificar o âmbito militar",
+        "dir_hum": "Fundamentos constitucionais e legislação de proteção"
+      }
+    },
+    {
+      "n": 2,
+      "tipo": "normal",
+      "foco": "Avançar em atos, direitos fundamentais e teoria do crime",
+      "escrita": "Uma resposta em Administrativo",
+      "sinteses": {
+        "dir_adm": "Poderes e atos administrativos; atributos e invalidação",
+        "dir_const": "Direitos fundamentais, sociais, nacionalidade e direitos políticos",
+        "dir_pen": "Fato típico, causalidade, dolo e culpa",
+        "dir_proc_pen": "Inquérito, arquivamento e ANPP",
+        "dir_pen_mil": "Crime, imputabilidade e concurso de agentes",
+        "dir_hum": "Convenções e sistemas de proteção: conceitos e competências"
+      }
+    },
+    {
+      "n": 3,
+      "tipo": "normal",
+      "foco": "Aplicar controle constitucional, investigação e culpabilidade",
+      "escrita": "Uma resposta em Constitucional",
+      "sinteses": {
+        "dir_adm": "Processo administrativo, agentes, responsabilidades e PAD",
+        "dir_const": "Controle difuso/concentrado, ADI/ADC/ADPF e súmula vinculante",
+        "dir_pen": "Tentativa, desistência, ilicitude, culpabilidade, erros e concurso de pessoas",
+        "dir_proc_pen": "Ação penal, competência, conexão e continência",
+        "dir_pen_mil": "Penas e aplicação; diferenças frente ao Penal comum",
+        "dir_hum": "Sistema interamericano e tratados: segunda rodada aplicada"
+      }
+    },
+    {
+      "n": 4,
+      "tipo": "simulado",
+      "foco": "Simulado de linha de base e correção; preservar estudo dirigido",
+      "escrita": "Uma resposta em Penal, fora das 8 h de questões",
+      "sinteses": {
+        "dir_adm": "LAI/LGPD e revisão dos erros do simulado",
+        "dir_const": "Ações constitucionais, ACP e acesso à informação; revisão",
+        "dir_pen": "Prescrição e punibilidade; revisão da parte geral",
+        "dir_proc_pen": "Incidentes, sanidade, questões prejudiciais e medidas assecuratórias",
+        "dir_pen_mil": "Suspensão/livramento, efeitos e medidas; revisão do simulado",
+        "dir_hum": "Letalidade policial, ADPF 635 e Caso Nova Brasília: mapa inicial"
+      }
+    },
+    {
+      "n": 5,
+      "tipo": "normal",
+      "foco": "Entrar em licitações, organização estatal, penas e cautelares",
+      "escrita": "Uma resposta em Processo Penal",
+      "sinteses": {
+        "dir_adm": "Licitação e contratos; distinguir os regimes pertinentes",
+        "dir_const": "Organização do Estado, competências e intervenção",
+        "dir_pen": "Penas, dosimetria, concurso de crimes e efeitos",
+        "dir_proc_pen": "Provas: admissibilidade, meios e obtenção; normas relacionadas",
+        "dir_pen_mil": "Ação penal e extinção da punibilidade",
+        "dir_hum": "Violência contra a mulher: formas e proteção"
+      }
+    },
+    {
+      "n": 6,
+      "tipo": "normal",
+      "foco": "Aplicar serviços públicos, competências e procedimentos",
+      "escrita": "Duas respostas curtas: Administrativo e Constitucional",
+      "sinteses": {
+        "dir_adm": "Serviços, concessões, PPP e consórcios",
+        "dir_const": "Administração pública; Legislativo e Executivo",
+        "dir_pen": "Crimes contra pessoa, patrimônio e dignidade sexual",
+        "dir_proc_pen": "Prisões, liberdade e cautelares pessoais",
+        "dir_pen_mil": "Crimes em paz; próprios e impróprios",
+        "dir_hum": "Igualdade racial, discriminação e ações afirmativas"
+      }
+    },
+    {
+      "n": 7,
+      "tipo": "normal",
+      "foco": "Consolidar estatutos e crimes; tratar lacunas detectadas",
+      "escrita": "Duas respostas curtas: Penal e Processo Penal",
+      "sinteses": {
+        "dir_adm": "Terceiro setor, OS/OSCIP, MROSC, terceirização e reforma",
+        "dir_const": "Judiciário, garantias e funções essenciais à Justiça",
+        "dir_pen": "Crimes contra fé pública, Administração, Justiça e Estado Democrático",
+        "dir_proc_pen": "Sujeitos, atos, sentença e procedimentos comum/juizados",
+        "dir_pen_mil": "Crimes contra a pessoa",
+        "dir_hum": "Desigualdade, interseccionalidade, população de rua e LGBTQIA+"
+      }
+    },
+    {
+      "n": 8,
+      "tipo": "simulado",
+      "foco": "Segundo simulado; comparar acurácia e tempo com a semana 4",
+      "escrita": "Corrigir e reescrever uma resposta fraca",
+      "sinteses": {
+        "dir_adm": "Estatuto PMERJ e Lei Orgânica Nacional: primeira leitura orientada",
+        "dir_const": "Segurança pública e defesa do Estado",
+        "dir_pen": "Tortura, abuso, armas e drogas; corrigir o simulado",
+        "dir_proc_pen": "Maria da Penha, Henry Borel e procedimento de funcionários públicos",
+        "dir_pen_mil": "Crimes contra o patrimônio; revisão do simulado",
+        "dir_hum": "Povos indígenas, quilombolas e territórios"
+      }
+    },
+    {
+      "n": 9,
+      "tipo": "normal",
+      "foco": "Legislação específica, recursos e grupos protegidos",
+      "escrita": "Uma resposta integrada de Direito Público",
+      "sinteses": {
+        "dir_adm": "Estatuto PMERJ: segunda rodada; previdência e concurso público",
+        "dir_const": "Ordem social e Convenção sobre deficiência",
+        "dir_pen": "Organização criminosa, lavagem, hediondos e alterações penais transversais",
+        "dir_proc_pen": "Recursos, habeas corpus, revisão criminal e nulidades",
+        "dir_pen_mil": "Crimes contra a administração militar: primeira rodada",
+        "dir_hum": "Pessoa idosa: proteção e inclusão"
+      }
+    },
+    {
+      "n": 10,
+      "tipo": "normal",
+      "foco": "Fechar primeira passagem pelos blocos complementares",
+      "escrita": "Uma resposta jurídica com fonte e contraponto",
+      "sinteses": {
+        "dir_adm": "Bens, desapropriação, indenização e limitações",
+        "dir_const": "Constituição estadual e comparação com a federal",
+        "dir_pen": "Racismo, ECA, Maria da Penha, Henry Borel, pessoa idosa e com deficiência",
+        "dir_proc_pen": "Execução penal; ECA e procedimentos especiais remanescentes",
+        "dir_pen_mil": "Crimes contra a administração militar: casos e distinções",
+        "dir_hum": "Pessoa com deficiência: legislação, inclusão e convenção"
+      }
+    },
+    {
+      "n": 11,
+      "tipo": "normal",
+      "foco": "Reduzir erros recorrentes e completar lacunas do catálogo",
+      "escrita": "Duas respostas nos temas de maior erro",
+      "sinteses": {
+        "dir_adm": "Responsabilidade estatal, controle, improbidade e anticorrupção",
+        "dir_const": "Revisão por erros de competências, poderes e controle",
+        "dir_pen": "Trânsito, ambiente, consumo e crimes complementares do catálogo",
+        "dir_proc_pen": "Interceptação, crime organizado e Pacote Anticrime; casos integrados",
+        "dir_pen_mil": "Crimes em guerra; revisão comparada da parte geral",
+        "dir_hum": "Letalidade e proteção: aplicação, atualização de fontes e revisão"
+      }
+    },
+    {
+      "n": 12,
+      "tipo": "simulado",
+      "foco": "Terceiro simulado e plano individual do próximo ciclo",
+      "escrita": "Diagnóstico de escrita; planejar sessão completa em bloco separado",
+      "sinteses": {
+        "dir_adm": "Infrações administrativas/LRF e lacunas finais",
+        "dir_const": "Simulado, mapa de lacunas e próximo ciclo",
+        "dir_pen": "Simulado, distinção entre tipos e próximo ciclo",
+        "dir_proc_pen": "Simulado, sequência procedimental e próximo ciclo",
+        "dir_pen_mil": "Simulado e correção dos grupos mais fracos",
+        "dir_hum": "Simulado e correção dos grupos mais fracos"
+      }
+    }
+  ],
+  "missoes": [
+    {
+      "chave": "PMERJ-M01-ADM",
+      "semana": 1,
+      "materia": "dir_adm",
+      "tipo": "automatica",
+      "metaQuestoes": 20,
+      "assunto": "ADM-03",
+      "linhas": [
+        "ADM-01",
+        "ADM-02",
+        "ADM-03"
+      ],
+      "nome": "Organização administrativa: direta, indireta e delegação",
+      "objetivo": "Distinguir administração direta, administração indireta e delegação, apontando em cada caso a entidade, o vínculo com o ente central e o regime jurídico.",
+      "conteudo": "Ler o recorte de princípios e organização administrativa do material do aluno; montar quadro com entidade, vínculo e regime.",
+      "evidencia": "Questões corrigidas e três distinções escritas no quadro."
+    },
+    {
+      "chave": "PMERJ-M01-CONST",
+      "semana": 1,
+      "materia": "dir_const",
+      "tipo": "automatica",
+      "metaQuestoes": 20,
+      "assunto": "CONST-04",
+      "linhas": [
+        "CONST-01",
+        "CONST-02",
+        "CONST-03",
+        "CONST-04",
+        "CONST-05",
+        "CONST-06"
+      ],
+      "nome": "Eficácia das normas e limites da reforma",
+      "objetivo": "Classificar normas constitucionais quanto à eficácia e aplicabilidade e identificar os limites formais, circunstanciais e materiais ao poder de reforma.",
+      "conteudo": "Ler os dispositivos da Constituição sobre emendas e o material de apoio selecionado; classificar exemplos de normas por eficácia.",
+      "evidencia": "Questões corrigidas e dois erros justificados com o dispositivo da Constituição."
+    },
+    {
+      "chave": "PMERJ-M01-PEN",
+      "semana": 1,
+      "materia": "dir_pen",
+      "tipo": "automatica",
+      "metaQuestoes": 20,
+      "assunto": "PEN-06",
+      "linhas": [
+        "PEN-03",
+        "PEN-05",
+        "PEN-06",
+        "PEN-07",
+        "PEN-10"
+      ],
+      "nome": "Lei penal no tempo e no espaço",
+      "objetivo": "Resolver conflitos de lei penal no tempo e no espaço, explicando retroatividade benéfica, ultratividade e o tratamento da lei temporária e excepcional.",
+      "conteudo": "Ler os dispositivos iniciais do Código Penal sobre aplicação da lei e montar uma sequência de decisão para conflito de leis.",
+      "evidencia": "Questões corrigidas e um caso resolvido por escrito com a sequência de decisão."
+    },
+    {
+      "chave": "PMERJ-M01-CPP",
+      "semana": 1,
+      "materia": "dir_proc_pen",
+      "tipo": "automatica",
+      "metaQuestoes": 20,
+      "assunto": "CPP-02",
+      "linhas": [
+        "CPP-01",
+        "CPP-02",
+        "CPP-03",
+        "CPP-04",
+        "CPP-05"
+      ],
+      "nome": "Sistema processual e aplicação da lei processual",
+      "objetivo": "Distinguir sistema acusatório de sistema inquisitivo e aplicar a regra de aplicação imediata da lei processual penal, separando-a da regra da lei penal.",
+      "conteudo": "Ler as disposições preliminares do Código de Processo Penal e comparar hipóteses de aplicação no tempo.",
+      "evidencia": "Questões corrigidas e síntese escrita de um caso de aplicação temporal."
+    },
+    {
+      "chave": "PMERJ-M01-CPM",
+      "semana": 1,
+      "materia": "dir_pen_mil",
+      "tipo": "automatica",
+      "metaQuestoes": 13,
+      "assunto": "CPM-01",
+      "linhas": [
+        "CPM-01"
+      ],
+      "nome": "Quando o caso é militar",
+      "objetivo": "Reconhecer os elementos que levam um fato a ser examinado como crime militar antes de enquadrá-lo no Código Penal comum.",
+      "conteudo": "Ler o recorte vigente do Código Penal Militar sobre aplicação da lei penal militar, conferindo o texto atualizado.",
+      "evidencia": "Questões corrigidas e, em cada uma, o elemento militar do caso apontado."
+    },
+    {
+      "chave": "PMERJ-M01-DH",
+      "semana": 1,
+      "materia": "dir_hum",
+      "tipo": "automatica",
+      "metaQuestoes": 13,
+      "assunto": "DH-12",
+      "linhas": [
+        "DH-01",
+        "DH-12"
+      ],
+      "nome": "Proteção constitucional e convencional",
+      "objetivo": "Distinguir a proteção constitucional da proteção convencional de direitos humanos e explicar como um tratado é incorporado ao direito brasileiro.",
+      "conteudo": "Ler o recorte da Constituição sobre direitos e garantias e a incorporação de tratados, e os documentos oficiais indicados.",
+      "evidencia": "Questões corrigidas e mapa dos instrumentos de proteção."
+    },
+    {
+      "chave": "PMERJ-M02-ADM",
+      "semana": 2,
+      "materia": "dir_adm",
+      "tipo": "automatica",
+      "metaQuestoes": 20,
+      "assunto": "ADM-12",
+      "linhas": [
+        "ADM-11",
+        "ADM-12"
+      ],
+      "nome": "Poderes e elementos do ato administrativo",
+      "objetivo": "Identificar os elementos do ato administrativo, distinguir motivo, motivação e finalidade, e separar anulação de revogação.",
+      "conteudo": "Ler o recorte de poderes administrativos e ato administrativo; montar quadro dos elementos com um exemplo de vício em cada um.",
+      "evidencia": "Questões corrigidas e o quadro de elementos e vícios preenchido."
+    },
+    {
+      "chave": "PMERJ-M02-CONST",
+      "semana": 2,
+      "materia": "dir_const",
+      "tipo": "automatica",
+      "metaQuestoes": 20,
+      "assunto": "CONST-10",
+      "linhas": [
+        "CONST-10",
+        "CONST-11",
+        "CONST-12"
+      ],
+      "nome": "Direitos fundamentais e direitos políticos",
+      "objetivo": "Distinguir direitos de garantias fundamentais e aplicar as regras de perda e suspensão de direitos políticos e de inelegibilidade.",
+      "conteudo": "Ler os títulos da Constituição sobre direitos e garantias fundamentais e direitos políticos.",
+      "evidencia": "Questões corrigidas e tabela de hipóteses de perda e de suspensão de direitos políticos."
+    },
+    {
+      "chave": "PMERJ-M02-PEN",
+      "semana": 2,
+      "materia": "dir_pen",
+      "tipo": "automatica",
+      "metaQuestoes": 20,
+      "assunto": "PEN-14",
+      "linhas": [
+        "PEN-12",
+        "PEN-13",
+        "PEN-14",
+        "PEN-16",
+        "PEN-17",
+        "PEN-18",
+        "PEN-20",
+        "PEN-21",
+        "PEN-22"
+      ],
+      "nome": "Fato típico: conduta, nexo, dolo e culpa",
+      "objetivo": "Decompor o fato típico em conduta, resultado, nexo causal e tipicidade, e distinguir dolo eventual de culpa consciente.",
+      "conteudo": "Ler o recorte de teoria do crime do material do aluno e os dispositivos do Código Penal sobre relação de causalidade, crime doloso e crime culposo.",
+      "evidencia": "Questões corrigidas e um caso decomposto por escrito nos elementos do fato típico."
+    },
+    {
+      "chave": "PMERJ-M02-CPP",
+      "semana": 2,
+      "materia": "dir_proc_pen",
+      "tipo": "automatica",
+      "metaQuestoes": 20,
+      "assunto": "CPP-06",
+      "linhas": [
+        "CPP-06",
+        "CPP-07",
+        "CPP-08"
+      ],
+      "nome": "Inquérito, arquivamento e acordo de não persecução",
+      "objetivo": "Aplicar as regras do inquérito policial e do arquivamento e verificar os requisitos do acordo de não persecução penal em casos concretos.",
+      "conteudo": "Ler os dispositivos do Código de Processo Penal sobre inquérito policial, arquivamento e acordo de não persecução penal.",
+      "evidencia": "Questões corrigidas e lista de requisitos do acordo aplicada a um caso."
+    },
+    {
+      "chave": "PMERJ-M02-CPM",
+      "semana": 2,
+      "materia": "dir_pen_mil",
+      "tipo": "automatica",
+      "metaQuestoes": 13,
+      "assunto": "CPM-03",
+      "linhas": [
+        "CPM-02",
+        "CPM-03",
+        "CPM-04"
+      ],
+      "nome": "Crime militar, imputabilidade e concurso de agentes",
+      "objetivo": "Aplicar ao caso militar as regras de crime, imputabilidade e concurso de agentes, apontando onde o Código Penal Militar difere do Código Penal.",
+      "conteudo": "Ler o recorte do Código Penal Militar sobre crime, imputabilidade e concurso de agentes e comparar com os dispositivos do Código Penal.",
+      "evidencia": "Questões corrigidas e três diferenças entre os dois códigos anotadas."
+    },
+    {
+      "chave": "PMERJ-M02-DH",
+      "semana": 2,
+      "materia": "dir_hum",
+      "tipo": "automatica",
+      "metaQuestoes": 13,
+      "assunto": "DH-02",
+      "linhas": [
+        "DH-02"
+      ],
+      "nome": "Sistemas de proteção e seus órgãos",
+      "objetivo": "Distinguir o sistema global do sistema interamericano de proteção e as competências da Comissão e da Corte Interamericana de Direitos Humanos.",
+      "conteudo": "Ler o recorte de convenções internacionais e sistemas de proteção indicado no material do aluno.",
+      "evidencia": "Questões corrigidas e quadro comparativo Comissão × Corte."
+    },
+    {
+      "chave": "PMERJ-M03-ADM",
+      "semana": 3,
+      "materia": "dir_adm",
+      "tipo": "automatica",
+      "metaQuestoes": 20,
+      "assunto": "ADM-21",
+      "linhas": [
+        "ADM-13",
+        "ADM-18",
+        "ADM-19",
+        "ADM-20",
+        "ADM-21"
+      ],
+      "nome": "Responsabilidades do agente e processo disciplinar",
+      "objetivo": "Distinguir as responsabilidades civil, administrativa e penal do agente público, a repercussão da absolvição criminal e as fases do processo administrativo disciplinar.",
+      "conteudo": "Ler o recorte de agentes públicos, responsabilidades e processo administrativo disciplinar do material do aluno.",
+      "evidencia": "Questões corrigidas e linha do tempo das fases do processo disciplinar."
+    },
+    {
+      "chave": "PMERJ-M03-CONST",
+      "semana": 3,
+      "materia": "dir_const",
+      "tipo": "automatica",
+      "metaQuestoes": 20,
+      "assunto": "CONST-09",
+      "linhas": [
+        "CONST-07",
+        "CONST-08",
+        "CONST-09"
+      ],
+      "nome": "Controle concentrado: ADI e ADC",
+      "objetivo": "Identificar cabimento, legitimidade e efeitos básicos da ação direta de inconstitucionalidade e da ação declaratória de constitucionalidade.",
+      "conteudo": "Ler a Constituição e a legislação processual pertinente em fonte oficial; construir a tabela objeto, legitimados e efeitos.",
+      "evidencia": "Questões corrigidas e duas respostas justificadas com fonte conferível."
+    },
+    {
+      "chave": "PMERJ-M03-PEN",
+      "semana": 3,
+      "materia": "dir_pen",
+      "tipo": "automatica",
+      "metaQuestoes": 20,
+      "assunto": "PEN-29",
+      "linhas": [
+        "PEN-24",
+        "PEN-25",
+        "PEN-26",
+        "PEN-28",
+        "PEN-29",
+        "PEN-30",
+        "PEN-32"
+      ],
+      "nome": "Tentativa, ilicitude e culpabilidade",
+      "objetivo": "Distinguir tentativa, desistência voluntária e arrependimento eficaz e situar, no caso concreto, as excludentes de ilicitude e de culpabilidade.",
+      "conteudo": "Ler os dispositivos do Código Penal sobre tentativa, desistência, ilicitude, culpabilidade e erro; montar um fluxograma de análise do caso.",
+      "evidencia": "Questões corrigidas e o fluxograma aplicado a dois casos."
+    },
+    {
+      "chave": "PMERJ-M03-CPP",
+      "semana": 3,
+      "materia": "dir_proc_pen",
+      "tipo": "automatica",
+      "metaQuestoes": 20,
+      "assunto": "CPP-10",
+      "linhas": [
+        "CPP-09",
+        "CPP-10",
+        "CPP-11",
+        "CPP-12",
+        "CPP-13"
+      ],
+      "nome": "Ação penal e competência",
+      "objetivo": "Identificar a espécie de ação penal de cada caso e fixar a competência, aplicando as regras de conexão e continência.",
+      "conteudo": "Ler os dispositivos do Código de Processo Penal sobre ação penal, competência, conexão e continência.",
+      "evidencia": "Questões corrigidas e três casos classificados por espécie de ação e por competência."
+    },
+    {
+      "chave": "PMERJ-M03-CPM",
+      "semana": 3,
+      "materia": "dir_pen_mil",
+      "tipo": "automatica",
+      "metaQuestoes": 13,
+      "assunto": "CPM-06",
+      "linhas": [
+        "CPM-05",
+        "CPM-06"
+      ],
+      "nome": "Penas e aplicação da pena no Código Penal Militar",
+      "objetivo": "Distinguir as penas principais do Código Penal Militar e aplicar as regras de fixação da pena, comparando com o Código Penal comum.",
+      "conteudo": "Ler o recorte do Código Penal Militar sobre penas e aplicação da pena.",
+      "evidencia": "Questões corrigidas e quadro das diferenças de pena entre os dois códigos."
+    },
+    {
+      "chave": "PMERJ-M03-DH",
+      "semana": 3,
+      "materia": "dir_hum",
+      "tipo": "automatica",
+      "metaQuestoes": 13,
+      "assunto": "DH-02",
+      "linhas": [
+        "DH-02"
+      ],
+      "nome": "Sistema interamericano aplicado",
+      "objetivo": "Aplicar a Convenção Americana sobre Direitos Humanos a casos, distinguindo recomendação da Comissão de sentença da Corte Interamericana.",
+      "conteudo": "Retomar os tratados da semana 2 e ler os trechos indicados da Convenção Americana e de decisões da Corte Interamericana.",
+      "evidencia": "Questões corrigidas e dois casos resolvidos com o órgão competente apontado."
+    },
+    {
+      "chave": "PMERJ-M04-ADM",
+      "semana": 4,
+      "materia": "dir_adm",
+      "tipo": "manual",
+      "metaQuestoes": null,
+      "assunto": "ADM-40",
+      "linhas": [
+        "ADM-40"
+      ],
+      "nome": "Acesso à informação, dados pessoais e correção do simulado",
+      "objetivo": "Distinguir as hipóteses de acesso e de sigilo da Lei nº 12.527/2011 e as bases legais de tratamento da Lei nº 13.709/2018, e classificar a causa de cada erro de Administrativo no simulado.",
+      "conteudo": "Ler o recorte da Lei de Acesso à Informação e da LGPD; corrigir as questões de Administrativo do simulado anotando a causa de cada erro (conceito, norma, exceção, leitura ou tempo).",
+      "evidencia": "Simulado de Administrativo corrigido com causa de cada erro e questões dirigidas corrigidas."
+    },
+    {
+      "chave": "PMERJ-M04-CONST",
+      "semana": 4,
+      "materia": "dir_const",
+      "tipo": "manual",
+      "metaQuestoes": null,
+      "assunto": "CONST-13",
+      "linhas": [
+        "CONST-13",
+        "CONST-14",
+        "CONST-15"
+      ],
+      "nome": "Ações constitucionais e correção do simulado",
+      "objetivo": "Distinguir cabimento e legitimidade de mandado de segurança, mandado de injunção, ação popular, habeas data, habeas corpus e ação civil pública, e classificar a causa de cada erro de Constitucional no simulado.",
+      "conteudo": "Ler o recorte da Constituição e das leis das ações constitucionais; corrigir as questões de Constitucional do simulado anotando a causa de cada erro.",
+      "evidencia": "Simulado de Constitucional corrigido com causa de cada erro e quadro das ações."
+    },
+    {
+      "chave": "PMERJ-M04-PEN",
+      "semana": 4,
+      "materia": "dir_pen",
+      "tipo": "manual",
+      "metaQuestoes": null,
+      "assunto": "PEN-40",
+      "linhas": [
+        "PEN-38",
+        "PEN-39",
+        "PEN-40"
+      ],
+      "nome": "Prescrição, punibilidade e correção do simulado",
+      "objetivo": "Calcular a prescrição em casos simples, identificando termo inicial, causas suspensivas e interruptivas, e classificar a causa de cada erro de Penal no simulado.",
+      "conteudo": "Ler os dispositivos do Código Penal sobre extinção da punibilidade e prescrição; corrigir as questões de Penal do simulado anotando a causa de cada erro.",
+      "evidencia": "Simulado de Penal corrigido com causa de cada erro e um cálculo de prescrição por escrito."
+    },
+    {
+      "chave": "PMERJ-M04-CPP",
+      "semana": 4,
+      "materia": "dir_proc_pen",
+      "tipo": "manual",
+      "metaQuestoes": null,
+      "assunto": "CPP-19",
+      "linhas": [
+        "CPP-14",
+        "CPP-15",
+        "CPP-16",
+        "CPP-17",
+        "CPP-18",
+        "CPP-19"
+      ],
+      "nome": "Incidentes processuais e correção do simulado",
+      "objetivo": "Distinguir questões prejudiciais, exceções, incidente de falsidade, incidente de sanidade mental e medidas assecuratórias, e classificar a causa de cada erro de Processo Penal no simulado.",
+      "conteudo": "Ler os dispositivos do Código de Processo Penal sobre questões e processos incidentes; corrigir as questões de Processo Penal do simulado anotando a causa de cada erro.",
+      "evidencia": "Simulado de Processo Penal corrigido com causa de cada erro e quadro dos incidentes."
+    },
+    {
+      "chave": "PMERJ-M04-CPM",
+      "semana": 4,
+      "materia": "dir_pen_mil",
+      "tipo": "manual",
+      "metaQuestoes": null,
+      "assunto": "CPM-07",
+      "linhas": [
+        "CPM-07",
+        "CPM-08",
+        "CPM-09",
+        "CPM-10",
+        "CPM-11"
+      ],
+      "nome": "Suspensão, livramento, efeitos e correção do simulado",
+      "objetivo": "Distinguir suspensão condicional da pena, livramento condicional, penas acessórias e medidas de segurança no Código Penal Militar, e classificar a causa de cada erro de Penal Militar no simulado.",
+      "conteudo": "Ler o recorte do Código Penal Militar sobre suspensão condicional, livramento condicional, efeitos da condenação e medidas de segurança; corrigir as questões de Penal Militar do simulado.",
+      "evidencia": "Simulado de Penal Militar corrigido com causa de cada erro."
+    },
+    {
+      "chave": "PMERJ-M04-DH",
+      "semana": 4,
+      "materia": "dir_hum",
+      "tipo": "manual",
+      "metaQuestoes": null,
+      "assunto": "DH-07",
+      "linhas": [
+        "DH-07"
+      ],
+      "nome": "Letalidade policial e correção do simulado",
+      "objetivo": "Mapear as determinações da ADPF 635 e da sentença da Corte Interamericana no Caso Nova Brasília que alcançam a atuação policial, e classificar a causa de cada erro de Direitos Humanos no simulado.",
+      "conteudo": "Ler as fontes oficiais da ADPF 635 e da sentença do Caso Nova Brasília; corrigir as questões de Direitos Humanos do simulado anotando a causa de cada erro.",
+      "evidencia": "Simulado de Direitos Humanos corrigido com causa de cada erro e mapa inicial das determinações."
+    }
+  ],
+  "missoesPendentes": [
+    {
+      "chave": "PMERJ-M05-ADM",
+      "semana": 5,
+      "materia": "dir_adm",
+      "status": "pendente"
+    },
+    {
+      "chave": "PMERJ-M05-CONST",
+      "semana": 5,
+      "materia": "dir_const",
+      "status": "pendente"
+    },
+    {
+      "chave": "PMERJ-M05-PEN",
+      "semana": 5,
+      "materia": "dir_pen",
+      "status": "pendente"
+    },
+    {
+      "chave": "PMERJ-M05-CPP",
+      "semana": 5,
+      "materia": "dir_proc_pen",
+      "status": "pendente"
+    },
+    {
+      "chave": "PMERJ-M05-CPM",
+      "semana": 5,
+      "materia": "dir_pen_mil",
+      "status": "pendente"
+    },
+    {
+      "chave": "PMERJ-M05-DH",
+      "semana": 5,
+      "materia": "dir_hum",
+      "status": "pendente"
+    },
+    {
+      "chave": "PMERJ-M06-ADM",
+      "semana": 6,
+      "materia": "dir_adm",
+      "status": "pendente"
+    },
+    {
+      "chave": "PMERJ-M06-CONST",
+      "semana": 6,
+      "materia": "dir_const",
+      "status": "pendente"
+    },
+    {
+      "chave": "PMERJ-M06-PEN",
+      "semana": 6,
+      "materia": "dir_pen",
+      "status": "pendente"
+    },
+    {
+      "chave": "PMERJ-M06-CPP",
+      "semana": 6,
+      "materia": "dir_proc_pen",
+      "status": "pendente"
+    },
+    {
+      "chave": "PMERJ-M06-CPM",
+      "semana": 6,
+      "materia": "dir_pen_mil",
+      "status": "pendente"
+    },
+    {
+      "chave": "PMERJ-M06-DH",
+      "semana": 6,
+      "materia": "dir_hum",
+      "status": "pendente"
+    },
+    {
+      "chave": "PMERJ-M07-ADM",
+      "semana": 7,
+      "materia": "dir_adm",
+      "status": "pendente"
+    },
+    {
+      "chave": "PMERJ-M07-CONST",
+      "semana": 7,
+      "materia": "dir_const",
+      "status": "pendente"
+    },
+    {
+      "chave": "PMERJ-M07-PEN",
+      "semana": 7,
+      "materia": "dir_pen",
+      "status": "pendente"
+    },
+    {
+      "chave": "PMERJ-M07-CPP",
+      "semana": 7,
+      "materia": "dir_proc_pen",
+      "status": "pendente"
+    },
+    {
+      "chave": "PMERJ-M07-CPM",
+      "semana": 7,
+      "materia": "dir_pen_mil",
+      "status": "pendente"
+    },
+    {
+      "chave": "PMERJ-M07-DH",
+      "semana": 7,
+      "materia": "dir_hum",
+      "status": "pendente"
+    },
+    {
+      "chave": "PMERJ-M08-ADM",
+      "semana": 8,
+      "materia": "dir_adm",
+      "status": "pendente"
+    },
+    {
+      "chave": "PMERJ-M08-CONST",
+      "semana": 8,
+      "materia": "dir_const",
+      "status": "pendente"
+    },
+    {
+      "chave": "PMERJ-M08-PEN",
+      "semana": 8,
+      "materia": "dir_pen",
+      "status": "pendente"
+    },
+    {
+      "chave": "PMERJ-M08-CPP",
+      "semana": 8,
+      "materia": "dir_proc_pen",
+      "status": "pendente"
+    },
+    {
+      "chave": "PMERJ-M08-CPM",
+      "semana": 8,
+      "materia": "dir_pen_mil",
+      "status": "pendente"
+    },
+    {
+      "chave": "PMERJ-M08-DH",
+      "semana": 8,
+      "materia": "dir_hum",
+      "status": "pendente"
+    },
+    {
+      "chave": "PMERJ-M09-ADM",
+      "semana": 9,
+      "materia": "dir_adm",
+      "status": "pendente"
+    },
+    {
+      "chave": "PMERJ-M09-CONST",
+      "semana": 9,
+      "materia": "dir_const",
+      "status": "pendente"
+    },
+    {
+      "chave": "PMERJ-M09-PEN",
+      "semana": 9,
+      "materia": "dir_pen",
+      "status": "pendente"
+    },
+    {
+      "chave": "PMERJ-M09-CPP",
+      "semana": 9,
+      "materia": "dir_proc_pen",
+      "status": "pendente"
+    },
+    {
+      "chave": "PMERJ-M09-CPM",
+      "semana": 9,
+      "materia": "dir_pen_mil",
+      "status": "pendente"
+    },
+    {
+      "chave": "PMERJ-M09-DH",
+      "semana": 9,
+      "materia": "dir_hum",
+      "status": "pendente"
+    },
+    {
+      "chave": "PMERJ-M10-ADM",
+      "semana": 10,
+      "materia": "dir_adm",
+      "status": "pendente"
+    },
+    {
+      "chave": "PMERJ-M10-CONST",
+      "semana": 10,
+      "materia": "dir_const",
+      "status": "pendente"
+    },
+    {
+      "chave": "PMERJ-M10-PEN",
+      "semana": 10,
+      "materia": "dir_pen",
+      "status": "pendente"
+    },
+    {
+      "chave": "PMERJ-M10-CPP",
+      "semana": 10,
+      "materia": "dir_proc_pen",
+      "status": "pendente"
+    },
+    {
+      "chave": "PMERJ-M10-CPM",
+      "semana": 10,
+      "materia": "dir_pen_mil",
+      "status": "pendente"
+    },
+    {
+      "chave": "PMERJ-M10-DH",
+      "semana": 10,
+      "materia": "dir_hum",
+      "status": "pendente"
+    },
+    {
+      "chave": "PMERJ-M11-ADM",
+      "semana": 11,
+      "materia": "dir_adm",
+      "status": "pendente"
+    },
+    {
+      "chave": "PMERJ-M11-CONST",
+      "semana": 11,
+      "materia": "dir_const",
+      "status": "pendente"
+    },
+    {
+      "chave": "PMERJ-M11-PEN",
+      "semana": 11,
+      "materia": "dir_pen",
+      "status": "pendente"
+    },
+    {
+      "chave": "PMERJ-M11-CPP",
+      "semana": 11,
+      "materia": "dir_proc_pen",
+      "status": "pendente"
+    },
+    {
+      "chave": "PMERJ-M11-CPM",
+      "semana": 11,
+      "materia": "dir_pen_mil",
+      "status": "pendente"
+    },
+    {
+      "chave": "PMERJ-M11-DH",
+      "semana": 11,
+      "materia": "dir_hum",
+      "status": "pendente"
+    },
+    {
+      "chave": "PMERJ-M12-ADM",
+      "semana": 12,
+      "materia": "dir_adm",
+      "status": "pendente"
+    },
+    {
+      "chave": "PMERJ-M12-CONST",
+      "semana": 12,
+      "materia": "dir_const",
+      "status": "pendente"
+    },
+    {
+      "chave": "PMERJ-M12-PEN",
+      "semana": 12,
+      "materia": "dir_pen",
+      "status": "pendente"
+    },
+    {
+      "chave": "PMERJ-M12-CPP",
+      "semana": 12,
+      "materia": "dir_proc_pen",
+      "status": "pendente"
+    },
+    {
+      "chave": "PMERJ-M12-CPM",
+      "semana": 12,
+      "materia": "dir_pen_mil",
+      "status": "pendente"
+    },
+    {
+      "chave": "PMERJ-M12-DH",
+      "semana": 12,
+      "materia": "dir_hum",
+      "status": "pendente"
+    }
+  ],
+  "planos": [
+    {
+      "tipo": "intensiva",
+      "nome": "Ciclo pré-edital de 12 semanas",
+      "descricao": "Primeira passagem orientada pelo programa histórico (Anexo II de 2024), com simulados nas semanas 4, 8 e 12. Não substitui o edital do próximo ciclo.",
+      "ordem": 0
+    }
+  ]
+}
