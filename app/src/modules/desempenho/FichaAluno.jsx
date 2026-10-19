@@ -222,7 +222,7 @@ export function FichaAluno({ aluno, concurso, turmas = [], concursos = [], trilh
             quem testa pela ficha procura o botão e não acha. */}
         <div style={{ padding: "0 14px 12px", fontSize: 12, color: T.sub, lineHeight: 1.5 }}>
           {aluno.usuario_id
-            ? "As questões e o registro de estudo ficam na tela do aluno: ele entra com o código dele e toca em \"Iniciar missão\" na aba Hoje."
+            ? "As questões e o registro de estudo ficam na tela do aluno: ele entra com o código dele e toca no botão da missão na aba Hoje (\"Iniciar missão\" quando a missão tem questões ligadas, \"Registrar\" quando não tem)."
             : "Sem credencial, o aluno ainda não entra no app. Gere a credencial: as questões e o registro de estudo ficam na tela dele, na aba Hoje."}
         </div>
         {erroAcao && <div style={{ padding: "0 14px 12px" }}><Erro>{erroAcao}</Erro></div>}

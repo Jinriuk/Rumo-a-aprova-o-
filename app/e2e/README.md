@@ -43,7 +43,7 @@ Cada teste leva a tag da jornada (`@j:<nome>`) e, nas obrigatórias, `@critica`.
 | Jornada | Spec | O que prova |
 |---|---|---|
 | `auth` | `auth.spec.js` | login válido e inválido (mesma mensagem para código inexistente e senha errada), troca obrigatória, recuperação pelo e-mail que chega ao Mailpit local (o `PUT /auth/v1/user` que dava 405 em produção), logout, refresh da página, sessão expirada e revogada no servidor |
-| `aluno` | `aluno.spec.js` | Hoje, trilha, concluir objetivo, registro de estudo e simulado, cada um conferido no banco e depois de atualizar a página |
+| `aluno` | `aluno.spec.js` | Hoje com uma ação (missão da vez, sessão de questões, linha da semana), Plano em blocos por semana, concluir tarefa, registro de estudo e simulado, cada um conferido no banco e depois de atualizar a página; aviso de maturidade uma vez |
 | `coordenacao` | `coordenacao.spec.js` | turma → aluno → meta → credencial → troca de senha do aluno novo → responsável e vínculo → progresso na ficha; painel, abas e marca |
 | `responsavel` | `responsavel.spec.js` | lê só o vinculado (tela e API com a sessão dele), não edita (sem controle e a API recusa), revogação pela tela da coordenação vale na sessão aberta |
 | `super_admin` | `admin.spec.js` | cria escola com coordenação (claims e log), a coordenação ativa o acesso pelo e-mail local, suspender e reativar chegam na sessão dela, usuário comum negado na tela e nas RPCs |

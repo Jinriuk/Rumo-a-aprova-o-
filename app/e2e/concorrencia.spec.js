@@ -44,6 +44,7 @@ test.describe("concorrência e falha", { tag: ["@j:concorrencia", "@critica"] },
       `select ma.id from meta_atividades ma join metas m on m.id = ma.meta_id
         where m.aluno_id = $1 and m.status = 'ativa' and ma.estado = 'pendente' order by ma.id limit 1`, [CONTA.alunoId]);
     expect(alvo, "precisa de objetivo pendente na meta ativa").toBeTruthy();
+    await irParaAba(page, "Plano"); // raio-x fase 2: as tarefas moram no Plano
     await page.getByRole("button", { name: "✓ Concluir" }).first().dblclick();
     await page.waitForLoadState("networkidle");
     await expect.poll(async () => (await sql(
@@ -79,8 +80,8 @@ test.describe("concorrência e falha", { tag: ["@j:concorrencia", "@critica"] },
     }
 
     // a mesma atividade concluída nas duas abas (a segunda com tela velha)
-    await irParaAba(a, "Hoje");
-    await irParaAba(b, "Hoje");
+    await irParaAba(a, "Plano");
+    await irParaAba(b, "Plano");
     const [alvo] = await sql(
       `select ma.id from meta_atividades ma join metas m on m.id = ma.meta_id
         where m.aluno_id = $1 and m.status = 'ativa' and ma.estado = 'pendente' order by ma.id limit 1`, [CONTA.alunoId]);

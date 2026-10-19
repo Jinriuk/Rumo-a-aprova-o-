@@ -27,6 +27,7 @@ export function Registrar({
   contextoInicial = null, confirmacao = null, aoConfirmar,
   aoVerMissao, aoRegistrarOutro, aoSairContexto,
   aoConcluirObjetivo, objetivoConcluido, concluindoObjetivo, erroObjetivo,
+  compacto = false,
 }) {
   const T = useTema();
   const { input: inputS, label: lbl } = useInputStyle();
@@ -158,15 +159,15 @@ export function Registrar({
           <button type="button" onClick={aoSairContexto}>Usar registro livre</button>
         </section>
       )}
-      {/* RESUMO DO DIA */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(150px,1fr))", gap: 10 }}>
+      {/* RESUMO DO DIA (fora do registro aberto no Hoje: só o formulário) */}
+      {!compacto && <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(150px,1fr))", gap: 10 }}>
         <StatCard rotulo="Questões hoje" valor={resumo.q} icone="✦" tom={resumo.q > 0 ? "neutro" : "neutro"} />
         <StatCard rotulo="Tempo hoje" valor={fmtHoras(resumo.min)} icone="◷" />
         <StatCard rotulo="Acerto hoje" valor={resumo.acc == null ? "—" : `${resumo.acc}%`} icone="◎"
           tom={resumo.acc == null ? "neutro" : resumo.acc >= 70 ? "ok" : "alerta"} />
         <StatCard rotulo="Matérias" valor={resumo.materias.length} icone="📚"
           sub={resumo.materias.length ? resumo.materias.slice(0, 2).join(", ") + (resumo.materias.length > 2 ? "…" : "") : "nenhuma ainda"} />
-      </div>
+      </div>}
 
       {/* REGISTRO RÁPIDO */}
       <SectionCard titulo="Registro rápido" sub="Lance o que estudou agora — leva segundos.">
@@ -228,7 +229,7 @@ export function Registrar({
         {/* sem contexto nenhum; com objetivo da semana o cartão do topo já diz */}
         {!contextoInicial && (
           <div style={{ fontSize: 11.5, color: T.sub, marginTop: 8, lineHeight: 1.5 }}>
-            Registro livre: entra no seu histórico e no volume, mas não avança missão. Para avançar uma missão, use o botão “Iniciar missão” na aba Hoje.
+            Registro livre: entra no seu histórico e no volume, mas não avança missão. Para avançar uma missão, use o botão dela no Hoje ou no Plano.
           </div>
         )}
         {!tempoInvalido && minutosParse > 0 && <div style={{ fontSize: 11.5, color: T.sub, marginTop: 8 }}>◷ {minutosParse} minutos {minutosSugeridos > 0 ? "— puxado do cronômetro, pode ajustar" : ""}</div>}
@@ -271,7 +272,7 @@ export function Registrar({
       </SectionCard>
 
       {/* RECENTES */}
-      <SectionCard titulo="Registros recentes" semPadding>
+      {!compacto && <SectionCard titulo="Registros recentes" semPadding>
         {recentes.length === 0 ? (
           <div style={{ padding: 8 }}><EmptyState icone="✎" titulo="Nada registrado ainda" dica="Seu primeiro registro aparece aqui e alimenta o radar de desempenho." /></div>
         ) : (
@@ -290,7 +291,7 @@ export function Registrar({
             )}
           </>
         )}
-      </SectionCard>
+      </SectionCard>}
     </div>
   );
 }

@@ -1,14 +1,14 @@
-/* "Hoje" — o coração gamificado da área do aluno (ref. designs):
-   faixa do aspirante (patente + XP + ofensiva), Missão atual grande,
-   Radar de desempenho e Próxima Missão compacta/bloqueada.
+/* "Hoje" — peças da área do aluno: a faixa do aspirante (patente + XP +
+   ofensiva) e o cartão de ciclo encerrado. O cartão da semana ("Missão N ·
+   alvo atual"), o radar e a "Próxima Missão" saíram do Hoje no raio-x fase
+   2 (18/10): o topo é a missão da vez (MissaoDaVez.jsx).
    Tudo derivado de dado REAL; o jargão é só apresentação. */
 import React from "react";
-import { StatCard, StatusBadge, BarraXP } from "../../shared/ui/componentes.jsx";
+import { BarraXP } from "../../shared/ui/componentes.jsx";
 import { Insignia } from "../../shared/ui/Insignia.jsx";
 import { useTema } from "../../shared/branding/BrandingContext.jsx";
-import { fmtBR, fmtBRDiaSemana, todayISO, daysBetween } from "../../shared/regras/regras.js";
-import { L, patente, fmtHoras, fmtHorasCurto, xpPorPrioridade } from "./jargao.js";
-import { primeiroContextoPendente } from "./jornada.js";
+import { fmtBR } from "../../shared/regras/regras.js";
+import { patente } from "./jargao.js";
 
 export function FaixaAspirante({ nome, contexto, xp, streak, aoAbrirConquistas }) {
   const T = useTema();
@@ -62,7 +62,7 @@ export function FaixaAspirante({ nome, contexto, xp, streak, aoAbrirConquistas }
 
    O aluno continua podendo registrar estudo e simulado (decisão de
    produto): o ciclo fecha a cobrança, não a porta. */
-function CicloEncerrado({ trilha, m, metas, aoAvancar }) {
+export function CicloEncerrado({ trilha, m, metas, aoAvancar }) {
   const T = useTema();
   const ultima = trilha?.semanas?.[trilha.semanas.length - 1] ?? null;
   const semanas = Array.isArray(metas) ? metas.length : (trilha?.semanas?.length ?? 0);
@@ -112,197 +112,6 @@ function CicloEncerrado({ trilha, m, metas, aoAvancar }) {
           style={{ display: "block", width: "100%", marginTop: 12, background: "transparent", color: T.gold, border: `1.5px solid ${T.gold}`, borderRadius: 9, padding: "10px 16px", fontWeight: 700, fontSize: 13, cursor: "pointer", textAlign: "center" }}>
           Registrar estudo
         </button>
-      )}
-    </div>
-  );
-}
-
-export function MissaoAtual({ meta, trilha, m, metas, ciclo, aoAvancar }) {
-  const T = useTema();
-
-  // A1: o fim do ciclo vem ANTES de qualquer leitura da meta. A meta da
-  // última semana continua existindo e continua vencida — é justamente
-  // por lê-la sem saber que o ciclo acabou que a tela ficava vermelha
-  // para sempre.
-  if (ciclo === "encerrado") {
-    return <CicloEncerrado trilha={trilha} m={m} metas={metas} aoAvancar={aoAvancar} />;
-  }
-
-  if (!meta) {
-    return (
-      <div className="mission-card" style={{ background: T.card, border: `1px solid ${T.line}`, borderRadius: 14, padding: 18, textAlign: "center" }}>
-        <div className="disp" style={{ fontSize: 15, fontWeight: 700 }}>Missão sendo preparada</div>
-        <div style={{ fontSize: 12.5, color: T.sub, marginTop: 6, lineHeight: 1.5 }}>
-          A missão da semana nasce no servidor, na virada. Se demorar, fale com a coordenação.
-        </div>
-      </div>
-    );
-  }
-
-  const semana = trilha.semanas.find((s) => s.numero === meta.semana_numero);
-  const proxima = trilha.semanas.find((s) => s.numero === meta.semana_numero + 1);
-  const itens = meta.meta_atividades ?? [];
-  const feitas = itens.filter((x) => x.estado === "concluida").length;
-  const ignoradas = itens.filter((x) => x.estado === "ignorada").length;
-  const consideradas = Math.max(1, itens.length - ignoradas);
-  const pendentes = consideradas - feitas;
-  const pct = Math.min(100, Math.round((feitas / consideradas) * 100));
-  const disciplinas = new Set((trilha.atividadesPorSemana[meta.semana_numero] ?? []).map((a) => a.disciplina_codigo)).size;
-  const atrasada = pendentes > 0 && String(meta.fim) < todayISO();
-
-  // meta de XP da semana: quanto a missão vale e quanto já foi garantido
-  const xpDe = (it) => xpPorPrioridade[trilha.atividadesPorId[it.atividade_modelo_id]?.prioridade] ?? 40;
-  const xpMissao = itens.filter((x) => x.estado !== "ignorada").reduce((s, it) => s + xpDe(it), 0);
-  const xpGanho = itens.filter((x) => x.estado === "concluida").reduce((s, it) => s + xpDe(it), 0);
-
-  const corBorda = atrasada ? T.red : T.gold;
-  const labelEstado = atrasada ? "⚠ atrasada" : pendentes === 0 ? "✓ concluída" : "⊚ alvo atual";
-  const corLabel = atrasada ? T.red : T.gold;
-  const contextoAlvo = primeiroContextoPendente(meta, trilha);
-
-  return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-      {/* MISSÃO ATUAL */}
-      <div className="mission-card" style={{ "--mission-accent": corBorda, background: `linear-gradient(160deg, ${T.cardHi}, ${T.card})`, border: `1.5px solid ${corBorda}66`, borderRadius: 14, padding: 16 }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 9, flexWrap: "wrap", marginBottom: 8 }}>
-          <span className="disp" style={{ background: corBorda, color: "#0A1622", borderRadius: 8, padding: "3px 11px", fontWeight: 800, fontSize: 14 }}>
-            {L.missao.toUpperCase()} {meta.semana_numero}
-          </span>
-          <span style={{ fontSize: 11, color: corLabel, fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.4 }}>{labelEstado}</span>
-          <span style={{ marginLeft: "auto", textAlign: "right" }}>
-            <b className="num disp" style={{ fontSize: 18, color: T.ink }}>{feitas}/{consideradas}</b>
-            <div style={{ fontSize: 9.5, color: T.sub, textTransform: "uppercase", letterSpacing: 0.4 }}>alvos abatidos</div>
-          </span>
-        </div>
-
-        {semana && <div className="disp" style={{ fontSize: 17, fontWeight: 700, lineHeight: 1.25 }}>{semana.foco}</div>}
-        {semana?.simulado && <div style={{ fontSize: 12, color: T.red, fontWeight: 700, marginTop: 4 }}>⚑ {semana.simulado} nesta missão</div>}
-
-        {/* barra com o marcador navegando */}
-        <div style={{ position: "relative", height: 24, margin: "14px 0 8px" }}>
-          <div style={{ position: "absolute", top: 7, left: 0, right: 0, height: 10, background: T.bg, borderRadius: 6, overflow: "hidden" }}>
-            <div className="mission-progress-fill" style={{ width: `${pct}%`, height: "100%", background: `linear-gradient(90deg, ${corBorda}, ${pendentes === 0 ? T.green : T.green})`, transition: "width .4s" }} />
-          </div>
-          <div style={{ position: "absolute", top: 0, left: `calc(${pct}% - 12px)`, width: 24, height: 24, borderRadius: "50%", background: T.bg2, border: `2px solid ${corBorda}`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, transition: "left .4s", boxShadow: "0 0 8px #0008" }}>⚓</div>
-        </div>
-
-        {/* estado da missão + CTA */}
-        {atrasada ? (
-          <>
-            <div style={{ fontSize: 13, color: T.red, fontWeight: 600, marginTop: 6, lineHeight: 1.4 }}>
-              ⚠ Missão atrasada — <b>{pendentes} {pendentes === 1 ? "pendência" : "pendências"}</b> em aberto. Conclua antes de avançar.
-            </div>
-            {aoAvancar && (
-              // I4: era o único branco-sobre-coral do app (3,42:1, abaixo
-              // de 4,5:1). O botão de perigo canônico (componentes.jsx,
-              // `Botao perigo`) já usa #0A1622 sobre T.red e passa em
-              // 5,33:1 — o conserto é voltar pro padrão que já existe.
-              <button type="button" className="mission-primary-action" onClick={() => aoAvancar("registrar", contextoAlvo)}
-                style={{ display: "block", width: "100%", marginTop: 12, background: T.red, color: "#0A1622", border: `1.5px solid ${T.red}`, borderRadius: 9, padding: "10px 16px", fontWeight: 700, fontSize: 13, cursor: "pointer", textAlign: "center" }}>
-                Continuar missão
-              </button>
-            )}
-          </>
-        ) : pendentes === 0 ? (
-          <>
-            <div style={{ fontSize: 13, color: T.green, fontWeight: 600, marginTop: 6, lineHeight: 1.4 }}>
-              ✓ Missão cumprida! Todos os objetivos desta semana foram concluídos.
-            </div>
-            {aoAvancar && (
-              <div style={{ display: "flex", gap: 8, marginTop: 12, flexWrap: "wrap" }}>
-                <button type="button" className="mission-primary-action" onClick={() => aoAvancar("plano")}
-                  style={{ flex: 1, minWidth: 140, background: T.gold, color: "#0A1622", border: `1.5px solid ${T.gold}`, borderRadius: 9, padding: "10px 12px", fontWeight: 700, fontSize: 13, cursor: "pointer" }}>
-                  Ver próxima missão ›
-                </button>
-                <button type="button" onClick={() => aoAvancar("registrar", null)}
-                  style={{ flex: 1, minWidth: 140, background: "transparent", color: T.gold, border: `1.5px solid ${T.gold}66`, borderRadius: 9, padding: "10px 12px", fontWeight: 700, fontSize: 13, cursor: "pointer" }}>
-                  ✎ Revisar missão
-                </button>
-              </div>
-            )}
-          </>
-        ) : (
-          <>
-            <div style={{ fontSize: 13, color: T.ink, fontWeight: 600, marginTop: 6, lineHeight: 1.4 }}>
-              🎯 Sua missão: concluir <b style={{ color: T.gold }}>{pendentes} {pendentes === 1 ? "objetivo" : "objetivos"}</b> até {fmtBR(String(meta.fim))}.
-            </div>
-            {aoAvancar && (
-              <button type="button" className="mission-primary-action" onClick={() => aoAvancar("registrar", contextoAlvo)}
-                style={{ display: "block", width: "100%", marginTop: 12, background: T.gold, color: "#0A1622", border: `1.5px solid ${T.gold}`, borderRadius: 9, padding: "10px 16px", fontWeight: 700, fontSize: 13, cursor: "pointer", textAlign: "center" }}>
-                Continuar missão <span aria-hidden="true">→</span>
-              </button>
-            )}
-          </>
-        )}
-
-        <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, color: T.sub, marginTop: 8, flexWrap: "wrap", gap: 6 }}>
-          <span>{disciplinas} disciplinas · {itens.length} objetivos{ignoradas > 0 ? ` · ${ignoradas} adiados` : ""}</span>
-          <span>{fmtBR(String(meta.inicio))} – {fmtBR(String(meta.fim))}</span>
-        </div>
-
-        {/* meta de XP da semana — objetivo concreto e curto */}
-        {xpMissao > 0 && (
-          <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 10, background: T.bg, border: `1px solid ${T.line}`, borderRadius: 9, padding: "8px 11px" }}>
-            <span style={{ fontSize: 14 }}>⭐</span>
-            <span style={{ flex: 1, fontSize: 11.5, color: T.sub }}>XP da missão</span>
-            <span className="num" style={{ fontSize: 13, fontWeight: 800 }}>
-              <b style={{ color: xpGanho >= xpMissao ? T.green : T.gold }}>{xpGanho}</b>
-              <span style={{ color: T.sub, fontWeight: 600 }}> / {xpMissao} XP</span>
-            </span>
-          </div>
-        )}
-      </div>
-
-      {/* RADAR DE DESEMPENHO */}
-      {m && (
-        <div>
-          <div style={{ fontSize: 11, color: T.sub, fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.6, margin: "2px 2px 8px" }}>◎ {L.radar}</div>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(150px,1fr))", gap: 10 }}>
-            <StatCard rotulo={L.precisao} valor={`${m.acerto}%`} sub="acerto no ciclo" icone="◎" tom={m.acerto >= 70 ? "ok" : m.acerto > 0 ? "alerta" : "neutro"} />
-            <StatCard rotulo={L.horas} valor={fmtHoras(m.minutosTotais ?? 0)} sub="tempo registrado" icone="◷" />
-            <StatCard rotulo={L.questoesTotal} valor={m.totDone} sub={`${m.qSem} nesta semana`} icone="✦" />
-            <StatCard rotulo={L.ritmo} valor={fmtHorasCurto(m.mediaMinutosDia ?? 0)} sub={m.streak > 0 ? `ofensiva: ${m.streak} 🔥` : "retomando o ritmo"} icone="⧗" />
-          </div>
-        </div>
-      )}
-
-      {/* PRÓXIMA MISSÃO — compacta */}
-      {proxima ? (() => {
-        const diasDesbloqueio = Math.max(0, daysBetween(new Date(todayISO()), new Date(String(proxima.inicio))));
-        const explicacao = pendentes === 0
-          ? diasDesbloqueio === 0
-            ? "Disponível hoje à meia-noite."
-            : `Disponível em ${fmtBRDiaSemana(String(proxima.inicio))} — ${diasDesbloqueio === 1 ? "1 dia" : `${diasDesbloqueio} dias`}.`
-          : "Complete os objetivos desta missão para avançar.";
-        return (
-          <div className="next-mission" style={{ display: "flex", alignItems: "center", gap: 12, background: T.card, border: `1px solid ${T.line}`, borderRadius: 12, padding: "11px 14px" }}>
-            <div style={{ width: 38, height: 38, borderRadius: 10, border: `1.5px solid ${T.line}`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 17, flexShrink: 0 }}>🔒</div>
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontSize: 10.5, color: T.sub, textTransform: "uppercase", letterSpacing: 0.5 }}>{L.proximaMissao}</div>
-              <div className="disp" style={{ fontSize: 14.5, fontWeight: 700 }}>{L.missao} {proxima.numero}</div>
-              <div style={{ fontSize: 11.5, color: T.sub, marginTop: 2 }}>{explicacao}</div>
-            </div>
-            <div style={{ textAlign: "right", flexShrink: 0 }}>
-              <div style={{ fontSize: 10, color: T.sub }}>desbloqueia em</div>
-              <StatusBadge tom={pendentes === 0 ? "ok" : "alerta"}>
-                {diasDesbloqueio === 0 ? "hoje à meia-noite" : diasDesbloqueio === 1 ? "1 dia" : `${diasDesbloqueio} dias`}
-              </StatusBadge>
-            </div>
-          </div>
-        );
-      })() : (
-        // T5: esta é a última semana da trilha (não há `proxima`). Antes,
-        // este bloco sempre dizia "Boa prova!" — inclusive quando a
-        // MESMA missão está `atrasada` (bloco vermelho logo acima, mesmo
-        // card). As duas condições vêm de fontes independentes
-        // (meta.fim vs. trilha.semanas) e nunca se checavam: o aluno via
-        // "atrasada, conclua antes de avançar" e, 20px abaixo, "boa
-        // prova!" — vermelho e comemoração juntos, sem nenhuma ligação.
-        <div style={{ background: T.card, border: `1px solid ${T.line}`, borderRadius: 12, padding: "12px 14px", textAlign: "center", fontSize: 12.5, color: T.sub }}>
-          {atrasada
-            ? "🏁 Última missão do plano — ainda há pendências. Conclua os objetivos acima antes da prova."
-            : "🏁 Última missão do plano — reta final. Boa prova!"}
-        </div>
       )}
     </div>
   );
