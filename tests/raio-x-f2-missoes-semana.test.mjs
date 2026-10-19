@@ -83,13 +83,22 @@ test("concurso sem plano semanal: a de agora sai das missões fora das semanas",
   assert.equal(m.comMeta, true);
 });
 
-test("concurso só com missões sem meta (CN no demo): nada a contar, sem 'Missões em dia'", () => {
+test("concurso só com missões sem meta (CN no demo): o Hoje mostra as tarefas da semana, sem 'Missões em dia'", () => {
   const soManual = CAT.map((c) => ({ ...c, meta_questoes: null }));
   const m = montarMissoesPorSemana({ fila: filaDeMissoes({ catalogo: soManual, progresso: [] }), catalogo: soManual, vinculos: VINC, totalSemanas: 12 });
   assert.equal(m.missaoDeAgora, null);
-  assert.equal(m.comMeta, false, "o cartão diz que o concurso ainda não tem missões com questões");
+  assert.equal(m.comMeta, false, "o Hoje mostra as tarefas da semana no lugar da missão");
   const visao = semComentarios(ler("app/src/routes/aluno/VisaoEstudo.jsx"));
-  assert.match(visao, /semMissoes=\{missoesProntas && !missoesSemana\.comMeta\}/);
+  assert.match(visao, /const semMissoesLigadas = missoesProntas && !catalogoMissoes\.erro && !missoesSemana\.comMeta;/);
+  assert.match(visao, /\{semMissoesLigadas \? \(\s*<CartaoTarefasDaSemana meta=\{meta\}/, "o cartão das tarefas, como antes");
+  assert.match(visao, /aoPraticar=\{podeEditar \? abrirRegistroNoHoje : undefined\}/, "o registro abre no próprio Hoje");
+  const cartao = semComentarios(ler("app/src/modules/motor/MetaSemana.jsx"));
+  assert.match(cartao, /export function CartaoTarefasDaSemana/);
+  assert.match(cartao, /<SectionCard titulo=\{L\.objetivos\}/);
+  assert.match(cartao, /podeEditar=\{podeEditar && meta\.status === "ativa"\}/, "só a meta ativa edita");
+  for (const arq of ["app/src/modules/motor/MissoesDaSemana.jsx", "app/src/routes/aluno/VisaoEstudo.jsx"]) {
+    assert.doesNotMatch(ler(arq), /ainda não tem missões com questões/, `${arq} não diz mais a frase`);
+  }
 });
 
 test("matéria fora da trilha do aluno: a missão fica com a coordenação, sem botão e sem contar (achado do Codex)", () => {
@@ -129,12 +138,14 @@ test("botões: Iniciar com questões, Registrar sem, nenhum fora da vez; conclu�
   assert.match(src, /acao\.tipo === "questoes" \? "▶ Iniciar missão" : "Registrar"/);
 });
 
-test("Hoje: cartão + missões da semana abertas; 'Ver próximas semanas' abre ali; nada troca de aba; sem radar nem tarefas", () => {
+test("Hoje: cartão + missões da semana abertas; 'Ver próximas semanas' abre ali; nada troca de aba; sem radar; tarefas só sem missões ligadas", () => {
   const visao = semComentarios(ler("app/src/routes/aluno/VisaoEstudo.jsx"));
   const hoje = visao.slice(visao.indexOf('tab === "hoje" && ('), visao.indexOf('tab === "registrar" && podeEditar'));
   assert.match(hoje, /<MissaoDeAgora missao=\{missoesSemana\.missaoDeAgora\}/);
   assert.match(hoje, /<MissoesDoHoje montagem=\{missoesSemana\}/);
-  assert.doesNotMatch(hoje, /irAba\("plano"\)|TarefasDaSemana|RadarDesempenho|MissoesPersistidas/);
+  assert.doesNotMatch(hoje, /irAba\("plano"\)|<TarefasDaSemana|RadarDesempenho|MissoesPersistidas/);
+  // a única lista de tarefas do Hoje é o cartão do concurso sem missões ligadas
+  assert.equal(hoje.match(/<CartaoTarefasDaSemana /g)?.length, 1);
   assert.match(hoje, /resolvendo \? sessaoDeQuestoes : registroNoHoje && podeEditar \?/, "sessão e registro no lugar do cartão");
   const bloco = semComentarios(ler("app/src/modules/motor/MissoesDaSemana.jsx"));
   assert.match(bloco, /aria-expanded=\{verProximas\} onClick=\{\(\) => setVerProximas\(\(v\) => !v\)\}/);

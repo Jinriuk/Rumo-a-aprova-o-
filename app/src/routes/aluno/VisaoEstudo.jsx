@@ -12,7 +12,7 @@ import { useTema } from "../../shared/branding/BrandingContext.jsx";
 import { useTrilha } from "../../modules/conteudo/useTrilha.js";
 import { FaixaAspirante, CicloEncerrado } from "../../modules/motor/MetaHero.jsx";
 import { MissaoDeAgora, MissoesDoHoje, ListaMissoes } from "../../modules/motor/MissoesDaSemana.jsx";
-import { TarefasDaSemana } from "../../modules/motor/MetaSemana.jsx";
+import { TarefasDaSemana, CartaoTarefasDaSemana } from "../../modules/motor/MetaSemana.jsx";
 import { ResolverQuestoes } from "../../modules/motor/ResolverQuestoes.jsx";
 import { contextoRegistroDaMissao } from "../../modules/motor/jornada.js";
 import { Registrar } from "../../modules/motor/Registrar.jsx";
@@ -406,6 +406,9 @@ export function VisaoEstudo({ aluno, podeEditar, concurso = null, contexto = "Pl
   // cartão ofereceria a tarefa ou "semana em dia" no lugar da missão; o
   // toque nesse meio-tempo registraria sem ligar à missão. Espera os dois.
   const missoesProntas = !examTag || (catalogoMissoes.examTag === examTag && gam.versao >= 0);
+  // concurso sem missão com questões ligada (CN no demo: só missões com a
+  // coordenação): o Hoje mostra o cartão das tarefas da semana, como antes
+  const semMissoesLigadas = missoesProntas && !catalogoMissoes.erro && !missoesSemana.comMeta;
   // XP da FONTE DE VERDADE (ledger persistido, Fase C0 + PED1). Se o aluno
   // ainda não tem eventos (base nova/antes do backfill), cai na estimativa legada.
   const xp = dados.xpPersistido?.eventos?.length
@@ -492,13 +495,17 @@ export function VisaoEstudo({ aluno, podeEditar, concurso = null, contexto = "Pl
               <>
                 <div ref={missaoRef} tabIndex={-1} aria-label="Missão de agora, destaque"
                   className={realceMissao ? "mission-impact" : undefined} style={{ scrollMarginTop: 18 }}>
-                  <MissaoDeAgora missao={missoesSemana.missaoDeAgora} nomesMateria={nomesMateria}
-                    questoesIntegradas={questoesIntegradas} carregando={!missoesProntas}
-                    semMissoes={missoesProntas && !missoesSemana.comMeta}
-                    erroAoCarregar={missoesProntas && !!catalogoMissoes.erro}
-                    aoTentarDeNovo={() => { setCatalogoMissoes((c) => ({ ...c, examTag: null, erro: false })); setTentativaCatalogo((n) => n + 1); }}
-                    aoAgir={podeEditar ? agirNaMissao : undefined}
-                    aoRegistrarLivre={podeEditar ? () => abrirRegistroNoHoje(null) : undefined} />
+                  {semMissoesLigadas ? (
+                    <CartaoTarefasDaSemana meta={meta} trilha={trilha} podeEditar={podeEditar} aoMudar={recarregar}
+                      aoPraticar={podeEditar ? abrirRegistroNoHoje : undefined} />
+                  ) : (
+                    <MissaoDeAgora missao={missoesSemana.missaoDeAgora} nomesMateria={nomesMateria}
+                      questoesIntegradas={questoesIntegradas} carregando={!missoesProntas}
+                      erroAoCarregar={missoesProntas && !!catalogoMissoes.erro}
+                      aoTentarDeNovo={() => { setCatalogoMissoes((c) => ({ ...c, examTag: null, erro: false })); setTentativaCatalogo((n) => n + 1); }}
+                      aoAgir={podeEditar ? agirNaMissao : undefined}
+                      aoRegistrarLivre={podeEditar ? () => abrirRegistroNoHoje(null) : undefined} />
+                  )}
                 </div>
                 {missoesProntas && (
                   <MissoesDoHoje montagem={missoesSemana} totalSemanas={trilha.semanas.length}

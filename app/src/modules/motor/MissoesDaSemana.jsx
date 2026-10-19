@@ -34,7 +34,7 @@ export function acaoDaMissao(linha, questoesIntegradas, { modo = "hoje", podeRes
   return destino === "questoes" ? { tipo: "questoes", rotulo: "Iniciar" } : { tipo: "registro", rotulo: "Registrar" };
 }
 
-export function MissaoDeAgora({ missao, nomesMateria, questoesIntegradas, carregando = false, semMissoes = false, erroAoCarregar = false, aoTentarDeNovo, aoAgir, aoRegistrarLivre }) {
+export function MissaoDeAgora({ missao, nomesMateria, questoesIntegradas, carregando = false, erroAoCarregar = false, aoTentarDeNovo, aoAgir, aoRegistrarLivre }) {
   const T = useTema();
   const acao = carregando ? { tipo: "carregando", rotulo: "…" } : acaoDaMissao(missao, questoesIntegradas);
   const ocupado = acao?.tipo === "carregando";
@@ -64,9 +64,7 @@ export function MissaoDeAgora({ missao, nomesMateria, questoesIntegradas, carreg
           )}
         </>
       ) : (
-        <h2 className="disp" style={{ fontSize: 17, fontWeight: 700, margin: "6px 0 0" }}>
-          {semMissoes ? "Seu concurso ainda não tem missões com questões" : "Missões em dia"}
-        </h2>
+        <h2 className="disp" style={{ fontSize: 17, fontWeight: 700, margin: "6px 0 0" }}>Missões em dia</h2>
       )}
       {!carregando && !missao && !erroAoCarregar && aoRegistrarLivre && (
         <button type="button" className="mission-primary-action" onClick={aoRegistrarLivre}

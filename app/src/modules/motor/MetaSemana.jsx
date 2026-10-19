@@ -3,7 +3,7 @@
    CONCLUIR e secundária ADIAR. Um único selo de prioridade, sem estrelas
    concorrendo. Quem GERA a meta é o servidor; aqui o aluno só marca. */
 import React, { useState } from "react";
-import { Erro, StatusBadge } from "../../shared/ui/componentes.jsx";
+import { Erro, StatusBadge, SectionCard, EmptyState } from "../../shared/ui/componentes.jsx";
 import { useTema } from "../../shared/branding/BrandingContext.jsx";
 import { L, PRIORIDADE, xpPorPrioridade, questoesSugeridas } from "./jargao.js";
 import { contextoRegistroDaAtividade, textoDaTarefa } from "./jornada.js";
@@ -69,6 +69,29 @@ export function TarefasDaSemana({ meta = null, atividades = [], trilha, podeEdit
       {verFeitas && feitas.map((item, i) => linha(item, i === feitas.length - 1))}
       {erro && <div style={{ padding: "0 14px 12px" }}><Erro>{erro}</Erro></div>}
     </div>
+  );
+}
+
+/* O cartão do Hoje quando o concurso não tem missão com questões ligada
+   (CN no demo, só missões acompanhadas pela coordenação): as tarefas da
+   semana, como antes do raio-x fase 2, no lugar do cartão da missão. */
+export function CartaoTarefasDaSemana({ meta, trilha, podeEditar = false, aoMudar, aoPraticar }) {
+  if (!meta) {
+    return (
+      <SectionCard titulo={L.objetivos}>
+        <EmptyState icone="⚓" titulo="Nenhuma tarefa ainda" dica="As tarefas da semana nascem no servidor, na virada. Elas aparecem aqui automaticamente." />
+      </SectionCard>
+    );
+  }
+  const itens = meta.meta_atividades ?? [];
+  const feitas = itens.filter((x) => x.estado === "concluida").length;
+  const adiadas = itens.filter((x) => x.estado === "ignorada").length;
+  const sub = `${feitas} de ${itens.length - adiadas} concluídas${adiadas > 0 ? ` · ${adiadas} ${adiadas === 1 ? "adiada" : "adiadas"}` : ""}`;
+  return (
+    <SectionCard titulo={L.objetivos} sub={sub} semPadding>
+      <TarefasDaSemana meta={meta} trilha={trilha} podeEditar={podeEditar && meta.status === "ativa"}
+        aoMudar={aoMudar} aoPraticar={aoPraticar} />
+    </SectionCard>
   );
 }
 
