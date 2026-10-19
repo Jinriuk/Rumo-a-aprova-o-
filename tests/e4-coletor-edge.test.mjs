@@ -238,6 +238,21 @@ test("E4: registrar-erro confere a origem antes de ler o corpo, e lê com teto",
   assert.match(src, /, 413\)/);
 });
 
+test("0061: o despacho (?despachar=1) não lê corpo nem grava nada do pedido, e o relato comum também esvazia a fila", () => {
+  const src = semComentario(ler("supabase/functions/registrar-erro/index.ts"));
+  const iDesp = src.indexOf('searchParams.get("despachar") === "1"');
+  const iOrigem = src.indexOf("origemPermitida(");
+  const iCorpo = src.indexOf("lerCorpoLimitado(");
+  assert.ok(iDesp > 0 && iDesp < iOrigem && iDesp < iCorpo, "o despacho vem antes da origem e não lê o corpo");
+  const ramo = src.slice(iDesp, iOrigem);
+  assert.match(ramo, /despacharPendentes\(\)/);
+  assert.doesNotMatch(ramo, /registrarEvento|lerCorpoLimitado|req\.(json|text)/, "o despacho não grava nada que venha do pedido");
+  assert.match(src.slice(src.indexOf("registrarEvento(evento")), /despacharPendentes\(\)\.catch/, "o relato comum despacha a fila sem falhar por ela");
+  const srv = semComentario(ler("supabase/functions/_shared/coletor-servidor.ts"));
+  assert.match(srv, /rpc\("coletor_despachar_pendentes"/);
+  assert.match(srv, /cfg\.faltando\.length === 0 && await enviarAlerta/, "sem configuração, marca como falha em vez de enviar");
+});
+
 test("E4: o servidor do coletor lê o destinatário de ALERTA_EMAIL e reaproveita os RESEND_*", () => {
   const src = semComentario(ler("supabase/functions/_shared/coletor-servidor.ts"));
   assert.match(src, /Deno\.env\.get\("ALERTA_EMAIL"\)/);

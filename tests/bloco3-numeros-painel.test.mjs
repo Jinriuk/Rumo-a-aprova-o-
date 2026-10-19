@@ -184,7 +184,7 @@ test("D15: ficha, responsável, Hoje e frase-resumo dizem 'no ciclo'", () => {
   assert.match(resp, /% de acerto no ciclo`/, "frase-resumo");
   assert.match(resp, /rotulo="Acerto no ciclo"/);
   assert.match(src("app/src/modules/desempenho/Insights.jsx"), /rotulo="Acerto no ciclo"/);
-  assert.match(src("app/src/modules/motor/MetaHero.jsx"), /sub="acerto no ciclo"/);
+  // o radar do Hoje (MetaHero) saiu no raio-x fase 2; o acerto fica em Desempenho
   for (const p of ["app/src/modules/desempenho/ResumoResponsavel.jsx", "app/src/modules/desempenho/Insights.jsx",
                    "app/src/modules/motor/MetaHero.jsx", "app/src/modules/motor/Conquistas.jsx"]) {
     assert.doesNotMatch(src(p), /acerto geral/i, `${p} ainda diz "acerto geral"`);

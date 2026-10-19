@@ -24,6 +24,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { resolve, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
+import { randomInt } from "node:crypto";
 
 const __dir = dirname(fileURLToPath(import.meta.url));
 const root = resolve(__dir, "..");
@@ -128,7 +129,44 @@ test("backend: novaSenhaTemporaria() não recebe nem usa o código como entrada"
   const m = srcBackend.match(/function novaSenhaTemporaria\(\)[\s\S]{0,10}?\{([\s\S]+?)\n\}/);
   assert.ok(m, "não encontrei novaSenhaTemporaria() em provisionar-aluno/index.ts");
   assert.ok(!/codigo/i.test(m[1]), "novaSenhaTemporaria() referencia 'codigo' — deveria ser puramente aleatória");
-  assert.match(m[1], /crypto\.getRandomValues/, "novaSenhaTemporaria() não usa CSPRNG");
+  const sorteio = srcBackend.match(/function sortear\([\s\S]+?\n\}/);
+  assert.ok(sorteio && /sortear\(ALFABETO_SENHA, 16\)/.test(m[1]), "a senha não sai de sortear()");
+  assert.match(sorteio[0], /randomInt\(alfabeto\.length\)/, "sortear() não usa randomInt");
+  assert.match(srcBackend, /import \{ randomInt \} from "node:crypto";/, "randomInt não vem do node:crypto (CSPRNG)");
+  // sem resto (%) nem arredondamento sobre byte: enviesavam as primeiras letras
+  assert.doesNotMatch(sorteio[0], /%|Math\.floor|getRandomValues/, "sortear() voltou a derivar a letra de um byte");
+});
+
+// P1.1: o Auth do demo exige minúscula, maiúscula e dígito; ~8% das senhas
+// sorteadas sem essa garantia saíam sem dígito e o createUser recusava
+// (weak_password), visto como "Tente novamente" na coordenação. Roda o
+// gerador de verdade, extraído da fonte, muitas vezes.
+test("backend: novaSenhaTemporaria() sempre tem minúscula, maiúscula e dígito, 16 posições", () => {
+  const alfabeto = srcBackend.match(/const ALFABETO_SENHA = "([^"]+)";/)[1];
+  const corpo = srcBackend.match(/function novaSenhaTemporaria\(\)[\s\S]{0,10}?\{([\s\S]+?)\n\}/)[1];
+  const sortearSrc = srcBackend.match(/function sortear\([\s\S]+?\n\}/)[0]
+    .replace(/\(alfabeto: string, n: number\): string/, "(alfabeto, n)");
+  const gerar = new Function("randomInt", "ALFABETO_SENHA", `${sortearSrc}\n${corpo}`);
+  for (let i = 0; i < 3000; i++) {
+    const s = gerar(randomInt, alfabeto);
+    assert.equal(s.length, 16);
+    assert.ok(/[a-z]/.test(s) && /[A-Z]/.test(s) && /[0-9]/.test(s), `senha sem uma das três classes (posição ${i})`);
+    assert.ok([...s].every((c) => alfabeto.includes(c)));
+  }
+});
+
+test("backend: sortear() é uniforme no alfabeto (sem viés de módulo)", () => {
+  const alfabeto = srcBackend.match(/const ALFABETO_SENHA = "([^"]+)";/)[1];
+  const sortearSrc = srcBackend.match(/function sortear\([\s\S]+?\n\}/)[0]
+    .replace(/\(alfabeto: string, n: number\): string/, "(alfabeto, n)");
+  const sortear = new Function("randomInt", `${sortearSrc}\nreturn sortear;`)(randomInt);
+  const conta = new Map([...alfabeto].map((c) => [c, 0]));
+  for (let i = 0; i < alfabeto.length * 4; i++) {
+    for (const c of sortear(alfabeto, 1000)) conta.set(c, conta.get(c) + 1);
+  }
+  // com `% 54` as 40 primeiras letras saíam 5/4 das outras 14; aqui todas
+  // ficam a menos de 8% da média (4000 por letra; desvio padrão ~63)
+  for (const [c, v] of conta) assert.ok(Math.abs(v - 4000) < 320, `letra ${c} saiu ${v} vezes`);
 });
 
 test("frontend: entrarComCodigo envia a SENHA DIGITADA, não uma derivação do código", () => {

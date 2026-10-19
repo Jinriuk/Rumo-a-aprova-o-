@@ -18,7 +18,13 @@ test.describe("mobile", { tag: ["@j:mobile", "@critica"] }, () => {
     await semEstouroHorizontal(page);
     await expect(botaoVisivel(page, "Hoje")).toBeVisible();
     await expect(botaoVisivel(page, "Mais")).toBeVisible();
-    await irParaAba(page, "Conquistas"); // fica atrás do "Mais" no celular
+    await irParaAba(page, "Histórico"); // fica atrás do "Mais" no celular
+    await expect(page.getByText(/Histórico da jornada|Nenhuma meta no arquivo/).first()).toBeVisible();
+    // raio-x fase 2, PR 3: a barra é Hoje, Plano, Registrar, Desempenho e Mais
+    const barra = ["Hoje", "Plano", "Registrar", "Desempenho", "Mais"];
+    for (const rotulo of barra) await expect(botaoVisivel(page, rotulo)).toBeVisible();
+    await irParaAba(page, "Hoje");
+    await page.locator(".player-rank").click(); // Conquistas: pelo XP
     await expect(page.getByText(/Evolução de patentes/)).toBeVisible();
     await semEstouroHorizontal(page);
     expect(erros).toEqual([]);

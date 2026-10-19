@@ -73,11 +73,26 @@ const normalizarCodigo = (s: string) => s.replace(/[^a-zA-Z0-9]/g, "").toUpperCa
 // validação do cliente é só decoração — SEGURANCA-04 (validação de
 // força só no cliente, contornável pela API) é achado documentado
 // (docs/auditoria/seguranca/seg2), e este endpoint é onde fechamos.
+// P1.1 (13/10): a MESMA regra do Auth (demo e produção) e da tela
+// (app/src/shared/lib/senha.js): 8+ caracteres com minúscula, maiúscula e
+// número. Antes bastavam duas classes quaisquer e o Auth recusava o resto
+// com um 500 genérico.
+const REGRA_SENHA = "A senha precisa ter 8 caracteres ou mais, com letra minúscula, letra maiúscula e número.";
+
 function senhaFraca(s: string): string | null {
-  if (typeof s !== "string" || s.length < 8) return "Senha muito curta (mínimo 8 caracteres).";
-  const classes = [/[A-Z]/, /[a-z]/, /[0-9]/, /[^A-Za-z0-9]/].filter((r) => r.test(s)).length;
-  if (classes < 2) return "Senha fraca — combine maiúsculas, minúsculas, números ou símbolos.";
+  if (typeof s !== "string" || s.length < 8 || !/[a-z]/.test(s) || !/[A-Z]/.test(s) || !/[0-9]/.test(s)) {
+    return REGRA_SENHA;
+  }
   return null;
+}
+
+// O Auth ainda pode recusar (senha vazada, regra mais dura configurada no
+// painel). Vira 422 com texto para o usuário, não 500.
+function recusaDoAuth(e: unknown): string | null {
+  const err = e as { code?: string; name?: string; message?: string; reasons?: string[] } | null;
+  if (!err || (err.code !== "weak_password" && err.name !== "AuthWeakPasswordError")) return null;
+  const vazada = (err.reasons ?? []).includes("pwned") || /known to be weak|pwned|easy to guess/i.test(err.message ?? "");
+  return vazada ? "Esta senha aparece em vazamentos conhecidos e é fácil de adivinhar. Escolha outra." : REGRA_SENHA;
 }
 
 // Etapa 7 / BLOCO B1 — a regra que dá sentido a todo o resto: a senha
@@ -92,14 +107,60 @@ function senhaEhOCodigo(senha: string, codigo: string): boolean {
   return normalizarCodigo(senha) === normalizarCodigo(codigo);
 }
 
-async function registrarLogAcesso(
-  escolaId: string | null, usuarioId: string, papel: string | null, acao: string,
-) {
-  if (!escolaId) return; // JWT sem app_metadata completo — nada a registrar por tenant
-  const { error } = await admin.from("logs_acesso").insert({
-    escola_id: escolaId, aluno_id: null, usuario_id: usuarioId, papel: papel ?? "desconhecido", acao,
-  });
-  if (error) console.error("falha ao registrar log de acesso:", error.message);
+// Onde a troca de senha fica registrada. logs_acesso é a trilha LGPD POR
+// ALUNO (aluno_id NOT NULL, 0001): até 17/10 este insert ia com aluno_id
+// null e o Postgres recusava, então nenhuma troca ficava registrada (o
+// erro só aparecia no log da função). Agora:
+//   aluno        → uma linha com o próprio aluno_id;
+//   responsavel  → uma linha por aluno vinculado (a credencial dele abre
+//                  os dados desses alunos);
+//   coordenacao  → logs_coordenacao (0022), a trilha dela, sem aluno;
+//   sem escola ou outro papel → nada (não há trilha por escola).
+// Pura de propósito: o teste a executa sem rede.
+type Quem = { id: string; escola_id: string | null; papel: string | null };
+type LinhaLog = { tabela: "logs_acesso" | "logs_coordenacao"; linha: Record<string, unknown> };
+function linhasDoLogDeSenha(quem: Quem, alunoIds: string[], acao = "trocou-senha"): LinhaLog[] {
+  if (!quem.escola_id) return [];
+  if (quem.papel === "coordenacao") {
+    return [{ tabela: "logs_coordenacao", linha: {
+      escola_id: quem.escola_id, usuario_id: quem.id, papel: "coordenacao", acao,
+      entidade: "usuario", entidade_id: quem.id,
+    } }];
+  }
+  if (quem.papel !== "aluno" && quem.papel !== "responsavel") return [];
+  return [...new Set(alunoIds)].map((alunoId) => ({ tabela: "logs_acesso", linha: {
+    escola_id: quem.escola_id, aluno_id: alunoId, usuario_id: quem.id, papel: quem.papel, acao,
+  } }));
+}
+
+async function alunosDoChamador(quem: Quem): Promise<string[]> {
+  if (!quem.escola_id) return [];
+  if (quem.papel === "aluno") {
+    const { data, error } = await admin.from("alunos").select("id")
+      .eq("usuario_id", quem.id).eq("escola_id", quem.escola_id);
+    if (error) throw error;
+    return (data ?? []).map((a: { id: string }) => a.id);
+  }
+  if (quem.papel === "responsavel") {
+    const { data, error } = await admin.from("vinculos_responsaveis").select("aluno_id")
+      .eq("responsavel_id", quem.id).eq("escola_id", quem.escola_id);
+    if (error) throw error;
+    return (data ?? []).map((v: { aluno_id: string }) => v.aluno_id);
+  }
+  return [];
+}
+
+// A senha já foi trocada quando isto roda: falha no registro vai ao log da
+// função e não desfaz nem esconde a troca.
+async function registrarTrocaDeSenha(quem: Quem) {
+  try {
+    for (const { tabela, linha } of linhasDoLogDeSenha(quem, await alunosDoChamador(quem))) {
+      const { error } = await admin.from(tabela).insert(linha);
+      if (error) console.error(`falha ao registrar a troca de senha em ${tabela}:`, error.message);
+    }
+  } catch (e) {
+    console.error("falha ao registrar a troca de senha:", (e as Error)?.message ?? e);
+  }
 }
 
 Deno.serve(comRelato5xx("trocar-senha", async (req) => {
@@ -129,7 +190,11 @@ Deno.serve(comRelato5xx("trocar-senha", async (req) => {
     }
 
     const { error: e1 } = await admin.auth.admin.updateUserById(quem.id, { password: senha_nova });
-    if (e1) throw e1;
+    if (e1) {
+      const recusa = recusaDoAuth(e1);
+      if (recusa) return json({ error: recusa, estado: "senha_fraca" }, 422);
+      throw e1;
+    }
 
     // must_change_password vive em `usuarios` (não no Auth) — é o que
     // App.jsx lê via meuPerfil() pra decidir o gate (B2). Zera sempre,
@@ -138,7 +203,7 @@ Deno.serve(comRelato5xx("trocar-senha", async (req) => {
       .update({ must_change_password: false }).eq("id", quem.id);
     if (e2) throw e2;
 
-    await registrarLogAcesso(quem.escola_id, quem.id, quem.papel, "trocou-senha");
+    await registrarTrocaDeSenha(quem);
 
     return json({ estado: "senha_trocada" });
   } catch (e) {

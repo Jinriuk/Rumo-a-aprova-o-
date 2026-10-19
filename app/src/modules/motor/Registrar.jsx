@@ -27,6 +27,7 @@ export function Registrar({
   contextoInicial = null, confirmacao = null, aoConfirmar,
   aoVerMissao, aoRegistrarOutro, aoSairContexto,
   aoConcluirObjetivo, objetivoConcluido, concluindoObjetivo, erroObjetivo,
+  compacto = false,
 }) {
   const T = useTema();
   const { input: inputS, label: lbl } = useInputStyle();
@@ -70,12 +71,17 @@ export function Registrar({
 
   // Verdade da validação vem do contrato (mesma regra do payload que
   // vai ao banco). As dicas inline de borda derivam dela.
-  const validacao = useMemo(() => validarRegistroEstudo(f), [f]);
+  const validacao = useMemo(() => validarRegistroEstudo(f, contextoInicial), [f, contextoInicial]);
+  // P0.4 (0064): só a prática aberta a partir de uma missão conta para ela.
+  const praticaMissao = contextoInicial?.tipo === "missao" && !!contextoInicial?.missaoId;
+  const revisaoMissao = contextoInicial?.tipo === "revisao" && !!contextoInicial?.missaoId;
+  const deMissao = praticaMissao || revisaoMissao;
   const minutosParse = parseTempo(f.tempo);
   const tempoInvalido = !!validacao.erros.tempo;
   const acertosDemais = !!validacao.erros.acertos;
   const podeSalvar = validacao.ok && !ocupado;
   const faltaTopico = f.questoes !== "" && +f.questoes > 0 && f.topico.trim() === "";
+  const semAcertos = f.questoes !== "" && +f.questoes > 0 && String(f.acertos).trim() === "";
 
   // resumo do dia
   const hoje = todayISO();
@@ -88,7 +94,7 @@ export function Registrar({
   }, [registros, hoje, trilha]);
 
   async function adicionar() {
-    const v = validarRegistroEstudo(f);
+    const v = validarRegistroEstudo(f, contextoInicial);
     if (!v.ok) { setErro(Object.values(v.erros)[0]); return; }
     // enviar() é a trava: um segundo clique no mesmo tick é ignorado.
     await enviar(async () => {
@@ -135,32 +141,42 @@ export function Registrar({
         <section className="journey-context" aria-labelledby="journey-context-title">
           <div className="journey-context-marker" aria-hidden="true"><span /></div>
           <div className="journey-context-copy">
-            <small>Você está avançando neste objetivo</small>
+            <small>{praticaMissao ? "Você está praticando esta missão" : revisaoMissao ? "Você está revisando esta missão" : "Você está avançando neste objetivo"}</small>
             <strong id="journey-context-title" className="disp">{contextoInicial.titulo}</strong>
             <span>
               {trilha.porCodigo[contextoInicial.disciplinaCodigo]?.nome ?? contextoInicial.disciplinaCodigo}
               {contextoInicial.questoesSugeridas ? ` · prática sugerida: ≈${contextoInicial.questoesSugeridas} questões` : ""}
             </span>
+            {/* P0.4: o aluno sabe, antes de salvar, o que este registro faz */}
+            <span>
+              {praticaMissao
+                ? "Conta para esta missão, se ela for a da vez na matéria."
+                : revisaoMissao
+                  ? "Fica no assunto desta missão; não avança a fila."
+                  : "Registro livre: entra no histórico e no volume, mas não conclui missão."}
+            </span>
           </div>
           <button type="button" onClick={aoSairContexto}>Usar registro livre</button>
         </section>
       )}
-      {/* RESUMO DO DIA */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(150px,1fr))", gap: 10 }}>
+      {/* RESUMO DO DIA (fora do registro aberto no Hoje: só o formulário) */}
+      {!compacto && <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(150px,1fr))", gap: 10 }}>
         <StatCard rotulo="Questões hoje" valor={resumo.q} icone="✦" tom={resumo.q > 0 ? "neutro" : "neutro"} />
         <StatCard rotulo="Tempo hoje" valor={fmtHoras(resumo.min)} icone="◷" />
         <StatCard rotulo="Acerto hoje" valor={resumo.acc == null ? "—" : `${resumo.acc}%`} icone="◎"
           tom={resumo.acc == null ? "neutro" : resumo.acc >= 70 ? "ok" : "alerta"} />
         <StatCard rotulo="Matérias" valor={resumo.materias.length} icone="📚"
           sub={resumo.materias.length ? resumo.materias.slice(0, 2).join(", ") + (resumo.materias.length > 2 ? "…" : "") : "nenhuma ainda"} />
-      </div>
+      </div>}
 
       {/* REGISTRO RÁPIDO */}
       <SectionCard titulo="Registro rápido" sub="Lance o que estudou agora — leva segundos.">
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(140px,1fr))", gap: 12 }}>
           <div style={{ gridColumn: "1 / -1" }}>
             <label htmlFor={id("mat")} style={lbl}>Matéria</label>
-            <select id={id("mat")} value={f.disciplina_codigo} onChange={(e) => set("disciplina_codigo", e.target.value)} style={inputS}>
+            {/* prática de missão fica presa à matéria dela: o servidor recusa outra */}
+            <select id={id("mat")} value={f.disciplina_codigo} onChange={(e) => set("disciplina_codigo", e.target.value)} style={inputS}
+              disabled={deMissao} aria-describedby={validacao.erros.disciplina ? id("erro-mat") : undefined}>
               {trilha.disciplinas.map((s) => <option key={s.codigo} value={s.codigo} style={{ background: T.bg2 }}>{s.nome}</option>)}
             </select>
           </div>
@@ -171,7 +187,9 @@ export function Registrar({
                 vez). Este campo não está dentro de <form>, então o
                 atributo nativo não muda o comportamento de envio: só
                 alinha a semântica ARIA com o HTML de verdade. */}
-            <input id={id("top")} value={f.topico} onChange={(e) => set("topico", e.target.value)} required aria-required="true" placeholder="ex: MDC e MMC" style={inputS} />
+            {/* raio-x, mudança 8: "MDC e MMC" aparecia num concurso de Direito.
+                O exemplo serve a qualquer concurso e cabe em 390 px. */}
+            <input id={id("top")} value={f.topico} onChange={(e) => set("topico", e.target.value)} required aria-required="true" placeholder="ex: assunto que estudou" style={inputS} />
           </div>
           <div>
             <label htmlFor={id("q")} style={lbl}>Questões</label>
@@ -187,6 +205,7 @@ export function Registrar({
             <label htmlFor={id("ac")} style={lbl}>Acertos</label>
             <input id={id("ac")} type="number" inputMode="numeric" min="0" value={f.acertos} onChange={(e) => set("acertos", e.target.value)} placeholder="0"
               aria-invalid={acertosDemais ? true : undefined}
+              aria-describedby={semAcertos && praticaMissao ? id("dica-acertos") : undefined}
               style={{ ...inputS, borderColor: acertosDemais ? T.red : T.line }} />
           </div>
           <div>
@@ -196,8 +215,23 @@ export function Registrar({
               style={{ ...inputS, borderColor: tempoInvalido ? T.red : minutosSugeridos > 0 && f.tempo ? T.gold : T.line }} />
           </div>
         </div>
+        {validacao.erros.disciplina && <div id={id("erro-mat")} style={{ fontSize: 12, color: T.red, marginTop: 8 }}>{validacao.erros.disciplina}</div>}
         {acertosDemais && <div style={{ fontSize: 12, color: T.red, marginTop: 8 }}>Acertos não podem passar do número de questões.</div>}
+        {/* 0061: a missão só conta registro com acertos informados; o aviso
+            aparece antes de salvar, não depois de o aluno estranhar. P0.4:
+            só faz sentido na prática de missão (livre não conta de todo modo). */}
+        {semAcertos && praticaMissao && (
+          <div id={id("dica-acertos")} role="status" aria-live="polite" style={{ fontSize: 12, color: T.sub, marginTop: 8 }}>
+            Sem acertos, este estudo fica no seu histórico mas não conta para a missão.
+          </div>
+        )}
         {tempoInvalido && <div style={{ fontSize: 12, color: T.red, marginTop: 8 }}>Tempo não entendido — use formatos como “45min”, “1h” ou “1h30”.</div>}
+        {/* sem contexto nenhum; com objetivo da semana o cartão do topo já diz */}
+        {!contextoInicial && (
+          <div style={{ fontSize: 11.5, color: T.sub, marginTop: 8, lineHeight: 1.5 }}>
+            Registro livre: entra no seu histórico e no volume, mas não avança missão. Para avançar uma missão, use o botão dela no Hoje ou no Plano.
+          </div>
+        )}
         {!tempoInvalido && minutosParse > 0 && <div style={{ fontSize: 11.5, color: T.sub, marginTop: 8 }}>◷ {minutosParse} minutos {minutosSugeridos > 0 ? "— puxado do cronômetro, pode ajustar" : ""}</div>}
 
         {/* alvo de toque de 32px: acima do mínimo de 24px do WCAG 2.5.8,
@@ -238,7 +272,7 @@ export function Registrar({
       </SectionCard>
 
       {/* RECENTES */}
-      <SectionCard titulo="Registros recentes" semPadding>
+      {!compacto && <SectionCard titulo="Registros recentes" semPadding>
         {recentes.length === 0 ? (
           <div style={{ padding: 8 }}><EmptyState icone="✎" titulo="Nada registrado ainda" dica="Seu primeiro registro aparece aqui e alimenta o radar de desempenho." /></div>
         ) : (
@@ -257,7 +291,7 @@ export function Registrar({
             )}
           </>
         )}
-      </SectionCard>
+      </SectionCard>}
     </div>
   );
 }

@@ -370,10 +370,11 @@ begin
       -- gen_random_uuid()). O cabeçalho promete "reexecução não
       -- duplica"; era o quinto lugar onde isso não era verdade. O par
       -- (aluno, data, disciplina) identifica a linha gerada aqui.
-      insert into registros_estudo (id, escola_id, aluno_id, data, disciplina_codigo, topico, questoes, acertos, minutos)
+      -- 0064: histórico da vitrine é anterior à regra temática: 'legado'
+      insert into registros_estudo (id, escola_id, aluno_id, data, disciplina_codigo, topico, questoes, acertos, minutos, tipo_pratica)
       select gen_random_uuid(), v_esc, v_aluno, v_dat,
              v_disc[1 + (i % 4)], 'Revisão dirigida — bateria de questões',
-             v_qtd, v_acc, v_min
+             v_qtd, v_acc, v_min, 'legado'
        where not exists (
          select 1 from registros_estudo re
           where re.aluno_id = v_aluno and re.data = v_dat

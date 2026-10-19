@@ -15,7 +15,7 @@
 #      simulador (a função só aceita host local/privado nessa variável);
 #   3. banco (migrations + seeds) e front com VITE_ERROR_REPORT_URL
 #      apontando para a função registrar-erro LOCAL;
-#   4. scripts/alertas/provas.mjs (P1 a P7) e o relatório.
+#   4. scripts/alertas/provas.mjs (P1 a P8) e o relatório.
 # Nada sai da máquina: a trava da E3 recusa *.supabase.co, e o e-mail e
 # o ping caem no simulador. A stack cai no fim (E2E_MANTER_STACK=1 mantém).
 # ============================================================
@@ -77,4 +77,7 @@ if grep -q "correlation_id" "$RAIZ/app/src/shared/lib/observabilidade.js"; then
 fi
 
 export PROVAS_HC_BASE="http://${HOST_IP}:${PORTA}/hc"
+# a URL do projeto vista de dentro do banco (o Kong publicado no host), para
+# o pg_net pedir o despacho do e-mail de falha do motor (P8)
+export PROVAS_PROJECT_URL="http://${HOST_IP}:54321"
 node "$RAIZ/scripts/alertas/provas.mjs"

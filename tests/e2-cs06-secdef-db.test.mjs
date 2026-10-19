@@ -24,6 +24,7 @@ const CLASSE = {
   "public.abrir_proximo_ciclo(uuid, date, uuid[])": "a",
   "public.backoffice_criar_escola(text, text, text, text, text, integer, text, text, text, text, text)": "a",
   "public.backoffice_dashboard()": "a",
+  "public.quest_missoes_disponiveis()": "a", // 0065: só ids de missão do próprio aluno (meu_aluno_id + tenant_operacional)
   "public.backoffice_definir_status(uuid, text)": "a",
   "public.backoffice_detalhe_escola(uuid)": "a",
   "public.backoffice_editar_escola(uuid, text, text, text, text, text, text, integer, text, text, text, text, text)": "a",
@@ -46,6 +47,9 @@ const CLASSE = {
   "app.registrar_nivel_historico()": "c",
   "app.trg_ped1_registro()": "c",
   "app.heartbeat_virada()": "c", // E4 (0060): ping do healthchecks ao fim da virada global
+  "app.registrar_recebimento()": "c", // 0061: horário do servidor em que o registro chegou
+  "app.quest_registro_guarda()": "c", // 0065: cliente não edita registro corrigido no servidor
+  "app.registro_conferir_pratica()": "c", // 0064: confere missão e assunto do registro antes de gravar
   // d — interna
   "app.backfill_progresso(uuid)": "d",
   "app.desbloquear_conquista_basica(uuid, uuid, text, text)": "d",
@@ -53,6 +57,14 @@ const CLASSE = {
   "app.motor_avaliar_aluno(uuid)": "d",
   "app.motor_conquista_xp(uuid, uuid, text, text)": "d",
   "app.motor_streak_dias(uuid)": "d",
+  // 0061: motor de missões em sequência (chamadas pelo gatilho da PED1 e pelo operador)
+  "app.missoes_aplicar(text, registros_estudo, registros_estudo)": "d",
+  "app.missoes_fila(uuid, text)": "d",
+  "app.quest_entrega_json(uuid)": "d", // 0065: chamadas só pelas quest_* de servidor
+  "app.quest_missao_da_vez(uuid, text)": "d",
+  "app.missoes_reavaliar_aluno(uuid)": "d",
+  "app.missoes_reprocessar(uuid, text, uuid, uuid)": "d",
+  "app.relatar_falha_servidor(text, text)": "d",
   // s — servidor
   "app.abrir_proximo_ciclo(uuid, date)": "s",
   "app.estado_ciclo(uuid, date)": "s",
@@ -70,9 +82,14 @@ const CLASSE = {
   "app.virada_saude(integer)": "s",
   "app.virar_semana(date)": "s",
   "app.virar_semana(uuid, date)": "s",
+  "public.coletor_despachar_pendentes(integer)": "s", // 0061: só a Edge Function registrar-erro
   "public.coletor_marcar_email(bigint, boolean)": "s", // E4 (0059): só a Edge Function registrar-erro
   "public.coletor_registrar_erro(text, text, jsonb, boolean)": "s", // E4 (0059): idem
   "public.motor_gerar_meta_segura(uuid)": "s",
+  "public.quest_guardar_questoes(uuid, jsonb, text, boolean)": "s", // 0065: só a Edge Function questoes-integradas
+  "public.quest_guardar_questoes(uuid, jsonb, text, boolean, text)": "s", // 0066: idem, com a fase da busca
+  "public.quest_preparar_entrega(uuid, uuid, uuid, uuid, integer, boolean)": "s", // 0065: idem
+  "public.quest_responder(uuid, uuid, uuid, uuid, text, integer)": "s", // 0065: idem
   "public.registrar_codigo_acesso(uuid, uuid, text)": "s",
   "public.resolver_codigo_acesso(text, text, integer, integer)": "s",
   "public.revogar_codigo_acesso(uuid)": "s",
@@ -103,7 +120,7 @@ test("C-S06: toda SECURITY DEFINER de public/app tem classe registrada, e nenhum
   const sobrando = Object.keys(CLASSE).filter((n) => !nomes.includes(n));
   assert.deepEqual(semClasse, [], `SECURITY DEFINER sem decisão de quem chama: classifique em tests/e2-cs06-secdef-db.test.mjs`);
   assert.deepEqual(sobrando, [], "classe registrada para função que não existe mais");
-  assert.equal(nomes.length, 53); // 50 da 0057 + 3 da Etapa 4 (0059 e 0060)
+  assert.equal(nomes.length, 69); // 50 da 0057 + 3 da Etapa 4 (0059 e 0060) + 7 da 0061 + 1 da 0064 + 7 da 0065 + 1 da 0066
 });
 
 test("C-S06: toda SECURITY DEFINER fixa o search_path", async () => {

@@ -268,9 +268,10 @@ insert into aluno_xp_eventos (id, escola_id, aluno_id, exam_tag, origem, pontos)
 insert into aluno_conquistas (id, escola_id, aluno_id, conquista_id, exam_tag) values
   ('${R.conqA1}', '${ESC.A}', '${AL.A1}', (select id from conquistas order by id limit 1), 'cn'),
   ('${R.conqB1}', '${ESC.B}', '${AL.B1}', (select id from conquistas order by id limit 1), 'cn');
+-- concluída: fora do motor, a 0061 só aceita ajuste manual de conclusão (vira 'legado')
 insert into aluno_missoes (id, escola_id, aluno_id, missao_id, exam_tag, estado) values
-  ('${R.amA1}', '${ESC.A}', '${AL.A1}', (select id from missoes where exam_tag = 'cn' order by id limit 1), 'cn', 'em_andamento'),
-  ('${R.amB1}', '${ESC.B}', '${AL.B1}', (select id from missoes where exam_tag = 'cn' order by id limit 1), 'cn', 'em_andamento');
+  ('${R.amA1}', '${ESC.A}', '${AL.A1}', (select id from missoes where exam_tag = 'cn' order by id limit 1), 'cn', 'concluida'),
+  ('${R.amB1}', '${ESC.B}', '${AL.B1}', (select id from missoes where exam_tag = 'cn' order by id limit 1), 'cn', 'concluida');
 insert into aluno_niveis (id, escola_id, aluno_id, escopo, nivel, origem) values
   ('${R.nivA1}', '${ESC.A}', '${AL.A1}', 'geral', 'base', 'manual'),
   ('${R.nivB1}', '${ESC.B}', '${AL.B1}', 'geral', 'base', 'manual');

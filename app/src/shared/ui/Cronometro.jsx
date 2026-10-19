@@ -2,8 +2,13 @@
    Iniciar → conta · Pausar → para E mostra cronômetro de PAUSA +
    duas opções: Retomar ou Finalizar (manda o tempo pro registro).
    Baseado em TIMESTAMPS (não perde tempo com a aba em segundo
-   plano) e persistido no localStorage (sobrevive a F5). */
-import React, { useEffect, useState } from "react";
+   plano) e persistido no localStorage (sobrevive a F5).
+   `sessao` (desenho de 18/10): a sessão de questões liga o cronômetro ao
+   abrir e, ao fechar, ele para e zera sem ir ao registro, porque o lote já
+   grava os minutos no servidor (contaria duas vezes). Só mexe no tempo que
+   a própria sessão ligou: um cronômetro que o aluno já tinha ligado fica
+   como estava. */
+import React, { useEffect, useRef, useState } from "react";
 import { useTema } from "../branding/BrandingContext.jsx";
 
 const CHAVE = "rumo-cronometro-v1";
@@ -22,15 +27,26 @@ function carregar() {
   return { fase: "parado", acumuladoMs: 0, marcoMs: 0 };
 }
 
-export function Cronometro({ aoFinalizar }) {
+export function Cronometro({ aoFinalizar, sessao = false }) {
   const T = useTema();
   const [st, setSt] = useState(carregar);
   const [agora, setAgora] = useState(Date.now());
+  const stRef = useRef(st);
 
   useEffect(() => {
+    stRef.current = st;
     if (st.fase === "parado") localStorage.removeItem(CHAVE);
     else localStorage.setItem(CHAVE, JSON.stringify(st));
   }, [st]);
+
+  // Sessão fechada com o cronômetro fora da tela (no Plano ele não
+  // aparece): ele sai antes de ver sessao=false. O tempo da sessão não
+  // pode sobrar para a próxima.
+  useEffect(() => () => {
+    if (stRef.current.daSessao) {
+      try { localStorage.removeItem(CHAVE); } catch { /* sem storage: nada sobra */ }
+    }
+  }, []);
 
   useEffect(() => {
     if (st.fase === "parado") return;
@@ -42,8 +58,17 @@ export function Cronometro({ aoFinalizar }) {
   const pausaMs = st.fase === "pausa" ? Math.max(0, agora - st.marcoMs) : 0;
   const minutos = Math.max(1, Math.round(estudoMs / 60000));
 
-  const iniciar = () => { setAgora(Date.now()); setSt({ fase: "rodando", acumuladoMs: st.acumuladoMs, marcoMs: Date.now() }); };
-  const pausar = () => setSt({ fase: "pausa", acumuladoMs: estudoMs, marcoMs: Date.now() });
+  const iniciar = () => { setAgora(Date.now()); setSt({ fase: "rodando", acumuladoMs: st.acumuladoMs, marcoMs: Date.now(), daSessao: st.daSessao }); };
+
+  useEffect(() => {
+    if (sessao) {
+      setSt((atual) => (atual.fase === "parado" ? { fase: "rodando", acumuladoMs: 0, marcoMs: Date.now(), daSessao: true } : atual));
+      setAgora(Date.now());
+    } else {
+      setSt((atual) => (atual.daSessao ? { fase: "parado", acumuladoMs: 0, marcoMs: 0 } : atual));
+    }
+  }, [sessao]);
+  const pausar = () => setSt({ fase: "pausa", acumuladoMs: estudoMs, marcoMs: Date.now(), daSessao: st.daSessao });
   const zerar = () => setSt({ fase: "parado", acumuladoMs: 0, marcoMs: 0 });
   const finalizar = () => { aoFinalizar?.(minutos); zerar(); };
 
@@ -53,7 +78,7 @@ export function Cronometro({ aoFinalizar }) {
     <div style={{ display: "flex", alignItems: "center", gap: 9, background: T.card, border: `1px solid ${st.fase === "rodando" ? T.gold : T.line}`, borderRadius: 12, padding: "8px 12px", flexWrap: "wrap" }}>
       <div style={{ minWidth: 96 }}>
         <div style={{ fontSize: 9.5, color: T.sub, fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.5 }}>
-          {st.fase === "rodando" ? "● estudando" : st.fase === "pausa" ? "em pausa" : "Cronômetro"}
+          {st.fase === "rodando" ? (st.daSessao ? "● questões" : "● estudando") : st.fase === "pausa" ? "em pausa" : "Cronômetro"}
         </div>
         <span className="num disp" style={{ fontSize: 19, fontWeight: 800, color: st.fase === "rodando" ? T.gold : T.ink, lineHeight: 1.1 }}>{fmt(estudoMs)}</span>
       </div>
@@ -75,7 +100,8 @@ export function Cronometro({ aoFinalizar }) {
       {st.fase === "pausa" && (
         <>
           <button type="button" onClick={iniciar} style={btn({ background: T.gold, color: "#0A1622", border: "none" })}>▶ Retomar</button>
-          <button type="button" onClick={finalizar} style={btn({ borderColor: T.green, color: T.green })}>■ Finalizar → registrar {minutos}min</button>
+          {/* tempo da sessão de questões já vai no lote: não se registra de novo */}
+          {!st.daSessao && <button type="button" onClick={finalizar} style={btn({ borderColor: T.green, color: T.green })}>■ Finalizar → registrar {minutos}min</button>}
           <button type="button" onClick={zerar} title="Descartar tempo" style={btn({ color: T.sub, padding: "8px 10px" })}>↺</button>
         </>
       )}
