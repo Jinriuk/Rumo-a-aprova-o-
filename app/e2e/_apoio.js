@@ -23,6 +23,7 @@ export const CONTAS = {
   responsavelRevogacao: porCodigo(FIXTURE.respRevogacao), // vínculo com o Lucas que a jornada revoga
   alunoJornada: porCodigo(FIXTURE.alunoJornada), // jornada do aluno (escreve)
   alunoConcorrencia: porCodigo(FIXTURE.alunoConcorrencia), // duplo clique, duas abas, falha de API
+  alunoAviso: porCodigo(FIXTURE.alunoAviso), // concurso não completo: aviso de maturidade uma vez
 };
 export { SENHA_E2E, SENHA_NOVA_E2E };
 

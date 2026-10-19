@@ -178,7 +178,8 @@ test("tela: a VisaoEstudo monta a fila com catálogo + ajustes + progresso e nã
   const visao = ler("app/src/routes/aluno/VisaoEstudo.jsx");
   assert.match(visao, /filaDeMissoes\(\{/);
   assert.match(visao, /db\.carregarMissoes\(examTag\), db\.carregarMissoesEscola\(examTag\)/);
-  assert.match(visao, /<MissoesPersistidas fila=\{filaMissoes\}/);
+  // desenho de 18/10: a fila vira as linhas por semana do Hoje e do Plano
+  assert.match(visao, /montarMissoesPorSemana\(\{\s*fila: filaMissoes,/);
   const painel = ler("app/src/modules/motor/ProgressoVivido.jsx");
   assert.match(painel, /a_seguir: "A seguir"/);
   assert.match(painel, /atual: "Atual"/);

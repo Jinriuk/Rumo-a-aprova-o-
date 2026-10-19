@@ -168,14 +168,32 @@ test("os seis concursos anteriores não mudam de nível; só o PMERJ entra, como
   });
 });
 
-test("o aviso de maturidade aparece no cadastro, na área do aluno e na do responsável para pre_edital", () => {
+test("o aviso de maturidade aparece no cadastro, e uma vez (até o Entendi) para aluno e responsável", () => {
   // AvisoMaturidade some só quando podeExibirComoPronta; pre_edital é false.
   const aviso = semComentarios(ler("app/src/modules/conteudo/SeloMaturidade.jsx"));
   assert.match(aviso, /if \(info\.podeExibirComoPronta\) return null;/);
   const cadastro = semComentarios(ler("app/src/modules/pessoas/CadastroAlunos.jsx"));
   assert.equal((cadastro.match(/maturidadeDe\(codigoSel\) !== "completa" && \(\s*<AvisoMaturidade/g) ?? []).length, 2,
     "os dois formulários (individual e em lote) mostram o aviso");
-  assert.match(semComentarios(ler("app/src/routes/aluno/AreaAluno.jsx")), /<AvisoMaturidade codigo=\{concurso\.codigo\}/);
-  assert.match(semComentarios(ler("app/src/routes/responsavel/AreaResponsavel.jsx")), /<AvisoMaturidade codigo=\{concurso\.codigo\}/,
+  // raio-x, mudança 8 (18/10): fora das telas fixas. Aluno e responsável
+  // veem o aviso até tocar "Entendi"; o aluno o encontra depois no Plano.
+  assert.match(semComentarios(ler("app/src/routes/aluno/AreaAluno.jsx")), /<AvisoMaturidadeUmaVez codigo=\{concurso\.codigo\} usuarioId=\{perfil\.usuario\.id\}/);
+  assert.match(semComentarios(ler("app/src/routes/responsavel/AreaResponsavel.jsx")), /<AvisoMaturidadeUmaVez codigo=\{concurso\.codigo\} usuarioId=\{perfil\.usuario\.id\}/,
     "o responsável vê as atividades da trilha pré-edital e precisa do mesmo aviso");
+  assert.match(aviso, /export function AvisoMaturidadeUmaVez/);
+  assert.match(aviso, />\s*Entendi\s*</);
+  assert.match(aviso, /localStorage\.setItem\(chave, "1"\)/, "o Entendi fica guardado");
+  assert.match(semComentarios(ler("app/src/routes/aluno/VisaoEstudo.jsx")), /<LinhaMaturidade codigo=\{codigoConcurso\}/, "a linha fixa do Plano");
+  // achado do Codex no #193: beta/esqueleto recebem aluno sem trilha semanal,
+  // e sem trilha não há Plano; a linha fica na tela de "trilha não configurada"
+  const visao = semComentarios(ler("app/src/routes/aluno/VisaoEstudo.jsx"));
+  const semTrilha = visao.slice(visao.indexOf("if (!trilha) return ("), visao.indexOf("const itensMeta"));
+  assert.match(semTrilha, /<LinhaMaturidade codigo=\{examTag\}/);
+});
+
+test("a linha do Plano usa um resumo curto de cada nível", () => {
+  for (const nivel of Object.keys(APRESENTACAO_MATURIDADE)) {
+    const r = APRESENTACAO_MATURIDADE[nivel].resumo;
+    assert.ok(r && r.length <= 70, `${nivel}: resumo de uma linha`);
+  }
 });

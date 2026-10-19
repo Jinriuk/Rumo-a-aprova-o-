@@ -1,5 +1,14 @@
 import { questoesSugeridas } from "./jargao.js";
 
+const ROTULO_MATERIA = { mat: "Matemática", por: "Português", ing: "Inglês", fis: "Física", qui: "Química", bio: "Biologia", his: "História", geo: "Geografia", red: "Redação", soc: "Estudos Sociais" };
+
+/* Raio-x, mudança 8: nome da matéria, nunca o código cru ("DIR_ADM").
+   `nomes` = trilha + catálogo `materias` (VisaoEstudo); o mapa fixo cobre
+   os concursos antigos quando o catálogo não respondeu. */
+export function nomeDaMateria(codigo, nomes = null) {
+  return nomes?.[codigo] ?? ROTULO_MATERIA[codigo] ?? "Outra matéria";
+}
+
 /* Contrato puro da jornada UXG2. O contexto vive apenas na navegação:
    não altera o schema e não finge que o registro está vinculado à
    meta_atividade no banco. */
@@ -13,7 +22,8 @@ export function contextoRegistroDaAtividade(metaAtividade, trilha) {
     metaAtividadeId: metaAtividade.id,
     atividadeModeloId: atividade.id,
     disciplinaCodigo: atividade.disciplina_codigo,
-    titulo: atividade.texto,
+    // o mesmo texto que a tarefa mostra: "Estudo:", nunca "Missão:" (mudança 3)
+    titulo: textoDaTarefa(atividade.texto),
     questoesSugeridas: questoesSugeridas[atividade.prioridade] ?? 10,
   };
 }
@@ -53,6 +63,61 @@ export function objetivosPendentesEmOrdem(meta, trilha) {
     .map((par) => par.item);
 }
 
+/* Raio-x, mudança 3: "missão" fica só para a unidade de assunto com
+   questões. O item da semana que o conteúdo escreve como "Missão: …" é um
+   estudo. Só a apresentação muda; o texto editorial no banco fica.
+   O título é a primeira frase (o resto é a orientação de leitura e
+   prática, que continua no Plano). */
+export function textoDaTarefa(texto) {
+  return String(texto ?? "").replace(/^Missão:/, "Estudo:");
+}
+
+export function tituloDaTarefa(texto) {
+  return textoDaTarefa(texto).split(/\.\s/)[0].replace(/\.$/, "");
+}
+
+/* Raio-x fase 2 (decisão de 18/10): a ação única do Hoje.
+   A missão da vez é a missão atual (ou a próxima a começar) da matéria da
+   primeira tarefa pendente da semana que tem missão; assim o Hoje anda com
+   a semana. Sem nenhuma, a primeira da fila. Sem missão nenhuma (fila
+   vazia ou toda concluída), a própria tarefa pendente vira a ação, pelo
+   registro. Sem tarefa pendente, registro livre.
+   `fila` = filaDeMissoes(); `registraveis` = Set das matérias da trilha
+   (matéria fora dela é acompanhada pela coordenação, não pelo botão). */
+export function acaoDaVez({ fila = [], meta = null, trilha = null, registraveis = null } = {}) {
+  const pode = (cod) => !registraveis || registraveis.size === 0 || registraveis.has(cod);
+  const daVez = (grupo) => (grupo && pode(grupo.materia_codigo)
+    ? grupo.missoes.find((mi) => mi.estado === "atual" || mi.proxima) ?? null
+    : null);
+  const porMateria = new Map(fila.map((g) => [g.materia_codigo, g]));
+  const pendentes = objetivosPendentesEmOrdem(meta, trilha);
+  for (const item of pendentes) {
+    const missao = daVez(porMateria.get(trilha.atividadesPorId[item.atividade_modelo_id].disciplina_codigo));
+    if (missao) return { tipo: "missao", missao };
+  }
+  for (const grupo of fila) {
+    const missao = daVez(grupo);
+    if (missao) return { tipo: "missao", missao };
+  }
+  if (pendentes.length) {
+    const tarefa = pendentes[0];
+    return { tipo: "tarefa", tarefa, atividade: trilha.atividadesPorId[tarefa.atividade_modelo_id] };
+  }
+  return { tipo: "livre" };
+}
+
+/* "Semana 1 de 12 · 2 de 3 tarefas". A posição é a da semana na trilha
+   (a mesma conta do Plano); adiadas saem do total, como no cartão antigo. */
+export function resumoDaSemana(meta, trilha) {
+  if (!meta || !trilha?.semanas?.length) return null;
+  const total = trilha.semanas.length;
+  const numero = Math.max(1, trilha.semanas.findIndex((s) => s.numero === meta.semana_numero) + 1);
+  const itens = meta.meta_atividades ?? [];
+  const feitas = itens.filter((x) => x.estado === "concluida").length;
+  const consideradas = itens.filter((x) => x.estado !== "ignorada").length;
+  return { numero, total, feitas, consideradas, texto: `Semana ${numero} de ${total} · ${feitas} de ${consideradas} ${consideradas === 1 ? "tarefa" : "tarefas"}` };
+}
+
 export function primeiroContextoPendente(meta, trilha) {
   return contextoRegistroDaAtividade(objetivosPendentesEmOrdem(meta, trilha)[0], trilha);
 }
@@ -63,7 +128,7 @@ export function resumoRegistroConfirmado(registro, porCodigo = {}) {
   const temAcertos = registro.acertos !== null && registro.acertos !== undefined;
   const acertos = temAcertos ? Number(registro.acertos) : null;
   return {
-    materia: porCodigo[registro.disciplina_codigo]?.nome ?? registro.disciplina_codigo ?? "Matéria",
+    materia: porCodigo[registro.disciplina_codigo]?.nome ?? "Matéria",
     topico: registro.topico || "Estudo registrado",
     questoes,
     acertos,

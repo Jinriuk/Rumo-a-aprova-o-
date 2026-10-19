@@ -47,6 +47,7 @@ export const APRESENTACAO_MATURIDADE = {
     aceitaAluno: true,
     temTrilhaSemanal: true,
     descricao: "Trilha semanal e estrutura de prova prontas e testadas.",
+    resumo: "Trilha pronta.",
   },
   pre_edital: {
     rotulo: "Pré-edital",
@@ -55,6 +56,7 @@ export const APRESENTACAO_MATURIDADE = {
     aceitaAluno: true,
     temTrilhaSemanal: true,
     descricao: "Calendário de estudo pronto, montado sobre o programa do edital anterior (fonte histórica). O novo edital ainda não saiu: conteúdo, pesos e data podem mudar.",
+    resumo: "Montado sobre o edital anterior; pode mudar quando o novo sair.",
   },
   beta: {
     rotulo: "Beta",
@@ -63,6 +65,7 @@ export const APRESENTACAO_MATURIDADE = {
     aceitaAluno: true,
     temTrilhaSemanal: false,
     descricao: "Estrutura e missões prontas; calendário semanal ainda em construção.",
+    resumo: "Calendário semanal ainda em construção.",
   },
   esqueleto: {
     rotulo: "Esqueleto",
@@ -71,6 +74,7 @@ export const APRESENTACAO_MATURIDADE = {
     aceitaAluno: true,
     temTrilhaSemanal: false,
     descricao: "Só a estrutura da prova. Conteúdo de estudo ainda não montado.",
+    resumo: "Conteúdo de estudo ainda não montado.",
   },
   indisponivel: {
     rotulo: "Indisponível",
@@ -79,6 +83,7 @@ export const APRESENTACAO_MATURIDADE = {
     aceitaAluno: false,
     temTrilhaSemanal: false,
     descricao: "Sem conteúdo suficiente para receber alunos.",
+    resumo: "Sem conteúdo suficiente para receber alunos.",
   },
 };
 

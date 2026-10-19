@@ -109,7 +109,10 @@ test.describe("motor de ciclo", { tag: ["@j:ciclo", "@critica"] }, () => {
     await page.clock.setFixedTime(new Date(instante));
     await entrarCom(page, { codigo: F.alunoCodigo }, SENHA_E2E);
     await expect(botaoVisivel(page, "Hoje"), await retratoDaTela(page)).toBeVisible({ timeout: 20_000 });
-    await expect(page.getByText("E2E atividade da semana 1")).toBeVisible({ timeout: 15_000 });
+    // raio-x fase 2: as tarefas moram no Plano, na semana do calendário
+    await irParaAba(page, "Plano");
+    await expect(page.getByRole("button", { name: /^Semana 1\b.*Em andamento/, expanded: true })).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByText("E2E atividade da semana 1").first()).toBeVisible({ timeout: 15_000 });
   });
 
   test("fronteira de Brasília: 02:59:59Z de segunda ainda é domingo; 03:00Z vira a semana", async ({ page }) => {
@@ -132,8 +135,11 @@ test.describe("motor de ciclo", { tag: ["@j:ciclo", "@critica"] }, () => {
 
     await page.clock.setFixedTime(new Date(`${segunda2}T15:00:00Z`));
     await entrarCom(page, { codigo: F.alunoCodigo }, SENHA_E2E);
-    await expect(page.getByText("E2E atividade da semana 2"), await retratoDaTela(page)).toBeVisible({ timeout: 20_000 });
-    await expect(page.getByText("E2E atividade da semana 1")).toHaveCount(0);
+    await expect(botaoVisivel(page, "Hoje"), await retratoDaTela(page)).toBeVisible({ timeout: 20_000 });
+    await irParaAba(page, "Plano");
+    await expect(page.getByRole("button", { name: /^Semana 2\b.*Em andamento/, expanded: true })).toBeVisible({ timeout: 20_000 });
+    await expect(page.getByText("E2E atividade da semana 2").first()).toBeVisible({ timeout: 20_000 });
+    await expect(page.getByText("E2E atividade da semana 1"), "semana 1 fechada e recolhida").toHaveCount(0);
   });
 
   test("encerramento: depois da última semana a meta fecha, nada nasce e a tela diz que o ciclo acabou", async ({ page }) => {
