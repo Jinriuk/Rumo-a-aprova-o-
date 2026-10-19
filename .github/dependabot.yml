@@ -52,6 +52,15 @@ updates:
         update-types: ["version-update:semver-major"]
       - dependency-name: "@eslint/js"
         update-types: ["version-update:semver-major"]
+      # ⚠️ IGNORE TEMPORÁRIO — motion major (19/10/2026, PR #198 fechado).
+      # O grupo subiu motion 13 -> 14 e o CI caiu no teste "UXG2 mantém
+      # JSX/Vite e isola o motor de animação" (tests/uxg1-experiencia.test.mjs),
+      # que trava motion em ^13. Decisão do dono: fica na 13 por enquanto.
+      # Minor e patch da 13 continuam vindo no grupo. Para subir para a 14:
+      # apague estas duas linhas e trate o bump num PR só dele (teste e o
+      # chunk "motion" do app/vite.config.js).
+      - dependency-name: "motion"
+        update-types: ["version-update:semver-major"]
 
   # Suíte de testes (node --test + utilitários)
   - package-ecosystem: "npm"
