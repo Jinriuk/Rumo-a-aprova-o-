@@ -125,7 +125,7 @@ jobs:
           sudo apt-get install -y -q "postgresql-client-${PG_MAJOR}" > /dev/null
 
       - name: Artefato da execução ${{ inputs.backup_run_id }} (${{ inputs.projeto }})
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@v8
         with:
           pattern: backup-${{ inputs.projeto }}-${{ inputs.backup_run_id }}-*
           run-id: ${{ inputs.backup_run_id }}
