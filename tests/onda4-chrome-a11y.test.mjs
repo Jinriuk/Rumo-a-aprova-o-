@@ -60,13 +60,14 @@ test("BLOCO1: .menu-rolagem agora tem uma barra visível (Firefox e WebKit/Blink
   assert.match(src, /\.menu-rolagem::-webkit-scrollbar-thumb\s*\{\s*background:/, "sem thumb visível");
 });
 
-test("BLOCO1: aluno (8 abas) e coordenação (6, 'marca' por último) — a lista rola dentro do mesmo container sem paginação própria", () => {
+test("BLOCO1: aluno (6 abas desde o raio-x fase 2) e coordenação (6, 'marca' por último) — a lista rola dentro do mesmo container sem paginação própria", () => {
   // Confirma que a premissa do defeito (contagem de abas) continua batendo
   // com o catálogo — se um dev reduzir/mudar a lista, este teste avisa.
   const visao = lerCodigo("app/src/routes/aluno/VisaoEstudo.jsx");
   const abasAluno = visao.match(/const ABAS = \[([\s\S]*?)\]\.filter/)?.[1] ?? "";
   const contagemAluno = (abasAluno.match(/\[["']/g) ?? []).length;
-  assert.equal(contagemAluno, 8, "VisaoEstudo não tem mais 8 abas — reavaliar se I1/I7 ainda se aplicam");
+  // raio-x fase 2, PR 3: Trilha e Conquistas saíram do menu do aluno
+  assert.equal(contagemAluno, 6, "VisaoEstudo não tem mais 6 abas — reavaliar se I1/I7 ainda se aplicam");
 
   const escola = lerCodigo("app/src/routes/escola/AreaEscola.jsx");
   const abasEscola = escola.match(/const ABAS = \[([\s\S]*?)\];/)?.[1] ?? "";
@@ -130,11 +131,11 @@ test("BLOCO3: Conquistas.jsx — 'Ver carreira completa' e 'Ver mais/menos' por 
   assert.match(m2[1], /minHeight:\s*32/, "'Ver mais/menos' por grupo sem minHeight");
 });
 
-test("BLOCO3: VisaoEstudo.jsx — botão 'ver N objetivos' tem alvo de toque real", () => {
+test("BLOCO3: VisaoEstudo.jsx — o cabeçalho que abre a semana no Plano tem alvo de toque real", () => {
   const src = lerCodigo("app/src/routes/aluno/VisaoEstudo.jsx");
   const m = src.match(/onClick=\{\(\) => setAberto\(\(v\) => !v\)\}\s*\n\s*style=\{\{([^}]*)\}\}/);
-  assert.ok(m, "não achei o botão de expandir objetivos");
-  assert.match(m[1], /minHeight:\s*32/, "sem minHeight — antes era padding: \"4px 0\" só");
+  assert.ok(m, "não achei o botão de abrir a semana");
+  assert.match(m[1], /minHeight:\s*(3[2-9]|4\d)/, "sem minHeight — antes era padding: \"4px 0\" só");
 });
 
 test("BLOCO3: Acumulado.jsx — toggle Tempo/Questões tem alvo de toque real", () => {
@@ -410,10 +411,13 @@ test("T45: aria-labelledby real — o <h2> ganha id e o diálogo aponta pra ele 
 // ============================================================
 // BLOCO 8 — contraste (I4, T23, C11)
 // ============================================================
-test("I4: MetaHero.jsx volta ao padrão canônico #0A1622 sobre T.red (não mais branco)", () => {
-  const src = lerCodigo("app/src/modules/motor/MetaHero.jsx");
-  assert.doesNotMatch(src, /background: T\.red, color: "#fff"/, "ainda tem branco sobre coral (3,42:1)");
-  assert.match(src, /background: T\.red, color: "#0A1622"/, "não voltou ao padrão do botão de perigo canônico");
+test("I4: o botão principal do Hoje usa #0A1622 sobre a cor de destaque (nunca branco)", () => {
+  // o botão vermelho de "missão atrasada" saiu com o cartão da semana
+  // (raio-x fase 2); o botão único do cartão novo segue o mesmo padrão
+  for (const p of ["app/src/modules/motor/MetaHero.jsx", "app/src/modules/motor/MissoesDaSemana.jsx"]) {
+    assert.doesNotMatch(lerCodigo(p), /background: T\.(red|gold), color: "#fff"/, `${p}: branco sobre cor (abaixo de 4,5:1)`);
+  }
+  assert.match(lerCodigo("app/src/modules/motor/MissoesDaSemana.jsx"), /background: T\.gold, color: "#0A1622"/);
 });
 
 test("T23/C11: T.red foi corrigido no TOKEN — mede ≥4,5:1 como texto contra as 4 superfícies fixas", () => {
@@ -492,11 +496,14 @@ test("C2: AreaEscola.jsx passa rotuloExtra para o 3º estado de tela (ficha de a
     "AreaEscola não repassa o nome do aluno pro título quando a ficha está aberta");
 });
 
-test("C2: VisaoEstudo.jsx usa o MenuPrincipal sem rotuloExtra — não tem 3º estado de tela fora de aba", () => {
+// Raio-x fase 2, PR 3: Conquistas saiu do menu e abre pelo XP. É o 3º
+// estado de tela fora de aba que C2 mandava reavaliar: o título vem do
+// rotuloExtra, e só para ele.
+test("C2: VisaoEstudo.jsx usa rotuloExtra só para Conquistas, a única tela fora do menu", () => {
   const src = lerCodigo("app/src/routes/aluno/VisaoEstudo.jsx");
-  const chamada = src.match(/<MenuPrincipal abas=\{ABAS\}[\s\S]{0,150}\/>/);
+  const chamada = src.match(/<MenuPrincipal abas=\{ABAS\}[\s\S]{0,300}?\/>/);
   assert.ok(chamada, "não achei a chamada de MenuPrincipal em VisaoEstudo");
-  assert.doesNotMatch(chamada[0], /rotuloExtra/, "VisaoEstudo não deveria precisar de rotuloExtra — reavaliar se ganhou um 3º estado");
+  assert.match(chamada[0], /rotuloExtra=\{tab === "conquistas" \? "Conquistas" : undefined\}/);
 });
 
 test("index.html mantém o título estático como FALLBACK (antes de qualquer JS rodar, e nas telas sem MenuPrincipal — login, recuperação)", () => {

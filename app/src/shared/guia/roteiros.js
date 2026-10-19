@@ -57,22 +57,24 @@ export const ROTEIRO_COORDENACAO = [
   },
 ];
 
+// Raio-x fase 2, PR 3: na ordem das abas do aluno (Hoje, Plano, Registrar,
+// Desempenho, Simulados, Histórico). Trilha e Conquistas saíram do menu.
 export const ROTEIRO_ALUNO = [
   {
     aba: "hoje",
     titulo: "Hoje: o que fazer agora",
-    texto: "Esta é a sua tela principal. Ela mostra a missão da semana e o que falta fazer. O número na aba \"Hoje\" é quantas atividades ainda estão pendentes.",
-    dica: "Se aparecer o diagnóstico inicial no topo, responda primeiro: ele ajusta o seu plano.",
+    texto: "Esta é a sua tela principal. Ela mostra a missão de agora, com um botão só: \"Iniciar missão\" abre as questões dela; sem questões ligadas, \"Registrar\" abre o registro já com a missão. Logo abaixo ficam as missões da semana, e \"Ver próximas semanas\" mostra as seguintes ali mesmo.",
+    dica: "Tocar no seu XP, no topo, abre a sua patente e as conquistas.",
+  },
+  {
+    aba: "plano",
+    titulo: "Plano",
+    texto: "As semanas do seu plano, com as missões de cada semana e, abaixo delas, as tarefas para concluir ou adiar. Ficam abertas a semana do calendário e a das suas missões; a missão concluída tem \"Revisar\". O número na aba \"Plano\" é quantas tarefas ainda estão pendentes.",
   },
   {
     aba: "registrar",
     titulo: "Registrar: conte o que você estudou",
     texto: "Depois de estudar, registre aqui a matéria, as questões feitas, os acertos e o tempo. É isso que alimenta o seu desempenho e o seu XP. O cronômetro no topo registra o tempo para você.",
-  },
-  {
-    aba: "concurso",
-    titulo: "Trilha do concurso",
-    texto: "O caminho até a prova: o que cai, o peso de cada matéria e em que ponto da trilha você está.",
   },
   {
     aba: "desempenho",
@@ -85,19 +87,9 @@ export const ROTEIRO_ALUNO = [
     texto: "Lance aqui o resultado dos simulados que você fizer, para acompanhar a evolução até a prova.",
   },
   {
-    aba: "conquistas",
-    titulo: "Conquistas",
-    texto: "Seu XP, a sua patente e as conquistas que você desbloqueia estudando com constância.",
-  },
-  {
     aba: "historico",
     titulo: "Histórico",
-    texto: "As metas das semanas que já passaram, com o que foi feito e o que ficou pendente em cada uma.",
-  },
-  {
-    aba: "plano",
-    titulo: "Plano",
-    texto: "O plano completo das semanas, com o que está previsto em cada uma.",
+    texto: "As semanas que já passaram, com o que foi feito e o que ficou pendente em cada uma.",
   },
 ];
 

@@ -97,28 +97,36 @@ describe("migration 0047 — colunas de credencial em usuarios (Postgres real)",
   });
 });
 
-describe("shared/lib/senha.js — força de senha (lógica pura)", () => {
-  let forcaSenha, NIVEL_MINIMO_ACEITAVEL;
+describe("shared/lib/senha.js — regra de senha (lógica pura)", () => {
+  let forcaSenha, NIVEL_MINIMO_ACEITAVEL, conferirSenha, senhaAceita;
   before(async () => {
-    ({ forcaSenha, NIVEL_MINIMO_ACEITAVEL } = await import("../app/src/shared/lib/senha.js"));
+    ({ forcaSenha, NIVEL_MINIMO_ACEITAVEL, conferirSenha, senhaAceita } = await import("../app/src/shared/lib/senha.js"));
   });
 
-  it("curta demais (< 8) é sempre nível 0, mesmo com símbolos", () => {
+  it("curta demais (< 8) é sempre nível 0, mesmo com as três classes", () => {
     assert.equal(forcaSenha("Aa1!").nivel, 0);
+    assert.equal(senhaAceita("Aa1!"), false);
   });
 
-  it("só minúsculas, 8+ chars, é fraca (nível 1)", () => {
-    assert.equal(forcaSenha("abcdefgh").nivel, 1);
+  // P1.1 (13/10): a regra é a do Auth do demo e da produção. Antes "duas
+  // classes quaisquer" (AbcdefGh) liberava o botão e o Auth recusava.
+  it("8+ sem número, sem maiúscula ou sem minúscula não libera o botão", () => {
+    for (const s of ["AbcdefGh", "abcdefg1", "ABCDEFG1", "abcdefgh", "12345678"]) {
+      assert.equal(senhaAceita(s), false, s);
+      assert.ok(forcaSenha(s).nivel < NIVEL_MINIMO_ACEITAVEL, s);
+    }
   });
 
-  it("duas classes (maiúscula+minúscula), 8+ chars, é razoável (nível 2) — libera o botão", () => {
-    const f = forcaSenha("AbcdefGh");
-    assert.equal(f.nivel, 2);
-    assert.ok(f.nivel >= NIVEL_MINIMO_ACEITAVEL);
-  });
-
-  it("quatro classes é forte (nível 3)", () => {
+  it("8+ com minúscula, maiúscula e número é aceita; com símbolo ou 12+ é forte", () => {
+    assert.equal(forcaSenha("Abcdefg1").nivel, 2);
     assert.equal(forcaSenha("Abc123!@").nivel, 3);
+    assert.equal(forcaSenha("Abcdefghijk1").nivel, 3);
+  });
+
+  it("diz o que falta, item por item, na ordem da tela", () => {
+    assert.deepEqual(conferirSenha("abc").map((r) => [r.id, r.ok]),
+      [["tamanho", false], ["minuscula", true], ["maiuscula", false], ["numero", false]]);
+    assert.equal(forcaSenha("abcdefgh").texto, "Falta: uma letra maiúscula, um número");
   });
 });
 
@@ -154,8 +162,9 @@ describe("Edge Function trocar-senha — contrato (inspeção de fonte)", () => 
 
   it("valida força mínima no SERVIDOR, não só confia no cliente (SEGURANCA-04)", () => {
     assert.match(src, /function senhaFraca/);
-    assert.match(src, /length\s*<\s*8/);
-    assert.match(src, /classes\s*<\s*2/);
+    assert.match(src, /s\.length < 8 \|\| !\/\[a-z\]\/\.test\(s\) \|\| !\/\[A-Z\]\/\.test\(s\) \|\| !\/\[0-9\]\/\.test\(s\)/);
+    // e no caminho da requisição, antes de tocar o Auth
+    assert.ok(src.indexOf("senhaFraca(senha_nova)") < src.indexOf("updateUserById"));
   });
 
   it("recusa senha IGUAL ao código — sem isso o BLOCO B1 inteiro é decorativo", () => {
@@ -196,6 +205,47 @@ describe("Edge Function trocar-senha — contrato (inspeção de fonte)", () => 
 // Presença de código não prova comportamento: aqui EXTRAÍMOS as funções
 // reais do .ts e as EXECUTAMOS (mesma técnica de login-codigo-fronteira —
 // sem runner de Deno, é o mais perto de rodar a função de verdade).
+describe("trocar-senha — mesma regra da tela, e recusa do Auth vira 422 com texto", () => {
+  let senhaFraca, recusaDoAuth, senhaAceita;
+  before(async () => {
+    ({ senhaAceita } = await import("../app/src/shared/lib/senha.js"));
+    const src = ler("supabase/functions/trocar-senha/index.ts");
+    const pedaco = (re, nome) => {
+      const m = src.match(re);
+      assert.ok(m, `não encontrei ${nome} em trocar-senha/index.ts`);
+      return m[0];
+    };
+    const fonte = [
+      pedaco(/const REGRA_SENHA = [^\n]+\n/, "REGRA_SENHA"),
+      pedaco(/function senhaFraca\([\s\S]+?\n\}/, "senhaFraca"),
+      pedaco(/function recusaDoAuth\([\s\S]+?\n\}/, "recusaDoAuth"),
+    ].join("\n")
+      // tira só as anotações de tipo — o corpo é JS puro
+      .replace(/ as \{[^}]+\} \| null/g, "")
+      .replace(/\): string \| null \{/g, ") {")
+      .replace(/\((\w+): (string|unknown)\)/g, "($1)");
+    ({ senhaFraca, recusaDoAuth } = new Function(`${fonte}\nreturn { senhaFraca, recusaDoAuth };`)());
+  });
+
+  it("servidor e tela aceitam e recusam exatamente as mesmas senhas", () => {
+    const amostra = ["", "Aa1", "abcdefgh", "ABCDEFGH", "12345678", "AbcdefGh", "abcdefg1", "ABCDEFG1",
+      "Abcdefg1", "Nova-7xYz", "Senha!123", "çãoÁÉÍ12", "Estudo2026", "estudo2026", "ESTUDO2026"];
+    for (const s of amostra) assert.equal(senhaFraca(s) === null, senhaAceita(s), JSON.stringify(s));
+  });
+
+  it("weak_password do Auth vira texto: regra ou senha vazada; outro erro segue como 500", () => {
+    assert.match(recusaDoAuth({ code: "weak_password", reasons: ["characters"] }), /minúscula, letra maiúscula e número/);
+    assert.match(recusaDoAuth({ name: "AuthWeakPasswordError", reasons: ["pwned"] }), /vazamentos/);
+    assert.equal(recusaDoAuth({ code: "unexpected_failure" }), null);
+    assert.equal(recusaDoAuth(null), null);
+  });
+
+  it("a recusa do Auth responde 422 senha_fraca, não 500", () => {
+    const src = ler("supabase/functions/trocar-senha/index.ts");
+    assert.match(src, /const recusa = recusaDoAuth\(e1\);\n\s*if \(recusa\) return json\(\{ error: recusa, estado: "senha_fraca" \}, 422\);/);
+  });
+});
+
 describe("trocar-senha — a regra 'senha ≠ código' rodando de verdade", () => {
   let codigoDoEmail, senhaEhOCodigo;
 
@@ -324,7 +374,14 @@ describe("shared/data/index.js — seam das novas ações de credencial", () => 
     assert.match(src, /export const resetarSenhaCredencial = \(usuarioId\) =>\s*\n\s*invocar\("provisionar-aluno", \{ tipo: "resetar-senha", usuario_id: usuarioId \}\);/);
     assert.match(src, /export const revogarCredencial = \(usuarioId\) =>\s*\n\s*invocar\("provisionar-aluno", \{ tipo: "revogar-credencial", usuario_id: usuarioId \}\);/);
     assert.match(src, /export const reativarCredencial = \(usuarioId\) =>\s*\n\s*invocar\("provisionar-aluno", \{ tipo: "reativar-credencial", usuario_id: usuarioId \}\);/);
-    assert.match(src, /export const trocarSenha = \(senhaNova\) => invocar\("trocar-senha", \{ senha_nova: senhaNova \}\);/);
+    assert.match(src, /export async function trocarSenha\(senhaNova\) \{\s*\n\s*const resultado = await invocar\("trocar-senha", \{ senha_nova: senhaNova \}\);/);
+  });
+
+  it("P1.1: depois de trocar a senha entra de novo, porque a Admin API apaga as sessões da conta", () => {
+    const corpo = src.slice(src.indexOf("export async function trocarSenha"), src.indexOf("export const gerarMeta"));
+    assert.match(corpo, /supabase\.auth\.getSession\(\)/);
+    assert.match(corpo, /supabase\.auth\.signInWithPassword\(\{ email, password: senhaNova \}\)/);
+    assert.ok(corpo.indexOf("invocar(\"trocar-senha\"") < corpo.indexOf("signInWithPassword"), "só entra de novo depois que o servidor confirma a troca");
   });
 
   it("meuPerfil seleciona must_change_password (é o que App.jsx lê pro gate B2)", () => {
@@ -662,5 +719,48 @@ describe("E2/C-S05 — troca de senha e credencial no banco (Postgres real)", ()
       const r = await db.query("select id from alunos where usuario_id = $1", [ALUNO]);
       assert.equal(r.rowCount, 1, "se as policies passaram a ler credencial_status, atualize o registro da E2");
     });
+  });
+});
+
+// 17/10/2026, produção 22:33: o log da trocar-senha mostrava "null value in
+// column aluno_id of relation logs_acesso" a cada troca. logs_acesso é a
+// trilha LGPD por aluno (aluno_id NOT NULL): a troca não ficava registrada.
+describe("trocar-senha — a troca fica registrada na trilha certa, sempre com aluno quando é logs_acesso", () => {
+  let linhasDoLogDeSenha;
+  before(async () => {
+    const { stripTypeScriptTypes } = await import("node:module");
+    const src = ler("supabase/functions/trocar-senha/index.ts");
+    const m = src.match(/function linhasDoLogDeSenha\([\s\S]+?\n\}/);
+    assert.ok(m, "não encontrei linhasDoLogDeSenha em trocar-senha/index.ts");
+    const js = stripTypeScriptTypes(m[0]);
+    ({ linhasDoLogDeSenha } = new Function(`${js}\nreturn { linhasDoLogDeSenha };`)());
+  });
+
+  it("aluno: uma linha em logs_acesso com o próprio aluno_id", () => {
+    const r = linhasDoLogDeSenha({ id: "u1", escola_id: "e1", papel: "aluno" }, ["a1"]);
+    assert.deepEqual(r, [{ tabela: "logs_acesso", linha: { escola_id: "e1", aluno_id: "a1", usuario_id: "u1", papel: "aluno", acao: "trocou-senha" } }]);
+  });
+
+  it("responsável: uma linha por aluno vinculado, sem repetir", () => {
+    const r = linhasDoLogDeSenha({ id: "r1", escola_id: "e1", papel: "responsavel" }, ["a1", "a2", "a1"]);
+    assert.deepEqual(r.map((x) => [x.tabela, x.linha.aluno_id]), [["logs_acesso", "a1"], ["logs_acesso", "a2"]]);
+  });
+
+  it("coordenação: logs_coordenacao (sem aluno); sem escola ou papel desconhecido: nada", () => {
+    assert.deepEqual(linhasDoLogDeSenha({ id: "c1", escola_id: "e1", papel: "coordenacao" }, []),
+      [{ tabela: "logs_coordenacao", linha: { escola_id: "e1", usuario_id: "c1", papel: "coordenacao", acao: "trocou-senha", entidade: "usuario", entidade_id: "c1" } }]);
+    assert.deepEqual(linhasDoLogDeSenha({ id: "s1", escola_id: null, papel: "super_admin" }, []), []);
+    assert.deepEqual(linhasDoLogDeSenha({ id: "x", escola_id: "e1", papel: "outro" }, ["a1"]), []);
+  });
+
+  it("nenhuma linha de logs_acesso sai sem aluno_id, e o insert antigo com aluno_id null saiu", () => {
+    for (const papel of ["aluno", "responsavel", "coordenacao"]) {
+      for (const l of linhasDoLogDeSenha({ id: "u", escola_id: "e", papel }, ["a"])) {
+        if (l.tabela === "logs_acesso") assert.ok(l.linha.aluno_id, papel);
+      }
+    }
+    const src = ler("supabase/functions/trocar-senha/index.ts");
+    assert.doesNotMatch(src, /aluno_id:\s*null/);
+    assert.match(src, /await registrarTrocaDeSenha\(quem\);/);
   });
 });

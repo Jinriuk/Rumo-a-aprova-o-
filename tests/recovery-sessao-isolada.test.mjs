@@ -153,7 +153,11 @@ describe("recovery — mensagens de erro (lógica pura)", () => {
 
   it("senha fraca recusada pelo servidor ganha mensagem própria", () => {
     const m = mensagemErroRedefinicao({ status: 422, codigoGoTrue: "weak_password", message: "redefinir senha: weak" });
-    assert.match(m, /fraca/i);
+    // P1.1: diz a regra (a mesma da tela e do Auth), não só "fraca"
+    assert.equal(m, "A senha precisa ter 8 caracteres ou mais, com letra minúscula, letra maiúscula e número.");
+    const vazada = mensagemErroRedefinicao({ status: 422, codigoGoTrue: "weak_password",
+      message: "redefinir senha: Password is known to be weak and easy to guess, please choose a different one." });
+    assert.match(vazada, /vazamentos/);
   });
 
   it("falha desconhecida cai no genérico, nunca em string vazia", () => {

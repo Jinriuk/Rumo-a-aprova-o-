@@ -16,6 +16,7 @@
    vê a tela de login (ou o painel de quem estiver logado) sem
    nenhuma explicação de que o link não valia mais.
    ============================================================ */
+import { REGRA_SENHA_TEXTO } from "./senha.js";
 
 export const RECUPERACAO_AUSENTE = "ausente";
 export const RECUPERACAO_VALIDA = "recuperacao";
@@ -84,6 +85,16 @@ export function mensagemLinkInvalido(codigo) {
   return "Não foi possível validar este link de recuperação. Solicite um novo na tela de login.";
 }
 
+// Senha recusada pelo Auth: senha conhecida em vazamento ("known to be
+// weak", verificação de senhas vazadas) ou fora da regra (P1.1: 8+ com
+// minúscula, maiúscula e número, a mesma de shared/lib/senha.js).
+export function mensagemSenhaRecusada(msg = "") {
+  if (/known to be weak|pwned|easy to guess/i.test(String(msg))) {
+    return "Esta senha aparece em vazamentos conhecidos e é fácil de adivinhar. Escolha outra.";
+  }
+  return `A senha precisa ter ${REGRA_SENHA_TEXTO}.`;
+}
+
 // Falha do PUT /auth/v1/user. Cada caso previsível ganha texto próprio:
 // mandar "tente novamente" para quem repetiu a senha antiga é o tipo de
 // mensagem que faz o usuário rodar em círculo.
@@ -95,8 +106,8 @@ export function mensagemErroRedefinicao(erro) {
   if (codigo === "same_password" || /different from the old password/i.test(msg)) {
     return "A nova senha precisa ser diferente da senha atual.";
   }
-  if (codigo === "weak_password" || /weak.?password/i.test(msg)) {
-    return "O servidor recusou esta senha por ser fraca. Use uma combinação mais longa, com letras, números e símbolos.";
+  if (codigo === "weak_password" || /weak.?password|should contain|known to be weak|pwned/i.test(msg)) {
+    return mensagemSenhaRecusada(msg);
   }
   if (status === 401 || status === 403 || /expired|invalid|not found|bad_?jwt/i.test(msg)) {
     return LINK_INVALIDO;

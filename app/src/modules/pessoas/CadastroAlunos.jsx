@@ -100,7 +100,7 @@ export function NovoAluno({ turmas, trilhas = [], concursos = [], aoMudar }) {
   const [feito, setFeito] = useState(null);
 
   // Maturidade do concurso selecionado governa o que o sistema oferece:
-  // só concurso COMPLETO recebe a trilha semanal (calendário); indisponível
+  // só concurso COMPLETO ou PRÉ-EDITAL recebe a trilha semanal (calendário); indisponível
   // não recebe aluno (PED2). Sem essa trava, todo aluno herdava o calendário
   // do CN, e trilha incompleta aparecia como pronta.
   const cnId = concursos.find((c) => c.codigo === "cn")?.id ?? null;
@@ -248,7 +248,7 @@ export function NovosAlunos({ turmas, trilhas = [], concursos = [], aoMudar }) {
     if (fileRef.current) fileRef.current.value = "";
   }
 
-  // Maturidade do concurso: só completo recebe trilha semanal; indisponível
+  // Maturidade do concurso: só completo ou pré-edital recebe trilha semanal; indisponível
   // não recebe aluno (PED2). Evita herdar o calendário do CN por engano.
   const cnId = concursos.find((c) => c.codigo === "cn")?.id ?? null;
   const codigoSel = concursos.find((c) => c.id === (concursoId || cnId))?.codigo ?? null;
@@ -623,7 +623,7 @@ export function NovaTurma({ aoMudar }) {
       <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "flex-end" }}>
         <div style={{ flex: 1, minWidth: 200 }}>
           <label htmlFor={`${uid}-turma`} style={lbl}>Nome da turma</label>
-          <input id={`${uid}-turma`} value={nome} onChange={(e) => setNome(e.target.value)} placeholder="ex: Turma CN 2026 — manhã" style={inputS} />
+          <input id={`${uid}-turma`} value={nome} onChange={(e) => setNome(e.target.value)} placeholder="ex: Turma 2026 — manhã" style={inputS} />
         </div>
         <Botao onClick={criar} disabled={!nomeValido(nome) || ocupado}>{ocupado ? "Criando…" : "+ Criar turma"}</Botao>
       </div>

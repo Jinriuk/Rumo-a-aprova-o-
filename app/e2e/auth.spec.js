@@ -72,17 +72,37 @@ test.describe("autenticação", { tag: ["@j:auth", "@critica"] }, () => {
     await expect(page.getByText("Escolha sua senha")).toBeVisible({ timeout: 20_000 });
     // nenhuma área aparece atrás da troca
     await expect(botaoVisivel(page, "Hoje")).toHaveCount(0);
-    // a senha não pode ser o próprio código
+    // P1.1: a regra aparece antes de digitar e é a mesma do servidor de
+    // autenticação; sem número (ou sem maiúscula) o botão não libera
+    const regras = page.getByRole("list", { name: "A senha precisa ter" });
+    await expect(regras).toContainText("8 caracteres ou mais");
+    await expect(regras).toContainText("uma letra maiúscula");
+    await expect(regras).toContainText("um número");
+    const definir = page.getByRole("button", { name: "Definir senha e continuar" });
+    await campo(page, "Nova senha").fill("SemNumeroAqui");
+    await campo(page, "Confirmar senha").fill("SemNumeroAqui");
+    await expect(definir).toBeDisabled();
+    // a senha não pode ser o próprio código: o código puro (só maiúsculas
+    // e números) já para na regra; com minúsculas chega ao servidor, que
+    // recusa por ser o código
     await campo(page, "Nova senha").fill(conta.codigo);
     await campo(page, "Confirmar senha").fill(conta.codigo);
-    await page.getByRole("button", { name: "Definir senha e continuar" }).click();
-    await expect(page.getByRole("alert")).toBeVisible({ timeout: 15_000 });
+    await expect(definir).toBeDisabled();
+    const codigoMisto = conta.codigo[0] + conta.codigo.slice(1).toLowerCase();
+    await campo(page, "Nova senha").fill(codigoMisto);
+    await campo(page, "Confirmar senha").fill(codigoMisto);
+    await definir.click();
+    await expect(page.getByRole("alert")).toContainText("código", { timeout: 15_000 });
     await campo(page, "Nova senha").fill(SENHA_NOVA_E2E);
     await campo(page, "Confirmar senha").fill(SENHA_NOVA_E2E);
     await page.getByRole("button", { name: "Definir senha e continuar" }).click();
     await expect(botaoVisivel(page, "Hoje"), await retratoDaTela(page)).toBeVisible({ timeout: 20_000 });
     const [u] = await sql("select must_change_password from usuarios where id = $1", [conta.id]);
     expect(u.must_change_password).toBe(false);
+    // P1.1: a troca pela Admin API apaga as sessões da conta; sem entrar de
+    // novo, o JWT órfão passa no PostgREST e toda Edge Function dá 401.
+    const [s] = await sql("select count(*)::int as n from auth.sessions where user_id = $1", [conta.id]);
+    expect(s.n, "depois de trocar a senha o app entra de novo (sessão viva para as Edge Functions)").toBeGreaterThanOrEqual(1);
     await sair(page);
 
     await entrarCom(page, { codigo: conta.codigo }, SENHA_E2E);
