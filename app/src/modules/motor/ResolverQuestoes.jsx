@@ -11,23 +11,25 @@
    - Qualquer falha (Quest fora, limite, sem questão) oferece o registro
      manual da mesma missão, que não depende da Quest.
    - Enunciado e alternativas são TEXTO (textoSimples), nunca HTML.
-   - Sessão (18/10): o aluno escolhe 5, 10 ou 20 antes do primeiro lote; o
-     topo mostra "X de N questões desta missão"; no fim do lote, "Continuar:
-     mais N" até a missão fechar e, depois, "Missão concluída" com
-     "Continuar praticando". Desde a 0067 o lote seguinte não espera a
-     Quest (busca cheia não segura) e costuma vir do estoque.
+   - Sessão: abre direto com o último tamanho escolhido (padrão 10; raio-x
+     fase 2, 18/10). "Por vez: 5 · 10 · 20" fica dentro da sessão e vale
+     a partir do próximo lote. O topo mostra "X de N questões desta
+     missão"; no fim do lote, "Continuar: mais N" até a missão fechar e,
+     depois, "Missão concluída" com "Continuar praticando". Desde a 0067
+     o lote seguinte não espera a Quest (busca cheia não segura) e costuma
+     vir do estoque.
    - Depois que a missão fecha, a sessão vira revisão (título, aviso e
      registro manual de reserva como revisão), como o servidor já trata
      os lotes seguintes. Lote em aberto retomado com outro tamanho avisa
      que o tamanho escolhido vale para os próximos. */
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { SectionCard, Botao } from "../../shared/ui/componentes.jsx";
 import { useTema } from "../../shared/branding/BrandingContext.jsx";
 import { useEnvioUnico } from "../../shared/hooks/useEnvioUnico.js";
 import * as db from "../../shared/data/index.js";
 import {
-  mensagemDoEstado, novoPedidoId, textoSimples, origemDaQuestao, resumoDoLote, TAMANHO_LOTE, TAMANHOS_LOTE,
-  progressoDaMissao, fimDoLote, TEXTO_REVISAO,
+  mensagemDoEstado, novoPedidoId, textoSimples, origemDaQuestao, resumoDoLote, TAMANHOS_LOTE,
+  progressoDaMissao, fimDoLote, TEXTO_REVISAO, tamanhoLembrado, lembrarTamanho,
 } from "./questoesIntegradas.js";
 
 export function ResolverQuestoes({ missao, tipo = "missao", aoFechar, aoRegistrarManual, aoMudar }) {
@@ -45,9 +47,8 @@ export function ResolverQuestoes({ missao, tipo = "missao", aoFechar, aoRegistra
   const [fechouNesteLote, setFechouNesteLote] = useState(false);
   // lote em aberto que o servidor retomou com outro tamanho (nº de questões)
   const [retomado, setRetomado] = useState(null);
-  // tamanho escolhido antes do primeiro lote (null = ainda escolhendo)
-  const [tamanho, setTamanho] = useState(null);
-  const [opcao, setOpcao] = useState(TAMANHO_LOTE);
+  // tamanho dos lotes: o último que o aluno escolheu; trocar vale para o próximo
+  const [tamanho, setTamanho] = useState(() => tamanhoLembrado());
   const [respondidasValendo, setRespondidasValendo] = useState(0);
   const { ocupado, enviar } = useEnvioUnico("questões integradas");
 
@@ -67,7 +68,25 @@ export function ResolverQuestoes({ missao, tipo = "missao", aoFechar, aoRegistra
     }
   });
 
-  const comecar = () => { setTamanho(opcao); abrir(opcao); };
+  // abre direto: o pedidoId é fixo, então montar duas vezes (StrictMode)
+  // devolve o mesmo lote em vez de gastar outro
+  useEffect(() => { abrir(tamanho); }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const trocarTamanho = (n) => { setTamanho(n); lembrarTamanho(n); };
+  const seletorTamanho = (
+    <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+      <span id="tamanho-lote-rotulo" style={{ fontSize: 12, color: T.sub }}>Por vez:</span>
+      <div role="radiogroup" aria-labelledby="tamanho-lote-rotulo" style={{ display: "flex", gap: 6 }}>
+        {TAMANHOS_LOTE.map((n) => (
+          <button key={n} type="button" role="radio" aria-checked={tamanho === n} onClick={() => trocarTamanho(n)}
+            style={{ minWidth: 44, minHeight: 36, borderRadius: 8, fontWeight: 700, fontSize: 13, cursor: "pointer",
+                     border: `1.5px solid ${tamanho === n ? T.gold : T.line}`, background: tamanho === n ? `${T.gold}22` : T.card, color: T.ink }}>
+            {n}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
 
   const fechar = () => { if (mudouRef.current) aoMudar?.(); aoFechar?.(); };
   const concluida = fechouMissao || missao.estado === "concluida";
@@ -147,33 +166,6 @@ export function ResolverQuestoes({ missao, tipo = "missao", aoFechar, aoRegistra
     );
   }
 
-  if (tamanho === null) {
-    return (
-      <SectionCard titulo={titulo} sub={sub}>
-        <div style={{ padding: 16, display: "flex", flexDirection: "column", gap: 14 }}>
-          <div style={{ fontSize: 13, color: T.sub }}>{linhaProgresso}</div>
-          <div id="tamanho-lote-rotulo" style={{ fontSize: 14.5, fontWeight: 700 }}>Quantas questões por vez?</div>
-          <div role="radiogroup" aria-labelledby="tamanho-lote-rotulo" style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
-            {TAMANHOS_LOTE.map((n) => (
-              <button key={n} type="button" role="radio" aria-checked={opcao === n} onClick={() => setOpcao(n)}
-                style={{ minWidth: 72, minHeight: 44, borderRadius: 10, fontWeight: 700, fontSize: 15, cursor: "pointer",
-                         border: `1.5px solid ${opcao === n ? T.gold : T.line}`, background: opcao === n ? `${T.gold}22` : T.card, color: T.ink }}>
-                {n}
-              </button>
-            ))}
-          </div>
-          <div style={{ fontSize: 12, color: T.sub, lineHeight: 1.5 }}>
-            A cada {opcao} questões você vê o resultado e escolhe se continua.
-          </div>
-          <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
-            <Botao onClick={comecar} disabled={ocupado}>Começar</Botao>
-            <Botao secundario onClick={fechar}>Fechar</Botao>
-          </div>
-        </div>
-      </SectionCard>
-    );
-  }
-
   if (!lote) {
     return (
       <SectionCard titulo={titulo} sub={sub}>
@@ -195,6 +187,7 @@ export function ResolverQuestoes({ missao, tipo = "missao", aoFechar, aoRegistra
           <div style={{ fontSize: 12.5, color: T.sub, lineHeight: 1.5 }}>
             Estas questões já entraram no seu histórico. Registrar de novo à mão contaria duas vezes.
           </div>
+          {seletorTamanho}
           <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
             <Botao onClick={novoLote} disabled={ocupado}>{fim.principal}</Botao>
             <Botao secundario onClick={fechar}>Fechar</Botao>
@@ -213,6 +206,7 @@ export function ResolverQuestoes({ missao, tipo = "missao", aoFechar, aoRegistra
           <span>Questão {indice + 1} de {questoes.length}</span>
           {origem && <span>{origem}</span>}
         </div>
+        {seletorTamanho}
         <div style={{ fontSize: 12, color: T.sub, marginTop: -6 }}>
           {linhaProgresso}
         </div>

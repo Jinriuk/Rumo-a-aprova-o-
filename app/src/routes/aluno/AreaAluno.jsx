@@ -8,7 +8,7 @@ import { Cabecalho } from "../../shared/ui/Cabecalho.jsx";
 import { Empty, Erro } from "../../shared/ui/componentes.jsx";
 import { VisaoEstudo } from "./VisaoEstudo.jsx";
 import { useTrilha } from "../../modules/conteudo/useTrilha.js";
-import { AvisoMaturidade } from "../../modules/conteudo/SeloMaturidade.jsx";
+import { AvisoMaturidadeUmaVez } from "../../modules/conteudo/SeloMaturidade.jsx";
 import { Onboarding } from "../../modules/motor/Onboarding.jsx";
 import { diasParaProva, trechoProvaSubtitulo } from "../../modules/conteudo/concursos.js";
 import { mensagemAmigavel } from "../../shared/lib/erros.js";
@@ -70,8 +70,13 @@ export default function AreaAluno({ perfil }) {
         // (alimenta o formulário). Evita query extra no caso comum. Best-effort.
         if (!ob?.concluido_em && c?.codigo) {
           try {
-            const est = await db.carregarEstruturaProva(c.codigo);
-            if (vivo) setMateriasProva(est.materias ?? []);
+            // prova_materias só tem o código: o nome vem do catálogo
+            // (raio-x, mudança 8: nunca "dir_adm" na tela)
+            const [est, nomes] = await Promise.all([
+              db.carregarEstruturaProva(c.codigo),
+              db.carregarNomesMateria().catch(() => ({})),
+            ]);
+            if (vivo) setMateriasProva((est.materias ?? []).map((mt) => ({ ...mt, nome: mt.nome ?? nomes[mt.materia_codigo ?? mt.codigo] })));
           } catch { /* sem estrutura: o onboarding ainda funciona */ }
         }
       } catch (e) {
@@ -102,11 +107,12 @@ export default function AreaAluno({ perfil }) {
                 concluir. Assim a tela "Hoje" está sempre disponível. */}
             {onboarding !== undefined && !onboarding?.concluido_em && (
               <div style={{ marginBottom: 16 }}>
-                <Onboarding aluno={aluno} materias={materiasProva}
+                <Onboarding aluno={aluno} materias={materiasProva} concursoNome={concurso ? concurso.nome.split(" (")[0] : null}
                   aoConcluir={() => setOnboarding({ concluido_em: new Date().toISOString() })} />
               </div>
             )}
-            {concurso && <AvisoMaturidade codigo={concurso.codigo} style={{ marginBottom: 14 }} />}
+            {/* pré-edital: uma vez, até o "Entendi"; depois, uma linha no Plano */}
+            {concurso && <AvisoMaturidadeUmaVez codigo={concurso.codigo} usuarioId={perfil.usuario.id} style={{ marginBottom: 14 }} />}
             <VisaoEstudo aluno={aluno} podeEditar concurso={concurso}
               trilhaEstado={trilhaEstado} usuarioId={perfil.usuario.id} pedidoGuia={pedidoGuia}
               contexto={concurso ? concurso.nome.split(" (")[0] : "Plano de estudos"} />

@@ -1,27 +1,29 @@
 /* A visão de estudo de UM aluno, com cara de missão (ref. designs):
-   Hoje / Registrar / Desempenho / Simulados / Histórico / Plano.
+   Hoje / Plano / Registrar / Desempenho / Simulados / Histórico.
    Mesma composição para aluno (edita) e para coordenação (lê) — o
    banco decide o que cada um PODE; aqui só se esconde o que não cabe. */
 import React, { lazy, Suspense, useEffect, useMemo, useRef, useState } from "react";
-import { Tag, SubjDot, ErroComRetry, BarraXP, StatusBadge, CarregandoBloco } from "../../shared/ui/componentes.jsx";
-import { FeedbackProgresso, MissoesPersistidas } from "../../modules/motor/ProgressoVivido.jsx";
+import { ErroComRetry, BarraXP, StatusBadge, CarregandoBloco } from "../../shared/ui/componentes.jsx";
+import { FeedbackProgresso } from "../../modules/motor/ProgressoVivido.jsx";
 import { Icone } from "../../shared/ui/Icones.jsx";
 import { MenuPrincipal } from "../../shared/ui/MenuPrincipal.jsx";
 import { Cronometro } from "../../shared/ui/Cronometro.jsx";
 import { useTema } from "../../shared/branding/BrandingContext.jsx";
 import { useTrilha } from "../../modules/conteudo/useTrilha.js";
-import { FaixaAspirante, MissaoAtual } from "../../modules/motor/MetaHero.jsx";
-import { MetaSemana } from "../../modules/motor/MetaSemana.jsx";
+import { FaixaAspirante, CicloEncerrado } from "../../modules/motor/MetaHero.jsx";
+import { MissaoDeAgora, MissoesDoHoje, ListaMissoes } from "../../modules/motor/MissoesDaSemana.jsx";
+import { TarefasDaSemana, CartaoTarefasDaSemana } from "../../modules/motor/MetaSemana.jsx";
 import { ResolverQuestoes } from "../../modules/motor/ResolverQuestoes.jsx";
 import { contextoRegistroDaMissao } from "../../modules/motor/jornada.js";
 import { Registrar } from "../../modules/motor/Registrar.jsx";
 import { Arquivo } from "../../modules/motor/Arquivo.jsx";
-import { Conquistas, ConquistasRecentes } from "../../modules/motor/Conquistas.jsx";
-import { TrilhaConcurso } from "../../modules/conteudo/TrilhaConcurso.jsx";
+import { Conquistas } from "../../modules/motor/Conquistas.jsx";
 import { filaDeMissoes } from "../../modules/conteudo/missoes.js";
+import { montarMissoesPorSemana, resumoMissoesDaSemana } from "../../modules/conteudo/missoesPorSemana.js";
 import { calcularXP, patente } from "../../modules/motor/jargao.js";
 import { InsightsDesempenho } from "../../modules/desempenho/Insights.jsx";
 import { NiveisPorMateria } from "../../modules/desempenho/Niveis.jsx";
+import { LinhaMaturidade } from "../../modules/conteudo/SeloMaturidade.jsx";
 import { useEnvioUnico } from "../../shared/hooks/useEnvioUnico.js";
 import { useGuia } from "../../shared/guia/GuiaPassoAPasso.jsx";
 import { ROTEIRO_ALUNO, chaveGuia } from "../../shared/guia/roteiros.js";
@@ -65,6 +67,11 @@ export function VisaoEstudo({ aluno, podeEditar, concurso = null, contexto = "Pl
   const [confirmacaoRegistro, setConfirmacaoRegistro] = useState(null);
   const [objetivoConcluido, setObjetivoConcluido] = useState(false);
   const [realceMissao, setRealceMissao] = useState(0);
+  // "Registrar" no Hoje abre o registro ali mesmo: nada no Hoje troca de aba
+  const [registroNoHoje, setRegistroNoHoje] = useState(false);
+  // voltar das Conquistas devolve o foco ao XP que as abriu (sem isto o
+  // botão desmonta e o foco cai no <body>)
+  const [focoXp, setFocoXp] = useState(false);
   const missaoRef = useRef(null);
   const fecharObjetivo = useEnvioUnico("acao");
   // Alvo da confirmação em tela AGORA, lido dentro do await de
@@ -77,18 +84,6 @@ export function VisaoEstudo({ aluno, podeEditar, concurso = null, contexto = "Pl
   }, [confirmacaoRegistro]);
   const recarregar = () => setVersao((v) => v + 1);
   const recarregarTudo = () => { recarregar(); recarregarTrilha(); };
-
-  // Modo essencial (UX1.2): reduz a aba "Hoje" ao núcleo "o que faço
-  // agora" (faixa + missão + meta + registrar), recolhendo os extras de
-  // gamificação. Preferência persistida por aluno neste navegador.
-  const [essencial, setEssencial] = useState(() => {
-    try { return localStorage.getItem("rumo-modo-essencial") === "1"; } catch { return false; }
-  });
-  const alternarEssencial = () => setEssencial((v) => {
-    const n = !v;
-    try { localStorage.setItem("rumo-modo-essencial", n ? "1" : "0"); } catch { /* ignora */ }
-    return n;
-  });
 
   // ---- missões PERSISTIDAS (PED1): fecham sozinhas quando o aluno bate
   // volume + acurácia. Lê a tabela aluno_missoes (motor no banco).
@@ -114,15 +109,22 @@ export function VisaoEstudo({ aluno, podeEditar, concurso = null, contexto = "Pl
   // escola dizem quais missões existem e em que ordem; aluno_missoes diz
   // quais já começaram ou fecharam. As que ainda não começaram aparecem
   // como "a seguir" (o banco não cria linha para elas antes da hora).
-  const [catalogoMissoes, setCatalogoMissoes] = useState({ examTag: null, missoes: [], ajustes: [] });
+  const [catalogoMissoes, setCatalogoMissoes] = useState({ examTag: null, missoes: [], ajustes: [], nomes: {}, vinculos: [] });
+  const [tentativaCatalogo, setTentativaCatalogo] = useState(0);
   useEffect(() => {
     if (!examTag) return;
     let vivo = true;
-    Promise.all([db.carregarMissoes(examTag), db.carregarMissoesEscola(examTag)])
-      .then(([missoes, ajustes]) => { if (vivo) setCatalogoMissoes({ examTag, missoes: missoes ?? [], ajustes: ajustes ?? [] }); })
-      .catch(() => { /* complementar: sem catálogo, o painel some, a tela fica */ });
+    // nomes do catálogo `materias`: a matéria de uma missão pode não estar
+    // na trilha do aluno, e o painel nunca mostra o código cru (dir_adm)
+    // e a semana de cada missão no plano do concurso (desenho de 18/10)
+    Promise.all([db.carregarMissoes(examTag), db.carregarMissoesEscola(examTag), db.carregarNomesMateria().catch(() => ({})),
+      db.carregarSemanasDasMissoes(examTag).catch(() => [])])
+      .then(([missoes, ajustes, nomes, vinculos]) => { if (vivo) setCatalogoMissoes({ examTag, missoes: missoes ?? [], ajustes: ajustes ?? [], nomes: nomes ?? {}, vinculos: vinculos ?? [] }); })
+      // falha não é "concurso sem missões": o cartão do Hoje diz que não
+      // carregou e oferece tentar de novo (a tela fica)
+      .catch(() => { if (vivo) setCatalogoMissoes({ examTag, missoes: [], ajustes: [], nomes: {}, vinculos: [], erro: true }); });
     return () => { vivo = false; };
-  }, [examTag]);
+  }, [examTag, tentativaCatalogo]);
   // P1.1: em quais missões o servidor ligou as questões integradas. Só o
   // aluno resolve (podeEditar). undefined = ainda perguntando: "Iniciar
   // missão" fica carregando e não decide nada. Set = a resposta (vazio sem
@@ -156,6 +158,27 @@ export function VisaoEstudo({ aluno, podeEditar, concurso = null, contexto = "Pl
       progresso: gam.missoes,
     });
   }, [catalogoMissoes, examTag, gam.missoes]);
+
+  // Missões por semana (desenho de 18/10): a semana delas é a do ritmo do
+  // aluno; a missão de agora é a primeira não concluída dessa semana.
+  const missoesSemana = useMemo(() => {
+    const doAlvo = catalogoMissoes.examTag === examTag;
+    return montarMissoesPorSemana({
+      fila: filaMissoes,
+      catalogo: doAlvo ? catalogoMissoes.missoes : [],
+      ajustesEscola: doAlvo ? catalogoMissoes.ajustes : [],
+      vinculos: doAlvo ? catalogoMissoes.vinculos : [],
+      totalSemanas: trilha?.semanas?.length ?? null,
+      materiasDaTrilha: (trilha?.disciplinas ?? []).map((d) => d.codigo),
+    });
+  }, [catalogoMissoes, examTag, filaMissoes, trilha]);
+
+  // Raio-x, mudança 8: matéria sempre pelo nome. A trilha do aluno manda
+  // (é o nome que ele vê no Registrar); o catálogo cobre o resto.
+  const nomesMateria = useMemo(() => ({
+    ...catalogoMissoes.nomes,
+    ...Object.fromEntries((trilha?.disciplinas ?? []).map((d) => [d.codigo, d.nome])),
+  }), [catalogoMissoes.nomes, trilha]);
 
   // feedback no MOMENTO DA AÇÃO: compara o XP do ledger (fonte de verdade
   // C0) e as missões fechadas entre recargas, e celebra o delta (só para
@@ -198,6 +221,8 @@ export function VisaoEstudo({ aluno, podeEditar, concurso = null, contexto = "Pl
   // contexto acompanha a navegação; entradas genéricas em Registrar
   // continuam abrindo um formulário livre.
   const irAba = (k, contexto = null) => {
+    setResolvendo(null);
+    setRegistroNoHoje(false);
     if (k === "registrar") {
       setContextoRegistro(contexto);
       setConfirmacaoRegistro(null);
@@ -236,8 +261,33 @@ export function VisaoEstudo({ aluno, podeEditar, concurso = null, contexto = "Pl
     setContextoRegistro(null);
     setObjetivoConcluido(false);
     fecharObjetivo.setErro(null);
+    setRegistroNoHoje(false);
     setTab("hoje");
     setRealceMissao(Date.now());
+  };
+
+  // o registro aberto do Hoje (missão sem questões): mesmo formulário, sem
+  // trocar de aba
+  const abrirRegistroNoHoje = (contexto) => {
+    setContextoRegistro(contexto);
+    setConfirmacaoRegistro(null);
+    setObjetivoConcluido(false);
+    fecharObjetivo.setErro(null);
+    setRegistroNoHoje(true);
+  };
+
+  /* O botão de uma missão (cartão ou linha), pelo desenho de 18/10: com
+     questões ligadas abre a sessão na hora (no Hoje ou no Plano, onde o
+     toque aconteceu); sem, abre o registro já com a missão. "Revisar" só
+     existe no Plano. */
+  const agirNaMissao = (missao, acao) => {
+    if (!missao || !acao) return;
+    if (acao.tipo === "questoes") setResolvendo({ missao, tipo: "missao" });
+    else if (acao.tipo === "revisar-questoes") setResolvendo({ missao, tipo: "revisao" });
+    else if (acao.tipo === "registro") {
+      const ctx = contextoRegistroDaMissao(missao, "missao");
+      if (tab === "hoje") abrirRegistroNoHoje(ctx); else irAba("registrar", ctx);
+    } else if (acao.tipo === "revisar-registro") irAba("registrar", contextoRegistroDaMissao(missao, "revisao"));
   };
 
   const registrarOutro = () => {
@@ -259,6 +309,15 @@ export function VisaoEstudo({ aluno, podeEditar, concurso = null, contexto = "Pl
     const timer = setTimeout(() => setRealceMissao(0), 1800);
     return () => { cancelAnimationFrame(quadro); clearTimeout(timer); };
   }, [realceMissao, tab]);
+
+  useEffect(() => {
+    if (!focoXp || tab !== "hoje") return undefined;
+    const quadro = requestAnimationFrame(() => {
+      document.querySelector(".player-rank")?.focus?.();
+      setFocoXp(false);
+    });
+    return () => cancelAnimationFrame(quadro);
+  }, [focoXp, tab]);
 
   // A sessão de questões abre acima da lista de missões: no celular, quem
   // toca "Iniciar missão" lá embaixo não a veria. Rola até ela e leva o foco.
@@ -334,38 +393,83 @@ export function VisaoEstudo({ aluno, podeEditar, concurso = null, contexto = "Pl
       <div style={{ fontSize: 13, color: "#7E93A6", marginTop: 6, lineHeight: 1.5, maxWidth: 300, marginInline: "auto" }}>
         Sua trilha de estudo ainda não foi configurada pela coordenação. Em breve você terá acesso ao seu plano.
       </div>
+      {/* sem trilha não há Plano: a linha do aviso de maturidade fica aqui
+          (concurso beta/esqueleto recebe aluno sem calendário semanal) */}
+      <LinhaMaturidade codigo={examTag} style={{ justifyContent: "center", marginTop: 14 }} />
     </div>
   );
 
   const itensMeta = (meta?.meta_atividades ?? []);
   const pendentes = itensMeta.filter((x) => x.estado === "pendente").length;
+  // achado do Codex no #194: catálogo e progresso das missões não entram no
+  // gate de carregamento da tela. Antes de chegarem, a fila está vazia e o
+  // cartão ofereceria a tarefa ou "semana em dia" no lugar da missão; o
+  // toque nesse meio-tempo registraria sem ligar à missão. Espera os dois.
+  const missoesProntas = !examTag || (catalogoMissoes.examTag === examTag && gam.versao >= 0);
+  // concurso sem missão com questões ligada (CN no demo: só missões com a
+  // coordenação): o Hoje mostra o cartão das tarefas da semana, como antes
+  const semMissoesLigadas = missoesProntas && !catalogoMissoes.erro && !missoesSemana.comMeta;
   // XP da FONTE DE VERDADE (ledger persistido, Fase C0 + PED1). Se o aluno
   // ainda não tem eventos (base nova/antes do backfill), cai na estimativa legada.
   const xp = dados.xpPersistido?.eventos?.length
     ? dados.xpPersistido.total
     : calcularXP({ metas: dados.metas, totalQuestoes: m?.totDone ?? 0, simulados: dados.simulados.length });
 
+  // Raio-x fase 2, PR 3 (18/10): a Trilha sai (o Plano mostra as semanas) e
+  // Conquistas sai do menu (abre pelo XP no topo do Hoje). No celular cabem
+  // Hoje, Plano, Registrar e Desempenho; Simulados e Histórico vão ao "Mais".
   const ABAS = [
-    ["hoje", "Hoje", null, "ancora"], ["concurso", "Trilha", null, "escudo"], ["registrar", "Registrar", null, "lapis"],
+    ["hoje", "Hoje", null, "ancora"], ["plano", "Plano", null, "mapa"], ["registrar", "Registrar", null, "lapis"],
     ["desempenho", "Desempenho", null, "grafico"], ["simulados", "Simulados", null, "alvo"],
-    ["conquistas", "Conquistas", null, "medalha"], ["historico", "Histórico", null, "arquivo"], ["plano", "Plano", null, "mapa"],
+    ["historico", "Histórico", null, "arquivo"],
   ].filter(([k]) => podeEditar || k !== "registrar").map(
-    ([k, lb, badge, icone]) => (k === "hoje" && podeEditar && pendentes > 0 ? [k, lb, pendentes, icone] : [k, lb, badge, icone]),
+    // as tarefas pendentes moram no Plano (raio-x fase 2): o número vai com elas
+    ([k, lb, badge, icone]) => (k === "plano" && podeEditar && pendentes > 0 ? [k, lb, pendentes, icone] : [k, lb, badge, icone]),
+  );
+
+  // a sessão de questões abre onde o toque aconteceu (Hoje ou Plano)
+  const sessaoDeQuestoes = podeEditar && resolvendo ? (
+    <div ref={resolvendoRef} tabIndex={-1} aria-label="Questões da missão" style={{ scrollMarginTop: 18 }}>
+      <ResolverQuestoes key={`${resolvendo.missao.id}:${resolvendo.tipo}`}
+        missao={resolvendo.missao} tipo={resolvendo.tipo}
+        aoFechar={() => setResolvendo(null)}
+        aoMudar={recarregar}
+        aoRegistrarManual={(tipoEfetivo = resolvendo.tipo) => {
+          // depois que a missão fecha na sessão, o registro de reserva é
+          // revisão, não prática da missão
+          const ctx = contextoRegistroDaMissao(resolvendo.missao, tipoEfetivo);
+          setResolvendo(null);
+          if (tab === "hoje") abrirRegistroNoHoje(ctx); else irAba("registrar", ctx);
+        }} />
+    </div>
+  ) : null;
+
+  // no Hoje, só o formulário (sem o resumo do dia e os recentes)
+  const formularioRegistro = (compacto = false) => (
+    <Registrar compacto={compacto} aluno={aluno} trilha={trilha} registros={dados.registros}
+      aoMudar={recarregar} minutosSugeridos={minutosSugeridos}
+      contextoInicial={contextoRegistro} confirmacao={confirmacaoRegistro}
+      aoConfirmar={registroConfirmado} aoVerMissao={verMissaoAtualizada}
+      aoRegistrarOutro={registrarOutro} aoSairContexto={() => setContextoRegistro(null)}
+      aoConcluirObjetivo={concluirObjetivoDaJornada} objetivoConcluido={objetivoConcluido}
+      concluindoObjetivo={fecharObjetivo.ocupado} erroObjetivo={fecharObjetivo.erro} />
   );
 
   return (
     <div>
       {feedback && <FeedbackProgresso feedback={feedback} aoFechar={() => setFeedback(null)} />}
-      {/* cronômetro: só nas abas onde o estudo é registrado (Hoje/Registrar),
-          para não ocupar espaço em Desempenho, Plano etc. (UX1.2) */}
-      {podeEditar && (tab === "hoje" || tab === "registrar") && (
+      {/* cronômetro: só onde o estudo acontece (Hoje, Registrar e a sessão
+          de questões, que o liga sozinha e o zera ao fechar: o lote já grava
+          os minutos no servidor) */}
+      {podeEditar && (tab === "hoje" || tab === "registrar" || resolvendo) && (
         <div style={{ marginBottom: 12, display: "flex", justifyContent: "flex-end" }}>
-          <Cronometro aoFinalizar={(min) => { setMinutosSugeridos(min); irAba("registrar"); }} />
+          <Cronometro sessao={!!resolvendo} aoFinalizar={(min) => { setMinutosSugeridos(min); irAba("registrar"); }} />
         </div>
       )}
 
       {guia.elemento}
       <MenuPrincipal abas={ABAS} ativo={tab} aoTrocar={irAba}
+        rotuloExtra={tab === "conquistas" ? "Conquistas" : undefined}
         usuario={{ nome: aluno.nome, sub: `${patente(xp).nome} · ${xp.toLocaleString("pt-BR")} XP` }} />
 
       <Suspense fallback={<CarregandoBloco titulo="Carregando o painel…" cartoes={2} linhas={3} />}>
@@ -373,74 +477,49 @@ export function VisaoEstudo({ aluno, podeEditar, concurso = null, contexto = "Pl
       <div id="conteudo-principal" tabIndex={-1} className="fade" key={tab}>
         {tab === "hoje" && (
           <div style={{ display: "flex", flexDirection: "column", gap: 16, paddingTop: 4 }}>
+            {/* Desenho aprovado em 18/10: o cartão da missão de agora e as
+                missões da semana abertas, sem clique. A sessão de questões e o
+                registro abrem aqui mesmo, no lugar deles. Radar, textos longos
+                e tarefas ficam fora do Hoje (as tarefas moram no Plano). */}
+            {ciclo.estado === "encerrado" ? (
+              <CicloEncerrado trilha={trilha} m={m} metas={dados.metas} aoAvancar={podeEditar ? irAba : undefined} />
+            ) : resolvendo ? sessaoDeQuestoes : registroNoHoje && podeEditar ? (
+              <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                <button type="button" onClick={() => { setRegistroNoHoje(false); setContextoRegistro(null); }}
+                  style={{ alignSelf: "flex-start", background: "none", border: "none", color: T.sub, fontSize: 13, fontWeight: 600, padding: "6px 0", minHeight: 36, cursor: "pointer" }}>
+                  ← Voltar às missões
+                </button>
+                {formularioRegistro(true)}
+              </div>
+            ) : (
+              <>
+                <div ref={missaoRef} tabIndex={-1} aria-label="Missão de agora, destaque"
+                  className={realceMissao ? "mission-impact" : undefined} style={{ scrollMarginTop: 18 }}>
+                  {semMissoesLigadas ? (
+                    <CartaoTarefasDaSemana meta={meta} trilha={trilha} podeEditar={podeEditar} aoMudar={recarregar}
+                      aoPraticar={podeEditar ? abrirRegistroNoHoje : undefined} />
+                  ) : (
+                    <MissaoDeAgora missao={missoesSemana.missaoDeAgora} nomesMateria={nomesMateria}
+                      questoesIntegradas={questoesIntegradas} carregando={!missoesProntas}
+                      erroAoCarregar={missoesProntas && !!catalogoMissoes.erro}
+                      aoTentarDeNovo={() => { setCatalogoMissoes((c) => ({ ...c, examTag: null, erro: false })); setTentativaCatalogo((n) => n + 1); }}
+                      aoAgir={podeEditar ? agirNaMissao : undefined}
+                      aoRegistrarLivre={podeEditar ? () => abrirRegistroNoHoje(null) : undefined} />
+                  )}
+                </div>
+                {missoesProntas && (
+                  <MissoesDoHoje montagem={missoesSemana} totalSemanas={trilha.semanas.length}
+                    nomesMateria={nomesMateria} questoesIntegradas={questoesIntegradas}
+                    aoAgir={podeEditar ? agirNaMissao : undefined} />
+                )}
+              </>
+            )}
+            {/* patente e XP: abre as Conquistas, que saíram do menu */}
             <FaixaAspirante nome={aluno.nome.split(" ")[0]} contexto={contexto} xp={xp} streak={m?.streak ?? 0}
               aoAbrirConquistas={() => irAba("conquistas")} />
-            {/* T10: preferência de tela perto do TOPO da aba — antes era o
-                último nó, sem destaque, e quem está sobrecarregado (o
-                público que mais quer o modo essencial) tinha que rolar a
-                aba inteira pra achá-lo. Não é fixed (competiria com a
-                barra inferior no mobile): só entra mais cedo no fluxo. */}
-            {essencial && (
-              <div style={{ fontSize: 11.5, color: T.sub, textAlign: "center", lineHeight: 1.5 }}>
-                Modo essencial ativo — missões extras e conquistas estão recolhidas.
-              </div>
-            )}
-            {podeEditar && (
-              <div className="today-preference">
-                <span>Preferência desta tela</span>
-                <button type="button" onClick={alternarEssencial} aria-pressed={essencial}
-                  title={essencial ? "Mostrar missões extras e conquistas" : "Recolher missões extras e conquistas"}>
-                  <i aria-hidden="true" />
-                  {essencial ? "Modo essencial" : "Modo completo"}
-                </button>
-              </div>
-            )}
-            <div ref={missaoRef} tabIndex={-1} aria-label="Missão da semana"
-              className={realceMissao ? "mission-impact" : undefined} style={{ scrollMarginTop: 18 }}>
-              <MissaoAtual meta={meta} trilha={trilha} m={m} metas={dados.metas} ciclo={ciclo.estado}
-                aoAvancar={podeEditar ? irAba : undefined} />
-            </div>
-            {/* P0.4 (0064): no modo essencial o painel fica compacto, mas não
-                some: o botão da missão é o único caminho que a avança */}
-            {podeEditar && resolvendo && (
-              <div ref={resolvendoRef} tabIndex={-1} aria-label="Questões da missão" style={{ scrollMarginTop: 18 }}>
-                <ResolverQuestoes key={`${resolvendo.missao.id}:${resolvendo.tipo}`}
-                  missao={resolvendo.missao} tipo={resolvendo.tipo}
-                  aoFechar={() => setResolvendo(null)}
-                  aoMudar={recarregar}
-                  aoRegistrarManual={(tipoEfetivo = resolvendo.tipo) => {
-                    // depois que a missão fecha na sessão, o registro de
-                    // reserva é revisão, não prática da missão
-                    const ctx = contextoRegistroDaMissao(resolvendo.missao, tipoEfetivo);
-                    setResolvendo(null);
-                    irAba("registrar", ctx);
-                  }} />
-              </div>
-            )}
-            {examTag && filaMissoes.length > 0 && (
-              <MissoesPersistidas fila={filaMissoes} disciplinas={trilha.disciplinas} compacta={essencial}
-                aoPraticar={podeEditar ? (contexto) => irAba("registrar", contexto) : undefined}
-                questoesIntegradas={questoesIntegradas}
-                aoResolver={podeEditar ? (missao, tipo) => setResolvendo({ missao, tipo }) : undefined} />
-            )}
-            <MetaSemana meta={meta} trilha={trilha} podeEditar={podeEditar} aoMudar={recarregar}
-              compacta aoPraticar={(alvo) => irAba("registrar", alvo)}
-              aoAbrirDesempenho={() => irAba("desempenho")} />
-            {!essencial && m && <ConquistasRecentes m={m} metas={dados.metas} simulados={dados.simulados} aoAbrir={() => irAba("conquistas")} />}
           </div>
         )}
-        {tab === "concurso" && (
-          <TrilhaConcurso examTag={concurso?.codigo ?? null} concursoNome={concurso?.nome ?? null} />
-        )}
-        {tab === "registrar" && podeEditar && (
-          <Registrar aluno={aluno} trilha={trilha} registros={dados.registros}
-            aoMudar={recarregar} minutosSugeridos={minutosSugeridos}
-            contextoInicial={contextoRegistro} confirmacao={confirmacaoRegistro}
-            aoConfirmar={registroConfirmado} aoVerMissao={verMissaoAtualizada}
-            aoRegistrarOutro={registrarOutro} aoSairContexto={() => setContextoRegistro(null)}
-            aoConcluirObjetivo={concluirObjetivoDaJornada} objetivoConcluido={objetivoConcluido}
-            concluindoObjetivo={fecharObjetivo.ocupado} erroObjetivo={fecharObjetivo.erro} />
-        )}
+        {tab === "registrar" && podeEditar && formularioRegistro()}
         {tab === "desempenho" && (
           <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
             <nav aria-label="Seções do desempenho" className="navwrap" style={{ display: "flex", gap: 8, overflowX: "auto", paddingBottom: 2 }}>
@@ -468,67 +547,125 @@ export function VisaoEstudo({ aluno, podeEditar, concurso = null, contexto = "Pl
           <Simulados aluno={aluno} simulados={dados.simulados} podeEditar={podeEditar} semanaAtiva={semanaAtiva} concurso={concurso} aoMudar={recarregar} />
         )}
         {tab === "conquistas" && m && (
-          <Conquistas nome={aluno.nome.split(" ")[0]} xp={xp} m={m} metas={dados.metas} simulados={dados.simulados} />
+          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+            {/* fora do menu: sem aba acesa, a volta fica explícita */}
+            <button type="button" onClick={() => { irAba("hoje"); setFocoXp(true); }}
+              style={{ alignSelf: "flex-start", background: "none", border: "none", color: T.sub, fontSize: 13, fontWeight: 600, padding: "6px 0", minHeight: 36, cursor: "pointer" }}>
+              ← Voltar ao Hoje
+            </button>
+            <Conquistas nome={aluno.nome.split(" ")[0]} xp={xp} m={m} metas={dados.metas} simulados={dados.simulados} />
+          </div>
         )}
         {tab === "historico" && (
           <Arquivo metas={dados.metas} trilha={trilha} registros={dados.registros} />
         )}
-        {tab === "plano" && <Plano trilha={trilha} semanaAtiva={semanaAtiva} meta={meta} />}
+        {tab === "plano" && (
+          <Plano trilha={trilha} semanaAtiva={semanaAtiva} meta={meta} metas={dados.metas} codigoConcurso={examTag}
+            podeEditar={podeEditar} aoMudar={recarregar} aoPraticar={(alvo) => irAba("registrar", alvo)}
+            missoesSemana={missoesProntas ? missoesSemana : null} nomesMateria={nomesMateria}
+            questoesIntegradas={questoesIntegradas} aoAgir={podeEditar ? agirNaMissao : undefined}>
+            {resolvendo && sessaoDeQuestoes}
+          </Plano>
+        )}
       </div>
       </Suspense>
     </div>
   );
 }
 
-/* O Plano (Fase 16.4): a trilha vira JORNADA — uma linha do tempo de
-   missões com estado claro (encerrada / em andamento / a desbloquear),
-   "onde estou" e o próximo passo. Textos da metodologia importada;
-   estado da semana corrente vem da meta. */
-function Plano({ trilha, semanaAtiva, meta }) {
+/* O Plano (desenho aprovado em 18/10). Para o aluno, ele substitui a aba
+   Trilha: todas as semanas em blocos, com as mesmas linhas de missão do
+   Hoje (semana pela trilha_plano_missoes.semana_sugerida) e, abaixo delas,
+   as tarefas da semana, com as concluídas recolhidas em "X concluídas".
+   Abertas: a semana das missões (ritmo do aluno) e a do calendário.
+   Concluir/Adiar só na tarefa da meta ativa; "Revisar" só aqui.
+   A sessão de questões aberta daqui aparece no topo (`children`).
+   A coordenação continua com a visão própria (ficha). */
+function Plano({ trilha, semanaAtiva, meta, metas = [], codigoConcurso = null, podeEditar = false, aoMudar, aoPraticar,
+  missoesSemana = null, nomesMateria, questoesIntegradas, aoAgir, children }) {
   const T = useTema();
-  const estadosPorAtividade = Object.fromEntries(
-    (meta?.meta_atividades ?? []).map((ma) => [ma.atividade_modelo_id, ma.estado]),
-  );
-  const ativaNum = semanaAtiva?.numero ?? trilha.semanas[0]?.numero;
+  // a semana atual vem do calendário (a virada pode atrasar e a meta ativa
+  // ainda ser a da semana anterior); a meta só preenche o estado das tarefas
+  const ativaNum = semanaAtiva?.numero ?? meta?.semana_numero ?? trilha.semanas[0]?.numero;
   const total = trilha.semanas.length;
   const posicao = Math.max(1, trilha.semanas.findIndex((w) => w.numero === ativaNum) + 1);
-  const pctJornada = total > 1 ? Math.round(((posicao - 1) / (total - 1)) * 100) : 0;
+  const pctPlano = total > 1 ? Math.round(((posicao - 1) / (total - 1)) * 100) : 0;
+  // a meta de cada semana (a atual e as já fechadas): o estado das tarefas
+  // só as metas desta trilha: depois de um ciclo novo, o histórico das
+  // edições anteriores tem os mesmos números de semana
+  const trilhaId = trilha.trilha?.id ?? null;
+  const metaPorSemana = Object.fromEntries((metas ?? [])
+    .filter((x) => !trilhaId || !x.trilha_id || x.trilha_id === trilhaId)
+    .map((x) => [x.semana_numero, x]));
+  if (meta) metaPorSemana[meta.semana_numero] = meta;
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-      {/* onde estou — cabeçalho da jornada */}
       <div style={{ background: `linear-gradient(135deg, ${T.cardHi}, ${T.card})`, border: `1px solid ${T.line}`, borderRadius: 14, padding: "14px 16px" }}>
         <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 10, flexWrap: "wrap" }}>
-          <div style={{ fontSize: 11, color: T.sub, textTransform: "uppercase", letterSpacing: 0.6, fontWeight: 700 }}>Sua jornada</div>
+          <div style={{ fontSize: 11, color: T.sub, textTransform: "uppercase", letterSpacing: 0.6, fontWeight: 700 }}>Seu plano</div>
           <div className="num" style={{ fontSize: 11.5, color: T.sub }}>semana <b className="disp" style={{ color: T.gold, fontSize: 15 }}>{posicao}</b> de {total}</div>
         </div>
-        <div style={{ marginTop: 9 }}><BarraXP pct={pctJornada} alt={7} /></div>
+        <div style={{ marginTop: 9 }}><BarraXP pct={pctPlano} alt={7} /></div>
+        {/* pré-edital: depois do "Entendi", a informação fica só aqui */}
+        <LinhaMaturidade codigo={codigoConcurso} style={{ marginTop: 10 }} />
       </div>
 
+      {children}
+
       <div style={{ position: "relative" }}>
-        {/* trilho vertical que liga as missões */}
+        {/* trilho vertical que liga as semanas */}
         <div style={{ position: "absolute", left: 13, top: 14, bottom: 14, width: 2, background: T.line }} />
         <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
           {trilha.semanas.map((w) => (
-            <MissaoJornada key={w.numero} w={w} trilha={trilha} ativaNum={ativaNum}
-              estadosPorAtividade={estadosPorAtividade} T={T} />
+            <BlocoSemana key={w.numero} w={w} trilha={trilha} ativaNum={ativaNum}
+              meta={metaPorSemana[w.numero] ?? null}
+              podeEditar={podeEditar && w.numero === meta?.semana_numero && meta?.status === "ativa"}
+              aoMudar={aoMudar} aoPraticar={aoPraticar} T={T}
+              missoes={missoesSemana?.porSemana.get(w.numero) ?? []}
+              abertaPeloRitmo={w.numero === missoesSemana?.semanaAtual}
+              deAgoraId={missoesSemana?.missaoDeAgora?.id ?? null}
+              nomesMateria={nomesMateria} questoesIntegradas={questoesIntegradas} aoAgir={aoAgir} />
           ))}
         </div>
       </div>
+
+      {missoesSemana?.semSemana.length > 0 && (
+        <section aria-label="Missões sem semana no plano" style={{ background: T.card, border: `1px solid ${T.line}`, borderRadius: 12, padding: "12px 14px" }}>
+          <div style={{ fontSize: 13, fontWeight: 700 }}>Outras missões do concurso</div>
+          <div style={{ fontSize: 12, color: T.sub, marginTop: 2 }}>Sem semana definida no plano desta trilha.</div>
+          <ListaMissoes linhas={missoesSemana.semSemana} nomesMateria={nomesMateria}
+            questoesIntegradas={questoesIntegradas} aoAgir={aoAgir} modo="plano" />
+        </section>
+      )}
     </div>
   );
 }
 
-// Uma etapa da jornada: nó na linha do tempo + cartão da semana.
-function MissaoJornada({ w, trilha, ativaNum, estadosPorAtividade, T }) {
+// Uma semana do Plano: nó na linha do tempo + bloco que abre e fecha.
+function BlocoSemana({ w, trilha, ativaNum, meta, podeEditar, aoMudar, aoPraticar, T,
+  missoes = [], abertaPeloRitmo = false, deAgoraId = null, nomesMateria, questoesIntegradas, aoAgir }) {
   const isNow = w.numero === ativaNum;
   const isPast = w.numero < ativaNum;
-  const tarefas = trilha.atividadesPorSemana[w.numero] ?? [];
-  const dc = tarefas.filter((tk) => estadosPorAtividade[tk.id] === "concluida").length;
-  const [aberto, setAberto] = useState(isNow);
+  const [aberto, setAberto] = useState(isNow || abertaPeloRitmo);
+  // a semana das missões avança com o aluno no Plano: a nova abre sozinha
+  useEffect(() => { if (abertaPeloRitmo) setAberto(true); }, [abertaPeloRitmo]);
+  const previstas = trilha.atividadesPorSemana[w.numero] ?? [];
+  const itens = meta?.meta_atividades ?? [];
+  const consideradas = itens.filter((x) => x.estado !== "ignorada").length;
+  const feitas = itens.filter((x) => x.estado === "concluida").length;
   const tom = isNow ? "alerta" : isPast ? "ok" : "neutro";
   const rotulo = isPast ? "Encerrada" : isNow ? "Em andamento" : "Próxima";
-  const pct = tarefas.length ? Math.round((dc / tarefas.length) * 100) : 0;
+  // semana que já passou sem meta: o aluno entrou depois (o motor gera só a
+  // semana corrente). Não houve tarefa atribuída; o previsto não é mostrado
+  // como se tivesse sido.
+  const semRegistro = isPast && !meta;
+  const contagemTarefas = meta
+    ? `${feitas} de ${consideradas} ${consideradas === 1 ? "tarefa" : "tarefas"}`
+    : semRegistro ? "sem tarefas atribuídas"
+    : `${previstas.length} ${previstas.length === 1 ? "tarefa prevista" : "tarefas previstas"}`;
+  const contagem = missoes.length ? `${resumoMissoesDaSemana(missoes).texto} · ${contagemTarefas}` : contagemTarefas;
+  const idCorpo = `semana-${w.numero}-tarefas`;
 
   // nó: encerrada = check; agora = ponto vivo; futura = cadeado
   const no = isNow
@@ -544,50 +681,41 @@ function MissaoJornada({ w, trilha, ativaNum, estadosPorAtividade, T }) {
         </span>
       </div>
 
-      <div style={{ flex: 1, minWidth: 0, background: T.card, border: `1px solid ${isNow ? T.gold : T.line}`, borderWidth: isNow ? 1.5 : 1, borderRadius: 12, overflow: "hidden" }}>
-        <div style={{ padding: "12px 14px" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+      <section aria-label={`Semana ${w.numero}`} style={{ flex: 1, minWidth: 0, background: T.card, border: `1px solid ${isNow ? T.gold : T.line}`, borderWidth: isNow ? 1.5 : 1, borderRadius: 12, overflow: "hidden" }}>
+        <button type="button" aria-expanded={aberto} aria-controls={idCorpo} onClick={() => setAberto((v) => !v)}
+          style={{ display: "block", width: "100%", minHeight: 44, textAlign: "left", background: "transparent", border: "none", color: T.ink, padding: "12px 14px", cursor: "pointer" }}>
+          <span style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
             <span className="disp" style={{ fontSize: 14.5, fontWeight: 700 }}>Semana {w.numero}</span>
             <StatusBadge tom={tom}>{rotulo}</StatusBadge>
             <span className="num" style={{ marginLeft: "auto", fontSize: 11, color: T.sub }}>{fmtBR(String(w.inicio))}–{fmtBR(String(w.fim))}</span>
-          </div>
-          <div style={{ fontStyle: "italic", color: T.sub, fontSize: 13, marginTop: 6, lineHeight: 1.4 }}>{w.foco}</div>
-          {w.simulado && <div style={{ fontSize: 12, color: T.red, fontWeight: 700, marginTop: 6 }}>⚑ {w.simulado}</div>}
+          </span>
+          {w.foco && <span style={{ display: "block", fontStyle: "italic", color: T.sub, fontSize: 13, marginTop: 6, lineHeight: 1.4 }}>{w.foco}</span>}
+          {w.simulado && <span style={{ display: "block", fontSize: 12, color: T.red, fontWeight: 700, marginTop: 6 }}>⚑ {w.simulado}</span>}
+          <span className="num" style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, color: T.sub, marginTop: 8 }}>
+            <span aria-hidden="true">{aberto ? "▾" : "▸"}</span><span>{contagem}</span>
+          </span>
+        </button>
 
-          {isNow && tarefas.length > 0 && (
-            <div style={{ marginTop: 10 }}>
-              <BarraXP pct={pct} alt={5} brilho={false} />
-              <div className="num" style={{ fontSize: 11, color: T.sub, marginTop: 4 }}>{dc}/{tarefas.length} objetivos · <b style={{ color: T.gold }}>{pct}%</b></div>
-            </div>
-          )}
-
-          {tarefas.length > 0 && (
-            // T1: alvo de toque — padding vertical + minHeight reais no botão.
-            <button type="button" onClick={() => setAberto((v) => !v)}
-              style={{ marginTop: 10, border: "none", background: "transparent", color: T.sub, fontSize: 12, fontWeight: 600, padding: "8px 0", minHeight: 32, display: "flex", alignItems: "center", gap: 5 }}>
-              {aberto ? "▾ ocultar" : `▸ ver ${tarefas.length} ${tarefas.length === 1 ? "objetivo" : "objetivos"}`}
-            </button>
-          )}
-        </div>
-
-        {aberto && tarefas.length > 0 && (
-          <div style={{ borderTop: `1px solid ${T.line}`, padding: "8px 14px 12px" }}>
-            {tarefas.map((tk) => {
-              const estado = estadosPorAtividade[tk.id];
-              const ch = estado === "concluida";
-              return (
-                <div key={tk.id} className="chk" style={{ display: "flex", alignItems: "flex-start", gap: 9, padding: "8px 0", opacity: estado === "ignorada" ? 0.45 : 1 }}>
-                  <span style={{ marginTop: 3, width: 15, height: 15, borderRadius: "50%", border: `2px solid ${ch ? T.green : T.line}`, background: ch ? T.green : "transparent", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 8, color: "#0A1622", fontWeight: 800 }}>{ch ? "✓" : ""}</span>
-                  <span style={{ flex: 1, display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
-                    <SubjDot disciplina={trilha.porCodigo[tk.disciplina_codigo]} /><Tag p={tk.prioridade} />
-                    <span style={{ fontSize: 13, color: ch ? T.sub : T.ink, textDecoration: ch ? "line-through" : "none", flexBasis: "100%" }}>{tk.texto}</span>
-                  </span>
-                </div>
-              );
-            })}
+        {aberto && (
+          <div id={idCorpo} style={{ borderTop: `1px solid ${T.line}` }}>
+            {missoes.length > 0 && (
+              <div style={{ padding: "4px 14px 8px" }}>
+                <ListaMissoes linhas={missoes} deAgoraId={deAgoraId} nomesMateria={nomesMateria}
+                  questoesIntegradas={questoesIntegradas} aoAgir={aoAgir} modo="plano" />
+              </div>
+            )}
+            <div style={{ fontSize: 11, fontWeight: 700, color: T.sub, textTransform: "uppercase", letterSpacing: 0.5, padding: "10px 14px 0" }}>Tarefas da semana</div>
+            {semRegistro ? (
+              <div style={{ fontSize: 12.5, color: T.sub, padding: "10px 14px", lineHeight: 1.5 }}>
+                Você começou depois desta semana: nenhuma tarefa dela foi atribuída a você.
+              </div>
+            ) : (
+              <TarefasDaSemana meta={meta} atividades={previstas} trilha={trilha}
+                podeEditar={podeEditar} aoMudar={aoMudar} aoPraticar={podeEditar ? aoPraticar : undefined} />
+            )}
           </div>
         )}
-      </div>
+      </section>
     </div>
   );
 }

@@ -403,6 +403,23 @@ export async function carregarMissoes(examTag, { nivel } = {}) {
   return data;
 }
 
+/* Raio-x fase 2 (desenho de 18/10): em que semana cada missão cai, pelo
+   plano do concurso (trilha_plano_missoes.semana_sugerida). Global e só
+   leitura (RLS: select para todo autenticado). Um concurso pode ter mais
+   de um plano (anual, intensiva…): quem escolhe é escolherPlano
+   (conteudo/missoesPorSemana.js), aqui só se busca. */
+export async function carregarSemanasDasMissoes(examTag) {
+  const { data, error } = await supabase
+    .from("trilha_plano_missoes")
+    .select("missao_id, semana_sugerida, ordem, trilha_planos!inner(id, exam_tag, tipo, ordem)")
+    .eq("trilha_planos.exam_tag", examTag);
+  if (error) throw falha("semanas das missões", error);
+  return (data ?? []).map((x) => ({
+    missao_id: x.missao_id, semana: x.semana_sugerida, ordem: x.ordem,
+    plano_id: x.trilha_planos?.id, plano_ordem: x.trilha_planos?.ordem ?? 0,
+  }));
+}
+
 /* T38: nome real da matéria por código, para anexar às missões — evita
    mostrar o código cru (qui, mat…) na trilha do concurso.
 
@@ -418,7 +435,7 @@ export async function carregarMissoes(examTag, { nivel } = {}) {
    O catálogo é global e minúsculo (9 linhas), então não leva filtro por
    exam_tag: é um mapa código → nome. Uma missão cuja matéria não esteja
    em `prova_materias` daquele exame continua ganhando nome. */
-async function carregarNomesMateria() {
+export async function carregarNomesMateria() {
   const { data, error } = await supabase.from("materias").select("codigo, nome");
   if (error) throw falha("catálogo de matérias", error);
   return Object.fromEntries((data ?? []).map((m) => [m.codigo, m.nome]));
